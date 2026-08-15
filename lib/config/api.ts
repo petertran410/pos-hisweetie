@@ -3,11 +3,11 @@ import { useBranchStore } from "../store/branch";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-export const getAuthHeaders = (): HeadersInit => {
+export const getAuthHeaders = (): Record<string, string> => {
   const token = useAuthStore.getState().token;
   const selectedBranch = useBranchStore.getState().selectedBranch;
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
 
@@ -139,6 +139,22 @@ export const apiClient = {
 
     const res = await fetchWithTimeout(url.toString(), {
       headers: getAuthHeaders(),
+    });
+
+    if (!res.ok) {
+      await handleApiError(res);
+    }
+
+    return res.json();
+  },
+
+  postForm: async <T = any>(endpoint: string, data: FormData): Promise<T> => {
+    const headers = getAuthHeaders();
+    delete headers["Content-Type"];
+    const res = await fetchWithTimeout(`${API_URL}${endpoint}`, {
+      method: "POST",
+      headers,
+      body: data,
     });
 
     if (!res.ok) {

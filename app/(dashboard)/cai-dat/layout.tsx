@@ -12,6 +12,7 @@ import {
   RefreshCw,
   CreditCard,
   FileSignature,
+  KeyRound,
 } from "lucide-react";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import "@/app/dashboard.css";
@@ -71,6 +72,12 @@ export default function SettingsLayout({
       label: "Lịch sử thao tác",
       icon: Clock,
       permission: { resource: "audit_logs", action: "view" },
+    },
+    {
+      href: "/cai-dat/tich-hop-api",
+      label: "Tích hợp API",
+      icon: KeyRound,
+      permission: { resource: "settings", action: "update" },
     },
     {
       href: "/cai-dat/dong-bo",

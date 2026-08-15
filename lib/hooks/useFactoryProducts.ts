@@ -4,6 +4,7 @@ import {
   factoryProductsApi,
   FactoryProductPayload,
   FactoryProductQueryParams,
+  PriceHistorySeriesParams,
 } from "../api/factory-products";
 
 /**
@@ -44,6 +45,15 @@ export function useFactoryProductPriceHistory(id?: number) {
     queryKey: ["factory-products", "price-history", id],
     queryFn: () => factoryProductsApi.getPriceHistory(id!),
     enabled: !!id,
+    staleTime: 30_000,
+  });
+}
+
+export function useFactoryPriceSeries(params?: PriceHistorySeriesParams) {
+  return useQuery({
+    queryKey: ["factory-products", "price-history-series", params ?? null],
+    queryFn: () => factoryProductsApi.getPriceHistorySeries(params!),
+    enabled: !!params?.productId,
     staleTime: 30_000,
   });
 }

@@ -1,13 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ChevronLeft,
   ChevronRight,
   History,
+  LineChart,
   Loader2,
+  Download,
   Package,
+  Pencil,
   Plus,
   Trash2,
   X,
@@ -20,7 +24,7 @@ import {
   useUpdateFactoryProduct,
 } from "@/lib/hooks/useFactoryProducts";
 import { FactoryProduct } from "@/lib/api/factory-products";
-import { Factory } from "@/lib/api/factories";
+import { Factory, factoriesApi } from "@/lib/api/factories";
 import { AttachProductsModal } from "./AttachProductsModal";
 
 interface FactoryDetailRowProps {
@@ -75,6 +79,7 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
   const [role, setRole] = useState<Role>("primary");
   const [page, setPage] = useState(1);
   const [showAttach, setShowAttach] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [historyMapping, setHistoryMapping] = useState<FactoryProduct | null>(
     null
   );
@@ -111,6 +116,27 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
     setRole(next);
     setPage(1);
     setEditing(null);
+  };
+
+  const exportDetail = async () => {
+    setIsExporting(true);
+    try {
+      const blob = await factoriesApi.exportDetail(factory.id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `chi-tiet-nha-may-${factory.code || factory.id}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Không thể xuất file chi tiết nhà máy"
+      );
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const saveCell = async (mapping: FactoryProduct) => {
@@ -180,7 +206,7 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
             if (event.key === "Enter") void saveCell(mapping);
             if (event.key === "Escape") setEditing(null);
           }}
-          className="w-24 border border-brand rounded px-1.5 py-1 text-xs focus:outline-none"
+          className="w-24 border border-brand rounded px-1.5 py-1 text-xs text-right focus:outline-none focus:ring-2 focus:ring-brand-soft focus:border-brand"
         />
       );
     }
@@ -200,9 +226,10 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
                   : String(mapping[field]),
           })
         }
-        className="hover:text-brand disabled:cursor-default disabled:hover:text-inherit"
+        className="inline-flex items-center justify-end gap-1 rounded border border-transparent px-1.5 py-1 -mx-1.5 -my-1 transition-colors cursor-pointer hover:border-gray-300 hover:bg-brand-soft hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-default disabled:hover:border-transparent disabled:hover:bg-transparent disabled:hover:text-inherit"
         title={canUpdate ? "Bấm để chỉnh sửa" : undefined}>
-        {formatNumber(mapping[field], isRate ? "en-US" : "vi-VN")}
+        {mapping[field] == null ? "Nhập..." : formatNumber(mapping[field], isRate ? "en-US" : "vi-VN")}
+        {canUpdate && <Pencil className="w-3 h-3" aria-hidden="true" />}
       </button>
     );
   };
@@ -214,7 +241,12 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
           colSpan={colSpan}
           className="border-b-2 border-l-2 border-r-2 border-brand p-0 bg-gray-50">
           <div className="p-5 bg-white">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm mb-5">
+            <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 text-sm mb-5">
+              <InfoCard
+                label="Tên đầy đủ"
+                value={factory.fullName || "Chưa cập nhật"}
+                className="col-span-2 lg:col-span-3"
+              />
               <InfoCard
                 label="Nhà cung cấp"
                 value={factory.supplier?.name || "Chưa gắn"}
@@ -256,14 +288,28 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
                     </button>
                   ))}
                 </div>
-                {canUpdate && (
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setShowAttach(true)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded bg-brand text-white">
-                    <Plus className="w-4 h-4" /> Gắn sản phẩm
+                    onClick={() => void exportDetail()}
+                    disabled={isExporting}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded border border-gray-200 text-gray-700 hover:bg-white disabled:opacity-50">
+                    {isExporting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                    Xuất chi tiết
                   </button>
-                )}
+                  {canUpdate && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAttach(true)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded bg-brand text-white">
+                      <Plus className="w-4 h-4" /> Gắn sản phẩm
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="overflow-x-auto">
@@ -318,7 +364,7 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
                                   role: event.target.value as Role,
                                 })
                               }
-                              className="border border-gray-200 rounded px-1.5 py-1 text-xs bg-white disabled:border-transparent disabled:bg-transparent">
+                              className="border border-gray-200 rounded px-1.5 py-1 text-xs bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-soft focus:border-brand disabled:border-transparent disabled:bg-transparent disabled:cursor-default">
                               <option value="primary">Chính</option>
                               <option value="backup">Backup</option>
                             </select>
@@ -335,7 +381,7 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
                                   currency: event.target.value,
                                 })
                               }
-                              className="border border-gray-200 rounded px-1.5 py-1 text-xs bg-white disabled:border-transparent disabled:bg-transparent">
+                              className="border border-gray-200 rounded px-1.5 py-1 text-xs bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-soft focus:border-brand disabled:border-transparent disabled:bg-transparent disabled:cursor-default">
                               {CURRENCIES.map((currency) => (
                                 <option key={currency} value={currency}>
                                   {currency}
@@ -360,6 +406,12 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
                           </td>
                           <td className="px-3 py-2.5">
                             <div className="flex justify-end gap-1">
+                              <Link
+                                href={`/san-pham/nha-may/bien-dong-gia?productId=${mapping.productId}&factoryId=${mapping.factoryId}`}
+                                className="p-1.5 hover:bg-brand-soft rounded text-gray-600 hover:text-brand"
+                                title="Biểu đồ biến động giá">
+                                <LineChart className="w-4 h-4" />
+                              </Link>
                               <button
                                 type="button"
                                 onClick={() => setHistoryMapping(mapping)}
@@ -437,9 +489,17 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
   );
 }
 
-function InfoCard({ label, value }: { label: string; value: string }) {
+function InfoCard({
+  label,
+  value,
+  className = "",
+}: {
+  label: string;
+  value: string;
+  className?: string;
+}) {
   return (
-    <div className="rounded-lg bg-gray-50 p-3">
+    <div className={`rounded-lg bg-gray-50 p-3 ${className}`}>
       <div className="text-gray-500">{label}</div>
       <div className="font-medium mt-1 truncate" title={value}>
         {value}
@@ -457,6 +517,7 @@ function PriceHistoryModal({
 }) {
   const { data: history, isLoading } = useFactoryProductPriceHistory(mapping.id);
   const [mounted, setMounted] = useState(false);
+  const trendHref = `/san-pham/nha-may/bien-dong-gia?productId=${mapping.productId}&factoryId=${mapping.factoryId}`;
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -484,12 +545,19 @@ function PriceHistoryModal({
               {mapping.product?.code} · {mapping.product?.name}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded">
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              href={trendHref}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-brand text-brand hover:bg-brand-soft">
+              <LineChart className="w-4 h-4" /> Xem biểu đồ
+            </Link>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded">
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
         </div>
         <div className="overflow-y-auto max-h-[60vh]">
           {isLoading ? (
@@ -506,9 +574,11 @@ function PriceHistoryModal({
               <thead className="sticky top-0 bg-gray-50 text-xs text-gray-500">
                 <tr>
                   <th className="px-5 py-2 text-left">Thời điểm</th>
+                  <th className="px-3 py-2 text-left">Loại</th>
                   <th className="px-3 py-2 text-right">Giá trước</th>
-                  <th className="px-3 py-2 text-right">Giá PĐN</th>
+                  <th className="px-3 py-2 text-right">Giá sau</th>
                   <th className="px-3 py-2 text-right">Chênh lệch</th>
+                  <th className="px-3 py-2 text-left">Chứng từ</th>
                   <th className="px-3 py-2 text-left">Người ghi</th>
                   <th className="px-5 py-2 text-left">Ghi chú</th>
                 </tr>
@@ -519,6 +589,11 @@ function PriceHistoryModal({
                     <td className="px-5 py-3 text-gray-600">
                       {new Date(item.createdAt).toLocaleString("vi-VN")}
                     </td>
+                    <td className="px-3 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${item.eventType === "purchase_order" ? "bg-gold-soft text-gold" : "bg-brand-soft text-brand-dark"}`}>
+                        {item.eventType === "purchase_order" ? "Giá PĐN" : "Tham chiếu"}
+                      </span>
+                    </td>
                     <td className="px-3 py-3 text-right">
                       {formatNumber(item.oldPrice)}
                     </td>
@@ -528,7 +603,10 @@ function PriceHistoryModal({
                     <td className="px-3 py-3 text-right text-gray-600">
                       {item.oldPrice == null || item.newPrice == null
                         ? "—"
-                        : `${item.newPrice >= item.oldPrice ? "+" : ""}${formatNumber(Number(item.newPrice) - Number(item.oldPrice))}`}
+                        : `${Number(item.newPrice) >= Number(item.oldPrice) ? "+" : ""}${formatNumber(Number(item.newPrice) - Number(item.oldPrice))}`}
+                    </td>
+                    <td className="px-3 py-3 font-mono text-xs text-gray-500">
+                      {item.refCode || "—"}
                     </td>
                     <td className="px-3 py-3">
                       {item.changedByName || item.changer?.name || "—"}

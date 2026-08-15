@@ -1,9 +1,11 @@
 import { apiClient } from "@/lib/config/api";
+import { API_URL, getAuthHeaders } from "@/lib/config/api";
 
 export interface Factory {
   id: number;
   code?: string | null;
   name: string;
+  fullName?: string | null;
   description?: string | null;
   country?: string | null;
   currency?: string | null;
@@ -69,6 +71,7 @@ export interface FactoryQueryParams {
 export interface FactoryPayload {
   code?: string | null;
   name: string;
+  fullName?: string | null;
   description?: string | null;
   country?: string | null;
   currency?: string | null;
@@ -112,7 +115,72 @@ export interface FactoryProductsResponse {
   }>;
 }
 
+export interface FactoryImportPreview {
+  total: number;
+  valid: number;
+  invalid: number;
+  create: number;
+  update: number;
+  rows: Array<{
+    row: number;
+    code?: string;
+    resolvedCode?: string;
+    name: string;
+    supplier: { id: number; code: string | null; name: string } | null;
+    action: "create" | "update" | "error";
+    errors: string[];
+  }>;
+}
+
+export interface FactoryImportResult {
+  total: number;
+  created: number;
+  updated: number;
+}
+
 export const factoriesApi = {
+  importPreview: (file: File) => {
+    const data = new FormData();
+    data.append("file", file);
+    return apiClient.postForm<FactoryImportPreview>(
+      "/factories/import/preview",
+      data
+    );
+  },
+
+  importCommit: (file: File) => {
+    const data = new FormData();
+    data.append("file", file);
+    return apiClient.postForm<FactoryImportResult>("/factories/import", data);
+  },
+
+  importTemplateUrl: "/factories/import/template",
+
+  /** Xuất danh sách nhà máy theo đúng bộ lọc đang áp dụng trên bảng. */
+  exportAll: async (params?: FactoryQueryParams) => {
+    const url = new URL(`${API_URL}/factories/export`);
+    if (params?.supplierId != null)
+      url.searchParams.set("supplierId", String(params.supplierId));
+    if (params?.country) url.searchParams.set("country", params.country);
+    if (params?.search) url.searchParams.set("search", params.search);
+    if (params?.includeInactive) url.searchParams.set("includeInactive", "true");
+
+    const headers = getAuthHeaders();
+    delete headers["Content-Type"];
+    const response = await fetch(url.toString(), { headers });
+    if (!response.ok) throw new Error("Không thể xuất danh sách nhà máy");
+    return response.blob();
+  },
+
+  exportDetail: async (id: number) => {
+    const headers = getAuthHeaders();
+    delete headers["Content-Type"];
+    const response = await fetch(`${API_URL}/factories/${id}/export`, {
+      headers,
+    });
+    if (!response.ok) throw new Error("Không thể xuất chi tiết nhà máy");
+    return response.blob();
+  },
   getAll: (params?: FactoryQueryParams | boolean) => {
     // Backward compatible: nếu truyền boolean thì dùng như includeInactive cũ
     if (typeof params === "boolean") {

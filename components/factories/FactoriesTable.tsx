@@ -5,18 +5,23 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Download,
   Factory as FactoryIcon,
+  Loader2,
   Pencil,
   Plus,
   Trash2,
+  Upload,
 } from "lucide-react";
 import Swal from "sweetalert2";
 import { toast } from "sonner";
 import { useFactories, useDeleteFactory } from "@/lib/hooks/useFactories";
 import { usePermission } from "@/lib/hooks/usePermissions";
-import { FactoryQueryParams, Factory } from "@/lib/api/factories";
+import { FactoryQueryParams, Factory, factoriesApi } from "@/lib/api/factories";
 import { FactoryDetailRow } from "./FactoryDetailRow";
 import { FactoryForm } from "./FactoryForm";
+import { FactoryProductImportModal } from "./FactoryProductImportModal";
+import { FactoryImportModal } from "./FactoryImportModal";
 
 interface FactoriesTableProps {
   filters: FactoryQueryParams & { page: number; limit: number };
@@ -37,6 +42,9 @@ export function FactoriesTable({ filters, onPageChange }: FactoriesTableProps) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showFactoryImportModal, setShowFactoryImportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [editingFactory, setEditingFactory] = useState<Factory | null>(null);
   const deleteFactory = useDeleteFactory();
   const canCreate = usePermission("factories", "create");
@@ -90,6 +98,27 @@ export function FactoriesTable({ filters, onPageChange }: FactoriesTableProps) {
     }
   };
 
+  const exportFactories = async () => {
+    setIsExporting(true);
+    try {
+      const blob = await factoriesApi.exportAll({
+        ...filters,
+        search: debouncedSearch || undefined,
+        includeInactive: activeStatusTab === "all",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "danh-sach-nha-may.xlsx";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Không thể xuất danh sách nhà máy");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const renderStatus = (factory: Factory) => (
     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${factory.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
       {factory.isActive ? "Hoạt động" : "Ngừng hoạt động"}
@@ -111,6 +140,19 @@ export function FactoriesTable({ filters, onPageChange }: FactoriesTableProps) {
           />
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <button type="button" onClick={() => void exportFactories()} disabled={isExporting} className="px-3 py-1.5 border rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 disabled:opacity-50" style={{ borderColor: "var(--dt-border)" }} title="Xuất danh sách nhà máy theo bộ lọc hiện tại">
+            {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Xuất file
+          </button>
+          {canCreate && (
+            <button type="button" onClick={() => setShowFactoryImportModal(true)} className="px-3 py-1.5 border rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1.5" style={{ borderColor: "var(--dt-border)" }} title="Import nhà máy từ Excel">
+              <Upload className="w-4 h-4" /> Import nhà máy
+            </button>
+          )}
+          {canCreate && (
+            <button type="button" onClick={() => setShowImportModal(true)} className="px-3 py-1.5 border rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1.5" style={{ borderColor: "var(--dt-border)" }} title="Import liên kết sản phẩm - nhà máy từ Excel">
+              <Upload className="w-4 h-4" /> Import liên kết
+            </button>
+          )}
           {canCreate && (
             <button type="button" onClick={() => setShowCreateModal(true)} className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium flex items-center gap-1.5">
               <Plus className="w-4 h-4" /> Tạo nhà máy
@@ -140,6 +182,7 @@ export function FactoriesTable({ filters, onPageChange }: FactoriesTableProps) {
               </th>
               <th className="px-4 py-2.5 text-left font-medium text-gray-500 text-xs uppercase tracking-wide">Mã nhà máy</th>
               <th className="px-4 py-2.5 text-left font-medium text-gray-500 text-xs uppercase tracking-wide">Tên nhà máy</th>
+              <th className="px-4 py-2.5 text-left font-medium text-gray-500 text-xs uppercase tracking-wide min-w-[260px]">Tên đầy đủ</th>
               <th className="px-4 py-2.5 text-left font-medium text-gray-500 text-xs uppercase tracking-wide">Nhà cung cấp</th>
               <th className="px-4 py-2.5 text-left font-medium text-gray-500 text-xs uppercase tracking-wide">Quốc gia</th>
               <th className="px-4 py-2.5 text-center font-medium text-gray-500 text-xs uppercase tracking-wide">SP chính</th>
@@ -150,9 +193,9 @@ export function FactoriesTable({ filters, onPageChange }: FactoriesTableProps) {
           </thead>
           <tbody>
             {!response ? (
-              <tr><td colSpan={9} className="py-16 text-center text-gray-400"><div className="animate-spin rounded-full h-6 w-6 border-2 border-brand border-t-transparent mx-auto mb-2" />Đang tải...</td></tr>
+              <tr><td colSpan={10} className="py-16 text-center text-gray-400"><div className="animate-spin rounded-full h-6 w-6 border-2 border-brand border-t-transparent mx-auto mb-2" />Đang tải...</td></tr>
             ) : factories.length === 0 ? (
-              <tr><td colSpan={9} className="py-20 text-center text-gray-400"><FactoryIcon className="w-10 h-10 mx-auto mb-2 opacity-30" /><div className="text-sm">Không có nhà máy nào</div></td></tr>
+              <tr><td colSpan={10} className="py-20 text-center text-gray-400"><FactoryIcon className="w-10 h-10 mx-auto mb-2 opacity-30" /><div className="text-sm">Không có nhà máy nào</div></td></tr>
             ) : factories.map((factory) => {
               const expanded = expandedId === factory.id;
               return (
@@ -161,8 +204,9 @@ export function FactoriesTable({ filters, onPageChange }: FactoriesTableProps) {
                     <td className={`px-4 py-2.5 sticky left-0 z-10 ${expanded ? "bg-brand-soft border-t-2 border-l-2 border-brand" : "bg-white"}`} onClick={(event) => event.stopPropagation()}>
                       <input type="checkbox" checked={selectedIds.includes(factory.id)} onChange={() => setSelectedIds((ids) => ids.includes(factory.id) ? ids.filter((id) => id !== factory.id) : [...ids, factory.id])} className="cursor-pointer" />
                     </td>
-                    <td className={`px-4 py-2.5 font-mono text-xs ${expanded ? "border-t-2 border-brand" : ""}`}>{factory.code || "-"}</td>
+                    <td className={`px-4 py-2.5 text-gray-700 ${expanded ? "border-t-2 border-brand" : ""}`}>{factory.code || "-"}</td>
                     <td className={`px-4 py-2.5 font-medium ${expanded ? "border-t-2 border-brand" : ""}`}>{factory.name}</td>
+                    <td className={`px-4 py-2.5 text-gray-700 ${expanded ? "border-t-2 border-brand" : ""}`}>{factory.fullName ? <span className="block truncate max-w-[320px]" title={factory.fullName}>{factory.fullName}</span> : <span className="text-gray-300">-</span>}</td>
                     <td className={`px-4 py-2.5 text-gray-700 ${expanded ? "border-t-2 border-brand" : ""}`}>{factory.supplier?.name || "-"}</td>
                     <td className={`px-4 py-2.5 text-gray-700 ${expanded ? "border-t-2 border-brand" : ""}`}>{factory.country || "-"}</td>
                     <td className={`px-4 py-2.5 text-center ${expanded ? "border-t-2 border-brand" : ""}`}><span className="px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs">{factory.mappingCounts?.primary ?? 0}</span></td>
@@ -176,7 +220,7 @@ export function FactoriesTable({ filters, onPageChange }: FactoriesTableProps) {
                       </div>
                     </td>
                   </tr>
-                  {expanded && <FactoryDetailRow factory={factory} colSpan={9} />}
+                  {expanded && <FactoryDetailRow factory={factory} colSpan={10} />}
                 </Fragment>
               );
             })}
@@ -191,6 +235,8 @@ export function FactoriesTable({ filters, onPageChange }: FactoriesTableProps) {
       </div>
 
       {showCreateModal && <FactoryForm mode="create" onClose={() => setShowCreateModal(false)} />}
+      {showFactoryImportModal && <FactoryImportModal onClose={() => setShowFactoryImportModal(false)} />}
+      {showImportModal && <FactoryProductImportModal onClose={() => setShowImportModal(false)} />}
       {editingFactory && <FactoryForm mode="edit" factoryId={editingFactory.id} onClose={() => setEditingFactory(null)} />}
     </div>
   );

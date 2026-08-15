@@ -11,7 +11,7 @@ export default function FactoriesPage() {
   const handleFiltersChange = useCallback((newFilters: FactoryQueryParams & { page: number; limit: number }) => setFilters(newFilters), []);
   return (
     <PagePermissionGuard resource="factories" action="view">
-      <div className="flex h-full border-t w-screen" style={{ borderColor: "var(--dt-border)" }}>
+      <div className="flex h-full border-t" style={{ borderColor: "var(--dt-border)" }}>
         <FactoriesSidebar filters={filters} onFiltersChange={handleFiltersChange} />
         <FactoriesTable filters={filters} onPageChange={(page) => setFilters({ ...filters, page })} />
       </div>

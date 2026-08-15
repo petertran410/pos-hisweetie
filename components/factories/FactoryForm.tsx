@@ -4,7 +4,15 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Factory as FactoryIcon, Loader2, Save, X } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Factory as FactoryIcon,
+  Loader2,
+  Save,
+  WandSparkles,
+  X,
+} from "lucide-react";
 import {
   useCreateFactory,
   useFactory,
@@ -56,6 +64,7 @@ export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
   const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState<FactoryPayload>({
     name: "",
+    fullName: "",
     code: "",
     description: "",
     country: "VN",
@@ -83,6 +92,7 @@ export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
       setForm({
         code: existing.code ?? "",
         name: existing.name,
+        fullName: existing.fullName ?? "",
         description: existing.description ?? "",
         country: existing.country ?? "VN",
         currency: existing.currency ?? "VND",
@@ -119,6 +129,7 @@ export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
       ...form,
       code: form.code?.trim() || null,
       name: form.name.trim(),
+      fullName: form.fullName?.trim() || null,
       description: form.description?.trim() || null,
       country: form.country || null,
       currency: form.currency || "VND",
@@ -160,14 +171,37 @@ export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
             <section>
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Thông tin cơ bản</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                {/*
+                  Hàng 1: tên ngắn + mã đứng cạnh nhau — cả hai đều là định danh
+                  và đều có dòng chú thích nên chiều cao cân nhau.
+                */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Tên nhà máy <span className="text-red-500">*</span></label>
-                  <input type="text" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Nhập tên nhà máy" required className={INPUT_CLASS} />
+                  <input type="text" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Tên viết ngắn, VD: Greenfood" required className={INPUT_CLASS} />
+                  <p className="text-xs text-gray-400 mt-1">Tên ngắn hiển thị trong bảng và form chọn nhà máy.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Mã nhà máy</label>
                   <input type="text" value={form.code ?? ""} onChange={(event) => setForm({ ...form, code: event.target.value })} placeholder="VD: NM-CN-001" className={INPUT_CLASS} />
-                  <p className="text-xs text-gray-400 mt-1">Không bắt buộc. Để trống thì nhà máy không có mã.</p>
+                  {form.code?.trim() ? (
+                    <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+                      {mode === "edit" && existing?.code
+                        ? "Nhà máy đã có mã."
+                        : "Mã sẽ được lưu sau khi kiểm tra trùng."}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                      <WandSparkles className="w-3.5 h-3.5 flex-shrink-0" />
+                      Chưa có mã — hệ thống tự sinh dạng NM0001 khi lưu.
+                    </p>
+                  )}
+                </div>
+                {/* Tên đầy đủ thường rất dài nên cho chiếm trọn chiều ngang. */}
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Tên đầy đủ</label>
+                  <input type="text" value={form.fullName ?? ""} onChange={(event) => setForm({ ...form, fullName: event.target.value })} placeholder="VD: Công ty TNHH Thực phẩm Greenfood Quốc tế" className={INPUT_CLASS} />
+                  <p className="text-xs text-gray-400 mt-1">Không bắt buộc. Tên pháp lý đầy đủ dùng cho hợp đồng, chứng từ.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Nhà cung cấp quản lý</label>

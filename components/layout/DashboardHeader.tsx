@@ -85,6 +85,10 @@ export function DashboardHeader() {
         items: [
           { label: "Nhà cung cấp", href: "/san-pham/nha-cung-cap" },
           { label: "Nhà máy", href: "/san-pham/nha-may" },
+          {
+            label: "Biến động giá nhà máy",
+            href: "/san-pham/nha-may/bien-dong-gia",
+          },
           { label: "Đặt hàng nhập", href: "/san-pham/dat-hang-nhap" },
           {
             label: "Đặt hàng nhập chi tiết",

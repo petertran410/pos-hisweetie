@@ -49,6 +49,10 @@ export const ROUTE_PERMISSIONS: Record<
   "/san-pham/xuat-dung-noi-bo": { resource: "internal-use", action: "view" },
   "/san-pham/nha-cung-cap": { resource: "suppliers", action: "view" },
   "/san-pham/nha-may": { resource: "factories", action: "view" },
+  "/san-pham/nha-may/bien-dong-gia": {
+    resource: "factories",
+    action: "view",
+  },
   "/san-pham/dat-hang-nhap": { resource: "order_suppliers", action: "view" },
   "/san-pham/dat-hang-nhap-chi-tiet": {
     resource: "order_suppliers",
@@ -83,6 +87,7 @@ export const ROUTE_PERMISSIONS: Record<
   "/cai-dat/chi-nhanh": { resource: "branches", action: "view" },
   "/cai-dat/so-quy": { resource: "bank_accounts", action: "view" },
   "/cai-dat/lich-su": { resource: "audit_logs", action: "view" },
+  "/cai-dat/tich-hop-api": { resource: "settings", action: "update" },
   "/san-pham/kiem-kho": { resource: "stock_audits", action: "view" },
   "/cai-dat/in-an": { resource: "print_templates", action: "view" },
 };
@@ -149,6 +154,12 @@ export const NAV_CONFIG: NavSection[] = [
         key: "factories",
         label: "Nhà máy",
         href: "/san-pham/nha-may",
+        permission: { resource: "factories", action: "view" },
+      },
+      {
+        key: "factory-price-trend",
+        label: "Biến động giá nhà máy",
+        href: "/san-pham/nha-may/bien-dong-gia",
         permission: { resource: "factories", action: "view" },
       },
       {
