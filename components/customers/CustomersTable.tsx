@@ -418,7 +418,7 @@ export function CustomersTable({
                 Tạo khách hàng
               </button>
             </PermissionGate>
-            <PermissionGate resource="customers" action="create">
+            <PermissionGate resource="customers" action="import">
               <button
                 onClick={onImportClick}
                 className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600">
@@ -426,7 +426,7 @@ export function CustomersTable({
                 Import
               </button>
             </PermissionGate>
-            <PermissionGate resource="customers" action="view">
+            <PermissionGate resource="customers" action="export">
               <button
                 onClick={() =>
                   exportToFile({
