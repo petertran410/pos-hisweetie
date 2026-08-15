@@ -269,12 +269,8 @@ export function ProductForm({
     }
   }, [product, selectedBranch]);
 
-  // Trạng thái chỉ-công-bố: user không có quyền xem giá vốn lẫn giá bán.
-  // Khi đó: không gửi giá/tồn kho/khối lượng để tránh ghi đè giá trị thật
-  // hoặc tạo StockAudit ảo, và tránh NaN làm Prisma reject.
-  const isPublicationOnly =
-    !canViewCostPrice && !canViewSalePrice;
-
+  // view_cost_price/view_sale_price chỉ ẩn ô giá trên UI, không quyết định
+  // payload: ai có products:update thì lưu được đủ dữ liệu sản phẩm.
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
@@ -330,14 +326,6 @@ export function ProductForm({
           : {}),
       };
 
-      // Luồng chỉ-công-bố: bỏ hết giá/tồn kho/khối lượng/thuế/đơn vị để
-      // tránh ghi đè và tránh tạo StockAudit ảo khi onHand round-trip sai.
-      if (isPublicationOnly) {
-        await submitProduct(formData);
-        return;
-      }
-
-      // Full payload — chỉ gửi khi có đủ quyền hoặc có giá muốn cập nhật.
       Object.assign(formData, {
         stockQuantity: Number(data.stockQuantity) || 0,
         minStockAlert: Number(data.minStockAlert) || 0,

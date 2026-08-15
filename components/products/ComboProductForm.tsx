@@ -68,8 +68,8 @@ export function ComboProductForm({
   const canViewPublication = usePermission("products", "view_publication");
   const canViewCostPrice = usePermission("products", "view_cost_price");
   const canViewSalePrice = usePermission("products", "view_sale_price");
-  // Chỉ-công-bố: thiếu cả quyền giá vốn lẫn giá bán.
-  const isPublicationOnly = !canViewCostPrice && !canViewSalePrice;
+  // view_cost_price/view_sale_price chỉ ẩn ô giá trên UI, không quyết định
+  // payload: ai có products:update thì lưu được đủ dữ liệu sản phẩm (gồm BOM).
   const [activeTab, setActiveTab] = useState<
     "info" | "description" | "publication"
   >("info");
@@ -331,13 +331,6 @@ export function ComboProductForm({
         ...publicationPayload,
         branchId: selectedBranch?.id,
       };
-
-      // Luồng chỉ-công-bố: không gửi giá/tồn kho/thành phần để tránh ghi đè
-      // dữ liệu thật, tránh NaN (giá vốn thành phần bị strip) và StockAudit ảo.
-      if (isPublicationOnly) {
-        await submitProduct(formData);
-        return;
-      }
 
       const comboCost = calculateTotalPurchasePrice();
       const comboRetailPrice = calculateTotalRetailPrice();
