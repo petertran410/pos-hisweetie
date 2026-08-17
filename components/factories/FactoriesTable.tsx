@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronLeft,
@@ -45,11 +45,25 @@ export function FactoriesTable({ filters, onPageChange }: FactoriesTableProps) {
   const [showFactoryImportModal, setShowFactoryImportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingDetail, setIsExportingDetail] = useState(false);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
   const [editingFactory, setEditingFactory] = useState<Factory | null>(null);
   const deleteFactory = useDeleteFactory();
   const canCreate = usePermission("factories", "create");
   const canUpdate = usePermission("factories", "update");
   const canDelete = usePermission("factories", "delete");
+
+  // Đóng dropdown "Xuất file" khi click ra ngoài.
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportRef.current && !exportRef.current.contains(event.target as Node)) {
+        setShowExportDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Debounce search 300ms.
   useEffect(() => {
@@ -98,14 +112,20 @@ export function FactoriesTable({ filters, onPageChange }: FactoriesTableProps) {
     }
   };
 
+  /** Bộ lọc dùng chung cho cả 2 API xuất (danh sách / chi tiết). */
+  const exportParams = () => ({
+    ...filters,
+    search: debouncedSearch || undefined,
+    // Tab "Tất cả" và "Ngừng hoạt động" đều cần lấy cả bản ghi inactive;
+    // tab "Hoạt động" để mặc định BE chỉ lấy isActive=true.
+    includeInactive: activeStatusTab !== "active",
+  });
+
   const exportFactories = async () => {
+    setShowExportDropdown(false);
     setIsExporting(true);
     try {
-      const blob = await factoriesApi.exportAll({
-        ...filters,
-        search: debouncedSearch || undefined,
-        includeInactive: activeStatusTab === "all",
-      });
+      const blob = await factoriesApi.exportAll(exportParams());
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -116,6 +136,24 @@ export function FactoriesTable({ filters, onPageChange }: FactoriesTableProps) {
       toast.error("Không thể xuất danh sách nhà máy");
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const exportFactoriesDetail = async () => {
+    setShowExportDropdown(false);
+    setIsExportingDetail(true);
+    try {
+      const blob = await factoriesApi.exportAllDetail(exportParams());
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "chi-tiet-nha-may.xlsx";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Không thể xuất chi tiết nhà máy");
+    } finally {
+      setIsExportingDetail(false);
     }
   };
 
@@ -140,9 +178,41 @@ export function FactoriesTable({ filters, onPageChange }: FactoriesTableProps) {
           />
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <button type="button" onClick={() => void exportFactories()} disabled={isExporting} className="px-3 py-1.5 border rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 disabled:opacity-50" style={{ borderColor: "var(--dt-border)" }} title="Xuất danh sách nhà máy theo bộ lọc hiện tại">
-            {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Xuất file
-          </button>
+          <div ref={exportRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setShowExportDropdown((value) => !value)}
+              disabled={isExporting || isExportingDetail}
+              className="px-3 py-1.5 border rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 disabled:opacity-50"
+              style={{ borderColor: "var(--dt-border)" }}
+              title="Xuất Excel theo bộ lọc hiện tại">
+              {isExporting || isExportingDetail ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              Xuất file
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showExportDropdown ? "rotate-180" : ""}`} />
+            </button>
+            {showExportDropdown && (
+              <div className="absolute right-0 top-full mt-1 bg-white border rounded-xl shadow-lg z-20 w-56 overflow-hidden" style={{ borderColor: "var(--dt-border)" }}>
+                <button
+                  type="button"
+                  onClick={() => void exportFactories()}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">
+                  <div className="font-medium text-gray-700">Tổng quan</div>
+                  <div className="text-xs text-gray-400">Danh sách nhà máy</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void exportFactoriesDetail()}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t" style={{ borderColor: "var(--dt-border)" }}>
+                  <div className="font-medium text-gray-700">Chi tiết</div>
+                  <div className="text-xs text-gray-400">Kèm sản phẩm liên kết</div>
+                </button>
+              </div>
+            )}
+          </div>
           {canCreate && (
             <button type="button" onClick={() => setShowFactoryImportModal(true)} className="px-3 py-1.5 border rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1.5" style={{ borderColor: "var(--dt-border)" }} title="Import nhà máy từ Excel">
               <Upload className="w-4 h-4" /> Import nhà máy

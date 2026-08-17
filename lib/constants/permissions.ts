@@ -72,7 +72,7 @@ export const ACTION_LABELS: Record<string, string> = {
   update: "Chỉnh sửa",
   delete: "Xóa",
   push: "Đẩy Misa",
-  import: "Nhập dữ liệu",
+  import: "Import dữ liệu",
   export: "Xuất dữ liệu",
   download: "Tải xuống",
   send: "Gửi",

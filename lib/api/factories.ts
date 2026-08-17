@@ -156,19 +156,39 @@ export const factoriesApi = {
 
   importTemplateUrl: "/factories/import/template",
 
-  /** Xuất danh sách nhà máy theo đúng bộ lọc đang áp dụng trên bảng. */
-  exportAll: async (params?: FactoryQueryParams) => {
+  /** Build query string chung cho các API xuất Excel danh sách nhà máy. */
+  _exportQuery: (params?: FactoryQueryParams) => {
     const url = new URL(`${API_URL}/factories/export`);
     if (params?.supplierId != null)
       url.searchParams.set("supplierId", String(params.supplierId));
     if (params?.country) url.searchParams.set("country", params.country);
     if (params?.search) url.searchParams.set("search", params.search);
     if (params?.includeInactive) url.searchParams.set("includeInactive", "true");
+    return url;
+  },
 
+  /** Xuất danh sách nhà máy theo đúng bộ lọc đang áp dụng trên bảng. */
+  exportAll: async (params?: FactoryQueryParams) => {
+    const url = factoriesApi._exportQuery(params);
     const headers = getAuthHeaders();
     delete headers["Content-Type"];
     const response = await fetch(url.toString(), { headers });
     if (!response.ok) throw new Error("Không thể xuất danh sách nhà máy");
+    return response.blob();
+  },
+
+  /**
+   * Xuất chi tiết toàn bộ nhà máy theo bộ lọc:
+   * sheet "Nhà máy" + sheet "Sản phẩm liên kết" (mỗi dòng = 1 mapping NM-SP).
+   */
+  exportAllDetail: async (params?: FactoryQueryParams) => {
+    const url = factoriesApi._exportQuery(params);
+    // Đổi path sang /factories/export/detail, giữ nguyên query.
+    url.pathname = url.pathname.replace(/\/export$/, "/export/detail");
+    const headers = getAuthHeaders();
+    delete headers["Content-Type"];
+    const response = await fetch(url.toString(), { headers });
+    if (!response.ok) throw new Error("Không thể xuất chi tiết nhà máy");
     return response.blob();
   },
 
