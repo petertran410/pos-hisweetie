@@ -1,5 +1,6 @@
 import { apiClient } from "@/lib/config/api";
 import { API_URL, getAuthHeaders } from "@/lib/config/api";
+import type { MoqBasis, MoqScope, MoqUnit } from "@/lib/utils/moq";
 
 export interface Factory {
   id: number;
@@ -22,6 +23,12 @@ export interface Factory {
   wechat?: string | null;
   email?: string | null;
   moq?: string | number | null;
+  /** MOQ có đơn vị — xem `lib/utils/moq.ts`. */
+  moqValue?: string | number | null;
+  moqBasis?: MoqBasis | null;
+  moqUnit?: MoqUnit | null;
+  moqScope?: MoqScope | null;
+  moqIncrement?: string | number | null;
   leadtimeDays?: number | null;
   paymentTerm?: string | null;
 
@@ -85,6 +92,11 @@ export interface FactoryPayload {
   wechat?: string | null;
   email?: string | null;
   moq?: number | null;
+  moqValue?: number | null;
+  moqBasis?: MoqBasis | null;
+  moqUnit?: MoqUnit | null;
+  moqScope?: MoqScope | null;
+  moqIncrement?: number | null;
   leadtimeDays?: number | null;
   paymentTerm?: string | null;
 

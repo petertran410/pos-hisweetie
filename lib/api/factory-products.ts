@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/config/api";
+import type { MoqBasis, MoqSpec, MoqUnit } from "@/lib/utils/moq";
 
 /**
  * Mapping (nhà máy × sản phẩm) — tương ứng sheet "Product Mapping" trong file
@@ -19,6 +20,13 @@ export interface FactoryProduct {
   exchangeRate?: string | number | null;
   isManualRate: boolean;
   moq?: string | number | null;
+  /** MOQ có đơn vị, luôn ở phạm vi PER_LINE. */
+  moqValue?: string | number | null;
+  moqBasis?: MoqBasis | null;
+  moqUnit?: MoqUnit | null;
+  moqIncrement?: string | number | null;
+  /** Cụm MOQ backend đã chuẩn hoá — dùng thẳng, khỏi tự suy luận. */
+  moqSpec?: MoqSpec | null;
   leadtimeDays?: number | null;
   note?: string | null;
   isActive: boolean;
@@ -125,6 +133,10 @@ export interface FactoryProductPayload {
   exchangeRate?: number | null;
   isManualRate?: boolean;
   moq?: number | null;
+  moqValue?: number | null;
+  moqBasis?: MoqBasis | null;
+  moqUnit?: MoqUnit | null;
+  moqIncrement?: number | null;
   leadtimeDays?: number | null;
   note?: string | null;
   isActive?: boolean;
@@ -149,6 +161,14 @@ export interface ReferencePriceInfo {
   exchangeRate: number | null;
   referencePriceVnd: number | null;
   moq: number | null;
+  /** MOQ cấp dòng (mapping SP × nhà máy). */
+  moqSpec?: MoqSpec | null;
+  /** MOQ cấp nhà máy — ràng buộc độc lập, thường là toàn đơn. */
+  factoryMoqSpec?: MoqSpec | null;
+  /** Dữ liệu quy đổi gói lẻ → thùng / kg / tấn. */
+  conversionValue?: number | null;
+  weight?: number | null;
+  weightUnit?: string | null;
   priceUpdatedAt: string | null;
 }
 

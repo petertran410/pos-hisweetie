@@ -19,6 +19,8 @@ import {
   useUpdateFactory,
 } from "@/lib/hooks/useFactories";
 import { FactoryPayload } from "@/lib/api/factories";
+import { MoqInput } from "./MoqInput";
+import { basisOfUnit } from "@/lib/utils/moq";
 import { toast } from "sonner";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
@@ -77,6 +79,11 @@ export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
     wechat: "",
     email: "",
     moq: undefined,
+    moqValue: undefined,
+    moqBasis: undefined,
+    moqUnit: undefined,
+    moqScope: undefined,
+    moqIncrement: undefined,
     leadtimeDays: undefined,
     paymentTerm: "",
   });
@@ -104,6 +111,20 @@ export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
         wechat: existing.wechat ?? "",
         email: existing.email ?? "",
         moq: existing.moq != null ? Number(existing.moq) : undefined,
+        // Bản ghi cũ chỉ có `moq` → hiểu là thùng, toàn đơn.
+        moqValue:
+          existing.moqValue != null
+            ? Number(existing.moqValue)
+            : existing.moq != null
+              ? Number(existing.moq)
+              : undefined,
+        moqBasis: existing.moqBasis ?? undefined,
+        moqUnit: existing.moqUnit ?? undefined,
+        moqScope: existing.moqScope ?? undefined,
+        moqIncrement:
+          existing.moqIncrement != null
+            ? Number(existing.moqIncrement)
+            : undefined,
         leadtimeDays: existing.leadtimeDays ?? undefined,
         paymentTerm: existing.paymentTerm ?? "",
       });
@@ -140,7 +161,13 @@ export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
       strategicLevel: form.strategicLevel?.trim() || null,
       wechat: form.wechat?.trim() || null,
       email: form.email?.trim() || null,
-      moq: form.moq ?? null,
+      // Giữ `moq` đồng bộ với `moqValue` để API/báo cáo cũ vẫn đọc được.
+      moq: form.moqValue ?? null,
+      moqValue: form.moqValue ?? null,
+      moqBasis: form.moqValue == null ? null : (form.moqBasis ?? "QUANTITY"),
+      moqUnit: form.moqValue == null ? null : (form.moqUnit ?? "CARTON"),
+      moqScope: form.moqValue == null ? null : (form.moqScope ?? "PER_ORDER"),
+      moqIncrement: form.moqValue == null ? null : (form.moqIncrement ?? null),
       leadtimeDays: form.leadtimeDays ?? null,
       paymentTerm: form.paymentTerm?.trim() || null,
     };
@@ -276,10 +303,34 @@ export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                   <input type="email" value={form.email ?? ""} onChange={(event) => setForm({ ...form, email: event.target.value })} placeholder="Nhập email" className={INPUT_CLASS} />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">MOQ mặc định</label>
-                  <input type="number" min={0} step="any" value={form.moq ?? ""} onChange={(event) => setForm({ ...form, moq: event.target.value === "" ? undefined : Number(event.target.value) })} placeholder="Số lượng tối thiểu" className={INPUT_CLASS} />
-                  <p className="text-xs text-gray-400 mt-1">MOQ riêng từng sản phẩm khai báo ở bảng sản phẩm.</p>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    MOQ mặc định
+                  </label>
+                  <MoqInput
+                    value={{
+                      value: form.moqValue ?? undefined,
+                      unit: form.moqUnit ?? undefined,
+                      scope: form.moqScope ?? undefined,
+                      increment: form.moqIncrement ?? undefined,
+                    }}
+                    onChange={(next) =>
+                      setForm({
+                        ...form,
+                        moqValue: next.value,
+                        moqUnit: next.unit,
+                        moqScope: next.scope,
+                        moqIncrement: next.increment,
+                        // Đảm bảo basis khớp với unit đã chọn.
+                        moqBasis: next.unit
+                          ? basisOfUnit(next.unit)
+                          : undefined,
+                      })
+                    }
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    MOQ riêng từng sản phẩm khai báo ở bảng sản phẩm bên dưới.
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Leadtime (ngày)</label>

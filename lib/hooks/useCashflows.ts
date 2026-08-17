@@ -99,7 +99,10 @@ export function useOpeningBalance(filters: any) {
       );
       return response;
     },
-    enabled: !!filters.startDate,
+    // filters có thể là null khi user không có quyền cash_flows:view_balance
+    // (CashFlowsTable truyền null để tắt query) → phải optional-chaining, nếu
+    // không sẽ throw TypeError ngay trong render phase → crash cả trang.
+    enabled: !!filters?.startDate,
   });
 }
 

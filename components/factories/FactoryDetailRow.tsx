@@ -26,6 +26,13 @@ import {
 import { FactoryProduct } from "@/lib/api/factory-products";
 import { Factory, factoriesApi } from "@/lib/api/factories";
 import { AttachProductsModal } from "./AttachProductsModal";
+import {
+  MOQ_UNITS,
+  MOQ_UNIT_LABEL,
+  MoqUnit,
+  basisOfUnit,
+  normalizeMoqSpec,
+} from "@/lib/utils/moq";
 
 interface FactoryDetailRowProps {
   factory: Factory;
@@ -33,7 +40,7 @@ interface FactoryDetailRowProps {
 }
 
 type Role = "primary" | "backup";
-type NumericField = "referencePrice" | "exchangeRate" | "moq" | "leadtimeDays";
+type NumericField = "referencePrice" | "exchangeRate" | "leadtimeDays";
 
 const CURRENCIES = ["VND", "CNY", "USD", "THB"];
 const PAGE_SIZE = 6;
@@ -85,7 +92,7 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
   );
   const [editing, setEditing] = useState<{
     id: number;
-    field: NumericField;
+    field: NumericField | "moqValue";
     value: string;
   } | null>(null);
 
@@ -179,6 +186,107 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
     } catch {
       // Hook đã hiển thị lỗi.
     }
+  };
+
+  /** Lưu số MOQ, giữ nguyên đơn vị đang có (mặc định thùng). */
+  const saveMoqValue = async (mapping: FactoryProduct) => {
+    if (!editing || editing.id !== mapping.id) return;
+    const value = numberOrNull(editing.value);
+    const current = normalizeMoqSpec(mapping, "PER_LINE");
+    const unit = current?.unit ?? "CARTON";
+    try {
+      await updateMapping.mutateAsync({
+        id: mapping.id,
+        data: {
+          // Giữ `moq` cũ đồng bộ để báo cáo/API cũ không lệch số.
+          moq: value,
+          moqValue: value,
+          moqUnit: value == null ? null : unit,
+          moqBasis: value == null ? null : basisOfUnit(unit),
+        },
+      });
+    } catch {
+      // Hook đã hiển thị lỗi.
+    } finally {
+      setEditing(null);
+    }
+  };
+
+  /** Đổi đơn vị MOQ — giữ nguyên con số, chỉ đổi cách diễn giải. */
+  const changeMoqUnit = async (mapping: FactoryProduct, unit: MoqUnit) => {
+    try {
+      await updateMapping.mutateAsync({
+        id: mapping.id,
+        data: { moqUnit: unit, moqBasis: basisOfUnit(unit) },
+      });
+    } catch {
+      // Hook đã hiển thị lỗi.
+    }
+  };
+
+  /**
+   * Ô MOQ: sửa số ngay tại chỗ, đổi đơn vị bằng select cạnh bên.
+   *
+   * Tách khỏi `renderNumeric` vì MOQ không còn là con số trần — thiếu đơn vị
+   * thì "100" không phân biệt được 100 gói hay 100 thùng.
+   */
+  const renderMoq = (mapping: FactoryProduct) => {
+    const spec = normalizeMoqSpec(mapping, "PER_LINE");
+    const isEditing = editing?.id === mapping.id && editing.field === "moqValue";
+
+    return (
+      <div className="flex items-center justify-end gap-1">
+        {isEditing ? (
+          <input
+            autoFocus
+            type="number"
+            min={0}
+            step="any"
+            value={editing.value}
+            onChange={(event) =>
+              setEditing({ ...editing, value: event.target.value })
+            }
+            onBlur={() => void saveMoqValue(mapping)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") void saveMoqValue(mapping);
+              if (event.key === "Escape") setEditing(null);
+            }}
+            className="w-20 border border-brand rounded px-1.5 py-1 text-xs text-right focus:outline-none focus:ring-2 focus:ring-brand-soft focus:border-brand"
+          />
+        ) : (
+          <button
+            type="button"
+            disabled={!canUpdate}
+            onClick={() =>
+              setEditing({
+                id: mapping.id,
+                field: "moqValue",
+                value: spec ? String(spec.value) : "",
+              })
+            }
+            className="inline-flex items-center justify-end gap-1 rounded border border-transparent px-1.5 py-1 -my-1 transition-colors cursor-pointer hover:border-gray-300 hover:bg-brand-soft hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-default disabled:hover:border-transparent disabled:hover:bg-transparent disabled:hover:text-inherit"
+            title={canUpdate ? "Bấm để chỉnh sửa" : undefined}>
+            {spec ? formatNumber(spec.value) : "Nhập..."}
+            {canUpdate && <Pencil className="w-3 h-3" aria-hidden="true" />}
+          </button>
+        )}
+
+        <select
+          disabled={!canUpdate || !spec}
+          value={spec?.unit ?? "CARTON"}
+          onChange={(event) => {
+            const unit = event.target.value as MoqUnit;
+            void changeMoqUnit(mapping, unit);
+          }}
+          className="border border-gray-200 rounded px-1 py-1 text-xs bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-soft focus:border-brand disabled:border-transparent disabled:bg-transparent disabled:cursor-default">
+          {MOQ_UNITS.map((unit) => (
+            <option key={unit} value={unit}>
+              {MOQ_UNIT_LABEL[unit]}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
   };
 
   const renderNumeric = (mapping: FactoryProduct, field: NumericField) => {
@@ -399,7 +507,7 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
                             {formatNumber(mapping.referencePriceVnd)} VND
                           </td>
                           <td className="px-3 py-2.5 text-right">
-                            {renderNumeric(mapping, "moq")}
+                            {renderMoq(mapping)}
                           </td>
                           <td className="px-3 py-2.5 text-right">
                             {renderNumeric(mapping, "leadtimeDays")}

@@ -37,13 +37,6 @@ interface CashFlowsTableProps {
   onCreatePaymentClick: () => void;
 }
 
-const STATUS_TABS = [
-  { value: "all", label: "Tất cả" },
-  { value: "receipt", label: "Phiếu thu" },
-  { value: "payment", label: "Phiếu chi" },
-  { value: "2", label: "Đã hủy" },
-];
-
 const STATUS_COLOR: Record<number, string> = {
   0: "bg-green-100 text-green-700",
   2: "bg-red-100 text-red-700",
@@ -52,8 +45,6 @@ const STATUS_COLOR: Record<number, string> = {
 const METHOD_TEXT: Record<string, string> = {
   cash: "Tiền mặt",
   transfer: "Chuyển khoản",
-  // ewallet: "Ví điện tử",
-  // card: "Thẻ",
 };
 
 // Format số CNY (làm tròn 2 chữ số thập phân, dấu phẩy phân cách hàng nghìn)
@@ -66,11 +57,7 @@ const formatCNY = (value: number) =>
 //   Dòng 1 (chính): X CNY
 //   Dòng 2 (phụ):   (~Y VND)
 // NCC nội địa → fallback formatCurrency bình thường (1 dòng).
-function CashFlowAmountCell({
-  cf,
-}: {
-  cf: CashFlow;
-}) {
+function CashFlowAmountCell({ cf }: { cf: CashFlow }) {
   const isForeign = cf.partnerType === "S" && cf.currency === "CNY";
   if (!isForeign) {
     return (

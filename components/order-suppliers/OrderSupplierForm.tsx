@@ -10,6 +10,7 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  AlertTriangle,
 } from "lucide-react";
 import { useSuppliers, useSupplier } from "@/lib/hooks/useSuppliers";
 import { useBranches } from "@/lib/hooks/useBranches";
@@ -31,6 +32,8 @@ import { useCan } from "@/lib/hooks/useCan";
 import { useLatestSupplierPrices } from "@/lib/hooks/useLatestSupplierPrices";
 import { useReferencePrices } from "@/lib/hooks/useFactoryProducts";
 import type { ReferencePriceInfo } from "@/lib/api/factory-products";
+import { checkMoq } from "@/lib/utils/moq-check";
+import type { MoqProductInfo, MoqSpec } from "@/lib/utils/moq";
 import {
   useExchangeRate,
   useRefreshExchangeRate,
@@ -697,6 +700,56 @@ export function OrderSupplierForm({
   const { referenceByProduct } = useReferencePrices(productIds, {
     supplierId: supplierId || undefined,
   });
+
+  /**
+   * Cảnh báo MOQ (không chặn lưu phiếu).
+   *
+   * MOQ cấp nhà máy (thường tính trên toàn đơn) và MOQ cấp sản phẩm là hai
+   * ràng buộc độc lập, phải thoả mãn đồng thời. Số lượng người dùng nhập là
+   * **gói lẻ**, nên util tự quy đổi sang thùng/kg/tấn theo đơn vị của MOQ.
+   */
+  const moqViolations = useMemo(() => {
+    const factorySpecs = new Map<
+      number,
+      { name?: string | null; spec: MoqSpec | null }
+    >();
+    const mappingSpecs = new Map<string, MoqSpec | null>();
+    const productInfos = new Map<number, MoqProductInfo>();
+
+    const lines = products.flatMap((item) => {
+      const ref = referenceByProduct[item.productId];
+      if (!ref?.factoryId) return [];
+
+      if (!factorySpecs.has(ref.factoryId)) {
+        factorySpecs.set(ref.factoryId, {
+          name: ref.factoryName,
+          spec: ref.factoryMoqSpec ?? null,
+        });
+      }
+      if (ref.moqSpec) {
+        mappingSpecs.set(`${ref.factoryId}:${item.productId}`, ref.moqSpec);
+      }
+      productInfos.set(item.productId, {
+        productId: item.productId,
+        productName: item.productName,
+        conversionValue: ref.conversionValue,
+        weight: ref.weight,
+        weightUnit: ref.weightUnit,
+      });
+
+      return [
+        {
+          productId: item.productId,
+          quantity: Number(item.quantity) || 0,
+          factoryId: ref.factoryId,
+        },
+      ];
+    });
+
+    if (!lines.length) return [];
+    return checkMoq({ lines, factorySpecs, mappingSpecs, products: productInfos });
+  }, [products, referenceByProduct]);
+
   // NCC trước đó — init = NCC của phiếu đang sửa để mount KHÔNG ghi đè giá đã lưu.
   const prevSupplierRef = useRef<number>(orderSupplier?.supplierId || 0);
   // Tập productId cần áp giá NCC (thêm SP mới khi đã có NCC, hoặc đổi NCC).
@@ -1179,6 +1232,24 @@ export function OrderSupplierForm({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
+          {moqViolations.length > 0 && (
+            <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+                <AlertTriangle className="w-4 h-4" aria-hidden="true" />
+                Chưa đạt số lượng đặt tối thiểu (MOQ)
+              </div>
+              <ul className="mt-2 space-y-1 text-sm text-amber-800 list-disc pl-6">
+                {moqViolations.map((violation, index) => (
+                  <li key={`${violation.level}-${violation.factoryId}-${violation.productId ?? "all"}-${index}`}>
+                    {violation.message}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-amber-700">
+                Đây chỉ là cảnh báo — phiếu vẫn lưu được bình thường.
+              </p>
+            </div>
+          )}
           <div className="border border-gray-200 rounded-lg overflow-x-auto bg-white">
             <table className="w-full min-w-[1100px]">
               <thead className="bg-gray-100 border-b border-gray-200">
