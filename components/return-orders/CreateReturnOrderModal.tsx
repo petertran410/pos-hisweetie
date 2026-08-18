@@ -30,6 +30,7 @@ interface ReturnItem {
   saleGoodQuantity: number;
   saleDamagedQuantity: number;
   saleNearExpiryQuantity: number;
+  invoiceDetailId: number;
 }
 
 interface SelectedInvoice {
@@ -166,6 +167,7 @@ export function CreateReturnOrderModal({
         saleGoodQuantity: 0,
         saleDamagedQuantity: 0,
         saleNearExpiryQuantity: 0,
+        invoiceDetailId: detail.id,
       })
     );
 
@@ -294,7 +296,12 @@ export function CreateReturnOrderModal({
 
   const groupedByInvoice = selectedInvoices.map((inv) => ({
     invoice: inv,
-    items: returnItems.filter((item) => item.invoiceId === inv.id),
+    // Giữ index gốc trong returnItems: 1 hóa đơn có thể có nhiều dòng cùng
+    // productId (khác lô/hàng tặng), nên KHÔNG được dò lại bằng findIndex
+    // vì findIndex luôn trả về dòng đầu tiên khớp.
+    items: returnItems
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => item.invoiceId === inv.id),
   }));
 
   return (
@@ -467,19 +474,14 @@ export function CreateReturnOrderModal({
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item) => {
-                    const globalIndex = returnItems.findIndex(
-                      (ri) =>
-                        ri.invoiceId === item.invoiceId &&
-                        ri.productId === item.productId
-                    );
+                  {items.map(({ item, index }) => {
                     const saleTotal =
                       item.saleGoodQuantity +
                       item.saleDamagedQuantity +
                       item.saleNearExpiryQuantity;
                     return (
                       <tr
-                        key={`${item.invoiceId}-${item.productId}`}
+                        key={item.invoiceDetailId}
                         className="border-t">
                         <td className="px-2 py-2">
                           <div className="font-medium text-sm">
@@ -502,19 +504,19 @@ export function CreateReturnOrderModal({
                           <input
                             type="text"
                             value={getDisplay(
-                              globalIndex,
+                              index,
                               "saleGoodQuantity",
                               item.saleGoodQuantity
                             )}
                             onChange={(e) =>
                               handleFieldChange(
-                                globalIndex,
+                                index,
                                 "saleGoodQuantity",
                                 e.target.value
                               )
                             }
                             onBlur={() =>
-                              handleFieldBlur(globalIndex, "saleGoodQuantity")
+                              handleFieldBlur(index, "saleGoodQuantity")
                             }
                             className="w-14 px-1 py-1 border rounded text-right text-sm"
                           />
@@ -523,20 +525,20 @@ export function CreateReturnOrderModal({
                           <input
                             type="text"
                             value={getDisplay(
-                              globalIndex,
+                              index,
                               "saleDamagedQuantity",
                               item.saleDamagedQuantity
                             )}
                             onChange={(e) =>
                               handleFieldChange(
-                                globalIndex,
+                                index,
                                 "saleDamagedQuantity",
                                 e.target.value
                               )
                             }
                             onBlur={() =>
                               handleFieldBlur(
-                                globalIndex,
+                                index,
                                 "saleDamagedQuantity"
                               )
                             }
@@ -547,20 +549,20 @@ export function CreateReturnOrderModal({
                           <input
                             type="text"
                             value={getDisplay(
-                              globalIndex,
+                              index,
                               "saleNearExpiryQuantity",
                               item.saleNearExpiryQuantity
                             )}
                             onChange={(e) =>
                               handleFieldChange(
-                                globalIndex,
+                                index,
                                 "saleNearExpiryQuantity",
                                 e.target.value
                               )
                             }
                             onBlur={() =>
                               handleFieldBlur(
-                                globalIndex,
+                                index,
                                 "saleNearExpiryQuantity"
                               )
                             }
@@ -575,20 +577,20 @@ export function CreateReturnOrderModal({
                             type="text"
                             value={formatNumberInput(
                               getDisplay(
-                                globalIndex,
+                                index,
                                 "returnPrice",
                                 item.returnPrice
                               )
                             )}
                             onChange={(e) =>
                               handleFieldChange(
-                                globalIndex,
+                                index,
                                 "returnPrice",
                                 e.target.value
                               )
                             }
                             onBlur={() =>
-                              handleFieldBlur(globalIndex, "returnPrice")
+                              handleFieldBlur(index, "returnPrice")
                             }
                             className="w-20 px-1 py-1 border rounded text-right text-sm"
                           />
