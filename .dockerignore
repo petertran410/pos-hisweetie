@@ -1,0 +1,30 @@
+# Git
+.git
+.gitignore
+
+# Secrets — KHÔNG đưa vào image
+.env
+.env.*
+
+# Dependencies & build output (image tự cài/build lại)
+node_modules
+.next
+out
+build
+
+# Synology NAS metadata
+**/.DS_Store
+**/@eaDir
+
+# Tài liệu, không cần cho runtime
+*.md
+
+# Local/dev
+.vscode
+.idea
+npm-debug.log*
+yarn-error.log*
+*.tsbuildinfo
+next-env.d.ts
+coverage
+test-results

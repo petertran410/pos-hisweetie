@@ -268,6 +268,7 @@ export function CreateReturnOrderModal({
       images: uploadedUrls.length > 0 ? uploadedUrls : undefined,
       details: validItems.map((item) => ({
         invoiceId: item.invoiceId,
+        invoiceDetailId: item.invoiceDetailId,
         invoiceCode: item.invoiceCode,
         productId: item.productId,
         productCode: item.productCode,

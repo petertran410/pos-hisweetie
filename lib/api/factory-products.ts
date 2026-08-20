@@ -107,7 +107,12 @@ export interface PriceHistorySeriesResponse {
     change: number | null;
     changePercent: number | null;
   };
-  pagination: { page: number; limit: number; total: number; totalPages: number };
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
   currencyMode: PriceCurrencyMode;
 }
 

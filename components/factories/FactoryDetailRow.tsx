@@ -25,7 +25,9 @@ import {
 } from "@/lib/hooks/useFactoryProducts";
 import { FactoryProduct } from "@/lib/api/factory-products";
 import { Factory, factoriesApi } from "@/lib/api/factories";
+import { formatNumber, limitDecimals } from "@/lib/utils";
 import { AttachProductsModal } from "./AttachProductsModal";
+import { CodeLink } from "@/components/shared/CodeLink";
 import {
   MOQ_UNITS,
   MOQ_UNIT_LABEL,
@@ -47,27 +49,6 @@ const PAGE_SIZE = 6;
 
 const numberOrNull = (value: string) =>
   value.trim() === "" ? null : Number(value);
-
-const formatNumber = (
-  value: string | number | null | undefined,
-  locale: "vi-VN" | "en-US" = "vi-VN"
-) => {
-  if (value == null || value === "") return "—";
-  return Number(value).toLocaleString(locale, { maximumFractionDigits: 2 });
-};
-
-/**
- * Cắt bớt phần thập phân vượt quá `max` chữ số (không làm tròn).
- *
- * `input[type=number]` ở locale vi-VN cho phép gõ dấu phẩy làm dấu thập phân,
- * nên phải xét cả "." và "," rồi chuẩn hoá về "." để Number() parse được.
- */
-const limitDecimals = (value: string, max: number) => {
-  const normalized = value.replace(",", ".");
-  const dotIndex = normalized.indexOf(".");
-  if (dotIndex === -1) return normalized;
-  return normalized.slice(0, dotIndex + 1 + max);
-};
 
 /**
  * Chi tiết nhà máy: thông tin tóm tắt + danh sách sản phẩm kèm giá tham chiếu.
@@ -232,7 +213,8 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
    */
   const renderMoq = (mapping: FactoryProduct) => {
     const spec = normalizeMoqSpec(mapping, "PER_LINE");
-    const isEditing = editing?.id === mapping.id && editing.field === "moqValue";
+    const isEditing =
+      editing?.id === mapping.id && editing.field === "moqValue";
 
     return (
       <div className="flex items-center justify-end gap-1">
@@ -336,7 +318,9 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
         }
         className="inline-flex items-center justify-end gap-1 rounded border border-transparent px-1.5 py-1 -mx-1.5 -my-1 transition-colors cursor-pointer hover:border-gray-300 hover:bg-brand-soft hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-default disabled:hover:border-transparent disabled:hover:bg-transparent disabled:hover:text-inherit"
         title={canUpdate ? "Bấm để chỉnh sửa" : undefined}>
-        {mapping[field] == null ? "Nhập..." : formatNumber(mapping[field], isRate ? "en-US" : "vi-VN")}
+        {mapping[field] == null
+          ? "Nhập..."
+          : formatNumber(mapping[field], isRate ? "en-US" : "vi-VN")}
         {canUpdate && <Pencil className="w-3 h-3" aria-hidden="true" />}
       </button>
     );
@@ -391,8 +375,14 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
                           ? "bg-brand text-white"
                           : "text-gray-600 hover:bg-white"
                       }`}>
-                      {value === "primary" ? "Sản phẩm chính" : "Sản phẩm backup"}{" "}
-                      ({value === "primary" ? primaryRows.length : backupRows.length})
+                      {value === "primary"
+                        ? "Sản phẩm chính"
+                        : "Sản phẩm backup"}{" "}
+                      (
+                      {value === "primary"
+                        ? primaryRows.length
+                        : backupRows.length}
+                      )
                     </button>
                   ))}
                 </div>
@@ -424,28 +414,46 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
                 <table className="w-full min-w-[900px] text-sm">
                   <thead className="bg-gray-50 text-xs text-gray-500">
                     <tr>
-                      <th className="px-3 py-2 text-left font-medium">Sản phẩm</th>
-                      <th className="px-3 py-2 text-left font-medium">Vai trò</th>
-                      <th className="px-3 py-2 text-right font-medium">Giá tham chiếu</th>
-                      <th className="px-3 py-2 text-left font-medium">Tiền tệ</th>
-                      <th className="px-3 py-2 text-right font-medium">Tỉ giá VND</th>
-                      <th className="px-3 py-2 text-right font-medium">Giá quy đổi</th>
+                      <th className="px-3 py-2 text-left font-medium">
+                        Sản phẩm
+                      </th>
+                      <th className="px-3 py-2 text-left font-medium">
+                        Vai trò
+                      </th>
+                      <th className="px-3 py-2 text-right font-medium">
+                        Giá tham chiếu
+                      </th>
+                      <th className="px-3 py-2 text-left font-medium">
+                        Tiền tệ
+                      </th>
+                      <th className="px-3 py-2 text-right font-medium">
+                        Tỉ giá VND
+                      </th>
+                      <th className="px-3 py-2 text-right font-medium">
+                        Giá quy đổi
+                      </th>
                       <th className="px-3 py-2 text-right font-medium">MOQ</th>
-                      <th className="px-3 py-2 text-right font-medium">LT (ngày)</th>
+                      <th className="px-3 py-2 text-right font-medium">
+                        LT (ngày)
+                      </th>
                       <th className="px-3 py-2 w-20" />
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {isLoading ? (
                       <tr>
-                        <td colSpan={9} className="px-4 py-10 text-center text-gray-500">
+                        <td
+                          colSpan={9}
+                          className="px-4 py-10 text-center text-gray-500">
                           <Loader2 className="inline w-4 h-4 animate-spin mr-2" />
                           Đang tải sản phẩm...
                         </td>
                       </tr>
                     ) : !rows.length ? (
                       <tr>
-                        <td colSpan={9} className="px-4 py-10 text-center text-sm text-gray-400">
+                        <td
+                          colSpan={9}
+                          className="px-4 py-10 text-center text-sm text-gray-400">
                           <Package className="w-8 h-8 mx-auto mb-2 opacity-30" />
                           {role === "primary"
                             ? "Chưa có sản phẩm nào dùng nhà máy này làm nhà máy chính"
@@ -457,11 +465,14 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
                         <tr key={mapping.id} className="hover:bg-gray-50">
                           <td className="px-3 py-2.5">
                             <div className="font-medium text-gray-800">
-                              {mapping.product?.name || `Sản phẩm #${mapping.productId}`}
+                              {mapping.product?.name ||
+                                `Sản phẩm #${mapping.productId}`}
                             </div>
-                            <div className="font-mono text-xs text-gray-500">
-                              {mapping.product?.code}
-                            </div>
+                            <CodeLink
+                              entity="product"
+                              code={mapping.product?.code}
+                              className="font-mono text-xs text-brand hover:underline"
+                            />
                           </td>
                           <td className="px-3 py-2.5">
                             <select
@@ -623,7 +634,9 @@ function PriceHistoryModal({
   mapping: FactoryProduct;
   onClose: () => void;
 }) {
-  const { data: history, isLoading } = useFactoryProductPriceHistory(mapping.id);
+  const { data: history, isLoading } = useFactoryProductPriceHistory(
+    mapping.id
+  );
   const [mounted, setMounted] = useState(false);
   const trendHref = `/san-pham/nha-may/bien-dong-gia?productId=${mapping.productId}&factoryId=${mapping.factoryId}`;
 
@@ -645,11 +658,12 @@ function PriceHistoryModal({
         onMouseDown={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div>
-              <h3 className="font-semibold text-gray-900">Price Tracking</h3>
-              <p className="text-sm text-gray-500 mt-0.5">
-                Giá thực tế từ PĐN được lưu riêng và không làm thay đổi giá tham chiếu.
-              </p>
-              <p className="text-sm text-gray-500 mt-0.5">
+            <h3 className="font-semibold text-gray-900">Price Tracking</h3>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Giá thực tế từ PĐN được lưu riêng và không làm thay đổi giá tham
+              chiếu.
+            </p>
+            <p className="text-sm text-gray-500 mt-0.5">
               {mapping.product?.code} · {mapping.product?.name}
             </p>
           </div>
@@ -698,8 +712,11 @@ function PriceHistoryModal({
                       {new Date(item.createdAt).toLocaleString("vi-VN")}
                     </td>
                     <td className="px-3 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${item.eventType === "purchase_order" ? "bg-gold-soft text-gold" : "bg-brand-soft text-brand-dark"}`}>
-                        {item.eventType === "purchase_order" ? "Giá PĐN" : "Tham chiếu"}
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs ${item.eventType === "purchase_order" ? "bg-gold-soft text-gold" : "bg-brand-soft text-brand-dark"}`}>
+                        {item.eventType === "purchase_order"
+                          ? "Giá PĐN"
+                          : "Tham chiếu"}
                       </span>
                     </td>
                     <td className="px-3 py-3 text-right">

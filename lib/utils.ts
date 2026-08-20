@@ -3,6 +3,16 @@ export function formatCurrency(amount: number | string): string {
   return new Intl.NumberFormat("en-US").format(num);
 }
 
+export function formatNumber(
+  value: string | number | null | undefined,
+  locale: "vi-VN" | "en-US" = "en-US"
+): string {
+  if (value == null || value === "") return "—";
+  const num = Number(value);
+  if (!Number.isFinite(num)) return "—";
+  return num.toLocaleString(locale, { maximumFractionDigits: 2 });
+}
+
 export function formatDate(date: string | Date | undefined): string {
   if (!date) return "-";
   return new Date(date).toLocaleString("vi-VN");
@@ -18,13 +28,23 @@ export function parseNumberInput(value: string): number {
   return Number(value.replace(/,/g, "")) || 0;
 }
 
+export function limitDecimals(value: string, max: number): string {
+  const normalized = value.replace(",", ".");
+  const dotIndex = normalized.indexOf(".");
+  if (dotIndex === -1) return normalized;
+  return normalized.slice(0, dotIndex + 1 + max);
+}
+
 /**
  * Đổi preset thời gian (today, this_week, ...) → khoảng ngày [from, to].
  * Dùng chung cho các mobile filter sheet (hóa đơn, hóa đơn VAT, đơn hàng).
  * Backend lọc qua fromCreatedDate/toCreatedDate; KHÔNG nhận "_preset"
  * (ValidationPipe forbidNonWhitelisted → 400), nên phải tính ngày sẵn ở client.
  */
-export function getDateRangeFromPreset(preset: string): { from: Date; to: Date } {
+export function getDateRangeFromPreset(preset: string): {
+  from: Date;
+  to: Date;
+} {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   switch (preset) {
