@@ -9,8 +9,8 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
-docker-compose.yml
-Dockerfile
+/docker-compose.yml
+/Dockerfile
 
 # testing
 /coverage
