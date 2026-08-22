@@ -336,16 +336,28 @@ function ProductAggregateTable({
 }
 
 function InOutTable({ rows }: { rows: ProductChartRow[] }) {
-  // revenue=tồn đầu, totalCost=nhập, profit=xuất, value=tồn cuối
   const totals = rows.reduce(
     (acc, r) => {
-      acc.opening += r.revenue || 0;
-      acc.in += r.totalCost || 0;
-      acc.out += r.profit || 0;
-      acc.closing += r.value || 0;
+      acc.openingQuantity += r.openingQuantity ?? r.revenue ?? 0;
+      acc.openingValue += r.openingValue ?? 0;
+      acc.inQuantity += r.inQuantity ?? r.totalCost ?? 0;
+      acc.inValue += r.inValue ?? 0;
+      acc.outQuantity += r.outQuantity ?? r.profit ?? 0;
+      acc.outValue += r.outValue ?? 0;
+      acc.closingQuantity += r.closingQuantity ?? r.value ?? 0;
+      acc.closingValue += r.closingValue ?? 0;
       return acc;
     },
-    { opening: 0, in: 0, out: 0, closing: 0 }
+    {
+      openingQuantity: 0,
+      openingValue: 0,
+      inQuantity: 0,
+      inValue: 0,
+      outQuantity: 0,
+      outValue: 0,
+      closingQuantity: 0,
+      closingValue: 0,
+    }
   );
   return (
     <table className="w-full text-sm">
@@ -358,13 +370,25 @@ function InOutTable({ rows }: { rows: ProductChartRow[] }) {
             Tồn đầu
           </th>
           <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+            Giá trị đầu kỳ
+          </th>
+          <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
             Nhập
+          </th>
+          <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+            Giá trị nhập
           </th>
           <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
             Xuất
           </th>
           <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+            Giá trị xuất
+          </th>
+          <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
             Tồn cuối
+          </th>
+          <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+            Giá trị cuối kỳ
           </th>
         </tr>
       </thead>
@@ -373,36 +397,66 @@ function InOutTable({ rows }: { rows: ProductChartRow[] }) {
           <tr className="bg-amber-50 font-semibold">
             <td className="px-3 py-2 text-gray-800">Tổng</td>
             <td className="px-3 py-2 text-right text-gray-700">
-              {totals.opening.toLocaleString("vi-VN")}
+              {totals.openingQuantity.toLocaleString("vi-VN")}
+            </td>
+            <td className="px-3 py-2 text-right text-gray-700">
+              {formatCurrency(totals.openingValue)}
             </td>
             <td className="px-3 py-2 text-right text-green-700">
-              {totals.in.toLocaleString("vi-VN")}
+              {totals.inQuantity.toLocaleString("vi-VN")}
+            </td>
+            <td className="px-3 py-2 text-right text-green-700">
+              {formatCurrency(totals.inValue)}
             </td>
             <td className="px-3 py-2 text-right text-orange-600">
-              {totals.out.toLocaleString("vi-VN")}
+              {totals.outQuantity.toLocaleString("vi-VN")}
+            </td>
+            <td className="px-3 py-2 text-right text-orange-600">
+              {formatCurrency(totals.outValue)}
             </td>
             <td className="px-3 py-2 text-right text-brand-dark">
-              {totals.closing.toLocaleString("vi-VN")}
+              {totals.closingQuantity.toLocaleString("vi-VN")}
+            </td>
+            <td className="px-3 py-2 text-right text-brand-dark">
+              {formatCurrency(totals.closingValue)}
             </td>
           </tr>
         )}
-        {rows.map((row, idx) => (
-          <tr key={idx} className="hover:bg-gray-50">
-            <td className="px-3 py-2 text-gray-900">{row.subject}</td>
-            <td className="px-3 py-2 text-right text-gray-700">
-              {(row.revenue || 0).toLocaleString("vi-VN")}
-            </td>
-            <td className="px-3 py-2 text-right text-green-700">
-              {(row.totalCost || 0).toLocaleString("vi-VN")}
-            </td>
-            <td className="px-3 py-2 text-right text-orange-600">
-              {(row.profit || 0).toLocaleString("vi-VN")}
-            </td>
-            <td className="px-3 py-2 text-right font-medium text-brand-dark">
-              {(row.value || 0).toLocaleString("vi-VN")}
-            </td>
-          </tr>
-        ))}
+        {rows.map((row, idx) => {
+          const openingQuantity = row.openingQuantity ?? row.revenue ?? 0;
+          const inQuantity = row.inQuantity ?? row.totalCost ?? 0;
+          const outQuantity = row.outQuantity ?? row.profit ?? 0;
+          const closingQuantity = row.closingQuantity ?? row.value ?? 0;
+          return (
+            <tr key={idx} className="hover:bg-gray-50">
+              <td className="px-3 py-2 text-gray-900">{row.subject}</td>
+              <td className="px-3 py-2 text-right text-gray-700">
+                {openingQuantity.toLocaleString("vi-VN")}
+              </td>
+              <td className="px-3 py-2 text-right text-gray-700">
+                {formatCurrency(row.openingValue ?? 0)}
+              </td>
+              <td className="px-3 py-2 text-right text-green-700">
+                {inQuantity.toLocaleString("vi-VN")}
+              </td>
+              <td className="px-3 py-2 text-right text-green-700">
+                {formatCurrency(row.inValue ?? 0)}
+              </td>
+              <td className="px-3 py-2 text-right text-orange-600">
+                {outQuantity.toLocaleString("vi-VN")}
+              </td>
+              <td className="px-3 py-2 text-right text-orange-600">
+                {formatCurrency(row.outValue ?? 0)}
+              </td>
+              <td className="px-3 py-2 text-right font-medium text-brand-dark">
+                {closingQuantity.toLocaleString("vi-VN")}
+              </td>
+              <td className="px-3 py-2 text-right font-medium text-brand-dark">
+                {formatCurrency(row.closingValue ?? 0)}
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );

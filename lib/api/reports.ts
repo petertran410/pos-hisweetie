@@ -325,6 +325,14 @@ export interface ProductChartRow {
   totalCost?: number;
   profit?: number;
   quantity?: number;
+  openingQuantity?: number;
+  openingValue?: number;
+  inQuantity?: number;
+  inValue?: number;
+  outQuantity?: number;
+  outValue?: number;
+  closingQuantity?: number;
+  closingValue?: number;
 }
 
 export interface ProductPreviewResponse {
