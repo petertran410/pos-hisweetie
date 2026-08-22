@@ -8,6 +8,7 @@ import {
 import { Toaster, toast } from "sonner";
 import { useEffect, useState } from "react";
 import { initBranchCrossTabSync } from "@/lib/store/branch";
+import { initNotificationPrefsCrossTabSync } from "@/lib/store/notificationPrefs";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -58,9 +59,25 @@ export function Providers({ children }: { children: React.ReactNode }) {
     return cleanup;
   }, [queryClient]);
 
+  // Đồng bộ trạng thái "tắt thông báo" (mute chuông) giữa các tab.
+  useEffect(() => initNotificationPrefsCrossTabSync(), []);
+
   return (
     <QueryClientProvider client={queryClient}>
-      <Toaster position="top-right" />
+      {/* closeButton: mọi toast đều có nút X để người dùng tắt nhanh. */}
+      <Toaster
+        position="top-right"
+        closeButton
+        toastOptions={{
+          classNames: {
+            // Sonner mặc định đặt nút X ở góc TRÁI và chỉ rõ khi hover.
+            // Đưa sang phải + luôn hiển thị cho dễ bấm (nhất là trên mobile).
+            // Nét chữ X (svg stroke) dày hơn + màu đậm hơn cho dễ thấy.
+            closeButton:
+              "!left-auto !right-0 !top-0 !translate-x-1/3 !-translate-y-1/3 !opacity-100 !text-gray-700 !border-gray-300 hover:!bg-gray-100 [&>svg]:!stroke-[2.5] [&>svg]:!w-3.5 [&>svg]:!h-3.5",
+          },
+        }}
+      />
       {children}
     </QueryClientProvider>
   );

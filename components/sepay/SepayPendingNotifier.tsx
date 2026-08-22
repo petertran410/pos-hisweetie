@@ -14,6 +14,7 @@ import {
   writeSepayToastWatermark,
   SEPAY_TOAST_WATERMARK_KEY,
 } from "@/lib/sepay/notification";
+import { isNotificationMutedNow } from "@/lib/store/notificationPrefs";
 
 const POLL_INTERVAL = 10000; // 10s
 
@@ -93,12 +94,18 @@ export function SepayPendingNotifier() {
       lastSeenIdRef.current = latestId;
       writeSepayToastWatermark(latestId);
 
-      toast.success("Khách vừa chuyển khoản cần xử lý", {
-        id: "sepay-pending",
-        description: detail || undefined,
-        duration: 10000,
-        action: { label: "Xem ngay", onClick: goToTx },
-      });
+      // Người dùng đang TẮT THÔNG BÁO (mute ở chuông): bỏ qua toast nhưng vẫn
+      // nâng mốc ở trên (hết mute không bị dội một loạt toast cũ) và vẫn
+      // invalidate badge để chuông + danh sách thông báo cập nhật bình thường.
+      if (!isNotificationMutedNow()) {
+        toast.success("Khách vừa chuyển khoản cần xử lý", {
+          id: "sepay-pending",
+          description: detail || undefined,
+          duration: 10000,
+          action: { label: "Xem ngay", onClick: goToTx },
+        });
+      }
+
       queryClient.invalidateQueries({
         queryKey: ["notifications-unread-count"],
       });
