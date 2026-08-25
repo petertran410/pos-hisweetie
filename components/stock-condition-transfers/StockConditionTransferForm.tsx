@@ -21,6 +21,9 @@ import {
 import { stockConditionTransfersApi } from "@/lib/api/stock-condition-transfers";
 
 interface TransferItem {
+  /** Key nội bộ của dòng (không persist). Cho phép cùng 1 sản phẩm có nhiều
+   * dòng trong phiếu (vd: 1 dòng OUT lô chưa xác định + 1 dòng IN lô đúng). */
+  rowId: string;
   productId: number;
   productCode: string;
   productName: string;
@@ -44,6 +47,16 @@ interface Props {
   onClose: () => void;
 }
 
+/**
+ * Giá trị sentinel cho "lô chưa xác định NSX" trong dropdown chọn lô OUT.
+ * Không dùng "" vì "" trùng với "-- Chọn lô --" (chưa chọn gì) — backend cần
+ * phân biệt "chưa chọn" (bị chặn) với "chủ đích chọn lô chưa xác định".
+ */
+const UNKNOWN_LOT = "__UNKNOWN_LOT__";
+
+let rowIdCounter = 0;
+const nextRowId = () => `row-${++rowIdCounter}`;
+
 // ISO → giá trị cho <input type="datetime-local"> theo giờ local.
 function toDatetimeLocal(iso?: string): string {
   const d = iso ? new Date(iso) : new Date();
@@ -54,15 +67,21 @@ function toDatetimeLocal(iso?: string): string {
 }
 
 // Số lượng tối đa cho phép của một dòng, tùy chiều + loại.
-function maxAllowed(i: TransferItem): number {
-  if (i.direction === "IN") return i.good;
+function maxAllowed(i: TransferItem, items: TransferItem[]): number {
+  if (i.direction === "IN") {
+    // Hàng tốt khả dụng = tồn hàng tốt + phần OUT của CÙNG sản phẩm trong phiếu
+    // (OUT trả hàng về hàng tốt trước khi IN lấy — use case chuyển lô).
+    const outForProduct = items
+      .filter((x) => x.productId === i.productId && x.direction === "OUT")
+      .reduce((s, x) => s + (parseInt(x.quantity) || 0), 0);
+    return i.good + outForProduct;
+  }
   // OUT: giới hạn theo tồn hiện có của loại.
   if (i.toBucket === "DAMAGED") return i.damaged;
   if (i.toBucket === "PROMO") return i.promo;
-  // NEAR_EXPIRY OUT: theo tồn của đúng lô đã chọn.
-  const lot = i.nearExpiryLots.find(
-    (l) => (l.expiryDate || "") === (i.expiryDate || "")
-  );
+  // NEAR_EXPIRY OUT: theo tồn của đúng lô đã chọn (sentinel = lô chưa xác định).
+  const selected = i.expiryDate === UNKNOWN_LOT ? "" : i.expiryDate || "";
+  const lot = i.nearExpiryLots.find((l) => (l.expiryDate || "") === selected);
   return lot ? lot.quantity : 0;
 }
 
@@ -95,7 +114,10 @@ export function StockConditionTransferForm({ onClose }: Props) {
     productId: number;
     toBucket: ConditionBucket;
     expiryDate?: string | null;
-  }) => `${item.productId}|${item.toBucket}|${item.expiryDate || ""}`;
+  }) =>
+    `${item.productId}|${item.toBucket}|${
+      item.expiryDate && item.expiryDate !== UNKNOWN_LOT ? item.expiryDate : ""
+    }`;
 
   useEffect(() => {
     if (!selectedBranch?.id || !transferDate || items.length === 0) {
@@ -110,7 +132,9 @@ export function StockConditionTransferForm({ onClose }: Props) {
           items: items.map((item) => ({
             productId: item.productId,
             toBucket: item.toBucket,
-            expiryDate: item.expiryDate || null,
+            // Sentinel = lô chưa xác định NSX → gửi null cho backend.
+            expiryDate:
+              item.expiryDate === UNKNOWN_LOT ? null : item.expiryDate || null,
           })),
         });
         if (!cancelled) setBalanceAtTime(result);
@@ -158,11 +182,9 @@ export function StockConditionTransferForm({ onClose }: Props) {
       promoQuantity?: number;
     }>;
   }) => {
-    if (items.some((i) => i.productId === product.id)) {
-      setSearch("");
-      setShowDropdown(false);
-      return;
-    }
+    // KHÔNG chặn sản phẩm đã có trong phiếu: cho phép cùng 1 sản phẩm có nhiều
+    // dòng (vd: OUT lô chưa xác định + IN lô đúng để chuyển lô). Dòng trùng hoàn
+    // toàn (cùng SP + chiều + loại + lô) sẽ bị chặn ở validate trước khi gửi.
     if (!selectedBranch?.id) return;
 
     setSearch("");
@@ -211,6 +233,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
 
     setItems((prev) => [
       {
+        rowId: nextRowId(),
         productId: product.id,
         productCode: product.code,
         productName: product.name,
@@ -230,8 +253,8 @@ export function StockConditionTransferForm({ onClose }: Props) {
     ]);
   };
 
-  const removeItem = (productId: number) => {
-    setItems((prev) => prev.filter((i) => i.productId !== productId));
+  const removeItem = (rowId: string) => {
+    setItems((prev) => prev.filter((i) => i.rowId !== rowId));
   };
 
   const handleImported = async (imported: ImportedTransferItem[]) => {
@@ -256,39 +279,47 @@ export function StockConditionTransferForm({ onClose }: Props) {
       })
     );
     setItems((prev) => {
-      const map = new Map<number, TransferItem>();
-      for (const item of prev) map.set(item.productId, item);
+      const next = [...prev];
       for (const item of enriched) {
-        const existing = map.get(item.productId);
-        map.set(item.productId, {
-          ...item,
+        // Merge theo (SP + chiều + loại tồn): dòng trùng sẽ bị GHI ĐÈ thay vì
+        // nhân đôi; cùng SP nhưng khác chiều/loại vẫn là 2 dòng độc lập.
+        const idx = next.findIndex(
+          (x) =>
+            x.productId === item.productId &&
+            x.direction === item.direction &&
+            x.toBucket === item.toBucket
+        );
+        const row: TransferItem = {
+          rowId: idx >= 0 ? next[idx].rowId : nextRowId(),
+          productId: item.productId,
+          productCode: item.productCode,
+          productName: item.productName,
+          unit: item.unit,
           good: item.good,
           damaged: item.damaged,
           nearExpiry: item.nearExpiry,
           promo: item.promo,
           nearExpiryLots: item.nearExpiryLots,
-          unit: item.unit,
           direction: item.direction,
           toBucket: item.toBucket,
           quantity: item.quantity,
           expiryDate: item.expiryDate,
           note: item.note,
-          ...(existing ? {} : {}),
-        });
+        };
+        if (idx >= 0) next[idx] = row;
+        else next.push(row);
       }
-      return Array.from(map.values());
+      return next;
     });
   };
 
   const updateItem = (
-    productId: number,
+    rowId: string,
     field: keyof TransferItem,
     value: string
   ) => {
     setItems((prev) =>
-      prev.map((i) =>
-        i.productId === productId ? { ...i, [field]: value } : i
-      )
+      prev.map((i) => (i.rowId === rowId ? { ...i, [field]: value } : i))
     );
   };
 
@@ -306,6 +337,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
       // NSX chỉ BẮT BUỘC với chiều OUT (phải trừ vào đúng lô đang có tồn).
       // Chiều IN để trống được → vào "lô chưa xác định NSX", sau đó dùng chức
       // năng sửa phiếu để điền NSX khi biết. Khớp ràng buộc phía backend.
+      // Ngoại lệ: OUT + sentinel UNKNOWN_LOT = chủ đích trừ vào lô chưa xác định.
       if (
         item.toBucket === "NEAR_EXPIRY" &&
         item.direction === "OUT" &&
@@ -314,7 +346,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
         alert(`${item.productName}: Điều chỉnh giảm cận date phải chọn đúng lô`);
         return;
       }
-      const max = maxAllowed(item);
+      const max = maxAllowed(item, items);
       if (qty > max) {
         const what =
           item.direction === "IN"
@@ -323,6 +355,26 @@ export function StockConditionTransferForm({ onClose }: Props) {
         alert(`${item.productName}: Số lượng (${qty}) vượt quá ${what}`);
         return;
       }
+    }
+
+    // Chống trùng dòng hoàn toàn (cùng SP + chiều + loại tồn + lô) — trùng thì
+    // gộp số lượng vào 1 dòng. Khớp validate phía backend.
+    const seenKeys = new Set<string>();
+    for (const item of items) {
+      const lot =
+        item.toBucket === "NEAR_EXPIRY"
+          ? item.expiryDate === UNKNOWN_LOT
+            ? ""
+            : item.expiryDate
+          : "";
+      const key = `${item.productId}|${item.direction}|${item.toBucket}|${lot}`;
+      if (seenKeys.has(key)) {
+        alert(
+          `${item.productName}: Có 2 dòng trùng nhau (cùng sản phẩm, chiều, loại tồn và lô). Hãy gộp số lượng vào 1 dòng.`
+        );
+        return;
+      }
+      seenKeys.add(key);
     }
 
     createTransfer.mutate(
@@ -338,8 +390,17 @@ export function StockConditionTransferForm({ onClose }: Props) {
           direction: i.direction,
           quantity: parseInt(i.quantity) || 0,
           expiryDate:
-            i.toBucket === "NEAR_EXPIRY" && i.expiryDate
+            i.toBucket === "NEAR_EXPIRY" &&
+            i.expiryDate &&
+            i.expiryDate !== UNKNOWN_LOT
               ? i.expiryDate
+              : undefined,
+          // Sentinel → báo backend trừ vào "lô chưa xác định NSX".
+          unknownLot:
+            i.toBucket === "NEAR_EXPIRY" &&
+            i.direction === "OUT" &&
+            i.expiryDate === UNKNOWN_LOT
+              ? true
               : undefined,
           note: i.note || undefined,
         })),
@@ -412,7 +473,6 @@ export function StockConditionTransferForm({ onClose }: Props) {
           {showDropdown && products.length > 0 && (
             <div className="border rounded-lg mt-1 max-h-80 overflow-y-auto bg-white shadow-lg">
               {products.map((p) => {
-                const already = items.some((i) => i.productId === p.id);
                 const inv = p.inventories?.find(
                   (i: { branchId: number }) => i.branchId === selectedBranch?.id
                 );
@@ -421,12 +481,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
                     key={p.id}
                     type="button"
                     onClick={() => addProduct(p)}
-                    disabled={already}
-                    className={`w-full text-left px-3 py-2 border-t first:border-t-0 flex items-center justify-between ${
-                      already
-                        ? "opacity-50 cursor-not-allowed bg-gray-50"
-                        : "hover:bg-gray-50"
-                    }`}>
+                    className="w-full text-left px-3 py-2 border-t first:border-t-0 flex items-center justify-between hover:bg-gray-50">
                     <div>
                       <span className="font-medium">{p.name}</span>
                       <span className="text-xs text-gray-400 ml-2">
@@ -484,13 +539,13 @@ export function StockConditionTransferForm({ onClose }: Props) {
                 <tbody>
                   {items.map((item) => {
                     const qty = parseInt(item.quantity) || 0;
-                    const max = maxAllowed(item);
+                    const max = maxAllowed(item, items);
                     const isOverflow = qty > max;
                     const needExpiry = item.toBucket === "NEAR_EXPIRY";
                     const isOut = item.direction === "OUT";
                     const balance = balanceAtTime[balanceKey(item)];
                     return (
-                      <tr key={item.productId} className="border-t">
+                      <tr key={item.rowId} className="border-t">
                         <td className="px-3 py-2 text-xs">
                           {item.productCode}
                         </td>
@@ -504,7 +559,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
                               // Đổi chiều → reset lô/số lượng để tránh lệch giới hạn.
                               setItems((prev) =>
                                 prev.map((x) =>
-                                  x.productId === item.productId
+                                  x.rowId === item.rowId
                                     ? {
                                         ...x,
                                         direction: e.target
@@ -527,7 +582,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
                             onChange={(e) =>
                               setItems((prev) =>
                                 prev.map((x) =>
-                                  x.productId === item.productId
+                                  x.rowId === item.rowId
                                     ? {
                                         ...x,
                                         toBucket: e.target
@@ -558,7 +613,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
                             value={item.quantity}
                             onChange={(e) =>
                               updateItem(
-                                item.productId,
+                                item.rowId,
                                 "quantity",
                                 e.target.value.replace(/[^\d]/g, "")
                               )
@@ -580,12 +635,13 @@ export function StockConditionTransferForm({ onClose }: Props) {
                           {!needExpiry ? (
                             <span className="text-gray-300 text-xs">—</span>
                           ) : isOut ? (
-                            // OUT cận date: chọn ĐÚNG lô đang có tồn.
+                            // OUT cận date: chọn ĐÚNG lô đang có tồn. Lô "Chưa xác
+                            // định" dùng sentinel để phân biệt với "chưa chọn lô".
                             <select
                               value={item.expiryDate}
                               onChange={(e) =>
                                 updateItem(
-                                  item.productId,
+                                  item.rowId,
                                   "expiryDate",
                                   e.target.value
                                 )
@@ -595,7 +651,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
                               {item.nearExpiryLots.map((l) => (
                                 <option
                                   key={l.expiryDate || "null"}
-                                  value={l.expiryDate || ""}>
+                                  value={l.expiryDate || UNKNOWN_LOT}>
                                   {l.expiryDate
                                     ? formatMonthYear(l.expiryDate)
                                     : "Chưa xác định"}{" "}
@@ -608,7 +664,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
                               monthOnly
                               value={item.expiryDate}
                               onChange={(v) =>
-                                updateItem(item.productId, "expiryDate", v)
+                                updateItem(item.rowId, "expiryDate", v)
                               }
                             />
                           )}
@@ -618,7 +674,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
                             type="text"
                             value={item.note}
                             onChange={(e) =>
-                              updateItem(item.productId, "note", e.target.value)
+                              updateItem(item.rowId, "note", e.target.value)
                             }
                             placeholder="..."
                             className="w-full border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand"
@@ -626,7 +682,7 @@ export function StockConditionTransferForm({ onClose }: Props) {
                         </td>
                         <td className="px-3 py-2 text-center">
                           <button
-                            onClick={() => removeItem(item.productId)}
+                            onClick={() => removeItem(item.rowId)}
                             className="text-red-400 hover:text-red-600">
                             <Trash2 className="w-4 h-4" />
                           </button>

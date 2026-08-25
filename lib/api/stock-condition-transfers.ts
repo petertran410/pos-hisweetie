@@ -85,6 +85,8 @@ export interface CreateStockConditionTransferItem {
   direction?: TransferDirection;
   quantity: number;
   expiryDate?: string;
+  /** true = dòng OUT cận date trừ vào "lô chưa xác định NSX" (expiryDate=null). */
+  unknownLot?: boolean;
   note?: string;
 }
 

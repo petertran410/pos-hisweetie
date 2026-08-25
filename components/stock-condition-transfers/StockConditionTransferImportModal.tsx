@@ -282,11 +282,6 @@ export function StockConditionTransferImportModal({ branchId, onClose, onConfirm
       for (let index = parsed.length - 1; index >= 0; index--) {
         const row = parsed[index];
         const code = normalize(row.code);
-        if (seen.has(code)) {
-          previews.unshift({ ...row, error: "Mã hàng trùng trong file" });
-          continue;
-        }
-        seen.add(code);
         const product = byCode.get(code);
         const direction = parseDirection(row.direction);
         const bucket = parseBucket(row.bucket);
@@ -302,6 +297,17 @@ export function StockConditionTransferImportModal({ branchId, onClose, onConfirm
           previews.unshift({ ...row, error: "Loại tồn không hợp lệ" });
           continue;
         }
+        // Cùng 1 mã hàng được phép có NHIỀU dòng (khác chiều / khác loại tồn) để
+        // hỗ trợ chuyển lô trong 1 phiếu; chỉ chặn 2 dòng trùng hoàn toàn.
+        const lineKey = `${code}|${direction}|${bucket}`;
+        if (seen.has(lineKey)) {
+          previews.unshift({
+            ...row,
+            error: "Dòng trùng trong file (cùng mã hàng, chiều và loại tồn)",
+          });
+          continue;
+        }
+        seen.add(lineKey);
         if (row.quantity === undefined || !Number.isInteger(row.quantity) || row.quantity <= 0) {
           previews.unshift({ ...row, error: "Số lượng phải là số nguyên lớn hơn 0" });
           continue;

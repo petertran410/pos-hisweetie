@@ -9,8 +9,13 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { useAuthStore } from "@/lib/store/auth";
 import { API_URL } from "@/lib/config/api";
+import { productsApi, type NearExpiryLot } from "@/lib/api/products";
 import { useCan, useIsAdmin } from "@/lib/hooks/useCan";
 import { printEntity } from "@/lib/utils/print";
+import {
+  DatePickerInput,
+  formatMonthYear,
+} from "@/components/ui/DatePickerInput";
 import Swal from "sweetalert2";
 
 interface ConfirmStockModalProps {
@@ -21,17 +26,24 @@ interface ConfirmStockModalProps {
 
 interface ConfirmItem {
   detailId: number;
+  productId: number;
   productCode: string;
   productName: string;
   requestQuantity: number;
   goodQuantity: number;
   damagedQuantity: number;
   nearExpiryQuantity: number;
+  /** Lô NSX của phần cận date (YYYY-MM-DD, rỗng = lô chưa xác định NSX). */
+  nearExpiryDate: string;
   returnPrice: number;
   saleGoodQuantity: number;
   saleDamagedQuantity: number;
   saleNearExpiryQuantity: number;
 }
+
+/** Chuẩn hóa về YYYY-MM-DD để so khớp và đưa vào DatePickerInput. */
+const toDateKey = (v: string | null | undefined): string =>
+  v ? String(v).slice(0, 10) : "";
 
 export function ConfirmStockModal({
   returnOrderId,
@@ -93,14 +105,57 @@ export function ConfirmStockModal({
             nearExpiryQty = 0;
           }
 
+          // Default lô NSX cho phần cận date:
+          //  1. Lô đã lưu từ draft trước (manufactureDate).
+          //  2. Lô gốc của dòng hóa đơn (soldExpiryDate): hàng bán ra là cận date
+          //     từ lô nào thì trả về đúng lô đó. Ưu tiên quan hệ invoiceDetail;
+          //     nếu chưa có (backend chưa restart / phiếu nhiều hóa đơn) thì dò
+          //     từ danh sách dòng hóa đơn đi kèm phiếu trả.
+          //  3. Rỗng → người dùng tự chọn, để trống thì vào lô chưa xác định.
+          let nearExpiryDate = toDateKey(d.manufactureDate);
+          if (!nearExpiryDate) {
+            // Dòng hóa đơn gốc tham chiếu: { id, productId, conditionType, soldExpiryDate }
+            type InvLineRef = {
+              id?: number;
+              productId?: number;
+              conditionType?: string | null;
+              soldExpiryDate?: string | Date | null;
+            };
+            const invLines = (returnOrder.invoice?.details ||
+              []) as InvLineRef[];
+            let invDetail: InvLineRef | null | undefined =
+              d.invoiceDetail ?? invLines.find((x) => x.id === d.invoiceDetailId);
+            if (!invDetail) {
+              // Không biết id dòng gốc: chỉ tự dò khi có DUY NHẤT 1 dòng cận
+              // date của cùng sản phẩm để tránh gán nhầm lô.
+              const candidates = invLines.filter(
+                (x) =>
+                  x.productId === d.productId &&
+                  x.conditionType === "near_expiry" &&
+                  x.soldExpiryDate
+              );
+              if (candidates.length === 1) invDetail = candidates[0];
+            }
+            if (
+              invDetail?.conditionType === "near_expiry" &&
+              invDetail?.soldExpiryDate
+            ) {
+              nearExpiryDate = toDateKey(
+                String(invDetail.soldExpiryDate)
+              );
+            }
+          }
+
           return {
             detailId: d.id,
+            productId: Number(d.productId),
             productCode: d.productCode,
             productName: d.productName,
             requestQuantity: Number(d.requestQuantity),
             goodQuantity: goodQty,
             damagedQuantity: damagedQty,
             nearExpiryQuantity: nearExpiryQty,
+            nearExpiryDate,
             returnPrice: Number(d.returnPrice),
             saleGoodQuantity: Number(d.saleGoodQuantity || 0),
             saleDamagedQuantity: Number(d.saleDamagedQuantity || 0),
@@ -121,6 +176,53 @@ export function ConfirmStockModal({
       } catch {}
     }
   }, [returnOrder]);
+
+  // Tồn cận date theo lô của các sản phẩm đang có nhập cận date — hiển thị chip
+  // chọn nhanh lô. Dùng endpoint POS-only để không yêu cầu quyền products:view.
+  const [lotsByProduct, setLotsByProduct] = useState<
+    Record<number, NearExpiryLot[]>
+  >({});
+
+  useEffect(() => {
+    const branchId = returnOrder?.branchId;
+    if (!branchId) return;
+    const missing = [
+      ...new Set(
+        confirmItems
+          .filter((i) => i.nearExpiryQuantity > 0)
+          .map((i) => i.productId)
+          .filter((id) => id > 0 && lotsByProduct[id] === undefined)
+      ),
+    ];
+    if (missing.length === 0) return;
+    let cancelled = false;
+    Promise.all(
+      missing.map((id) =>
+        productsApi
+          .getNearExpiryLots(id, branchId, true)
+          .then((res) => [id, res.data || []] as const)
+          .catch(() => [id, [] as NearExpiryLot[]] as const)
+      )
+    ).then((entries) => {
+      if (cancelled) return;
+      setLotsByProduct((prev) => {
+        const next = { ...prev };
+        for (const [id, lots] of entries) next[id] = lots;
+        return next;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [confirmItems, returnOrder?.branchId, lotsByProduct]);
+
+  const updateLot = (index: number, value: string) => {
+    setConfirmItems((prev) =>
+      prev.map((item, i) =>
+        i === index ? { ...item, nearExpiryDate: value } : item
+      )
+    );
+  };
 
   const updateItem = (
     index: number,
@@ -235,6 +337,9 @@ export function ConfirmStockModal({
         goodQuantity: item.goodQuantity,
         damagedQuantity: item.damagedQuantity,
         nearExpiryQuantity: item.nearExpiryQuantity,
+        // Lô NSX của phần cận date; null → vào lô "chưa xác định NSX".
+        nearExpiryDate:
+          item.nearExpiryQuantity > 0 ? item.nearExpiryDate || null : null,
       })),
       note,
     };
@@ -384,6 +489,7 @@ export function ConfirmStockModal({
                   <th className="px-2 py-2 text-center w-28">Hàng tốt</th>
                   <th className="px-2 py-2 text-center w-28">Bục rách</th>
                   <th className="px-2 py-2 text-center w-28">Cận date</th>
+                  <th className="px-2 py-2 text-center w-36">Lô NSX</th>
                   <th className="px-2 py-2 text-right w-24">Tổng thực nhận</th>
                   <th className="px-2 py-2 text-right w-24">Giá nhập lại</th>
                   <th className="px-2 py-2 text-right w-28">Thành tiền</th>
@@ -393,6 +499,17 @@ export function ConfirmStockModal({
               <tbody>
                 {confirmItems.map((item, idx) => {
                   const totalConfirmed = getTotalConfirmed(item);
+                  // Lô cận date hiện có của sản phẩm — chỉ tính lô CÓ NGÀY để
+                  // đưa vào dropdown; lô "chưa xác định" (nếu có tồn) được thể
+                  // hiện bằng option "Chưa rõ NSX" riêng.
+                  const productLots = lotsByProduct[item.productId] || [];
+                  const datedLots = productLots.filter((l) => l.expiryDate);
+                  const unknownLot = productLots.find((l) => !l.expiryDate);
+                  const isCustomLot =
+                    !!item.nearExpiryDate &&
+                    !datedLots.some(
+                      (l) => toDateKey(l.expiryDate) === item.nearExpiryDate
+                    );
                   return (
                     <tr key={idx} className="border-t">
                       <td className="px-2 py-2">
@@ -482,6 +599,54 @@ export function ConfirmStockModal({
                             className="w-14 px-1 py-1 border rounded text-right text-sm"
                           />
                         </div>
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        {item.nearExpiryQuantity > 0 ? (
+                          <div>
+                            <select
+                              value={isCustomLot ? "__OTHER__" : item.nearExpiryDate}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                if (v === "__OTHER__") {
+                                  // Vào chế độ nhập tháng khác: nếu đang chọn 1
+                                  // lô có sẵn thì reset để chọn tháng mới.
+                                  updateLot(idx, isCustomLot ? item.nearExpiryDate : "");
+                                } else {
+                                  updateLot(idx, v);
+                                }
+                              }}
+                              title="Lô NSX của phần hàng cận date — để trống thì vào lô chưa xác định NSX"
+                              className={`w-full border rounded px-1 py-1 text-[11px] bg-white focus:outline-none focus:ring-1 ${
+                                item.nearExpiryDate
+                                  ? "border-amber-300 focus:ring-amber-300"
+                                  : "border-gray-300 focus:ring-brand"
+                              }`}>
+                              {datedLots.map((l) => (
+                                <option
+                                  key={l.expiryDate}
+                                  value={toDateKey(l.expiryDate)}>
+                                  {formatMonthYear(l.expiryDate)} ({l.quantity})
+                                </option>
+                              ))}
+                              <option value="">
+                                Chưa rõ NSX
+                                {unknownLot ? ` (${unknownLot.quantity})` : ""}
+                              </option>
+                              <option value="__OTHER__">Tháng khác…</option>
+                            </select>
+                            {isCustomLot && (
+                              <DatePickerInput
+                                monthOnly
+                                value={item.nearExpiryDate}
+                                onChange={(v) => updateLot(idx, v)}
+                                placeholder="Chọn tháng NSX"
+                                className="w-full flex items-center justify-between border border-amber-300 bg-amber-50 rounded px-1.5 py-1 text-[11px] text-left mt-1"
+                              />
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-300 text-xs">—</span>
+                        )}
                       </td>
                       <td className="px-2 py-2 text-right font-medium">
                         {totalConfirmed}

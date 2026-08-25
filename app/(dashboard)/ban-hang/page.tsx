@@ -3675,8 +3675,7 @@ export default function BanHangPage() {
         soldById: activeTab.soldById ?? user?.id,
         discountAmount: Number(activeTab.discount) || 0,
         discountRatio: Number(activeTab.discountRatio) || 0,
-        priceBookId: activeTab.selectedPriceBookId,
-        priceBookName: activeTab.selectedPriceBookName,
+        priceBookId: activeTab.selectedPriceBookId ?? 0,
         consignStatus: activeTab.consignStatus || "pending",
         description: activeTab.orderNote,
         items: activeTab.cartItems
@@ -3684,7 +3683,7 @@ export default function BanHangPage() {
           .map((item) => ({
             productId: item.product?.id,
             quantity: Number(item.quantity),
-            price: Number(item.price),
+            unitPrice: Number(item.price),
             discount: Number(item.discount) || 0,
             note: item.note,
           })),
