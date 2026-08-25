@@ -79,8 +79,10 @@ function maxAllowed(i: TransferItem, items: TransferItem[]): number {
   // OUT: giới hạn theo tồn hiện có của loại.
   if (i.toBucket === "DAMAGED") return i.damaged;
   if (i.toBucket === "PROMO") return i.promo;
-  // NEAR_EXPIRY OUT: theo tồn của đúng lô đã chọn (sentinel = lô chưa xác định).
-  const selected = i.expiryDate === UNKNOWN_LOT ? "" : i.expiryDate || "";
+  // NEAR_EXPIRY OUT: chưa chọn lô → 0 (nhắc người dùng phải chọn lô; nếu để
+  // theo lô chưa xác định sẽ gây hiểu nhầm). Sentinel = lô chưa xác định.
+  if (!i.expiryDate) return 0;
+  const selected = i.expiryDate === UNKNOWN_LOT ? "" : i.expiryDate;
   const lot = i.nearExpiryLots.find((l) => (l.expiryDate || "") === selected);
   return lot ? lot.quantity : 0;
 }
@@ -544,6 +546,10 @@ export function StockConditionTransferForm({ onClose }: Props) {
                     const needExpiry = item.toBucket === "NEAR_EXPIRY";
                     const isOut = item.direction === "OUT";
                     const balance = balanceAtTime[balanceKey(item)];
+                    // OUT cận date chưa chọn lô: backend trả về số dư của "lô
+                    // chưa xác định" theo key rỗng — không có ý nghĩa với dòng
+                    // OUT (bắt buộc chọn lô) → hiển thị "—" thay vì số gây hiểu nhầm.
+                    const balanceNA = isOut && needExpiry && !item.expiryDate;
                     return (
                       <tr key={item.rowId} className="border-t">
                         <td className="px-3 py-2 text-xs">
@@ -601,7 +607,9 @@ export function StockConditionTransferForm({ onClose }: Props) {
                           </select>
                         </td>
                         <td className="px-3 py-2 text-right font-medium text-slate-700">
-                          {balance == null ? "—" : balance.toLocaleString()}
+                          {balance == null || balanceNA
+                            ? "—"
+                            : balance.toLocaleString()}
                         </td>
                         <td
                           className={`px-3 py-2 text-right font-medium ${isOut ? "text-amber-600" : "text-green-600"}`}>
