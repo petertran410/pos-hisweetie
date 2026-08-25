@@ -20,6 +20,8 @@ interface FactorySelectProps {
   placeholder?: string;
   /** Loại trừ 1 factoryId khỏi danh sách (tránh chọn trùng primary/backup). */
   excludeFactoryId?: number | null;
+  /** Loại trừ nhiều factoryId — dùng khi sản phẩm gắn nhiều nhà máy. */
+  excludeFactoryIds?: number[];
   disabled?: boolean;
   className?: string;
   label?: string;
@@ -44,6 +46,7 @@ export function FactorySelect({
   onChange,
   placeholder = "— Chưa gắn —",
   excludeFactoryId,
+  excludeFactoryIds,
   disabled,
   className = "",
   label,
@@ -66,18 +69,22 @@ export function FactorySelect({
   // Nhà máy đang chọn (kể cả khi nó bị exclude ở dropdown còn lại).
   const selected = allFactories.find((f) => f.id === value) ?? null;
 
-  // Danh sách hiển thị: loại trừ excludeFactoryId + lọc theo search.
+  // Danh sách hiển thị: loại trừ nhà máy đã gắn + lọc theo search.
   const visibleFactories = useMemo(() => {
     const q = search.toLowerCase().trim();
+    const excluded = new Set<number>(excludeFactoryIds ?? []);
+    if (excludeFactoryId != null) excluded.add(excludeFactoryId);
+    // Nhà máy đang chọn vẫn phải hiện để người dùng thấy lựa chọn hiện tại.
+    if (value != null) excluded.delete(value);
     return allFactories
-      .filter((f) => f.id !== excludeFactoryId)
+      .filter((f) => !excluded.has(f.id))
       .filter(
         (f) =>
           !q ||
           f.name.toLowerCase().includes(q) ||
           (f.code ?? "").toLowerCase().includes(q)
       );
-  }, [allFactories, excludeFactoryId, search]);
+  }, [allFactories, excludeFactoryId, excludeFactoryIds, search, value]);
 
   // Đóng khi click ra ngoài.
   useEffect(() => {

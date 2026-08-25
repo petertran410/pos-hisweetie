@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, RotateCcw, Search, X } from "lucide-react";
+import { ChevronDown, RotateCcw } from "lucide-react";
 import {
   FilterMultiSelect,
   FilterNumberRange,
@@ -63,8 +63,6 @@ export function PurchasingPlanningSidebar({
   middleCategories = [],
   childCategories = [],
 }: Props) {
-  const [searchInput, setSearchInput] = useState(filters.search ?? "");
-
   // Trạng thái gập/mở từng nhóm — ghi nhớ giữa các lần mở trang
   const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
     level: true,
@@ -93,17 +91,6 @@ export function PurchasingPlanningSidebar({
       return next;
     });
   };
-
-  // Debounce ô tìm kiếm
-  useEffect(() => {
-    const t = setTimeout(() => {
-      if ((filters.search ?? "") !== searchInput) {
-        setFilters({ search: searchInput || undefined, page: 1 });
-      }
-    }, 400);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchInput]);
 
   const toOptions = (list: string[]): FilterOption[] =>
     list.map((v) => ({ value: v, label: v }));
@@ -144,7 +131,6 @@ export function PurchasingPlanningSidebar({
   }, [filters]);
 
   const handleReset = () => {
-    setSearchInput("");
     setFilters({
       search: undefined,
       priority: undefined,
@@ -172,14 +158,16 @@ export function PurchasingPlanningSidebar({
 
   return (
     <aside
-      className="flex w-64 shrink-0 flex-col gap-3 overflow-y-auto border-r p-4"
+      className="custom-sidebar-scroll m-4 flex w-72 shrink-0 flex-col rounded-xl border bg-white shadow-xl"
       style={{ borderColor: "var(--dt-border)" }}>
       {/* ── Tiêu đề ── */}
-      <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+      <div
+        className="sticky top-0 z-10 flex items-center justify-between rounded-t-xl border-b bg-white px-4 py-2"
+        style={{ borderColor: "var(--dt-border)" }}>
+        <h2 className="flex items-center gap-1.5 text-base font-semibold text-gray-800">
           Bộ lọc
           {activeCount > 0 && (
-            <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700">
+            <span className="bg-brand-soft text-brand rounded-full px-1.5 py-0.5 text-[10px] font-medium">
               {activeCount}
             </span>
           )}
@@ -188,36 +176,14 @@ export function PurchasingPlanningSidebar({
           <button
             type="button"
             onClick={handleReset}
-            className="flex items-center gap-1 text-xs text-gray-500 transition-colors hover:text-gray-800">
+            className="text-brand hover:text-brand-dark flex items-center gap-1 text-sm font-medium transition-colors">
             <RotateCcw className="h-3 w-3" />
-            Đặt lại
+            Xóa tất cả
           </button>
         )}
       </div>
 
-      {/* ── Tìm kiếm ── */}
-      <div>
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Mã hoặc tên hàng..."
-            className="w-full rounded border py-1.5 pr-7 pl-8 text-sm outline-none focus:ring-1 focus:ring-blue-400"
-            style={{ borderColor: "var(--dt-border)" }}
-          />
-          {searchInput && (
-            <button
-              type="button"
-              onClick={() => setSearchInput("")}
-              className="absolute top-1/2 right-2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-      </div>
-
+      <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
       {/* ── Toggle nhanh ── */}
       <div className="flex flex-col gap-1.5">
         <Checkbox
@@ -508,6 +474,7 @@ export function PurchasingPlanningSidebar({
           )}
         </div>
       )}
+      </div>
     </aside>
   );
 }

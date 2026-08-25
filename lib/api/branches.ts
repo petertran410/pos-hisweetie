@@ -7,6 +7,19 @@ export interface Branch {
   contactNumber?: string;
   address?: string;
   isActive: boolean;
+  /**
+   * @deprecated Dự kiến đặt hàng đã gộp toàn công ty — không còn phân biệt
+   * chi nhánh gốc. Giữ field để đọc dữ liệu cũ, không dùng để tính toán.
+   */
+  isPurchasingHub?: boolean;
+  /**
+   * @deprecated Leadtime đặt hàng dừng ở mốc hàng về công ty; điều chuyển nội
+   * bộ không còn được cộng vào.
+   */
+  transferLeadtimeColdMin?: number | null;
+  transferLeadtimeColdMax?: number | null;
+  transferLeadtimeNormalMin?: number | null;
+  transferLeadtimeNormalMax?: number | null;
 }
 
 export interface BranchesResponse {

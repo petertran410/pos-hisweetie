@@ -84,7 +84,8 @@ export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
     moqUnit: undefined,
     moqScope: undefined,
     moqIncrement: undefined,
-    leadtimeDays: undefined,
+    productionLeadtimeMin: undefined,
+    productionLeadtimeMax: undefined,
     paymentTerm: "",
   });
 
@@ -125,7 +126,8 @@ export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
           existing.moqIncrement != null
             ? Number(existing.moqIncrement)
             : undefined,
-        leadtimeDays: existing.leadtimeDays ?? undefined,
+        productionLeadtimeMin: existing.productionLeadtimeMin ?? undefined,
+        productionLeadtimeMax: existing.productionLeadtimeMax ?? undefined,
         paymentTerm: existing.paymentTerm ?? "",
       });
     }
@@ -166,10 +168,11 @@ export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
       moqValue: form.moqValue ?? null,
       moqBasis: form.moqValue == null ? null : (form.moqBasis ?? "QUANTITY"),
       moqUnit: form.moqValue == null ? null : (form.moqUnit ?? "CARTON"),
-      moqScope: form.moqValue == null ? null : (form.moqScope ?? "PER_ORDER"),
-      moqIncrement: form.moqValue == null ? null : (form.moqIncrement ?? null),
-      leadtimeDays: form.leadtimeDays ?? null,
-      paymentTerm: form.paymentTerm?.trim() || null,
+       moqScope: form.moqValue == null ? null : (form.moqScope ?? "PER_ORDER"),
+       moqIncrement: form.moqValue == null ? null : (form.moqIncrement ?? null),
+       productionLeadtimeMin: form.productionLeadtimeMin ?? null,
+       productionLeadtimeMax: form.productionLeadtimeMax ?? null,
+       paymentTerm: form.paymentTerm?.trim() || null,
     };
 
     try {
@@ -332,9 +335,30 @@ export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
                     MOQ riêng từng sản phẩm khai báo ở bảng sản phẩm bên dưới.
                   </p>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Leadtime (ngày)</label>
-                  <input type="number" min={0} value={form.leadtimeDays ?? ""} onChange={(event) => setForm({ ...form, leadtimeDays: event.target.value === "" ? undefined : Number(event.target.value) })} placeholder="Số ngày" className={INPUT_CLASS} />
+              </div>
+              <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50/50 p-3">
+                <p className="mb-2 text-sm font-medium text-blue-900">Thời gian sản xuất</p>
+                <p className="mb-3 text-xs text-blue-700">
+                  Nhà máy này sản xuất xong một đơn trong khoảng bao nhiêu ngày.
+                  Dùng để dự báo thời điểm cần đặt lại hàng.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  {([
+                    ["productionLeadtimeMin", "Nhanh nhất", "Lần nhanh nhất từng gặp"],
+                    ["productionLeadtimeMax", "Chậm nhất", "Dùng để tính ngày phải đặt"],
+                  ] as const).map(([field, label, hint]) => (
+                    <div key={field}>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">{label} (ngày)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={form[field] ?? ""}
+                        onChange={(event) => setForm({ ...form, [field]: event.target.value === "" ? undefined : Number(event.target.value) })}
+                        className={INPUT_CLASS}
+                      />
+                      <p className="mt-1 text-[11px] leading-tight text-gray-400">{hint}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </section>

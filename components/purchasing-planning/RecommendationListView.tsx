@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, PackageSearch } from "lucide-react";
 import { PriorityBadge, ReliabilityBadge } from "./PriorityBadge";
 import { money, num } from "./columns";
 import {
@@ -27,19 +27,18 @@ export function RecommendationListView({
 }: Props) {
   if (isLoading && items.length === 0) {
     return (
-      <div className="flex-1 overflow-y-auto p-4">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="mb-3 h-24 animate-pulse rounded bg-gray-100" />
-        ))}
+      <div className="flex flex-1 items-center justify-center py-20">
+        <div className="border-brand h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" />
       </div>
     );
   }
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 p-12 text-center">
-        <p className="font-medium text-gray-700">Không có sản phẩm nào</p>
-        <p className="text-sm text-gray-500">
+      <div className="flex-1 py-20 text-center text-gray-400">
+        <PackageSearch className="mx-auto mb-3 h-12 w-12 opacity-30" />
+        <p className="text-sm">Không có sản phẩm nào</p>
+        <p className="mt-1 text-xs">
           Thử bỏ bớt bộ lọc hoặc tắt &quot;Chỉ hiện SKU cần đặt&quot;.
         </p>
       </div>
@@ -83,7 +82,7 @@ function RecommendationRow({
       type="button"
       onClick={onSelect}
       className={`w-full px-4 py-3 text-left transition-colors ${
-        selected ? "bg-blue-50" : style.row ? style.row : "hover:bg-gray-50"
+        selected ? "bg-brand-soft" : style.row ? style.row : "hover:bg-gray-50"
       }`}>
       {/* Hàng 1: mã, tên, NCC */}
       <div className="mb-1 flex items-start justify-between gap-3">

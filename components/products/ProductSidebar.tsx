@@ -226,6 +226,12 @@ const DIRECT_SALE_OPTIONS = [
   { value: "no", label: "Không" },
 ];
 
+/** Phân loại hàng hoá — quyết định leadtime giai đoạn chuyển kho. */
+const CARGO_TYPE_OPTIONS = [
+  { value: "COLD", label: "Hàng lạnh" },
+  { value: "NORMAL", label: "Hàng thường" },
+];
+
 export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
   const { data: parentCategories } = useCategories("parent", {
     silentForbidden: true,
@@ -246,6 +252,7 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
   const [stockStatus, setStockStatus] = useState("");
   const [tradeMarkIds, setTradeMarkIds] = useState<string[]>([]);
   const [directSale, setDirectSale] = useState("");
+  const [cargoType, setCargoType] = useState<"" | "COLD" | "NORMAL">("");
 
   // ── Thời gian tạo ──
   const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
@@ -296,7 +303,8 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
     (dateMode === "custom" && !!(fromDate && toDate));
 
   const activeFilterCount =
-    [selectedStatus, stockStatus, directSale].filter(Boolean).length +
+    [selectedStatus, stockStatus, directSale, cargoType].filter(Boolean)
+      .length +
     (selectedTypes.length > 0 ? 1 : 0) +
     (parentNames.length > 0 ? 1 : 0) +
     (middleNames.length > 0 ? 1 : 0) +
@@ -317,6 +325,7 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
       if (tradeMarkIds.length > 0) f.tradeMarkIds = tradeMarkIds.map(Number);
       if (directSale === "yes") f.isDirectSale = true;
       if (directSale === "no") f.isDirectSale = false;
+      if (cargoType) f.cargoType = cargoType;
 
       if (selectedPreset !== "all_time" || dateMode === "custom") {
         const range =
@@ -346,6 +355,7 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
     stockStatus,
     tradeMarkIds,
     directSale,
+    cargoType,
     dateMode,
     selectedPreset,
     fromDate,
@@ -375,6 +385,7 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
     setStockStatus("");
     setTradeMarkIds([]);
     setDirectSale("");
+    setCargoType("");
     setDateMode("preset");
     setSelectedPreset("all_time");
     setFromDate("");
@@ -637,6 +648,20 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
             placeholder="Tất cả"
             searchPlaceholder="Tìm danh mục..."
             onChange={setChildNames}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Loại vận chuyển
+          </label>
+          <SimpleDropdown
+            options={CARGO_TYPE_OPTIONS}
+            value={cargoType}
+            placeholder="Tất cả"
+            onChange={(value) =>
+              setCargoType(value as "" | "COLD" | "NORMAL")
+            }
           />
         </div>
 

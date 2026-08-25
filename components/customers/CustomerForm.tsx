@@ -19,6 +19,18 @@ import { CustomerAddressFormModal } from "../pos/CustomerAddressFormModal";
 import { MisaEmployeeDropdown } from "./MisaEmployeeDropdown";
 import { MisaEmployee } from "@/lib/api/misa";
 import { usePermission } from "@/lib/hooks/usePermissions";
+import {
+  DebtPolicyFields,
+  EMPTY_DEBT_POLICY_FORM,
+  toDebtPolicyPayload,
+  validateDebtPolicyForm,
+  type DebtPolicyFormValue,
+} from "../debt-tracking/DebtPolicyFields";
+import {
+  useDebtPolicy,
+  useUpsertDebtPolicy,
+} from "@/lib/hooks/useDebtTracking";
+import { useUsersForFilter } from "@/lib/hooks/useUsers";
 
 interface CustomerFormProps {
   customer?: Customer;
@@ -134,9 +146,49 @@ export function CustomerForm({
   const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [showBirthDatePicker, setShowBirthDatePicker] = useState(false);
   const birthDatePickerRef = useRef<HTMLDivElement>(null);
-  const [activeFormTab, setActiveFormTab] = useState<"basic" | "invoice">(
-    "basic"
+  const [activeFormTab, setActiveFormTab] = useState<
+    "basic" | "invoice" | "debt"
+  >("basic");
+
+  // ---- Thiết lập công nợ ----
+  // Đây là cấu hình dài hạn của khách nên đặt ngay trong form khách hàng,
+  // không bắt người dùng sang trang theo dõi công nợ để chỉnh.
+  const canManageDebtPolicy = usePermission("debt_tracking", "update_policy");
+  const { data: debtPolicyData } = useDebtPolicy(
+    canManageDebtPolicy && customer?.id ? customer.id : undefined
   );
+  const { data: usersForPic } = useUsersForFilter();
+  const upsertDebtPolicy = useUpsertDebtPolicy();
+  const [debtPolicyForm, setDebtPolicyForm] = useState<DebtPolicyFormValue>(
+    EMPTY_DEBT_POLICY_FORM
+  );
+  const [loadedDebtPolicyId, setLoadedDebtPolicyId] = useState<number | null>(
+    null
+  );
+
+  // Nạp thiết lập hiện có đúng một lần, theo pattern "điều chỉnh state khi
+  // render" của React để không tạo vòng render thừa.
+  const loadedPolicy = debtPolicyData?.policy;
+  if (loadedPolicy && loadedDebtPolicyId !== loadedPolicy.id) {
+    setLoadedDebtPolicyId(loadedPolicy.id);
+    setDebtPolicyForm({
+      hasCreditLimit: loadedPolicy.hasCreditLimit,
+      creditLimit:
+        loadedPolicy.creditLimit != null
+          ? String(Number(loadedPolicy.creditLimit))
+          : "",
+      hasTermDays: loadedPolicy.hasTermDays,
+      termDays:
+        loadedPolicy.termDays != null ? String(loadedPolicy.termDays) : "",
+      paymentFrequency:
+        loadedPolicy.paymentFrequency != null
+          ? String(loadedPolicy.paymentFrequency)
+          : "",
+      debtForm: loadedPolicy.debtForm ?? "",
+      salePicId: loadedPolicy.salePicId ?? "",
+      accountantPicId: loadedPolicy.accountantPicId ?? "",
+    });
+  }
 
   // Portal mount guard — render modal lên document.body để overlay luôn phủ
   // toàn màn hình, tránh bị "kẹt" trong stacking/overflow context của trang cha
@@ -637,10 +689,32 @@ export function CustomerForm({
     });
 
     if (customer) {
+      // Thiết lập công nợ lưu ở bảng riêng nên gọi API riêng. Kiểm tra trước
+      // khi cập nhật khách để không lưu nửa vời.
+      if (canManageDebtPolicy) {
+        const debtError = validateDebtPolicyForm(debtPolicyForm);
+        if (debtError) {
+          toast.error(debtError);
+          setActiveFormTab("debt");
+          return;
+        }
+      }
+
       updateCustomer.mutate(
         { id: customer.id, data: formattedData },
         {
-          onSuccess: () => {
+          onSuccess: async () => {
+            if (canManageDebtPolicy) {
+              try {
+                await upsertDebtPolicy.mutateAsync({
+                  customerId: customer.id,
+                  payload: toDebtPolicyPayload(debtPolicyForm),
+                });
+              } catch {
+                // Hook đã hiện toast lỗi; giữ modal mở để người dùng thử lại.
+                return;
+              }
+            }
             onSuccess?.();
             onClose();
           },
@@ -696,6 +770,18 @@ export function CustomerForm({
               }`}>
               Thông tin xuất hóa đơn
             </button>
+            {canManageDebtPolicy && (
+              <button
+                type="button"
+                onClick={() => setActiveFormTab("debt")}
+                className={`py-2 sm:py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeFormTab === "debt"
+                    ? "border-brand text-brand"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}>
+                Công nợ
+              </button>
+            )}
           </div>
           {/* ================= TAB 1: THÔNG TIN CƠ BẢN ================= */}
           <div
@@ -1287,6 +1373,31 @@ export function CustomerForm({
               </div>
             )}
           </div>
+
+          {/* ================= TAB 3: CÔNG NỢ ================= */}
+          {canManageDebtPolicy && (
+            <div
+              className={
+                activeFormTab === "debt"
+                  ? "p-3 sm:p-6 flex-1 overflow-y-auto min-h-0"
+                  : "hidden"
+              }>
+              {customer ? (
+                <DebtPolicyFields
+                  value={debtPolicyForm}
+                  onChange={(patch) =>
+                    setDebtPolicyForm((prev) => ({ ...prev, ...patch }))
+                  }
+                  users={usersForPic ?? []}
+                />
+              ) : (
+                <div className="text-sm text-gray-500 bg-gray-50 border rounded px-3 py-3">
+                  Hãy tạo khách hàng trước, sau đó mở lại để thiết lập công nợ.
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Footer */}
           <div className="sticky bottom-0 bg-white border-t py-3 sm:py-4 px-4 flex justify-end gap-2 flex-shrink-0">
             <button

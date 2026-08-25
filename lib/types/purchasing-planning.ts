@@ -122,13 +122,16 @@ export const CONFIG_SOURCE_LABEL: Record<ConfigSource, string> = {
   DERIVED: "Tự học từ lịch sử",
 };
 
-export const PURCHASING_CONFIG_FIELDS = [
-  "leadTimeDays",
-  "safetyDays",
-  "coverageDays",
-  "growthFactor",
-  "moq",
-] as const;
+/**
+ * Tham số duy nhất còn cần khai bằng tay.
+ *
+ * Những thứ đã được tính tự động, không còn cấu hình ở đây:
+ *  - `leadTimeDays`: từ chuỗi Sản xuất → Thông quan → Về kho gốc → Điều chuyển
+ *  - `moq`: từ khai báo ở nhà máy / mapping SKU × nhà máy
+ *  - `safetyDays`: suy từ độ dao động doanh số theo tháng
+ *  - `growthFactor`: thay bằng đối chiếu khuyến mãi và phát hiện trend
+ */
+export const PURCHASING_CONFIG_FIELDS = ["coverageDays"] as const;
 
 export type PurchasingConfigField = (typeof PURCHASING_CONFIG_FIELDS)[number];
 export type PurchasingConfigScope = "GLOBAL" | "CATEGORY" | "SUPPLIER" | "SKU";
@@ -231,6 +234,15 @@ export interface DataQualityFlag {
 // DÒNG ĐỀ XUẤT — dùng ở màn hình DANH SÁCH
 // ═══════════════════════════════════════════════════════════════════════════
 
+export type OrderUrgency =
+  | "ORDER_NOW"
+  | "ORDER_THIS_MONTH"
+  | "ORDER_NEXT_MONTH"
+  | "ORDER_LATER"
+  | "NO_ACTION";
+
+export type DemandStability = "STABLE" | "VOLATILE" | "INSUFFICIENT_DATA";
+
 export interface RecommendationListItem {
   itemId: number;
 
@@ -256,8 +268,21 @@ export interface RecommendationListItem {
   // ── Nhà cung cấp ──
   supplierId: number | null;
   supplierName: string | null;
+  /** Tổng leadtime cận trên — dùng làm hạn chót đặt hàng. */
   leadTimeDays: number;
+  /** Tổng leadtime cận dưới — đầu nhanh của khoảng. */
+  leadTimeMinDays?: number | null;
   leadTimeSource: ConfigSource;
+
+  // ── Thời điểm cần đặt (trả lời "tháng sau có phải đặt không") ──
+  orderUrgency?: OrderUrgency | null;
+  /** ISO date — chậm nhất phải đặt để hàng kịp về. */
+  latestOrderDate?: string | null;
+
+  // ── Độ ổn định doanh số ──
+  demandStability?: DemandStability | null;
+  /** Hệ số biến thiên doanh số theo tháng — cơ sở tính tồn dự phòng. */
+  variationCoefficient?: number | null;
 
   // ── Phân loại ──
   priority: PriorityLevel;
@@ -371,6 +396,25 @@ export interface ForecastComparison {
   growthFactor: number;
   /** Nguồn dữ liệu thực tế đã dùng cho SKU này */
   demandSource: DemandSource;
+
+  // ── Khuyến mãi đang chạy / sắp chạy trong horizon đặt hàng ──
+  /** Các đợt đã được cộng thêm nhu cầu vào số lượng đề xuất. */
+  upcomingPromotions?: PromotionWindowInfo[];
+  /** Số lượng cộng thêm cho các đợt đó. */
+  promotionExtraDemand?: number;
+  /** Số ngày có khuyến mãi trong horizon, đã khử trùng lặp. */
+  promotionDays?: number;
+  /** Hệ số bán vượt mức nền, suy từ lịch sử chính SKU này. */
+  promotionUpliftFactor?: number;
+}
+
+/** Một đợt khuyến mãi đang hoặc sắp chạy. */
+export interface PromotionWindowInfo {
+  name: string | null;
+  /** ISO date */
+  startDate: string;
+  /** ISO date */
+  endDate: string;
 }
 
 /** Một bước trong quá trình tính — PRD §13.3 */
@@ -581,6 +625,16 @@ export interface RecommendationListResponse {
   items: RecommendationListItem[];
   pagination: PaginationMeta;
   meta: RecommendationListMeta;
+}
+
+/** Kết quả chạy engine tính đề xuất đặt hàng thủ công. */
+export interface RunPurchasingCalculationResult {
+  runId: number;
+  recommendationId: number;
+  status: "COMPLETED";
+  snapshotDate: string;
+  skuTotal: number;
+  skuBlocked: number;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

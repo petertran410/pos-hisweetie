@@ -30,9 +30,13 @@ import { ProductPickerDropdown } from "@/components/products/ProductPickerDropdo
 import { NumericInput } from "@/components/ui/NumericInput";
 import { useCan } from "@/lib/hooks/useCan";
 import { useLatestSupplierPrices } from "@/lib/hooks/useLatestSupplierPrices";
-import { useReferencePrices } from "@/lib/hooks/useFactoryProducts";
+import {
+  useReferencePrices,
+  useFactoryCandidates,
+} from "@/lib/hooks/useFactoryProducts";
 import type { ReferencePriceInfo } from "@/lib/api/factory-products";
 import { checkMoq } from "@/lib/utils/moq-check";
+import { FactoryLineSelect } from "./FactoryLineSelect";
 import type { MoqProductInfo, MoqSpec } from "@/lib/utils/moq";
 import {
   useExchangeRate,
@@ -182,6 +186,11 @@ interface ProductItem {
   factorySubTotalManual?: boolean;
   inventory: number;
   note?: string;
+  /**
+   * Nhà máy gia công cho riêng dòng này. Một sản phẩm có thể thuộc nhiều nhà
+   * máy của cùng NCC nên phải chọn theo dòng, không suy ra được từ sản phẩm.
+   */
+  factoryId?: number | null;
 }
 
 interface OrderSupplierFormProps {
@@ -701,24 +710,70 @@ export function OrderSupplierForm({
     supplierId: supplierId || undefined,
   });
 
+  // Nhà máy ứng viên cho từng dòng, đã lọc theo NCC của phiếu. Một sản phẩm
+  // có thể gia công ở nhiều nhà máy của cùng NCC nên phải chọn theo dòng.
+  const { candidatesByProduct } = useFactoryCandidates(productIds, {
+    supplierId: supplierId || undefined,
+  });
+
+  /**
+   * Tự gán nhà máy khi chỉ có đúng 1 ứng viên, và bỏ gán khi nhà máy đang chọn
+   * không còn hợp lệ (đổi NCC, gỡ mapping). Không tự chọn khi có nhiều ứng
+   * viên — để người dùng quyết định.
+   */
+  useEffect(() => {
+    if (!supplierId) return;
+    setProducts((prev) => {
+      let changed = false;
+      const next = prev.map((item) => {
+        const candidates = candidatesByProduct[item.productId];
+        if (!candidates) return item;
+
+        const validIds = new Set(candidates.map((c) => c.factoryId));
+        if (item.factoryId != null && !validIds.has(item.factoryId)) {
+          changed = true;
+          return { ...item, factoryId: null };
+        }
+        if (item.factoryId == null && candidates.length === 1) {
+          changed = true;
+          return { ...item, factoryId: candidates[0].factoryId };
+        }
+        return item;
+      });
+      return changed ? next : prev;
+    });
+  }, [candidatesByProduct, supplierId]);
+
   /**
    * Cảnh báo MOQ (không chặn lưu phiếu).
+   *
+   * MOQ áp theo **nhà máy người dùng chọn ở từng dòng**, không suy từ sản phẩm
+   * — một sản phẩm có thể gia công ở nhiều nhà máy với MOQ khác nhau.
    *
    * MOQ cấp nhà máy (thường tính trên toàn đơn) và MOQ cấp sản phẩm là hai
    * ràng buộc độc lập, phải thoả mãn đồng thời. Số lượng người dùng nhập là
    * **gói lẻ**, nên util tự quy đổi sang thùng/kg/tấn theo đơn vị của MOQ.
    */
-  const moqViolations = useMemo(() => {
+  const { moqViolations, unassignedCount } = useMemo(() => {
     const factorySpecs = new Map<
       number,
       { name?: string | null; spec: MoqSpec | null }
     >();
     const mappingSpecs = new Map<string, MoqSpec | null>();
     const productInfos = new Map<number, MoqProductInfo>();
+    let unassigned = 0;
 
     const lines = products.flatMap((item) => {
-      const ref = referenceByProduct[item.productId];
-      if (!ref?.factoryId) return [];
+      const candidates = candidatesByProduct[item.productId] ?? [];
+      // Dòng chưa chọn nhà máy → không biết áp MOQ nào. Đếm để cảnh báo riêng
+      // thay vì bỏ qua im lặng (sẽ báo thiếu vi phạm).
+      if (item.factoryId == null) {
+        if (candidates.length > 0) unassigned += 1;
+        return [];
+      }
+
+      const ref = candidates.find((c) => c.factoryId === item.factoryId);
+      if (!ref) return [];
 
       if (!factorySpecs.has(ref.factoryId)) {
         factorySpecs.set(ref.factoryId, {
@@ -746,9 +801,18 @@ export function OrderSupplierForm({
       ];
     });
 
-    if (!lines.length) return [];
-    return checkMoq({ lines, factorySpecs, mappingSpecs, products: productInfos });
-  }, [products, referenceByProduct]);
+    return {
+      moqViolations: lines.length
+        ? checkMoq({
+            lines,
+            factorySpecs,
+            mappingSpecs,
+            products: productInfos,
+          })
+        : [],
+      unassignedCount: unassigned,
+    };
+  }, [products, candidatesByProduct]);
 
   // NCC trước đó — init = NCC của phiếu đang sửa để mount KHÔNG ghi đè giá đã lưu.
   const prevSupplierRef = useRef<number>(orderSupplier?.supplierId || 0);
@@ -811,6 +875,7 @@ export function OrderSupplierForm({
             factorySubTotal !== factoryPrice * qty,
           inventory: 0,
           note: item.description,
+          factoryId: item.factoryId ?? null,
         };
       });
       setProducts(loadedProducts);
@@ -918,6 +983,14 @@ export function OrderSupplierForm({
   const handleRemoveProduct = (index: number) => {
     if (isFormDisabled) return;
     setProducts((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  /** Đổi nhà máy cho một dòng. Ảnh hưởng trực tiếp tới cảnh báo MOQ. */
+  const handleFactoryChange = (index: number, factoryId: number | null) => {
+    if (isFormDisabled) return;
+    setProducts((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, factoryId } : item))
+    );
   };
 
   const handleQuantityChange = (index: number, value: string) => {
@@ -1156,6 +1229,8 @@ export function OrderSupplierForm({
           factoryPrice: Number(p.factoryPrice) || null,
           factorySubTotal: Number(p.factorySubTotal) || null,
           description: p.note,
+          // Nhà máy theo dòng. Gửi null khi chưa chọn — backend cho phép trống.
+          factoryId: p.factoryId ?? null,
         };
         // Chỉ gửi price khi là số hợp lệ. Nếu user không có quyền xem giá vốn
         // thì cost bị strip ở backend → price = NaN; bỏ qua để backend tự
@@ -1232,13 +1307,21 @@ export function OrderSupplierForm({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          {moqViolations.length > 0 && (
+          {(moqViolations.length > 0 || unassignedCount > 0) && (
             <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
                 <AlertTriangle className="w-4 h-4" aria-hidden="true" />
-                Chưa đạt số lượng đặt tối thiểu (MOQ)
+                {moqViolations.length > 0
+                  ? "Chưa đạt số lượng đặt tối thiểu (MOQ)"
+                  : "Chưa chọn nhà máy"}
               </div>
               <ul className="mt-2 space-y-1 text-sm text-amber-800 list-disc pl-6">
+                {unassignedCount > 0 && (
+                  <li>
+                    {unassignedCount} sản phẩm chưa chọn nhà máy — chưa kiểm tra
+                    được MOQ cho các dòng này.
+                  </li>
+                )}
                 {moqViolations.map((violation, index) => (
                   <li key={`${violation.level}-${violation.factoryId}-${violation.productId ?? "all"}-${index}`}>
                     {violation.message}
@@ -1251,7 +1334,7 @@ export function OrderSupplierForm({
             </div>
           )}
           <div className="border border-gray-200 rounded-lg overflow-x-auto bg-white">
-            <table className="w-full min-w-[1100px]">
+            <table className="w-full min-w-[1290px]">
               <thead className="bg-gray-100 border-b border-gray-200">
                 <tr>
                   <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider w-12">
@@ -1262,6 +1345,9 @@ export function OrderSupplierForm({
                   </th>
                   <th className="px-[10px] py-2 text-left text-sm font-semibold text-gray-700 tracking-wider min-w-[220px]">
                     Tên hàng
+                  </th>
+                  <th className="px-[10px] py-2 text-left text-sm font-semibold text-gray-700 tracking-wider w-[190px]">
+                    Nhà máy
                   </th>
                   <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider w-[160px]">
                     SL đặt
@@ -1313,6 +1399,17 @@ export function OrderSupplierForm({
                     </td>
                     <td className="px-[10px] py-2 align-middle text-sm text-gray-900">
                       {item.productName}
+                    </td>
+                    <td className="px-[10px] py-2 align-middle">
+                      <FactoryLineSelect
+                        value={item.factoryId ?? null}
+                        candidates={candidatesByProduct[item.productId]}
+                        disabled={!!isFormDisabled}
+                        hasSupplier={!!supplierId}
+                        onChange={(factoryId) =>
+                          handleFactoryChange(index, factoryId)
+                        }
+                      />
                     </td>
                     <td className="px-[10px] py-2 align-middle whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1.5">

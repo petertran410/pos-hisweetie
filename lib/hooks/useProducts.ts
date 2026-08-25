@@ -76,6 +76,19 @@ export const useDeleteProduct = () => {
   });
 };
 
+export function useBulkUpdateCargoType() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: productsApi.bulkUpdateCargoType,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      toast.success("Đã cập nhật loại hàng");
+    },
+    onError: () => toast.error("Cập nhật loại hàng thất bại"),
+  });
+}
+
+
 export function useUpdateProductRetailPrice() {
   const queryClient = useQueryClient();
 

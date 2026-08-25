@@ -14,7 +14,11 @@ import { TrademarkDropdown } from "./TrademarkDropdown";
 import { MisaItemDropdown } from "./MisaItemDropdown";
 import { MisaInventoryItem } from "@/lib/api/misa";
 import { FormSection } from "./FormSection";
-import { FactorySelect } from "@/components/factories/FactorySelect";
+import {
+  ProductFactoryMappings,
+  buildFactoryMappingsPayload,
+  type FactoryMappingDraft,
+} from "./ProductFactoryMappings";
 import { useFormattedNumber } from "@/lib/hooks/useFormattedNumber";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { API_URL } from "@/lib/config/api";
@@ -76,12 +80,12 @@ export function ProductForm({
     unit: product?.misa_unit || "",
   });
 
-  // Liên kết nhà máy chính / backup (mới)
-  const [primaryFactoryId, setPrimaryFactoryId] = useState<number | null>(
-    product?.primaryFactoryId ?? null
-  );
-  const [backupFactoryId, setBackupFactoryId] = useState<number | null>(
-    product?.backupFactoryId ?? null
+  // Danh sách nhà máy gắn với sản phẩm — nguồn chân lý nhiều-nhiều.
+  const [factoryMappings, setFactoryMappings] = useState<FactoryMappingDraft[]>(
+    () =>
+      [...(product?.factoryMappings ?? [])]
+        .sort((a, b) => a.priority - b.priority)
+        .map((item) => ({ factoryId: item.factoryId, role: item.role }))
   );
   const { selectedBranch } = useBranchStore();
   const canViewCostPrice = usePermission("products", "view_cost_price");
@@ -319,10 +323,11 @@ export function ProductForm({
         isPieceUnit: Boolean(data.isPieceUnit),
         isActive: Boolean(data.isActive),
         branchId: selectedBranch?.id,
-        // Nhà máy chính / backup — chỉ gửi khi có quyền assign_factory, tránh
-        // ghi đè (null) lên dữ liệu thật khi user không có quyền chỉnh sửa.
+        // Nhà máy — chỉ gửi khi có quyền assign_factory, tránh ghi đè lên dữ
+        // liệu thật khi user không có quyền chỉnh sửa. Gửi full danh sách:
+        // backend replace-set, dòng không có trong list sẽ bị gỡ.
         ...(canAssignFactory
-          ? { primaryFactoryId, backupFactoryId }
+          ? { factoryMappings: buildFactoryMappingsPayload(factoryMappings) }
           : {}),
       };
 
@@ -587,38 +592,17 @@ export function ProductForm({
             {canViewFactory && (
               <FormSection
                 title="Nhà máy sản xuất"
-                description="Gắn nhà máy chính (thường xuyên gia công) và nhà máy backup (dự phòng khi cần chuyển đổi).">
-                <div className="grid grid-cols-2 gap-4">
-                  <FactorySelect
-                    label="Nhà máy chính"
-                    value={primaryFactoryId}
-                    onChange={setPrimaryFactoryId}
-                    excludeFactoryId={backupFactoryId}
-                    placeholder="— Chưa gắn —"
-                    disabled={!canAssignFactory}
-                  />
-                  <FactorySelect
-                    label="Nhà máy backup"
-                    value={backupFactoryId}
-                    onChange={setBackupFactoryId}
-                    excludeFactoryId={primaryFactoryId}
-                    placeholder="— Chưa gắn —"
-                    disabled={!canAssignFactory}
-                  />
-                </div>
+                description="Một sản phẩm có thể gắn nhiều nhà máy chính và nhiều nhà máy backup. Giá, MOQ, leadtime khai báo ở trang nhà máy.">
+                <ProductFactoryMappings
+                  value={factoryMappings}
+                  onChange={setFactoryMappings}
+                  disabled={!canAssignFactory}
+                />
                 {!canAssignFactory && (
                   <p className="text-xs text-gray-500 mt-2">
                     Bạn chỉ có quyền xem thông tin nhà máy, không thể chỉnh sửa.
                   </p>
                 )}
-                {canAssignFactory &&
-                  primaryFactoryId != null &&
-                  backupFactoryId != null &&
-                  primaryFactoryId === backupFactoryId && (
-                    <p className="text-xs text-red-600 mt-2">
-                      Không thể chọn cùng 1 nhà máy cho cả chính và backup.
-                    </p>
-                  )}
               </FormSection>
             )}
 

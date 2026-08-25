@@ -76,7 +76,7 @@ interface EditCtx {
   cancel: () => void;
   // Giai đoạn hiện tại / nhà máy
   productionStages: { id: number; name: string }[];
-  factories: { id: number; name: string }[];
+  factories: { id: number; name: string; supplierId?: number | null }[];
   createProductionStage: (
     name: string
   ) => Promise<{ id: number; name: string } | undefined>;
@@ -246,7 +246,12 @@ const DEFAULT_COLUMNS: ColumnConfig<OrderSupplierDetailItem, EditCtx>[] = [
       ctx ? (
         <InlineMasterSelect
           value={r.factoryId ?? null}
-          options={ctx.factories}
+          // Chỉ nhà máy thuộc đúng NCC của phiếu — backend cũng chặn, nhưng
+          // lọc sẵn ở đây để không hiện lựa chọn sẽ bị từ chối.
+          options={ctx.factories.filter(
+            (factory) =>
+              r.supplier?.id == null || factory.supplierId === r.supplier.id
+          )}
           placeholder="Chọn nhà máy"
           addLabel="Thêm nhà máy"
           newPlaceholder="Tên nhà máy mới"

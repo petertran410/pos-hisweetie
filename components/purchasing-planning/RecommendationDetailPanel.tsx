@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, Package, Settings2, TrendingDown, TrendingUp, X } from "lucide-react";
+import { AlertTriangle, Package, TrendingDown, TrendingUp, X } from "lucide-react";
 import { PriorityBadge, ReliabilityBadge, SeverityBadge } from "./PriorityBadge";
 import { useRecommendationDetail } from "@/lib/hooks/usePurchasingPlanning";
 import {
@@ -16,8 +16,6 @@ import {
 interface Props {
   itemId: number | null;
   onClose: () => void;
-  canConfig?: boolean;
-  onAdjustConfig?: (sku: { id: number; code: string; name: string }) => void;
 }
 
 const num = (v: number | null | undefined, digits = 0) =>
@@ -33,7 +31,23 @@ const money = (v: number | null | undefined) =>
 const dateVn = (s: string | null) =>
   s ? new Date(s).toLocaleDateString("vi-VN") : "—";
 
-export function RecommendationDetailPanel({ itemId, onClose, canConfig, onAdjustConfig }: Props) {
+const ORDER_URGENCY_LABEL: Record<string, string> = {
+  ORDER_NOW: "Cần đặt ngay",
+  ORDER_THIS_MONTH: "Cần đặt trong tháng này",
+  ORDER_NEXT_MONTH: "Có thể đợi sang tháng sau",
+  ORDER_LATER: "Chưa cần đặt",
+  NO_ACTION: "Chưa phát sinh nhu cầu",
+};
+
+const ORDER_URGENCY_BOX: Record<string, string> = {
+  ORDER_NOW: "border-red-200 bg-red-50 text-red-800",
+  ORDER_THIS_MONTH: "border-orange-200 bg-orange-50 text-orange-800",
+  ORDER_NEXT_MONTH: "border-blue-200 bg-blue-50 text-blue-800",
+  ORDER_LATER: "border-green-200 bg-green-50 text-green-800",
+  NO_ACTION: "border-gray-200 bg-gray-50 text-gray-700",
+};
+
+export function RecommendationDetailPanel({ itemId, onClose }: Props) {
   const { data, isLoading, isError } = useRecommendationDetail(itemId);
 
   if (itemId === null) return null;
@@ -113,6 +127,30 @@ export function RecommendationDetailPanel({ itemId, onClose, canConfig, onAdjust
                   Độ tin cậy dự báo: {CONFIDENCE_LABEL[data.confidence]}
                 </span>
               </div>
+
+              {data.orderUrgency && (
+                <div
+                  className={`mt-3 rounded border px-3 py-2 ${
+                    ORDER_URGENCY_BOX[data.orderUrgency]
+                  }`}>
+                  <div className="text-sm font-medium">
+                    {ORDER_URGENCY_LABEL[data.orderUrgency]}
+                  </div>
+                  <div className="mt-1 space-y-0.5 text-xs opacity-90">
+                    {data.latestOrderDate && (
+                      <div>Hạn đặt: {dateVn(data.latestOrderDate)}</div>
+                    )}
+                    <div>
+                      Chờ hàng:{" "}
+                      {data.leadTimeMinDays != null &&
+                      data.leadTimeMinDays !== data.leadTimeDays
+                        ? `${data.leadTimeMinDays}–${data.leadTimeDays}`
+                        : data.leadTimeDays}{" "}
+                      ngày
+                    </div>
+                  </div>
+                </div>
+              )}
             </Section>
 
             {/* ② DỮ LIỆU ĐẦU VÀO */}
@@ -232,6 +270,33 @@ export function RecommendationDetailPanel({ itemId, onClose, canConfig, onAdjust
                   </div>
                 )}
               </div>
+
+              {/* Khuyến mãi sắp tới đã được cộng vào số lượng đề xuất */}
+              {(data.forecastComparison.upcomingPromotions?.length ?? 0) > 0 && (
+                <div className="mt-3 rounded border border-violet-200 bg-violet-50 px-3 py-2">
+                  <div className="text-xs font-medium text-violet-900">
+                    Khuyến mãi sắp tới · đã cộng thêm{" "}
+                    {num(data.forecastComparison.promotionExtraDemand ?? 0)}{" "}
+                    {data.unit ?? "đv"}
+                  </div>
+                  <div className="mt-1 space-y-0.5 text-[11px] text-violet-800">
+                    {data.forecastComparison.upcomingPromotions?.map(
+                      (promotion, index) => (
+                        <div key={index}>
+                          • {promotion.name ?? "Không tên"} ·{" "}
+                          {dateVn(promotion.startDate)} →{" "}
+                          {dateVn(promotion.endDate)}
+                        </div>
+                      )
+                    )}
+                    <div className="pt-0.5 opacity-80">
+                      {data.forecastComparison.promotionDays} ngày khuyến mãi ×
+                      hệ số bán vượt{" "}
+                      {data.forecastComparison.promotionUpliftFactor}
+                    </div>
+                  </div>
+                </div>
+              )}
             </Section>
 
             {/* ④ CẤU HÌNH */}
@@ -264,21 +329,6 @@ export function RecommendationDetailPanel({ itemId, onClose, canConfig, onAdjust
                   </Link>
                 </div>
               </div>
-              {canConfig && onAdjustConfig && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    onAdjustConfig({
-                      id: data.productId,
-                      code: data.productCode,
-                      name: data.productName,
-                    })
-                  }
-                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-brand px-3 py-2 text-sm font-medium text-brand hover:bg-brand-soft">
-                  <Settings2 className="h-4 w-4" />
-                  Điều chỉnh cấu hình
-                </button>
-              )}
             </Section>
 
             {/* ⑤ QUÁ TRÌNH TÍNH */}

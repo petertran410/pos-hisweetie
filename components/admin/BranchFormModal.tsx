@@ -20,6 +20,11 @@ export function BranchFormModal({ branch, onClose }: BranchFormModalProps) {
     email: "",
     address: "",
     isActive: true,
+    isPurchasingHub: false,
+    transferLeadtimeColdMin: undefined as number | undefined,
+    transferLeadtimeColdMax: undefined as number | undefined,
+    transferLeadtimeNormalMin: undefined as number | undefined,
+    transferLeadtimeNormalMax: undefined as number | undefined,
   });
 
   const queryClient = useQueryClient();
@@ -53,6 +58,11 @@ export function BranchFormModal({ branch, onClose }: BranchFormModalProps) {
         email: branch.email || "",
         address: branch.address || "",
         isActive: branch.isActive ?? true,
+        isPurchasingHub: branch.isPurchasingHub ?? false,
+        transferLeadtimeColdMin: branch.transferLeadtimeColdMin ?? undefined,
+        transferLeadtimeColdMax: branch.transferLeadtimeColdMax ?? undefined,
+        transferLeadtimeNormalMin: branch.transferLeadtimeNormalMin ?? undefined,
+        transferLeadtimeNormalMax: branch.transferLeadtimeNormalMax ?? undefined,
       });
     }
   }, [branch]);

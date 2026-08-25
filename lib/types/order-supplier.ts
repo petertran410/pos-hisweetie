@@ -90,6 +90,14 @@ export interface OrderSupplierItem {
   subTotal: number;
   factoryPrice?: number | null;
   factorySubTotal?: number | null;
+  /** Nhà máy gia công của riêng dòng này (thuộc NCC của phiếu). */
+  factoryId?: number | null;
+  productionStageId?: number | null;
+  factory?: {
+    id: number;
+    code?: string | null;
+    name: string;
+  } | null;
   description?: string;
   orderByNumber?: number;
 }

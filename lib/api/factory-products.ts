@@ -161,6 +161,9 @@ export interface ReferencePriceInfo {
   factoryProductId: number;
   factoryId: number;
   factoryName: string;
+  /** 0 = ưu tiên cao nhất trong cùng vai trò. */
+  priority?: number;
+  role?: "primary" | "backup";
   referencePrice: number | null;
   currency: string;
   exchangeRate: number | null;
@@ -275,6 +278,25 @@ export const factoryProductsApi = {
     if (opts?.factoryId != null) query.factoryId = opts.factoryId;
     return apiClient.get<Record<number, ReferencePriceInfo | null>>(
       "/factory-products/reference-prices",
+      query
+    );
+  },
+
+  /**
+   * Tất cả nhà máy có thể sản xuất từng sản phẩm, đã lọc theo NCC.
+   * Khác `getReferencePrices` (gộp còn 1 nhà máy/sản phẩm).
+   */
+  getFactoryCandidates: (
+    productIds: number[],
+    opts?: { supplierId?: number; factoryId?: number }
+  ) => {
+    const query: Record<string, string | number> = {
+      productIds: productIds.join(","),
+    };
+    if (opts?.supplierId != null) query.supplierId = opts.supplierId;
+    if (opts?.factoryId != null) query.factoryId = opts.factoryId;
+    return apiClient.get<Record<number, ReferencePriceInfo[]>>(
+      "/factory-products/factory-candidates",
       query
     );
   },

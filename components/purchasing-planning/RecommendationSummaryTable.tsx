@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ChevronsUpDown, Info } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronsUpDown, Info, PackageSearch } from "lucide-react";
 import type { ColumnConfig } from "@/lib/hooks/useColumnVisibility";
 import {
   PRIORITY_STYLE,
@@ -55,19 +55,18 @@ export function RecommendationSummaryTable({
 
   if (isLoading && items.length === 0) {
     return (
-      <div className="flex-1 overflow-auto p-4">
-        {Array.from({ length: 12 }).map((_, i) => (
-          <div key={i} className="mb-2 h-8 animate-pulse rounded bg-gray-100" />
-        ))}
+      <div className="flex flex-1 items-center justify-center py-20">
+        <div className="border-brand h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" />
       </div>
     );
   }
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 p-12 text-center">
-        <p className="font-medium text-gray-700">Không có sản phẩm nào</p>
-        <p className="text-sm text-gray-500">
+      <div className="flex-1 py-20 text-center text-gray-400">
+        <PackageSearch className="mx-auto mb-3 h-12 w-12 opacity-30" />
+        <p className="text-sm">Không có sản phẩm nào</p>
+        <p className="mt-1 text-xs">
           Thử bỏ bớt bộ lọc hoặc tắt &quot;Chỉ hiện SKU cần đặt&quot;.
         </p>
       </div>
@@ -77,10 +76,10 @@ export function RecommendationSummaryTable({
   return (
     <div className="min-w-0 flex-1 overflow-auto">
       <table
-        className="w-full border-collapse text-xs"
+        className="w-full border-collapse text-sm"
         style={{ minWidth: "max-content" }}>
         {/* ── HEADER ── */}
-        <thead className="sticky top-0 z-20">
+        <thead className="sticky top-0 z-20 bg-gray-50">
           <tr>
             {visibleColumns.map((col, idx) => {
               const sortKey = COLUMN_SORT_KEY[col.key];
@@ -92,7 +91,7 @@ export function RecommendationSummaryTable({
                 <th
                   key={col.key}
                   onClick={() => sortable && handleSort(col.key)}
-                  className={`group border-b border-gray-200 bg-gray-50 px-2 py-2 text-left font-semibold whitespace-nowrap text-gray-700 ${
+                  className={`group border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-600 uppercase ${
                     sortable
                       ? "cursor-pointer select-none hover:bg-gray-100"
                       : ""
@@ -123,9 +122,9 @@ export function RecommendationSummaryTable({
                     {sortable &&
                       (active ? (
                         filters.sortDir === "desc" ? (
-                          <ArrowDown className="h-3 w-3 text-blue-600" />
+                          <ArrowDown className="text-brand h-3 w-3" />
                         ) : (
-                          <ArrowUp className="h-3 w-3 text-blue-600" />
+                          <ArrowUp className="text-brand h-3 w-3" />
                         )
                       ) : (
                         <ChevronsUpDown className="h-3 w-3 text-gray-300" />
@@ -145,7 +144,7 @@ export function RecommendationSummaryTable({
               return (
                 <td
                   key={col.key}
-                  className={`border-b border-gray-200 bg-blue-50 px-2 py-1.5 whitespace-nowrap ${
+                  className={`bg-brand-soft border-b border-gray-200 px-4 py-2.5 whitespace-nowrap ${
                     isSticky ? "sticky z-10" : ""
                   }`}
                   style={
@@ -167,7 +166,7 @@ export function RecommendationSummaryTable({
             const selected = selectedItemId === item.itemId;
             // Cột sticky phải có nền đục, nếu không chữ bên dưới sẽ lộ ra khi cuộn
             const stickyBg = selected
-              ? "bg-blue-50"
+              ? "bg-brand-soft"
               : item.priority === "CRITICAL"
                 ? "bg-red-50"
                 : item.priority === "HIGH"
@@ -179,14 +178,14 @@ export function RecommendationSummaryTable({
                 key={item.itemId}
                 onClick={() => onSelectItem(item.itemId)}
                 className={`cursor-pointer transition-colors hover:bg-gray-50 ${
-                  selected ? "bg-blue-50" : (style.row ?? "")
+                  selected ? "bg-brand-soft" : (style.row ?? "")
                 }`}>
                 {visibleColumns.map((col, idx) => {
                   const isSticky = idx < STICKY_COUNT;
                   return (
                     <td
                       key={col.key}
-                      className={`border-b border-gray-100 px-2 py-1.5 ${
+                      className={`border-b border-gray-100 px-4 py-2.5 ${
                         isSticky ? `sticky z-10 ${stickyBg}` : ""
                       }`}
                       style={

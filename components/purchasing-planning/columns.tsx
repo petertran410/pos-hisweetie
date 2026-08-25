@@ -29,6 +29,29 @@ export const money = (v: number | null | undefined) => {
 
 const dateVn = (s: string | null) =>
   s ? new Date(s).toLocaleDateString("vi-VN") : "—";
+const formatDate = (s: string) => dateVn(s);
+
+const ORDER_URGENCY_LABEL = {
+  ORDER_NOW: "Đặt ngay",
+  ORDER_THIS_MONTH: "Đặt tháng này",
+  ORDER_NEXT_MONTH: "Đặt tháng sau",
+  ORDER_LATER: "Chưa cần đặt",
+  NO_ACTION: "Chưa có nhu cầu",
+} as const;
+
+const ORDER_URGENCY_STYLE = {
+  ORDER_NOW: "border-red-200 bg-red-50 text-red-700",
+  ORDER_THIS_MONTH: "border-orange-200 bg-orange-50 text-orange-700",
+  ORDER_NEXT_MONTH: "border-blue-200 bg-blue-50 text-blue-700",
+  ORDER_LATER: "border-green-200 bg-green-50 text-green-700",
+  NO_ACTION: "border-gray-200 bg-gray-50 text-gray-600",
+} as const;
+
+const DEMAND_STABILITY_LABEL = {
+  STABLE: "Ổn định",
+  VOLATILE: "Biến động",
+  INSUFFICIENT_DATA: "Thiếu dữ liệu",
+} as const;
 
 /** Ngày cho file Excel — trả Date để Excel nhận đúng kiểu, null nếu không có */
 const dateForExport = (s: string | null): Date | null => {
@@ -203,12 +226,83 @@ export function buildColumns(): ColumnConfig<RecommendationListItem>[] {
     },
     {
       key: "leadTime",
-      label: "LT",
+      label: "Chờ hàng",
       visible: true,
-      width: "60px",
-      tooltip: "Số ngày giao hàng dự kiến của nhà cung cấp.",
-      render: (i) => <Num value={i.leadTimeDays} />,
-      exportValue: (i) => i.leadTimeDays,
+      width: "100px",
+      tooltip:
+        "Khoảng thời gian từ lúc đặt nhà máy tới khi hàng về công ty: Sản xuất → Thông quan → Về công ty.",
+      render: (i) =>
+        i.leadTimeMinDays != null && i.leadTimeMinDays !== i.leadTimeDays ? (
+          <span className="whitespace-nowrap tabular-nums">
+            {i.leadTimeMinDays}–{i.leadTimeDays} ngày
+          </span>
+        ) : (
+          <span className="whitespace-nowrap tabular-nums">
+            {i.leadTimeDays} ngày
+          </span>
+        ),
+      exportValue: (i) =>
+        i.leadTimeMinDays != null && i.leadTimeMinDays !== i.leadTimeDays
+          ? `${i.leadTimeMinDays}-${i.leadTimeDays}`
+          : String(i.leadTimeDays),
+    },
+    {
+      key: "orderUrgency",
+      label: "Khi nào đặt",
+      visible: true,
+      width: "130px",
+      tooltip:
+        "Thời điểm cần tạo đợt đặt hàng, tính lùi từ ngày công ty cạn kho trừ đi thời gian chờ hàng.",
+      render: (i) =>
+        i.orderUrgency ? (
+          <span
+            className={`inline-block whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-medium ${
+              ORDER_URGENCY_STYLE[i.orderUrgency]
+            }`}>
+            {ORDER_URGENCY_LABEL[i.orderUrgency]}
+          </span>
+        ) : (
+          <span className="text-gray-400">—</span>
+        ),
+      exportValue: (i) =>
+        i.orderUrgency ? ORDER_URGENCY_LABEL[i.orderUrgency] : "",
+    },
+    {
+      key: "latestOrderDate",
+      label: "Đặt trước ngày",
+      visible: true,
+      width: "115px",
+      tooltip: "Hạn chót đặt hàng để không bị đứt hàng.",
+      render: (i) => (
+        <span className="whitespace-nowrap tabular-nums">
+          {i.latestOrderDate ? formatDate(i.latestOrderDate) : "—"}
+        </span>
+      ),
+      exportValue: (i) =>
+        i.latestOrderDate ? formatDate(i.latestOrderDate) : "",
+    },
+    {
+      key: "demandStability",
+      label: "Ổn định bán",
+      visible: false,
+      width: "115px",
+      tooltip:
+        "Doanh số theo tháng có đều không. Càng dao động thì tồn dự phòng càng phải dày.",
+      render: (i) =>
+        i.demandStability ? (
+          <span
+            className={
+              i.demandStability === "VOLATILE"
+                ? "whitespace-nowrap text-amber-600"
+                : "whitespace-nowrap text-gray-600"
+            }>
+            {DEMAND_STABILITY_LABEL[i.demandStability]}
+          </span>
+        ) : (
+          <span className="text-gray-400">—</span>
+        ),
+      exportValue: (i) =>
+        i.demandStability ? DEMAND_STABILITY_LABEL[i.demandStability] : "",
     },
 
     // ── Tồn kho ──

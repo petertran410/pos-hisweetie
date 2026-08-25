@@ -26,6 +26,7 @@ export interface ProductQueryParams {
   parentNames?: string[];
   middleNames?: string[];
   childNames?: string[];
+  cargoType?: "COLD" | "NORMAL";
   tradeMarkIds?: number[];
   stockStatus?: string;
   priceBookId?: number;
@@ -100,6 +101,8 @@ export interface Product {
   vat?: number;
   shippingWeight?: number;
   shippingWeightUnit?: string;
+  /** Phân loại hàng hoá phục vụ leadtime chuyển kho. */
+  cargoType?: "COLD" | "NORMAL" | null;
   unit?: string;
   conversionValue?: number;
   masterProductId?: number;
@@ -126,17 +129,31 @@ export interface Product {
   publicationLocation?: ProductPublicationLocation;
   publicationDate?: string;
   publicationLink?: string;
-  // Nhà máy chính / backup (mới)
-  primaryFactoryId?: number | null;
-  backupFactoryId?: number | null;
-  primaryFactory?: {
-    id: number;
-    code?: string | null;
-    name: string;
-    country?: string | null;
-    currency?: string | null;
-  } | null;
-  backupFactory?: {
+  /**
+   * Danh sách nhà máy của sản phẩm — nguồn chân lý.
+   * Một sản phẩm gắn được nhiều nhà máy chính và nhiều nhà máy backup.
+   */
+  factoryMappings?: ProductFactoryMapping[];
+}
+
+export interface ProductFactoryMapping {
+  id: number;
+  factoryId: number;
+  role: "primary" | "backup";
+  /** 0 = ưu tiên cao nhất. */
+  priority: number;
+  isActive: boolean;
+  referencePrice: number | null;
+  currency: string | null;
+  exchangeRate: number | null;
+  moq: number | null;
+  moqValue: number | null;
+  moqBasis: string | null;
+  moqUnit: string | null;
+  moqIncrement: number | null;
+  leadtimeDays: number | null;
+  note: string | null;
+  factory: {
     id: number;
     code?: string | null;
     name: string;
@@ -195,6 +212,13 @@ export const productsApi = {
 
   updateProduct: (id: number, data: any): Promise<Product> => {
     return apiClient.put(`/products/${id}`, data);
+  },
+
+  bulkUpdateCargoType: (data: {
+    productIds: number[];
+    cargoType: "COLD" | "NORMAL";
+  }): Promise<{ message: string; updated: number }> => {
+    return apiClient.patch("/products/bulk-cargo-type", data);
   },
 
   deleteProduct: (id: number): Promise<void> => {

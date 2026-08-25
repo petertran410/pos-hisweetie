@@ -29,7 +29,9 @@ export interface Factory {
   moqUnit?: MoqUnit | null;
   moqScope?: MoqScope | null;
   moqIncrement?: string | number | null;
-  leadtimeDays?: number | null;
+  /** Khoảng thời gian sản xuất dùng cho dự kiến đặt hàng. */
+  productionLeadtimeMin?: number | null;
+  productionLeadtimeMax?: number | null;
   paymentTerm?: string | null;
 
   // --- Logistics (sheet "Logistics & Leadtime") ---
@@ -47,16 +49,10 @@ export interface Factory {
     code?: string | null;
   } | null;
   _count?: {
-    primaryForProducts?: number;
-    backupForProducts?: number;
     orderSupplierItems?: number;
     factoryProducts?: number;
   };
-  /**
-   * Số sản phẩm theo vai trò, tính từ bảng mapping FactoryProduct.
-   * Đây là nguồn cho cột "SP chính"/"SP backup" — KHÁC `_count.primaryForProducts`
-   * (đếm theo Product.primaryFactoryId cũ, chỉ cho phép 1 nhà máy/sản phẩm).
-   */
+  /** Số sản phẩm theo vai trò, tính từ mapping nhiều-nhiều. */
   mappingCounts?: {
     primary: number;
     backup: number;
@@ -97,7 +93,8 @@ export interface FactoryPayload {
   moqUnit?: MoqUnit | null;
   moqScope?: MoqScope | null;
   moqIncrement?: number | null;
-  leadtimeDays?: number | null;
+  productionLeadtimeMin?: number | null;
+  productionLeadtimeMax?: number | null;
   paymentTerm?: string | null;
 
   // Logistics (sheet "Logistics & Leadtime")

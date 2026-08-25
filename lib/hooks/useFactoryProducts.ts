@@ -88,6 +88,39 @@ export function useReferencePrices(
   return { referenceByProduct: query.data ?? {}, isLoading: query.isLoading };
 }
 
+/**
+ * Danh sách nhà máy ứng viên cho từng sản phẩm, đã lọc theo NCC của phiếu.
+ *
+ * Dùng ở form đặt hàng nhập: một sản phẩm có thể gia công ở nhiều nhà máy của
+ * cùng một NCC, người dùng phải tự chọn nhà máy cho từng dòng.
+ */
+export function useFactoryCandidates(
+  productIds: number[],
+  opts?: { supplierId?: number; factoryId?: number }
+) {
+  const ids = Array.from(
+    new Set(productIds.filter((id) => Number.isFinite(id) && id > 0))
+  ).sort((a, b) => a - b);
+
+  const query = useQuery({
+    queryKey: [
+      "factory-products",
+      "factory-candidates",
+      ids.join(","),
+      opts?.supplierId ?? null,
+      opts?.factoryId ?? null,
+    ],
+    queryFn: () => factoryProductsApi.getFactoryCandidates(ids, opts),
+    enabled: ids.length > 0 && (!!opts?.supplierId || !!opts?.factoryId),
+    staleTime: 30_000,
+  });
+
+  return {
+    candidatesByProduct: query.data ?? {},
+    isLoading: query.isLoading,
+  };
+}
+
 export function useCreateFactoryProduct() {
   const invalidate = useInvalidateFactoryProducts();
   return useMutation({

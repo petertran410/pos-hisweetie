@@ -18,6 +18,7 @@ import type {
   CreatePurchasingConfigRequest,
   PurchasingConfigPatch,
   PurchasingConfigScope,
+  RunPurchasingCalculationResult,
 } from "@/lib/types/purchasing-planning";
 import { PURCHASING_CONFIG_FIELDS } from "@/lib/types/purchasing-planning";
 import {
@@ -383,6 +384,17 @@ export const purchasingPlanningApi = {
     return apiClient.get<RecommendationListResponse>(
       `${BASE}/recommendations`,
       filters as Record<string, unknown>
+    );
+  },
+
+  /** Chạy lại engine với tồn kho, đơn nhập và lịch sử bán hàng hiện tại. */
+  runCalculation: async (): Promise<RunPurchasingCalculationResult> => {
+    if (USE_MOCK) {
+      throw new Error("Không thể chạy tính toán khi đang dùng dữ liệu mẫu");
+    }
+    return apiClient.post<RunPurchasingCalculationResult>(
+      `${BASE}/calculations/run`,
+      { runType: "MANUAL" }
     );
   },
 

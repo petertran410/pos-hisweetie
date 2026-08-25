@@ -25,6 +25,7 @@ import { ProductCustomerOrdersModal } from "./ProductCustomerOrdersModal";
 import { ProductSupplierOrdersModal } from "./ProductSupplierOrdersModal";
 import { ProductConsignmentsModal } from "./ProductConsignmentsModal";
 import { ProductExportModal } from "./ProductExportModal";
+import { BulkCargoTypeModal } from "./BulkCargoTypeModal";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { CodeLink } from "../shared/CodeLink";
 import { ColumnToggle } from "../shared/ColumnToggle";
@@ -139,6 +140,18 @@ const DEFAULT_COLUMNS: ColumnConfig<Product, ProductColumnCtx>[] = [
     visible: true,
     width: "140px",
     render: (product) => product.childName || "-",
+  },
+  {
+    key: "cargoType",
+    label: "Loại vận chuyển",
+    visible: true,
+    width: "130px",
+    render: (product) =>
+      product.cargoType === "COLD" ? (
+        <span className="text-blue-700 font-medium">Hàng lạnh</span>
+      ) : (
+        <span className="text-gray-700">Hàng thường</span>
+      ),
   },
   {
     key: "type",
@@ -354,6 +367,7 @@ export function ProductsTable({
   );
   const [didAutoExpand, setDidAutoExpand] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showCargoTypeModal, setShowCargoTypeModal] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -396,6 +410,7 @@ export function ProductsTable({
   const canViewCostPrice = usePermission("products", "view_cost_price");
   const canViewSalePrice = usePermission("products", "view_sale_price");
   const canExport = usePermission("products", "export");
+  const canUpdate = usePermission("products", "update");
 
   // Debounce search
   useEffect(() => {
@@ -626,6 +641,15 @@ export function ProductsTable({
             <Upload className="w-4 h-4" />
             Import
           </button>
+          {canUpdate && selectedIds.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowCargoTypeModal(true)}
+              className="px-3 py-1.5 border border-blue-200 text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 text-sm font-medium"
+            >
+              Gán loại hàng ({selectedIds.length})
+            </button>
+          )}
           {canExport && (
             <button
               onClick={() => setShowExportModal(true)}
@@ -921,6 +945,14 @@ export function ProductsTable({
             search: codeFilter || debouncedSearch || undefined,
           }}
           onClose={() => setShowExportModal(false)}
+        />
+      )}
+
+      {showCargoTypeModal && (
+        <BulkCargoTypeModal
+          productIds={selectedIds}
+          onClose={() => setShowCargoTypeModal(false)}
+          onDone={() => setSelectedIds([])}
         />
       )}
     </div>

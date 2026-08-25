@@ -51,6 +51,16 @@ const numberOrNull = (value: string) =>
   value.trim() === "" ? null : Number(value);
 
 /**
+ * Tóm tắt thời gian sản xuất của nhà máy dưới dạng khoảng nhanh nhất–chậm nhất.
+ */
+function formatProductionLeadtime(factory: Factory): string | null {
+  const { productionLeadtimeMin: min, productionLeadtimeMax: max } = factory;
+  if (min == null && max == null) return null;
+  if (min != null && max != null && min !== max) return `SX ${min}–${max} ngày`;
+  return `SX ${min ?? max} ngày`;
+}
+
+/**
  * Chi tiết nhà máy: thông tin tóm tắt + danh sách sản phẩm kèm giá tham chiếu.
  *
  * Sản phẩm chia 2 tab theo vai trò (chính/backup), mỗi tab phân trang 6 dòng —
@@ -348,13 +358,11 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
                 value={factory.contactNumber || factory.email || "-"}
               />
               <InfoCard
-                label="Leadtime & thanh toán"
+                label="Sản xuất & thanh toán"
                 value={
                   [
                     factory.paymentTerm,
-                    factory.leadtimeDays != null
-                      ? `${factory.leadtimeDays} ngày`
-                      : null,
+                    formatProductionLeadtime(factory),
                   ]
                     .filter(Boolean)
                     .join(" · ") || "-"
@@ -433,8 +441,10 @@ export function FactoryDetailRow({ factory, colSpan }: FactoryDetailRowProps) {
                         Giá quy đổi
                       </th>
                       <th className="px-3 py-2 text-right font-medium">MOQ</th>
-                      <th className="px-3 py-2 text-right font-medium">
-                        LT (ngày)
+                      <th
+                        className="px-3 py-2 text-right font-medium"
+                        title="Số ngày sản xuất riêng của sản phẩm này. Bỏ trống sẽ dùng thời gian sản xuất chung của nhà máy.">
+                        SX riêng (ngày)
                       </th>
                       <th className="px-3 py-2 w-20" />
                     </tr>

@@ -15,6 +15,7 @@ import type {
   PurchasingConfigPatch,
   PurchasingConfigScope,
   RecommendationFilters,
+  RunPurchasingCalculationResult,
 } from "@/lib/types/purchasing-planning";
 
 const KEY = "purchasing-planning";
@@ -38,6 +39,18 @@ export function useRecommendationDetail(itemId: number | null) {
     queryFn: () => purchasingPlanningApi.getRecommendationDetail(itemId!),
     enabled: itemId !== null,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** Chạy lại engine tính đề xuất — làm mới danh sách sau khi xong */
+export function useRunPurchasingCalculation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: purchasingPlanningApi.runCalculation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [KEY, "recommendations"] });
+      queryClient.invalidateQueries({ queryKey: [KEY, "detail"] });
+    },
   });
 }
 
