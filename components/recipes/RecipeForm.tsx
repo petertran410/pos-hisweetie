@@ -105,6 +105,7 @@ const ingredientUnitCost = (row: RecipeIngredientPayload) => {
     return row.product?.unitCost == null ? null : Number(row.product.unitCost);
   }
   if (row.unitCostSnapshot != null) return Number(row.unitCostSnapshot);
+  if (row.recipeReference?.costPerOutputUnit != null) return Number(row.recipeReference.costPerOutputUnit);
   return null;
 };
 const ingredientLineCost = (row: RecipeIngredientPayload) => {

@@ -30,7 +30,7 @@ export interface RecipeIngredientPayload {
   note?: string;
   sortOrder?: number;
   product?: RecipeIngredientProduct;
-  recipeReference?: { id: number; code: string; name: string; type: RecipeType; status: RecipeStatus };
+  recipeReference?: { id: number; code: string; name: string; type: RecipeType; status: RecipeStatus; costPerOutputUnit?: number | null };
   costSnapshot?: number | null;
   unitCostSnapshot?: number | null;
 }
