@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Search,
   Download,
-  Upload,
   Ticket as TicketIcon,
   RefreshCw,
   X,
@@ -13,7 +12,6 @@ import {
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { DebtTrackingTable } from "@/components/debt-tracking/DebtTrackingTable";
 import { CreateDebtTicketModal } from "@/components/debt-tracking/CreateDebtTicketModal";
-import { ImportDebtPolicyModal } from "@/components/debt-tracking/ImportDebtPolicyModal";
 import {
   useDebtTracking,
   useDebtTrackingSummary,
@@ -26,8 +24,7 @@ import {
   DebtTrackingParams,
   DEBT_FORM_LABELS,
 } from "@/lib/api/debt-tracking";
-
-const fmt = (n: number) => Math.round(n).toLocaleString("vi-VN");
+import { formatCurrency } from "@/lib/utils";
 
 const TABS: { value: DebtStatus | "ALL"; label: string; tone: string }[] = [
   { value: "ALL", label: "Tất cả", tone: "text-gray-700" },
@@ -46,11 +43,9 @@ export default function TheoDoiCongNoPage() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<number[]>([]);
   const [showCreateTicket, setShowCreateTicket] = useState(false);
-  const [showImport, setShowImport] = useState(false);
 
   const canCreateTicket = usePermission("debt_tickets", "create");
   const canExport = usePermission("debt_tracking", "export");
-  const canImport = usePermission("debt_tracking", "update_policy");
 
   const params: DebtTrackingParams = useMemo(
     () => ({
@@ -103,24 +98,29 @@ export default function TheoDoiCongNoPage() {
     <PagePermissionGuard resource="debt_tracking" action="view">
       <div className="flex flex-col h-full p-4 gap-3">
         {/* Thẻ tổng hợp */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
           <SummaryCard
             label="Khách đang theo dõi"
             value={summary ? String(summary.totalCustomers) : "—"}
           />
           <SummaryCard
             label="Tổng dư nợ"
-            value={summary ? fmt(summary.totalDebt) : "—"}
+            value={summary ? formatCurrency(summary.totalDebt) : "—"}
           />
           <SummaryCard
-            label="Nợ quá hạn"
-            value={summary ? fmt(summary.overdueAmount) : "—"}
+            label="Cần thu ngay"
+            value={summary ? formatCurrency(summary.requiredPaymentAmount) : "—"}
             tone="text-red-600"
           />
           <SummaryCard
-            label="Vượt hạn mức"
-            value={summary ? fmt(summary.overLimitAmount) : "—"}
+            label="Theo hạn mức"
+            value={summary ? formatCurrency(summary.limitOverdueAmount) : "—"}
             tone="text-orange-600"
+          />
+          <SummaryCard
+            label="Theo hóa đơn"
+            value={summary ? formatCurrency(summary.invoiceRequiredAmount) : "—"}
+            tone="text-red-600"
           />
           <SummaryCard
             label="Đang có phiếu thu hồi"
@@ -230,17 +230,6 @@ export default function TheoDoiCongNoPage() {
               Phiếu thu hồi nợ
             </Link>
 
-            {canImport && (
-              <button
-                onClick={() => setShowImport(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded hover:bg-gray-50"
-                title="Thiết lập công nợ hàng loạt từ file Excel"
-              >
-                <Upload className="w-4 h-4" />
-                Import Excel
-              </button>
-            )}
-
             {canExport && (
               <button
                 onClick={() => exportMut.mutate(params)}
@@ -259,8 +248,7 @@ export default function TheoDoiCongNoPage() {
             {canCreateTicket && (
               <button
                 onClick={() => setShowCreateTicket(true)}
-                disabled={selectedRows.length === 0}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-brand text-white rounded hover:opacity-90 disabled:opacity-40"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-brand text-white rounded hover:opacity-90"
               >
                 <TicketIcon className="w-4 h-4" />
                 Tạo phiếu
@@ -281,16 +269,12 @@ export default function TheoDoiCongNoPage() {
         </div>
       </div>
 
-      {showCreateTicket && selectedRows.length > 0 && (
+      {showCreateTicket && (
         <CreateDebtTicketModal
           rows={selectedRows}
           onClose={() => setShowCreateTicket(false)}
           onCreated={() => setSelected([])}
         />
-      )}
-
-      {showImport && (
-        <ImportDebtPolicyModal onClose={() => setShowImport(false)} />
       )}
     </PagePermissionGuard>
   );

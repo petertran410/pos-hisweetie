@@ -30,9 +30,12 @@ import {
   TICKET_STATUS_LABELS,
   TICKET_LINE_STATUS_LABELS,
 } from "@/lib/api/debt-tickets";
+import {
+  formatCurrency,
+  formatNumberInput,
+  parseNumberInput,
+} from "@/lib/utils";
 
-const fmt = (n: number | null) =>
-  n === null || n === undefined ? "—" : Math.round(n).toLocaleString("vi-VN");
 const fmtDate = (s: string | null) =>
   s ? new Date(s).toLocaleDateString("vi-VN") : "—";
 
@@ -157,7 +160,7 @@ export default function TicketDetailPage() {
   };
 
   const saveLine = (customerId: number, field: EditField) => {
-    const value = Number(draft) || 0;
+    const value = parseNumberInput(draft);
     updateLine.mutate(
       { id, customerId, payload: { [field]: value } },
       { onSuccess: () => setEditing(null) }
@@ -192,9 +195,10 @@ export default function TicketDetailPage() {
       return (
         <div className="flex items-center gap-1 justify-end">
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => setDraft(formatNumberInput(e.target.value))}
             onKeyDown={(e) => {
               if (e.key === "Enter") saveLine(l.customerId, field);
               if (e.key === "Escape") setEditing(null);
@@ -217,13 +221,17 @@ export default function TicketDetailPage() {
         disabled={!isOpen || !canUpdate}
         onClick={() => {
           setEditing({ customerId: l.customerId, field });
-          setDraft(String(value ?? fallback ?? 0));
+          setDraft(formatNumberInput(String(value ?? fallback ?? 0)));
         }}
         className={`tabular-nums hover:underline disabled:no-underline disabled:cursor-default ${
           warn ? "text-amber-600 font-medium" : ""
         }`}
       >
-        {value !== null ? fmt(value) : fallback !== null ? fmt(fallback) : "—"}
+        {value !== null
+          ? formatCurrency(value)
+          : fallback !== null
+            ? formatCurrency(fallback)
+            : "—"}
       </button>
     );
   };
@@ -323,12 +331,15 @@ export default function TicketDetailPage() {
           <Card label="Số khách" value={String(ticket.summary.customerCount)} />
           <Card
             label="Nợ đầu kì"
-            value={fmt(ticket.summary.totalDebtAtCreate)}
+            value={formatCurrency(ticket.summary.totalDebtAtCreate)}
           />
-          <Card label="Nợ hiện tại" value={fmt(ticket.summary.totalCurrentDebt)} />
+          <Card
+            label="Nợ hiện tại"
+            value={formatCurrency(ticket.summary.totalCurrentDebt)}
+          />
           <Card
             label="Tối thiểu cần thu"
-            value={fmt(ticket.summary.totalMinimum)}
+            value={formatCurrency(ticket.summary.totalMinimum)}
           />
           <Card
             label="Đã thu"
@@ -398,10 +409,12 @@ export default function TicketDetailPage() {
                     )}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">
-                    {fmt(l.debtAtCreate)}
+                    {formatCurrency(l.debtAtCreate)}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">
-                    {fmt(l.currentDebt)}
+                    {l.currentDebt !== null
+                      ? formatCurrency(l.currentDebt)
+                      : "—"}
                   </td>
                   <td className="px-3 py-2 text-right">
                     {renderMoneyCell(
@@ -434,7 +447,7 @@ export default function TicketDetailPage() {
                       <>
                         <div className="tabular-nums text-green-700 font-medium">
                           {l.paidAmount !== null
-                            ? fmt(l.paidAmount)
+                            ? formatCurrency(l.paidAmount)
                             : "Đã xác nhận"}
                         </div>
                         <div className="text-gray-400">{fmtDate(l.paidAt)}</div>

@@ -22,9 +22,8 @@ import { usePermission } from "@/lib/hooks/usePermissions";
 import { DebtStatusBadge, ROW_TINT } from "./DebtStatusBadge";
 import { DebtNoteCell } from "./DebtNoteCell";
 import { DebtPolicyModal } from "./DebtPolicyModal";
-
-const fmt = (n: number | null | undefined) =>
-  n === null || n === undefined ? "—" : Math.round(n).toLocaleString("vi-VN");
+import { formatCurrency } from "@/lib/utils";
+import CodeLink from "../shared/CodeLink";
 
 const fmtDate = (s: string | null) =>
   s ? new Date(s).toLocaleDateString("vi-VN") : "—";
@@ -127,15 +126,20 @@ export function DebtTrackingTable({
               <th className="text-right px-3 py-2.5 font-medium">
                 Hạn mức / Vượt
               </th>
-              <th className="text-right px-3 py-2.5 font-medium">Nợ quá hạn</th>
-              <th className="text-left px-3 py-2.5 font-medium">Hạn gần nhất</th>
+              <th className="text-right px-3 py-2.5 font-medium">Cần thu</th>
+              <th className="text-right px-3 py-2.5 font-medium">Quá hạn HĐ</th>
+              <th className="text-left px-3 py-2.5 font-medium">
+                Hạn gần nhất
+              </th>
               <th className="text-left px-3 py-2.5 font-medium">
                 Thanh toán gần nhất
               </th>
               <th className="text-left px-3 py-2.5 font-medium">
                 Trạng thái nợ
               </th>
-              <th className="text-left px-3 py-2.5 font-medium">Phiếu thu hồi</th>
+              <th className="text-left px-3 py-2.5 font-medium">
+                Phiếu thu hồi
+              </th>
               <th className="text-left px-3 py-2.5 font-medium">
                 Ghi chú kế toán
               </th>
@@ -149,8 +153,7 @@ export function DebtTrackingTable({
             {rows.map((r) => (
               <tr
                 key={r.customerId}
-                className={`transition-colors ${ROW_TINT[r.debtStatus]}`}
-              >
+                className={`transition-colors ${ROW_TINT[r.debtStatus]}`}>
                 <td className="px-3 py-2 align-top">
                   <input
                     type="checkbox"
@@ -162,15 +165,15 @@ export function DebtTrackingTable({
 
                 <td className="px-3 py-2 align-top">
                   <Link
-                    href={`/khach-hang?search=${encodeURIComponent(
+                    href={`/khach-hang?Code=${encodeURIComponent(
                       r.code ?? r.name
                     )}`}
-                    className="font-medium hover:text-brand hover:underline"
-                  >
+                    target="_blanks"
+                    className="font-medium hover:text-brand hover:underline">
                     {r.name}
                   </Link>
                   <div className="text-xs text-gray-400">
-                    {r.code}
+                    <CodeLink entity="customer" code={r.code} />
                     {r.contactNumber ? ` · ${r.contactNumber}` : ""}
                   </div>
                   {r.policy.salePic && (
@@ -200,13 +203,12 @@ export function DebtTrackingTable({
                 </td>
 
                 <td className="px-3 py-2 align-top text-right tabular-nums font-medium">
-                  {fmt(r.totalDebt)}
+                  {formatCurrency(r.totalDebt)}
                   {r.unallocatedAmount > 0 && (
                     <div
                       className="text-[11px] text-gray-400 font-normal"
-                      title="Nợ cũ không gắn được hóa đơn nào nên chưa tính được hạn"
-                    >
-                      Nợ cũ: {fmt(r.unallocatedAmount)}
+                      title="Nợ cũ không gắn được hóa đơn nào nên chưa tính được hạn">
+                      Nợ cũ: {formatCurrency(r.unallocatedAmount)}
                     </div>
                   )}
                 </td>
@@ -214,10 +216,10 @@ export function DebtTrackingTable({
                 <td className="px-3 py-2 align-top text-right text-xs tabular-nums">
                   {r.creditLimit ? (
                     <>
-                      <div>{fmt(r.creditLimit)}</div>
+                      <div>{formatCurrency(r.creditLimit)}</div>
                       {r.overLimitAmount > 0 ? (
                         <div className="text-red-600 font-medium">
-                          +{fmt(r.overLimitAmount)}
+                          +{formatCurrency(r.overLimitAmount)}
                         </div>
                       ) : null}
                       {r.creditUsageRatio !== null && (
@@ -228,8 +230,7 @@ export function DebtTrackingTable({
                               : r.creditUsageRatio >= 0.8
                                 ? "text-amber-600"
                                 : "text-gray-400"
-                          }
-                        >
+                          }>
                           {Math.round(r.creditUsageRatio * 100)}%
                         </div>
                       )}
@@ -240,9 +241,35 @@ export function DebtTrackingTable({
                 </td>
 
                 <td className="px-3 py-2 align-top text-right tabular-nums">
+                  {r.requiredPaymentAmount > 0 ? (
+                    <>
+                      <div className="font-semibold text-red-700">
+                        {formatCurrency(r.requiredPaymentAmount)}
+                      </div>
+                      <div className="text-[11px] text-gray-500">
+                        {r.requiredPaymentSource === "CREDIT_LIMIT"
+                          ? "Theo hạn mức"
+                          : r.requiredPaymentSource === "INVOICE"
+                            ? "Theo hóa đơn"
+                            : "Hai nguồn bằng nhau"}
+                      </div>
+                      {r.limitOverdueAmount > 0 &&
+                        r.invoiceRequiredAmount > 0 && (
+                          <div className="text-[11px] text-gray-400">
+                            HM {formatCurrency(r.limitOverdueAmount)} · HĐ{" "}
+                            {formatCurrency(r.invoiceRequiredAmount)}
+                          </div>
+                        )}
+                    </>
+                  ) : (
+                    <span className="text-gray-300">—</span>
+                  )}
+                </td>
+
+                <td className="px-3 py-2 align-top text-right tabular-nums">
                   {r.overdueAmount > 0 ? (
                     <span className="text-red-600 font-semibold">
-                      {fmt(r.overdueAmount)}
+                      {formatCurrency(r.overdueAmount)}
                     </span>
                   ) : (
                     <span className="text-gray-300">—</span>
@@ -259,9 +286,18 @@ export function DebtTrackingTable({
                   {r.undeliveredAmount > 0 && (
                     <div
                       className="text-[11px] text-gray-400"
-                      title="Phần nợ thuộc hóa đơn chưa báo đơn giao hàng nên chưa phát sinh hạn"
-                    >
-                      Chưa báo đơn: {fmt(r.undeliveredAmount)}
+                      title="Phần nợ thuộc hóa đơn chưa báo đơn giao hàng nên chưa phát sinh hạn">
+                      Chưa báo đơn: {formatCurrency(r.undeliveredAmount)}
+                    </div>
+                  )}
+                  {r.dueAmount > 0 && (
+                    <div className="text-[11px] font-medium text-orange-600">
+                      Đến hạn: {formatCurrency(r.dueAmount)}
+                    </div>
+                  )}
+                  {r.dueSoonAmount > 0 && (
+                    <div className="text-[11px] text-amber-600">
+                      Sắp hạn: {formatCurrency(r.dueSoonAmount)}
                     </div>
                   )}
                 </td>
@@ -270,7 +306,7 @@ export function DebtTrackingTable({
                   {r.lastPayment ? (
                     <>
                       <div className="tabular-nums font-medium text-green-700">
-                        {fmt(r.lastPayment.amount)}
+                        {formatCurrency(r.lastPayment.amount)}
                       </div>
                       <div className="text-gray-400">
                         {fmtDate(r.lastPayment.transDate)}
@@ -286,8 +322,7 @@ export function DebtTrackingTable({
                           ? "text-green-600"
                           : "text-amber-600"
                       }`}
-                      title="Cam kết tần suất trả tiền trong tháng"
-                    >
+                      title="Cam kết tần suất trả tiền trong tháng">
                       <Repeat className="w-3 h-3" />
                       {r.paymentFrequency.paymentsThisMonth}/
                       {r.paymentFrequency.required} lần
@@ -306,8 +341,7 @@ export function DebtTrackingTable({
                   {r.openTicket ? (
                     <Link
                       href={`/khach-hang/ticket-cong-no/${r.openTicket.ticketId}`}
-                      className="inline-flex flex-col hover:underline"
-                    >
+                      className="inline-flex flex-col hover:underline">
                       <span className="text-brand font-medium">
                         {r.openTicket.ticketCode}
                       </span>
@@ -349,8 +383,7 @@ export function DebtTrackingTable({
                     <button
                       onClick={() => setPolicyTarget(r)}
                       className="p-1.5 hover:bg-gray-200 rounded"
-                      title="Thiết lập công nợ"
-                    >
+                      title="Thiết lập công nợ">
                       <Settings2 className="w-4 h-4 text-gray-500" />
                     </button>
                   )}
@@ -374,8 +407,7 @@ export function DebtTrackingTable({
             <button
               disabled={pg.page <= 1}
               onClick={() => onPageChange(pg.page - 1)}
-              className="p-1.5 border rounded disabled:opacity-40 hover:bg-gray-50"
-            >
+              className="p-1.5 border rounded disabled:opacity-40 hover:bg-gray-50">
               <ChevronLeft className="w-4 h-4" />
             </button>
             <span className="px-2">
@@ -384,8 +416,7 @@ export function DebtTrackingTable({
             <button
               disabled={pg.page >= pg.totalPages}
               onClick={() => onPageChange(pg.page + 1)}
-              className="p-1.5 border rounded disabled:opacity-40 hover:bg-gray-50"
-            >
+              className="p-1.5 border rounded disabled:opacity-40 hover:bg-gray-50">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

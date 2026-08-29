@@ -53,6 +53,7 @@ export function useCreatePackingSlip() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["packing-slips"] });
+      queryClient.invalidateQueries({ queryKey: ["debt-tracking"] });
     },
   });
 }
@@ -71,6 +72,7 @@ export function useUpdatePackingSlip() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["packing-slips"] });
+      queryClient.invalidateQueries({ queryKey: ["debt-tracking"] });
     },
   });
 }
@@ -98,6 +100,7 @@ export function useDeletePackingSlip() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["packing-slips"] });
+      queryClient.invalidateQueries({ queryKey: ["debt-tracking"] });
     },
   });
 }

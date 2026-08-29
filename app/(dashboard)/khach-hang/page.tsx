@@ -6,6 +6,7 @@ import { CustomersSidebar } from "@/components/customers/CustomersSidebar";
 import { CustomersTable } from "@/components/customers/CustomersTable";
 import { CustomerForm } from "@/components/customers/CustomerForm";
 import { CustomerImportModal } from "@/components/customers/CustomerImportModal";
+import { ImportDebtPolicyModal } from "@/components/debt-tracking/ImportDebtPolicyModal";
 import { CustomersMobileView } from "@/components/customers/CustomersMobileView";
 import { CustomerFilters, Customer } from "@/lib/types/customer";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
@@ -16,6 +17,7 @@ export default function CustomersPage() {
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showImportDebtModal, setShowImportDebtModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [filters, setFilters] = useState<CustomerFilters>(() => ({
     pageSize: 15,
@@ -51,6 +53,7 @@ export default function CustomersPage() {
           onCreateClick={() => setShowCreateForm(true)}
           onEditClick={(customer) => setEditingCustomer(customer)}
           onImportClick={() => setShowImportModal(true)}
+          onImportDebtClick={() => setShowImportDebtModal(true)}
         />
       </div>
 
@@ -81,6 +84,10 @@ export default function CustomersPage() {
 
       {showImportModal && (
         <CustomerImportModal onClose={() => setShowImportModal(false)} />
+      )}
+
+      {showImportDebtModal && (
+        <ImportDebtPolicyModal onClose={() => setShowImportDebtModal(false)} />
       )}
     </PagePermissionGuard>
   );

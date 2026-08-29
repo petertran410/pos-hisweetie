@@ -7,6 +7,11 @@ import {
   DEBT_GRACE_DAYS,
   COMMON_TERM_DAYS,
 } from "@/lib/api/debt-tracking";
+import {
+  formatCurrency,
+  formatNumberInput,
+  parseNumberInput,
+} from "@/lib/utils";
 
 /**
  * Giá trị thiết lập công nợ dưới dạng chuỗi để bind trực tiếp vào input.
@@ -44,7 +49,10 @@ export function validateDebtPolicyForm(
   if (v.hasTermDays && (!v.termDays || Number(v.termDays) < 0)) {
     return "Vui lòng nhập số ngày công nợ";
   }
-  if (v.hasCreditLimit && (!v.creditLimit || Number(v.creditLimit) <= 0)) {
+  if (
+    v.hasCreditLimit &&
+    (!v.creditLimit || parseNumberInput(v.creditLimit) <= 0)
+  ) {
     return "Vui lòng nhập hạn mức công nợ";
   }
   return null;
@@ -54,7 +62,9 @@ export function validateDebtPolicyForm(
 export function toDebtPolicyPayload(v: DebtPolicyFormValue) {
   return {
     hasCreditLimit: v.hasCreditLimit,
-    ...(v.hasCreditLimit ? { creditLimit: Number(v.creditLimit) } : {}),
+    ...(v.hasCreditLimit
+      ? { creditLimit: parseNumberInput(v.creditLimit) }
+      : {}),
     hasTermDays: v.hasTermDays,
     ...(v.hasTermDays ? { termDays: Number(v.termDays) } : {}),
     paymentFrequency: v.paymentFrequency ? Number(v.paymentFrequency) : null,
@@ -112,9 +122,9 @@ export function DebtPolicyFields({
         <div className="flex items-start gap-2 text-xs text-gray-600">
           <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
           <span>
-            Hai chiều dưới đây <b>độc lập</b>, có thể bật một hoặc cả hai. Bật
-            cả hai thì khách chỉ bị tính quá hạn khi thỏa <b>ĐỒNG THỜI</b> cả
-            hai điều kiện. Tắt cả hai = không công nợ.
+            Hai chiều dưới đây <b>độc lập</b>, có thể bật một hoặc cả hai. Nếu
+            bật cả hai, hệ thống tính riêng tiền theo hạn mức và theo hóa đơn,
+            sau đó lấy khoản lớn hơn. Tắt cả hai = không công nợ.
           </span>
         </div>
 
@@ -130,18 +140,19 @@ export function DebtPolicyFields({
           {value.hasCreditLimit && (
             <div className="mt-2 ml-6">
               <input
-                type="number"
-                min={0}
-                step={1000}
-                value={value.creditLimit}
-                onChange={(e) => onChange({ creditLimit: e.target.value })}
+                type="text"
+                inputMode="numeric"
+                value={formatNumberInput(value.creditLimit)}
+                onChange={(e) =>
+                  onChange({ creditLimit: formatNumberInput(e.target.value) })
+                }
                 placeholder="VD: 500000000"
                 className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
               />
-              {value.creditLimit && Number(value.creditLimit) > 0 && (
+              {value.creditLimit && parseNumberInput(value.creditLimit) > 0 && (
                 <p className="text-xs text-gray-500 mt-1">
-                  {Number(value.creditLimit).toLocaleString("vi-VN")} đ — nợ
-                  chạm mức này là phải thanh toán.
+                  {formatCurrency(parseNumberInput(value.creditLimit))} đ — khi
+                  vượt mức, số cần thu là phần vượt.
                 </p>
               )}
             </div>
@@ -185,7 +196,7 @@ export function DebtPolicyFields({
               />
               <p className="text-xs text-gray-500 mt-1">
                 Tính từ ngày <b>báo đơn giao hàng</b> đầu tiên của mỗi hóa đơn,
-                cộng thêm {DEBT_GRACE_DAYS} ngày ân hạn.
+                Hóa đơn bắt đầu cần thu từ ngày này; sau đó cộng thêm {DEBT_GRACE_DAYS} ngày ân hạn mới chuyển quá hạn.
               </p>
             </div>
           )}

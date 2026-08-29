@@ -62,6 +62,12 @@ export interface Order {
     wardName?: string;
     birthDate?: string;
     addresses?: CustomerAddress[];
+    debtPolicy?: {
+      debtForm?: "TRUST" | "CONTRACT" | "COD" | "PREPAID" | null;
+      hasCreditLimit: boolean;
+      hasTermDays: boolean;
+      isActive?: boolean;
+    } | null;
   };
   branch?: {
     id: number;

@@ -30,6 +30,11 @@ const TX_LABELS: Record<string, string> = {
   SALE_OUT: "Bán ra",
   SALE_CANCEL: "Hủy bán",
   PURCHASE_IN: "Nhập hàng",
+  RETURN_IN: "Nhập hàng trả",
+  RETURN_CANCEL: "Hủy trả hàng",
+  SUPPLIER_RETURN_OUT: "Trả hàng nhập",
+  CONSIGNMENT_RETURN_IN: "Hoàn ký gửi",
+  CONSIGNMENT_RETURN_CANCEL: "Hủy hoàn ký gửi",
 };
 
 const formatMoney = (v: number | null | undefined) =>

@@ -114,6 +114,10 @@ export const invoicesApi = {
   createInvoice: (data: any): Promise<Invoice> => {
     return apiClient.post("/invoices", data);
   },
+  /** Route POS có rule khách PREPAID + Không công nợ phải trả đủ. */
+  createPosInvoice: (data: any): Promise<Invoice> => {
+    return apiClient.post("/invoices/pos", data);
+  },
   updateInvoice: (id: number, data: any): Promise<Invoice> => {
     return apiClient.put(`/invoices/${id}`, data);
   },
@@ -147,6 +151,46 @@ export const invoicesApi = {
       discountRatio,
     } = params;
     return apiClient.post(`/invoices/from-order/${orderId}`, {
+      additionalPayment: additionalPayment || 0,
+      items: items || [],
+      payments: payments || [],
+      forceComplete: forceComplete ?? false,
+      ...(soldById ? { soldById } : {}),
+      ...(appliedPromotions ? { appliedPromotions } : {}),
+      ...(appliedPromotionIds ? { appliedPromotionIds } : {}),
+      ...(skipPromotions != null ? { skipPromotions } : {}),
+      ...(discountAmount != null ? { discountAmount } : {}),
+      ...(discountRatio != null ? { discountRatio } : {}),
+    });
+  },
+  /** Route POS có rule khách PREPAID + Không công nợ phải trả đủ trên đơn. */
+  createPosInvoiceFromOrder: (params: {
+    orderId: number;
+    additionalPayment?: number;
+    items?: any[];
+    payments?: Array<{ method: string; amount: number }>;
+    soldById?: number;
+    forceComplete?: boolean;
+    appliedPromotions?: any[];
+    appliedPromotionIds?: number[];
+    skipPromotions?: boolean;
+    discountAmount?: number;
+    discountRatio?: number;
+  }): Promise<Invoice> => {
+    const {
+      orderId,
+      additionalPayment,
+      items,
+      payments,
+      soldById,
+      forceComplete,
+      appliedPromotions,
+      appliedPromotionIds,
+      skipPromotions,
+      discountAmount,
+      discountRatio,
+    } = params;
+    return apiClient.post(`/invoices/pos/from-order/${orderId}`, {
       additionalPayment: additionalPayment || 0,
       items: items || [],
       payments: payments || [],

@@ -6,6 +6,7 @@ import { apiClient, API_URL, getAuthHeaders } from "@/lib/config/api";
 
 /** Trạng thái nợ — ba mức theo quy trình vận hành. */
 export type DebtStatus = "OVERDUE" | "DUE" | "NORMAL";
+export type RequiredPaymentSource = "CREDIT_LIMIT" | "INVOICE" | "TIE" | "NONE";
 
 export const DEBT_STATUS_LABELS: Record<DebtStatus, string> = {
   OVERDUE: "Quá Hạn",
@@ -20,7 +21,7 @@ export const DEBT_FORM_LABELS: Record<DebtForm, string> = {
   TRUST: "Công Nợ Tín Nhiệm",
   CONTRACT: "Hợp Đồng Công Nợ",
   COD: "Thanh Toán Khi Nhận Hàng",
-  PREPAID: "Chuyển Khoản Ngay",
+  PREPAID: "Chuyển khoản ngay",
 };
 
 export type PaymentHistory =
@@ -122,6 +123,7 @@ export interface DebtTrackingRow {
 
   overdueAmount: number;
   dueAmount: number;
+  dueSoonAmount: number;
   notDueAmount: number;
   /** Nợ thuộc hóa đơn chưa báo đơn giao hàng. */
   undeliveredAmount: number;
@@ -133,6 +135,11 @@ export interface DebtTrackingRow {
   creditUsageRatio: number | null;
   limitReached: boolean;
   overLimitAmount: number;
+  limitOverdueAmount: number;
+  invoiceRequiredAmount: number;
+  /** Số tiền hệ thống đề xuất cần thu ngay theo chính sách. */
+  requiredPaymentAmount: number;
+  requiredPaymentSource: RequiredPaymentSource;
   debtStatus: DebtStatus;
   outstandingCount: number;
 
@@ -159,10 +166,14 @@ export interface DebtTrackingSummary {
   totalDebt: number;
   overdueAmount: number;
   dueAmount: number;
+  dueSoonAmount: number;
   notDueAmount: number;
   undeliveredAmount: number;
   unallocatedAmount: number;
   overLimitAmount: number;
+  limitOverdueAmount: number;
+  invoiceRequiredAmount: number;
+  requiredPaymentAmount: number;
   byDebtStatus: Record<DebtStatus, number>;
   customersOverLimit: number;
   customersWithOpenTicket: number;
@@ -230,6 +241,7 @@ export interface OutstandingInvoice {
   deliveredAt: string | null;
   purchaseDate: string;
   dueDate: string | null;
+  overdueDate: string | null;
   daysOverdue: number;
   daysUntilDue: number | null;
   isOverdue: boolean;
@@ -251,6 +263,7 @@ export interface DebtTrackingDetail {
     outstandingInvoices: OutstandingInvoice[];
     overdueAmount: number;
     dueAmount: number;
+    dueSoonAmount: number;
     notDueAmount: number;
     undeliveredAmount: number;
     unallocatedAmount: number;
@@ -260,6 +273,10 @@ export interface DebtTrackingDetail {
     creditUsageRatio: number | null;
     limitReached: boolean;
     overLimitAmount: number;
+    limitOverdueAmount: number;
+    invoiceRequiredAmount: number;
+    requiredPaymentAmount: number;
+    requiredPaymentSource: RequiredPaymentSource;
     debtStatus: DebtStatus;
   };
   paymentFrequency: PaymentFrequencyInfo | null;

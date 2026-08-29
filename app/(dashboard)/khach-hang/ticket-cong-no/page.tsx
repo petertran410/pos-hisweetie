@@ -20,8 +20,8 @@ import {
   DebtTicketStatus,
   TICKET_STATUS_LABELS,
 } from "@/lib/api/debt-tickets";
+import { formatCurrency } from "@/lib/utils";
 
-const fmt = (n: number) => Math.round(n).toLocaleString("vi-VN");
 const fmtDate = (s: string | null) =>
   s ? new Date(s).toLocaleDateString("vi-VN") : "—";
 
@@ -231,14 +231,14 @@ export default function TicketCongNoPage() {
                           {t.summary.customerCount}
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">
-                          {fmt(t.summary.totalDebtAtCreate)}
+                          {formatCurrency(t.summary.totalDebtAtCreate)}
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">
-                          {fmt(t.summary.totalMinimum)}
+                          {formatCurrency(t.summary.totalMinimum)}
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">
                           {t.summary.totalConfirmed > 0
-                            ? fmt(t.summary.totalConfirmed)
+                            ? formatCurrency(t.summary.totalConfirmed)
                             : "—"}
                         </td>
                         <td className="px-3 py-2">

@@ -108,6 +108,19 @@ export function useCreateInvoice() {
   });
 }
 
+/** Tạo trực tiếp từ POS, có enforcement PREPAID + Không công nợ ở backend. */
+export function useCreatePosInvoice() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: invoicesApi.createPosInvoice,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      invalidateConditionQueries(queryClient);
+      toast.success("Tạo hóa đơn thành công");
+    },
+  });
+}
+
 export function useUpdateInvoice() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -115,6 +128,7 @@ export function useUpdateInvoice() {
       invoicesApi.updateInvoice(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["debt-tracking"] });
       invalidateConditionQueries(queryClient);
     },
     onError: (error: any) => {
@@ -186,6 +200,56 @@ export function useCreateInvoiceFromOrder() {
     },
     onError: (error: any) => {
       toast.error(error.message || "Tạo hóa đơn từ đơn hàng thất bại");
+    },
+  });
+}
+
+/** Tạo từ đơn hàng trên POS, backend yêu cầu order đã thanh toán đủ khi cần. */
+export function useCreatePosInvoiceFromOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      orderId,
+      additionalPayment,
+      items,
+      payments,
+      soldById,
+      forceComplete,
+      appliedPromotions,
+      appliedPromotionIds,
+      skipPromotions,
+      discountAmount,
+      discountRatio,
+    }: {
+      orderId: number;
+      additionalPayment?: number;
+      items?: any[];
+      payments?: Array<{ method: string; amount: number }>;
+      soldById?: number;
+      forceComplete?: boolean;
+      appliedPromotions?: any[];
+      appliedPromotionIds?: number[];
+      skipPromotions?: boolean;
+      discountAmount?: number;
+      discountRatio?: number;
+    }) =>
+      invoicesApi.createPosInvoiceFromOrder({
+        orderId,
+        additionalPayment,
+        items,
+        payments,
+        soldById,
+        forceComplete,
+        appliedPromotions,
+        appliedPromotionIds,
+        skipPromotions,
+        discountAmount,
+        discountRatio,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      invalidateConditionQueries(queryClient);
     },
   });
 }

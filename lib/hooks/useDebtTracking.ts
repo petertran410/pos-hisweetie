@@ -17,6 +17,23 @@ export function useDebtTracking(params?: DebtTrackingParams) {
   });
 }
 
+/**
+ * Tìm nhanh khách trong theo dõi công nợ — dùng khi thêm khách trực tiếp
+ * vào phiếu thu hồi nợ. Chỉ gọi khi có từ khóa.
+ */
+export function useDebtTrackingSearch(search?: string) {
+  return useQuery({
+    queryKey: [KEY, "quick-search", search ?? ""],
+    queryFn: () =>
+      debtTrackingApi.getList({
+        search: search || undefined,
+        pageSize: 8,
+      }),
+    enabled: !!search,
+    placeholderData: (prev) => prev,
+  });
+}
+
 /** Số liệu tổng hợp — dùng chung filter với danh sách để không lệch nhau. */
 export function useDebtTrackingSummary(params?: DebtTrackingParams) {
   return useQuery({

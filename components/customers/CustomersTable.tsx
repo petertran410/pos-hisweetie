@@ -33,6 +33,7 @@ interface CustomersTableProps {
   onCreateClick: () => void;
   onEditClick: (customer: Customer) => void;
   onImportClick: () => void;
+  onImportDebtClick: () => void;
 }
 
 const formatDateTime = (date?: string) => {
@@ -233,6 +234,7 @@ export function CustomersTable({
   onCreateClick,
   onEditClick,
   onImportClick,
+  onImportDebtClick,
 }: CustomersTableProps) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedCustomerId, setExpandedCustomerId] = useState<number | null>(
@@ -423,7 +425,16 @@ export function CustomersTable({
                 onClick={onImportClick}
                 className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600">
                 <Upload className="w-4 h-4" />
-                Import
+                Import khách hàng
+              </button>
+            </PermissionGate>
+            <PermissionGate resource="debt_tracking" action="update_policy">
+              <button
+                onClick={onImportDebtClick}
+                className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600"
+                title="Nạp hình thức / hạn mức / kỳ hạn công nợ hàng loạt">
+                <Upload className="w-4 h-4" />
+                Import thiết lập công nợ
               </button>
             </PermissionGate>
             <PermissionGate resource="customers" action="export">

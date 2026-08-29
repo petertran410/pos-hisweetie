@@ -12,10 +12,10 @@ import {
   useOrder,
 } from "@/lib/hooks/useOrders";
 import {
-  useCreateInvoice,
+  useCreatePosInvoice,
   useUpdateInvoice,
   useInvoice,
-  useCreateInvoiceFromOrder,
+  useCreatePosInvoiceFromOrder,
 } from "@/lib/hooks/useInvoices";
 import { toast } from "sonner";
 import { X, Plus, ArrowLeftRight, List, ShoppingCart } from "lucide-react";
@@ -555,13 +555,13 @@ export default function BanHangPage() {
 
   const createOrder = useCreateOrder();
   const updateOrder = useUpdateOrder();
-  const createInvoice = useCreateInvoice();
+  const createPosInvoice = useCreatePosInvoice();
   const updateInvoice = useUpdateInvoice();
   const createOrderPayment = useCreateOrderPayment();
   const createInvoicePayment = useCreateInvoicePayment();
   const createConsignment = useCreateConsignment();
   const updateConsignment = useUpdateConsignment();
-  const createInvoiceFromOrder = useCreateInvoiceFromOrder();
+  const createPosInvoiceFromOrder = useCreatePosInvoiceFromOrder();
 
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState("tab-1");
@@ -575,6 +575,44 @@ export default function BanHangPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId) || tabs[0];
+
+  const isPrepaidNoDebt = (customer: any) => {
+    const policy = customer?.debtPolicy;
+    return !!(
+      policy?.isActive !== false &&
+      policy?.debtForm === "PREPAID" &&
+      !policy?.hasCreditLimit &&
+      !policy?.hasTermDays
+    );
+  };
+
+  const showPrepaidNoDebtWarning = (input: {
+    paidAmount: number;
+    grandTotal: number;
+    fromOrder: boolean;
+  }) => {
+    toast.warning(
+      input.fromOrder
+        ? "Khách hàng thuộc hình thức Chuyển khoản ngay và loại Không công nợ. Đơn hàng chưa được thanh toán đủ nên không thể tạo hóa đơn. Vui lòng ghi nhận đủ tiền trên đơn hàng trước khi tạo hóa đơn."
+        : "Khách hàng thuộc hình thức Chuyển khoản ngay và loại Không công nợ. Hóa đơn chưa được thanh toán đủ nên không thể tạo hóa đơn. Vui lòng thu đủ tiền trước khi tạo hóa đơn.",
+      {
+        description: `Đã thanh toán: ${formatCurrency(input.paidAmount)} / Cần thanh toán: ${formatCurrency(input.grandTotal)}`,
+      },
+    );
+  };
+
+  const assertPrepaidOrderCanBeInvoiced = async (orderId: number) => {
+    const fresh = await ordersApi.getOrder(orderId);
+    if (!isPrepaidNoDebt(fresh.customer)) return true;
+
+    const paidAmount = Number(fresh.paidAmount || 0);
+    const grandTotal = Number(fresh.grandTotal || 0);
+    if (paidAmount + 1 < grandTotal) {
+      showPrepaidNoDebtWarning({ paidAmount, grandTotal, fromOrder: true });
+      return false;
+    }
+    return true;
+  };
 
   // ── Cảnh báo lệch giá: so đơn giá hiện tại với giá bán gần nhất (hóa đơn) ──
   const activeProductIds = useMemo(
@@ -2518,6 +2556,16 @@ export default function BanHangPage() {
 
     if (!(await assertOrderNotInvoiced(activeTab.documentId))) return;
 
+    try {
+      if (!(await assertPrepaidOrderCanBeInvoiced(activeTab.documentId))) {
+        return;
+      }
+    } catch (error) {
+      // Không khóa thao tác chỉ vì check sớm lỗi mạng; endpoint POS kiểm tra
+      // lại bằng dữ liệu DB mới nhất trước khi tạo hóa đơn.
+      console.error("prepaid order eligibility check error:", error);
+    }
+
     const order = existingOrder;
     if (!order) return;
 
@@ -2646,6 +2694,18 @@ export default function BanHangPage() {
           );
           return;
         }
+        if (isPrepaidNoDebt(fresh.customer)) {
+          const paidAmount = Number(fresh.paidAmount || 0);
+          const grandTotal = Number(fresh.grandTotal || 0);
+          if (paidAmount + 1 < grandTotal) {
+            showPrepaidNoDebtWarning({
+              paidAmount,
+              grandTotal,
+              fromOrder: true,
+            });
+            return;
+          }
+        }
       } catch (error) {
         console.error("handlePayment status check error:", error);
         // Lỗi mạng → chặn mềm, để BE xử lý tuyến cuối.
@@ -2755,7 +2815,7 @@ export default function BanHangPage() {
               ? [{ method: "cash", amount: actualPayment }]
               : [];
 
-        const result = await createInvoiceFromOrder.mutateAsync({
+        const result = await createPosInvoiceFromOrder.mutateAsync({
           orderId: activeTab.sourceOrderId,
           additionalPayment: actualPayment,
           payments: payments,
@@ -4001,7 +4061,7 @@ export default function BanHangPage() {
           const result = await createConsignment.mutateAsync(documentData);
           docId = (result as any)?.id;
         } else {
-          const result = await createInvoice.mutateAsync(documentData);
+          const result = await createPosInvoice.mutateAsync(documentData);
 
           docId = result?.id;
           if (docId)

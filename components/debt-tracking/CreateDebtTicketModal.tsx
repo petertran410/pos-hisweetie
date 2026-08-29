@@ -1,15 +1,50 @@
 "use client";
 
-import { useState } from "react";
-import { X, Loader2, AlertTriangle, Info } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { X, Loader2, AlertTriangle, Info, Search } from "lucide-react";
 import {
   DebtTrackingRow,
   MIN_PAYMENT_RATIO_WARN,
 } from "@/lib/api/debt-tracking";
 import { useCreateDebtTicket } from "@/lib/hooks/useDebtTickets";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
+import { useDebtTrackingSearch } from "@/lib/hooks/useDebtTracking";
+import { DatePickerInput } from "@/components/ui/DatePickerInput";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import {
+  formatCurrency,
+  formatNumberInput,
+  parseNumberInput,
+} from "@/lib/utils";
 
-const fmt = (n: number) => Math.round(n).toLocaleString("vi-VN");
+interface TicketLine {
+  customerId: number;
+  customerName: string;
+  customerCode: string | null;
+  contactNumber: string | null;
+  totalDebt: number;
+  minimumPayment: string;
+  confirmedAmount: string;
+  confirmedDate: string;
+  note: string;
+}
+
+/** Số tiền tối thiểu mặc định là khoản hệ thống đã so sánh giữa hạn mức và
+ * hóa đơn đến hạn. Không có khoản nào cần thu thì để 0, không tự lấy toàn nợ. */
+const toLine = (r: DebtTrackingRow): TicketLine => {
+  const suggested = r.requiredPaymentAmount;
+  return {
+    customerId: r.customerId,
+    customerName: r.name,
+    customerCode: r.code,
+    contactNumber: r.contactNumber,
+    totalDebt: r.totalDebt,
+    minimumPayment: formatNumberInput(String(Math.round(suggested))),
+    confirmedAmount: "",
+    confirmedDate: "",
+    note: "",
+  };
+};
 
 export function CreateDebtTicketModal({
   rows,
@@ -29,25 +64,78 @@ export function CreateDebtTicketModal({
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Số tiền tối thiểu mặc định = phần nợ ĐÃ ĐẾN HẠN (quá hạn + tới hạn) —
-  // đúng con số hệ thống gợi ý. Không có gì đến hạn thì lấy toàn bộ nợ.
-  const [lines, setLines] = useState(
-    rows.map((r) => {
-      const due = r.overdueAmount + r.dueAmount;
-      return {
-        customerId: r.customerId,
-        customerName: r.name,
-        customerCode: r.code,
-        totalDebt: r.totalDebt,
-        minimumPayment: String(Math.round(due > 0 ? due : r.totalDebt)),
-        confirmedAmount: "",
-        confirmedDate: "",
-        note: "",
-      };
-    })
+  // Khách ban đầu = các dòng đã tick ở trang theo dõi công nợ; sau đó có thể
+  // tìm thêm trực tiếp trong phiếu.
+  const [lines, setLines] = useState<TicketLine[]>(() => rows.map(toLine));
+
+  // ------------------ Tìm kiếm thêm khách ------------------
+  const [search, setSearch] = useState("");
+  const [searchDebounced, setSearchDebounced] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchDebounced(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data: searchData, isFetching: searching } = useDebtTrackingSearch(
+    searchDebounced || undefined
   );
 
-  const setLine = (i: number, patch: Partial<(typeof lines)[number]>) => {
+  // Bỏ những khách đã nằm trong phiếu khỏi kết quả gợi ý.
+  const results = useMemo(
+    () =>
+      (searchData?.data ?? []).filter(
+        (r) => !lines.some((l) => l.customerId === r.customerId)
+      ),
+    [searchData, lines]
+  );
+
+  // Highlight luôn nằm trong phạm vi kết quả hiện có.
+  const activeIndex = Math.min(
+    highlightedIndex,
+    Math.max(results.length - 1, 0)
+  );
+
+  useEffect(() => {
+    if (showDropdown && itemRefs.current[activeIndex]) {
+      itemRefs.current[activeIndex]?.scrollIntoView({ block: "nearest" });
+    }
+  }, [activeIndex, showDropdown]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(event.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const addCustomer = (row: DebtTrackingRow) => {
+    setLines((prev) =>
+      prev.some((l) => l.customerId === row.customerId)
+        ? prev
+        : [...prev, toLine(row)]
+    );
+    setSearch("");
+    setSearchDebounced("");
+    setShowDropdown(false);
+  };
+
+  const removeLine = (customerId: number) =>
+    setLines((prev) => prev.filter((l) => l.customerId !== customerId));
+
+  // ------------------ Tổng hợp & submit ------------------
+  const setLine = (i: number, patch: Partial<TicketLine>) => {
     setLines((prev) =>
       prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l))
     );
@@ -55,14 +143,14 @@ export function CreateDebtTicketModal({
 
   const totalDebt = lines.reduce((s, l) => s + l.totalDebt, 0);
   const totalMinimum = lines.reduce(
-    (s, l) => s + (Number(l.minimumPayment) || 0),
+    (s, l) => s + parseNumberInput(l.minimumPayment),
     0
   );
 
   /** Cảnh báo mềm: tối thiểu dưới 30% nợ hiện tại. */
-  const isBelowRatio = (l: (typeof lines)[number]) =>
+  const isBelowRatio = (l: TicketLine) =>
     l.totalDebt > 0 &&
-    Number(l.minimumPayment) < l.totalDebt * MIN_PAYMENT_RATIO_WARN;
+    parseNumberInput(l.minimumPayment) < l.totalDebt * MIN_PAYMENT_RATIO_WARN;
 
   const belowCount = lines.filter(isBelowRatio).length;
 
@@ -70,6 +158,10 @@ export function CreateDebtTicketModal({
     setError(null);
     if (!assigneeId) {
       setError("Vui lòng chọn nhân viên phụ trách");
+      return;
+    }
+    if (lines.length === 0) {
+      setError("Vui lòng thêm ít nhất một khách hàng");
       return;
     }
 
@@ -81,9 +173,13 @@ export function CreateDebtTicketModal({
         customers: lines.map((l) => ({
           customerId: l.customerId,
           minimumPayment:
-            l.minimumPayment !== "" ? Number(l.minimumPayment) : undefined,
+            l.minimumPayment !== ""
+              ? parseNumberInput(l.minimumPayment)
+              : undefined,
           confirmedAmount:
-            l.confirmedAmount !== "" ? Number(l.confirmedAmount) : undefined,
+            l.confirmedAmount !== ""
+              ? parseNumberInput(l.confirmedAmount)
+              : undefined,
           confirmedDate: l.confirmedDate || undefined,
           note: l.note.trim() || undefined,
         })),
@@ -104,7 +200,7 @@ export function CreateDebtTicketModal({
           <div>
             <h3 className="font-semibold">Tạo phiếu thu hồi nợ</h3>
             <p className="text-xs text-gray-500 mt-0.5">
-              {rows.length} khách hàng · Tổng nợ {fmt(totalDebt)} đ
+              {lines.length} khách hàng · Tổng nợ {formatCurrency(totalDebt)} đ
             </p>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
@@ -118,20 +214,16 @@ export function CreateDebtTicketModal({
               <label className="block text-sm font-medium mb-1.5">
                 Nhân viên phụ trách <span className="text-red-500">*</span>
               </label>
-              <select
-                value={assigneeId}
-                onChange={(e) =>
-                  setAssigneeId(e.target.value ? Number(e.target.value) : "")
-                }
-                className="w-full border rounded px-3 py-2 text-sm"
-              >
-                <option value="">— Chọn nhân viên —</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-              </select>
+              <SearchableSelect
+                options={users.map((u) => ({
+                  value: String(u.id),
+                  label: u.name,
+                }))}
+                value={assigneeId ? String(assigneeId) : ""}
+                onChange={(v) => setAssigneeId(v ? Number(v) : "")}
+                placeholder="— Chọn nhân viên —"
+                searchPlaceholder="Tìm nhân viên…"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1.5">
@@ -164,8 +256,98 @@ export function CreateDebtTicketModal({
               </label>
               <span className="text-xs text-gray-500">
                 Tổng tối thiểu cần thu:{" "}
-                <b className="text-gray-800">{fmt(totalMinimum)} đ</b>
+                <b className="text-gray-800">
+                  {formatCurrency(totalMinimum)} đ
+                </b>
               </span>
+            </div>
+
+            {/* Tìm thêm khách trực tiếp trong phiếu */}
+            <div className="relative mb-2" ref={searchRef}>
+              <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <input
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setHighlightedIndex(0);
+                  setShowDropdown(true);
+                }}
+                onFocus={() => search && setShowDropdown(true)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setShowDropdown(false);
+                    return;
+                  }
+                  if (!showDropdown || results.length === 0) return;
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setHighlightedIndex((i) =>
+                      Math.min(i + 1, results.length - 1)
+                    );
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setHighlightedIndex((i) => Math.max(i - 1, 0));
+                  } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (results[activeIndex]) {
+                      addCustomer(results[activeIndex]);
+                    }
+                  }
+                }}
+                placeholder="Tìm thêm khách theo mã, tên, số điện thoại…"
+                className="w-full border rounded pl-8 pr-3 py-2 text-sm"
+              />
+
+              {showDropdown && searchDebounced && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg max-h-72 overflow-y-auto z-20">
+                  {searching && results.length === 0 ? (
+                    <div className="flex items-center justify-center gap-2 px-3 py-4 text-sm text-gray-400">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Đang tìm…
+                    </div>
+                  ) : results.length === 0 ? (
+                    <div className="px-3 py-4 text-sm text-gray-400 text-center">
+                      Không tìm thấy khách phù hợp trong theo dõi công nợ
+                    </div>
+                  ) : (
+                    results.map((r, index) => (
+                      <button
+                        key={r.customerId}
+                        ref={(el) => {
+                          itemRefs.current[index] = el;
+                        }}
+                        onClick={() => addCustomer(r)}
+                        onMouseEnter={() => setHighlightedIndex(index)}
+                        className={`w-full px-3 py-2 text-left flex items-center justify-between gap-3 ${
+                          index === activeIndex
+                            ? "bg-gray-100"
+                            : "hover:bg-gray-50"
+                        }`}
+                      >
+                        <span className="min-w-0">
+                          <span className="block font-medium truncate">
+                            {r.name}
+                          </span>
+                          <span className="block text-xs text-gray-500">
+                            {r.code}
+                            {r.contactNumber ? ` · ${r.contactNumber}` : ""}
+                          </span>
+                        </span>
+                        <span className="text-right shrink-0">
+                          <span className="block text-sm tabular-nums">
+                            {formatCurrency(r.totalDebt)} đ
+                          </span>
+                          {r.overdueAmount > 0 && (
+                            <span className="block text-xs text-red-600 tabular-nums">
+                              Quá hạn {formatCurrency(r.overdueAmount)}
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="border rounded overflow-x-auto">
@@ -187,9 +369,21 @@ export function CreateDebtTicketModal({
                     <th className="text-left px-3 py-2 font-medium w-36">
                       Ngày xác nhận
                     </th>
+                    <th className="w-10"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
+                  {lines.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-3 py-6 text-center text-sm text-gray-400"
+                      >
+                        Chưa có khách nào — tìm và thêm khách qua ô tìm kiếm
+                        phía trên.
+                      </td>
+                    </tr>
+                  )}
                   {lines.map((l, i) => {
                     const below = isBelowRatio(l);
                     return (
@@ -198,17 +392,23 @@ export function CreateDebtTicketModal({
                           <div className="font-medium">{l.customerName}</div>
                           <div className="text-xs text-gray-400">
                             {l.customerCode}
+                            {l.contactNumber ? ` · ${l.contactNumber}` : ""}
                           </div>
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">
-                          {fmt(l.totalDebt)}
+                          {formatCurrency(l.totalDebt)}
                         </td>
                         <td className="px-3 py-2">
                           <input
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
                             value={l.minimumPayment}
                             onChange={(e) =>
-                              setLine(i, { minimumPayment: e.target.value })
+                              setLine(i, {
+                                minimumPayment: formatNumberInput(
+                                  e.target.value
+                                ),
+                              })
                             }
                             className={`w-full border rounded px-2 py-1 text-sm text-right tabular-nums ${
                               below ? "border-amber-400 bg-amber-50" : ""
@@ -222,25 +422,34 @@ export function CreateDebtTicketModal({
                         </td>
                         <td className="px-3 py-2">
                           <input
-                            type="number"
-                            min={0}
+                            type="text"
+                            inputMode="numeric"
                             value={l.confirmedAmount}
                             onChange={(e) =>
-                              setLine(i, { confirmedAmount: e.target.value })
+                              setLine(i, {
+                                confirmedAmount: formatNumberInput(
+                                  e.target.value
+                                ),
+                              })
                             }
                             placeholder="Chưa xác nhận"
                             className="w-full border rounded px-2 py-1 text-sm text-right tabular-nums"
                           />
                         </td>
                         <td className="px-3 py-2">
-                          <input
-                            type="date"
+                          <DatePickerInput
                             value={l.confirmedDate}
-                            onChange={(e) =>
-                              setLine(i, { confirmedDate: e.target.value })
-                            }
-                            className="w-full border rounded px-2 py-1 text-sm"
+                            onChange={(v) => setLine(i, { confirmedDate: v })}
                           />
+                        </td>
+                        <td className="px-2 py-2 align-middle">
+                          <button
+                            onClick={() => removeLine(l.customerId)}
+                            title="Xóa khỏi phiếu"
+                            className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
                         </td>
                       </tr>
                     );

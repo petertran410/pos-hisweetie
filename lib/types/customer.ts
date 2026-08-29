@@ -15,6 +15,12 @@ export interface Customer {
   branchId?: number;
   totalPurchased: number;
   totalDebt: number;
+  debtPolicy?: {
+    debtForm?: "TRUST" | "CONTRACT" | "COD" | "PREPAID" | null;
+    hasCreditLimit: boolean;
+    hasTermDays: boolean;
+    isActive?: boolean;
+  } | null;
   totalInvoiced: number;
   totalPoint: number;
   totalRevenue: number;
@@ -129,6 +135,12 @@ export interface CustomerSearchResult {
   phone?: string;
   email?: string;
   totalDebt: number;
+  debtPolicy?: {
+    debtForm?: "TRUST" | "CONTRACT" | "COD" | "PREPAID" | null;
+    hasCreditLimit: boolean;
+    hasTermDays: boolean;
+    isActive?: boolean;
+  } | null;
   parentId?: number;
   parent?: {
     code: string;
