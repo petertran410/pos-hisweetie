@@ -94,6 +94,22 @@ const normalizeIngredientUnit = (unit?: string | null) => {
   if (normalized === "g" || normalized === "gr") return "gram";
   return INGREDIENT_UNITS.find((option) => option === normalized) || "gram";
 };
+const sourceUnit = (row: RecipeIngredientPayload) => {
+  if (row.sourceType === "SEMI_FINISHED") {
+    const unit = row.recipeReference?.quantityUnit?.trim().toLowerCase();
+    return unit === "ml" || unit === "gram" ? unit : undefined;
+  }
+  if (row.sourceType === "PRODUCT") {
+    const weightUnit = row.product?.weightUnit?.trim().toLowerCase();
+    if (weightUnit === "g" || weightUnit === "gram" || weightUnit === "gr") return "gram";
+    if (weightUnit === "ml") return "ml";
+    const unit = row.product?.unit?.trim().toLowerCase();
+    return INGREDIENT_UNITS.find((option) => option === unit);
+  }
+  const unit = (row.customUnit || row.unit)?.trim().toLowerCase();
+  return INGREDIENT_UNITS.find((option) => option === unit);
+};
+const hasSourceUnit = (row: RecipeIngredientPayload) => !!sourceUnit(row);
 const money = (value?: number | null) =>
   value == null
     ? "—"
@@ -861,10 +877,10 @@ export function RecipeForm({
                   />
                   <FieldError message={errors.name} />
                 </Field>
-                <Field label="Loại">
-                  <select
-                    disabled={!editable}
-                    value={form.type}
+                 <Field label="Loại">
+                   <select
+                     disabled={!editable}
+                     value={form.type}
                     onChange={(e) =>
                       setField("type", e.target.value as RecipeType)
                     }
@@ -1049,6 +1065,8 @@ export function RecipeForm({
                         id: row.recipeReference.id,
                         code: row.recipeReference.code,
                         name: row.recipeReference.name,
+                        quantityUnit: row.recipeReference.quantityUnit,
+                        costPerOutputUnit: row.recipeReference.costPerOutputUnit,
                       }
                     : undefined;
                   return (
@@ -1100,10 +1118,12 @@ export function RecipeForm({
                                   .value as RecipeIngredientPayload["sourceType"],
                                 productId: undefined,
                                 recipeReferenceId: undefined,
-                                customName: undefined,
-                              })
-                            }
-                            className={inputClass}
+                                 customName: undefined,
+                                 unit: undefined,
+                                 customUnit: undefined,
+                               })
+                             }
+                             className={inputClass}
                             style={{ borderColor: "var(--dt-border)" }}
                           >
                             <option value="PRODUCT">Product</option>
@@ -1129,7 +1149,9 @@ export function RecipeForm({
                                 updateIngredient(index, {
                                   productId: product?.id,
                                   product,
-                                  unit: normalizeIngredientUnit(row.unit),
+                                  unit: product
+                                    ? sourceUnit({ ...row, sourceType: "PRODUCT", product })
+                                    : undefined,
                                 })
                               }
                             />
@@ -1156,9 +1178,13 @@ export function RecipeForm({
                                         name: recipe.name,
                                         type: "SEMI_FINISHED",
                                         status: "PUBLISHED",
+                                        quantityUnit: recipe.quantityUnit,
+                                        costPerOutputUnit: recipe.costPerOutputUnit,
                                       }
                                     : undefined,
-                                  unit: normalizeIngredientUnit(row.unit),
+                                  unit: recipe?.quantityUnit
+                                    ? sourceUnit({ ...row, sourceType: "SEMI_FINISHED", recipeReference: { ...recipe, type: "SEMI_FINISHED", status: "PUBLISHED" } })
+                                    : undefined,
                                 })
                               }
                             />
@@ -1206,7 +1232,7 @@ export function RecipeForm({
                           }
                         >
                           <select
-                            disabled={!editable}
+                            disabled={!editable || hasSourceUnit(row)}
                             value={normalizeIngredientUnit(
                               row.unit || row.customUnit,
                             )}
@@ -1276,7 +1302,7 @@ export function RecipeForm({
                             type="button"
                             onClick={() => removeIngredient(index)}
                             aria-label={`Xóa nguyên liệu ${index + 1}`}
-                            className={`flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 ${mode === "create" ? "md:col-start-12 md:row-start-1" : ""}`}
+                            className={`flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 ${mode === "create" ? "md:col-start-12 md:row-start-1 md:justify-self-end" : ""}`}
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
