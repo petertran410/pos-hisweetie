@@ -27,6 +27,7 @@ export default function LoadingPage() {
         key={formKey}
         onClose={() => router.push("/bao-don")}
         onSubmit={handleSubmit}
+        enableDocumentQrScanner
       />
     </div>
   );
