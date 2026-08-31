@@ -9,6 +9,8 @@ import { useConsignmentsForPacking } from "@/lib/hooks/useConsignments";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { uploadPackingLoadingImages } from "@/lib/hooks/usePackingLoadings";
 import { QrUploadModal } from "@/components/shared/QrUploadModal";
+import { DocumentScanner } from "@/components/shared/DocumentScanner";
+import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingLoading } from "@/lib/types/packing-loading";
 import { toast } from "sonner";
@@ -19,6 +21,7 @@ interface PackingLoadingFormProps {
   onSubmit: (data: any) => void;
   preselectedInvoiceIds?: number[];
   preselectedBranchId?: number | null;
+  enableDocumentQrScanner?: boolean;
 }
 
 export function PackingLoadingForm({
@@ -27,11 +30,16 @@ export function PackingLoadingForm({
   onSubmit,
   preselectedInvoiceIds = [],
   preselectedBranchId = null,
+  enableDocumentQrScanner = false,
 }: PackingLoadingFormProps) {
+  const { selectedBranch: currentBranch } = useBranchStore();
   const { data: branches } = useBranches();
   const { data: users } = useUsersForFilter();
   const [branchId, setBranchId] = useState(
-    packingLoading?.branchId || preselectedBranchId || 0
+    packingLoading?.branchId ??
+      preselectedBranchId ??
+      (enableDocumentQrScanner ? currentBranch?.id : undefined) ??
+      0
   );
   const [loadingById, setLoadingById] = useState(
     packingLoading?.loadingById || 0
@@ -39,6 +47,24 @@ export function PackingLoadingForm({
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<number[]>(
     packingLoading?.invoices?.map((i) => i.invoiceId) || preselectedInvoiceIds
   );
+
+  useEffect(() => {
+    if (
+      enableDocumentQrScanner &&
+      !packingLoading &&
+      !preselectedBranchId &&
+      branchId === 0 &&
+      currentBranch?.id
+    ) {
+      setBranchId(currentBranch.id);
+    }
+  }, [
+    branchId,
+    currentBranch?.id,
+    enableDocumentQrScanner,
+    packingLoading,
+    preselectedBranchId,
+  ]);
 
   // Loại chứng từ để loading: hóa đơn hoặc phiếu ký gửi.
   const [docType, setDocType] = useState<"invoice" | "consignment">(
@@ -103,11 +129,25 @@ export function PackingLoadingForm({
   );
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showQrModal, setShowQrModal] = useState(false);
+  const [showDocumentScanner, setShowDocumentScanner] = useState(false);
 
   const handleQrUploaded = (urls: string[]) => {
     if (urls.length > 0) {
       setImages((prev) => [...prev, ...urls]);
     }
+  };
+
+  const addScannedDocument = (document: {
+    id: number;
+    code: string;
+    grandTotal: number;
+    branchId: number;
+    purchaseDate?: string | null;
+    customer?: { id: number; name: string } | null;
+  }) => {
+    setSelectedInvoiceCache((prev) => ({ ...prev, [document.id]: document }));
+    setSelectedInvoiceIds((prev) => [...prev, document.id]);
+    setInvoiceSearch("");
   };
 
   const [showLoadingByDropdown, setShowLoadingByDropdown] = useState(false);
@@ -434,8 +474,12 @@ export function PackingLoadingForm({
 
             <div ref={invoiceDropdownRef} className="relative">
               <label className="block text-sm font-medium mb-2">
-                {docType === "consignment" ? "Phiếu ký gửi" : "Hóa đơn"}{" "}
-                <span className="text-red-500">*</span>
+                <span>{docType === "consignment" ? "Phiếu ký gửi" : "Hóa đơn"} <span className="text-red-500">*</span></span>
+                {enableDocumentQrScanner && branchId > 0 && (
+                  <button type="button" onClick={() => setShowDocumentScanner(true)} className="ml-2 inline-flex items-center gap-1 text-brand text-xs">
+                    <QrCode className="w-4 h-4" /> Quét QR
+                  </button>
+                )}
               </label>
               <div
                 className="w-full border rounded px-3 py-2 min-h-[42px] cursor-text flex flex-wrap gap-2 items-center"
@@ -664,6 +708,17 @@ export function PackingLoadingForm({
             onClick={(e) => e.stopPropagation()}
           />
         </div>
+      )}
+
+      {enableDocumentQrScanner && showDocumentScanner && branchId > 0 && (
+        <DocumentScanner
+          branchId={branchId}
+          documentType={docType}
+          packingType="packing-loading"
+          selectedIds={selectedInvoiceIds}
+          onDocument={addScannedDocument}
+          onClose={() => setShowDocumentScanner(false)}
+        />
       )}
 
       {showQrModal && (

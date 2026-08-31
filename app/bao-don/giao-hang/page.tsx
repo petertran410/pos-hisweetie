@@ -27,6 +27,7 @@ export default function GiaoHangPage() {
         key={formKey}
         onClose={() => router.push("/bao-don")}
         onSubmit={handleSubmit}
+        enableDocumentQrScanner
       />
     </div>
   );

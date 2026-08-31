@@ -377,6 +377,7 @@ export default function BaoDonPage() {
             packingSlip={editingPackingSlip || undefined}
             onClose={handleCloseForm}
             onSubmit={handleGiaoHangSubmit}
+            enableDocumentQrScanner
           />
         )}
 
@@ -386,6 +387,7 @@ export default function BaoDonPage() {
             packingHang={editingPackingHang || undefined}
             onClose={handleCloseForm}
             onSubmit={handleDongHangSubmit}
+            enableDocumentQrScanner
           />
         )}
 
@@ -395,6 +397,7 @@ export default function BaoDonPage() {
             packingLoading={editingPackingLoading || undefined}
             onClose={handleCloseForm}
             onSubmit={handleLoadingSubmit}
+            enableDocumentQrScanner
           />
         )}
       </div>
