@@ -2681,35 +2681,24 @@ export default function BanHangPage() {
       const proceed = await confirmPriceMismatch("hóa đơn");
       if (!proceed) return;
 
-      // Chặn race: đơn đã Hoàn thành/Hủy (đóng) thì không thể xuất thêm hóa đơn.
-      // Không chặn theo "có hóa đơn" vì luồng "Ra 1 phần HĐ" hợp lệ có HĐ trước đó.
-      try {
-        const fresh = await ordersApi.getOrder(activeTab.sourceOrderId);
-        if (
-          fresh.status === ORDER_STATUS.COMPLETED ||
-          fresh.status === ORDER_STATUS.CANCELLED
-        ) {
-          toast.error(
-            "Đơn hàng đã kết thúc, không thể xuất thêm hóa đơn. Vui lòng tải lại để xem trạng thái mới nhất.",
-          );
-          return;
-        }
-        if (isPrepaidNoDebt(fresh.customer)) {
-          const paidAmount = Number(fresh.paidAmount || 0);
-          const grandTotal = Number(fresh.grandTotal || 0);
-          if (paidAmount + 1 < grandTotal) {
-            showPrepaidNoDebtWarning({
-              paidAmount,
-              grandTotal,
-              fromOrder: true,
-            });
-            return;
-          }
-        }
-      } catch (error) {
-        console.error("handlePayment status check error:", error);
-        // Lỗi mạng → chặn mềm, để BE xử lý tuyến cuối.
-      }
+       // Chặn race: đơn đã Hoàn thành/Hủy (đóng) thì không thể xuất thêm hóa đơn.
+       // Không chặn theo "có hóa đơn" vì luồng "Ra 1 phần HĐ" hợp lệ có HĐ trước đó.
+       try {
+         const fresh = await ordersApi.getOrder(activeTab.sourceOrderId);
+         if (
+           fresh.status === ORDER_STATUS.COMPLETED ||
+           fresh.status === ORDER_STATUS.CANCELLED
+         ) {
+           toast.error(
+             "Đơn hàng đã kết thúc, không thể xuất thêm hóa đơn. Vui lòng tải lại để xem trạng thái mới nhất.",
+           );
+           return;
+         }
+       } catch (error) {
+         console.error("handlePayment status check error:", error);
+         // Lỗi mạng → chặn mềm, để BE xử lý tuyến cuối.
+       }
+
 
       // Phát hiện có mã xuất thiếu so với số lượng đặt (gộp theo productId, khớp với backend).
       const sourceOrder = activeTab.sourceOrder;
