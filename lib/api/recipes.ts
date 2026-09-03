@@ -30,7 +30,7 @@ export interface RecipeIngredientPayload {
   note?: string;
   sortOrder?: number;
   product?: RecipeIngredientProduct;
-  recipeReference?: { id: number; code: string; name: string; type: RecipeType; status: RecipeStatus };
+  recipeReference?: { id: number; code: string; name: string; type: RecipeType; status: RecipeStatus; quantityUnit?: "ml" | "gram" | null; costPerOutputUnit?: number | null };
   costSnapshot?: number | null;
   unitCostSnapshot?: number | null;
 }
@@ -151,6 +151,8 @@ export interface SemiFinishedRecipeOption {
   id: number;
   code: string;
   name: string;
+  quantityUnit?: "ml" | "gram" | null;
+  costPerOutputUnit?: number | null;
 }
 
 export interface RecipeListResponse {

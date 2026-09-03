@@ -27,6 +27,7 @@ export default function DongHangPage() {
         key={formKey}
         onClose={() => router.push("/bao-don")}
         onSubmit={handleSubmit}
+        enableDocumentQrScanner
       />
     </div>
   );

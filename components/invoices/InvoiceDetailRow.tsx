@@ -330,9 +330,9 @@ export function InvoiceDetailRow({
     invoice.status === INVOICE_STATUS.CANCELLED ||
     invoice.status === INVOICE_STATUS.DELIVERED;
 
-  // Admin/Super Admin được bỏ qua điều kiện ẩn theo trạng thái hóa đơn
+  // Chỉ ẩn nút chỉnh sửa khi hóa đơn đã bị hủy.
   const canCancel = !isFinalState || isAdmin;
-  const canProcess = !isFinalState || isAdmin;
+  const canProcess = invoice.status !== INVOICE_STATUS.CANCELLED;
 
   // Nút "Đã Báo Đơn":
   // - User: chỉ thấy khi hóa đơn CHƯA giao thành công.

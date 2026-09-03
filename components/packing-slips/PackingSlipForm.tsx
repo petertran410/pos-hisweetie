@@ -21,6 +21,8 @@ import {
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useImageUploader } from "@/lib/hooks/useImageUploader";
 import { QrUploadModal } from "@/components/shared/QrUploadModal";
+import { DocumentScanner } from "@/components/shared/DocumentScanner";
+import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingSlip } from "@/lib/types/packing-slip";
 import { toast } from "sonner";
@@ -40,6 +42,7 @@ interface PackingSlipFormProps {
   preselectedBranchId?: number | null;
   /** Thông tin hóa đơn chọn sẵn để hiển thị chip ngay, không phụ thuộc fetch lại */
   preselectedInvoices?: PreselectedInvoiceLite[];
+  enableDocumentQrScanner?: boolean;
 }
 
 export function PackingSlipForm({
@@ -49,14 +52,37 @@ export function PackingSlipForm({
   preselectedInvoiceIds = [],
   preselectedBranchId = null,
   preselectedInvoices = [],
+  enableDocumentQrScanner = false,
 }: PackingSlipFormProps) {
+  const { selectedBranch: currentBranch } = useBranchStore();
   const { data: branches } = useBranches();
   const [branchId, setBranchId] = useState(
-    packingSlip?.branchId || preselectedBranchId || 0
+    packingSlip?.branchId ??
+      preselectedBranchId ??
+      (enableDocumentQrScanner ? currentBranch?.id : undefined) ??
+      0
   );
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<number[]>(
     packingSlip?.invoices?.map((i) => i.invoiceId) || preselectedInvoiceIds
   );
+
+  useEffect(() => {
+    if (
+      enableDocumentQrScanner &&
+      !packingSlip &&
+      !preselectedBranchId &&
+      branchId === 0 &&
+      currentBranch?.id
+    ) {
+      setBranchId(currentBranch.id);
+    }
+  }, [
+    branchId,
+    currentBranch?.id,
+    enableDocumentQrScanner,
+    packingSlip,
+    preselectedBranchId,
+  ]);
 
   // Loại chứng từ để báo đơn: hóa đơn hoặc phiếu ký gửi.
   const [docType, setDocType] = useState<"invoice" | "consignment">(
@@ -208,11 +234,25 @@ export function PackingSlipForm({
   );
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showQrModal, setShowQrModal] = useState(false);
+  const [showDocumentScanner, setShowDocumentScanner] = useState(false);
 
   const handleQrUploaded = (urls: string[]) => {
     if (urls.length > 0) {
       setImages((prev) => [...prev, ...urls]);
     }
+  };
+
+  const addScannedDocument = (document: {
+    id: number;
+    code: string;
+    grandTotal: number;
+    branchId: number;
+    purchaseDate?: string | null;
+    customer?: { id: number; name: string } | null;
+  }) => {
+    setSelectedInvoiceCache((prev) => ({ ...prev, [document.id]: document }));
+    setSelectedInvoiceIds((prev) => [...prev, document.id]);
+    setInvoiceSearch("");
   };
 
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
@@ -519,8 +559,12 @@ export function PackingSlipForm({
 
             <div ref={invoiceDropdownRef} className="relative">
               <label className="block text-sm font-medium mb-2">
-                {docType === "consignment" ? "Phiếu ký gửi" : "Hóa đơn"}{" "}
-                <span className="text-red-500">*</span>
+                <span>{docType === "consignment" ? "Phiếu ký gửi" : "Hóa đơn"} <span className="text-red-500">*</span></span>
+                {enableDocumentQrScanner && branchId > 0 && (
+                  <button type="button" onClick={() => setShowDocumentScanner(true)} className="ml-2 inline-flex items-center gap-1 text-brand text-xs">
+                    <QrCode className="w-4 h-4" /> Quét QR
+                  </button>
+                )}
               </label>
               <div
                 className="w-full border rounded px-3 py-2 min-h-[42px] cursor-text flex flex-wrap gap-2 items-center"
@@ -1040,6 +1084,17 @@ export function PackingSlipForm({
             onClick={(e) => e.stopPropagation()}
           />
         </div>
+      )}
+
+      {enableDocumentQrScanner && showDocumentScanner && branchId > 0 && (
+        <DocumentScanner
+          branchId={branchId}
+          documentType={docType}
+          packingType="packing-slip"
+          selectedIds={selectedInvoiceIds}
+          onDocument={addScannedDocument}
+          onClose={() => setShowDocumentScanner(false)}
+        />
       )}
 
       {showQrModal && (

@@ -8,6 +8,8 @@ import { useInvoicesForPacking } from "@/lib/hooks/useInvoices";
 import { useConsignmentsForPacking } from "@/lib/hooks/useConsignments";
 import { uploadPackingHangImages } from "@/lib/hooks/usePackingHangs";
 import { QrUploadModal } from "@/components/shared/QrUploadModal";
+import { DocumentScanner } from "@/components/shared/DocumentScanner";
+import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingHang } from "@/lib/types/packing-hang";
 import { toast } from "sonner";
@@ -18,6 +20,7 @@ interface PackingHangFormProps {
   onSubmit: (data: any) => void;
   preselectedInvoiceIds?: number[];
   preselectedBranchId?: number | null;
+  enableDocumentQrScanner?: boolean;
 }
 
 export function PackingHangForm({
@@ -26,14 +29,37 @@ export function PackingHangForm({
   onSubmit,
   preselectedInvoiceIds = [],
   preselectedBranchId = null,
+  enableDocumentQrScanner = false,
 }: PackingHangFormProps) {
+  const { selectedBranch: currentBranch } = useBranchStore();
   const { data: branches } = useBranches();
   const [branchId, setBranchId] = useState(
-    packingHang?.branchId || preselectedBranchId || 0
+    packingHang?.branchId ??
+      preselectedBranchId ??
+      (enableDocumentQrScanner ? currentBranch?.id : undefined) ??
+      0
   );
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<number[]>(
     packingHang?.invoices?.map((i) => i.invoiceId) || preselectedInvoiceIds
   );
+
+  useEffect(() => {
+    if (
+      enableDocumentQrScanner &&
+      !packingHang &&
+      !preselectedBranchId &&
+      branchId === 0 &&
+      currentBranch?.id
+    ) {
+      setBranchId(currentBranch.id);
+    }
+  }, [
+    branchId,
+    currentBranch?.id,
+    enableDocumentQrScanner,
+    packingHang,
+    preselectedBranchId,
+  ]);
 
   // Loại chứng từ để đóng hàng: hóa đơn hoặc phiếu ký gửi.
   const [docType, setDocType] = useState<"invoice" | "consignment">(
@@ -97,11 +123,26 @@ export function PackingHangForm({
   );
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showQrModal, setShowQrModal] = useState(false);
+  const [showDocumentScanner, setShowDocumentScanner] = useState(false);
 
   const handleQrUploaded = (urls: string[]) => {
     if (urls.length > 0) {
       setImages((prev) => [...prev, ...urls]);
     }
+  };
+
+  const addScannedDocument = (document: {
+    id: number;
+    code: string;
+    grandTotal: number;
+    branchId: number;
+    purchaseDate?: string | null;
+    customer?: { id: number; name: string } | null;
+  }) => {
+    const cached: InvoiceLite = { ...document };
+    setSelectedInvoiceCache((prev) => ({ ...prev, [document.id]: cached }));
+    setSelectedInvoiceIds((prev) => [...prev, document.id]);
+    setInvoiceSearch("");
   };
 
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
@@ -356,8 +397,12 @@ export function PackingHangForm({
 
             <div ref={invoiceDropdownRef} className="relative">
               <label className="block text-sm font-medium mb-2">
-                {docType === "consignment" ? "Phiếu ký gửi" : "Hóa đơn"}{" "}
-                <span className="text-red-500">*</span>
+                <span>{docType === "consignment" ? "Phiếu ký gửi" : "Hóa đơn"} <span className="text-red-500">*</span></span>
+                {enableDocumentQrScanner && branchId > 0 && (
+                  <button type="button" onClick={() => setShowDocumentScanner(true)} className="ml-2 inline-flex items-center gap-1 text-brand text-xs">
+                    <QrCode className="w-4 h-4" /> Quét QR
+                  </button>
+                )}
               </label>
               <div
                 className="w-full border rounded px-3 py-2 min-h-[42px] cursor-text flex flex-wrap gap-2 items-center"
@@ -584,6 +629,17 @@ export function PackingHangForm({
             onClick={(e) => e.stopPropagation()}
           />
         </div>
+      )}
+
+      {enableDocumentQrScanner && showDocumentScanner && branchId > 0 && (
+        <DocumentScanner
+          branchId={branchId}
+          documentType={docType}
+          packingType="packing-hang"
+          selectedIds={selectedInvoiceIds}
+          onDocument={addScannedDocument}
+          onClose={() => setShowDocumentScanner(false)}
+        />
       )}
 
       {showQrModal && (
