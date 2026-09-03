@@ -53,6 +53,8 @@ export function DebtPolicyModal({
       debtForm: policy.debtForm ?? "",
       salePicId: policy.salePicId ?? "",
       accountantPicId: policy.accountantPicId ?? "",
+      requireFullPaymentForInvoice:
+        policy.requireFullPaymentForInvoice ?? false,
     });
   }
 

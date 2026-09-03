@@ -10,6 +10,12 @@ export type DebtTicketStatus =
   | "ENDED";
 
 export type DebtTicketLineStatus = "PENDING" | "PARTIAL" | "PAID";
+export type DebtTicketType = "DEBT_COLLECTION" | "STOP_DELIVERY";
+
+export const TICKET_TYPE_LABELS: Record<DebtTicketType, string> = {
+  DEBT_COLLECTION: "Thu hồi công nợ",
+  STOP_DELIVERY: "Ngừng đi hàng",
+};
 
 export const TICKET_STATUS_LABELS: Record<DebtTicketStatus, string> = {
   REQUESTED: "Yêu Cầu Thu Hồi Nợ",
@@ -43,6 +49,7 @@ export interface DebtTicketLine {
   debtAtCreate: number;
   /** Nợ cuối kì — nợ hiện tại của khách, đọc live. */
   currentDebt: number | null;
+  requiredPaymentAmount: number;
   /** Số tiền tối thiểu cần phải thanh toán (hệ thống gợi ý, sửa được). */
   minimumPayment: number | null;
   /** Số tiền khách xác nhận sẽ trả — có thể nhỏ hơn mức tối thiểu. */
@@ -63,6 +70,7 @@ export interface DebtTicket {
   code: string;
   title: string | null;
   status: DebtTicketStatus;
+  ticketType: DebtTicketType;
   isOpen: boolean;
   note: string | null;
   assignee: { id: number; name: string; email?: string } | null;
@@ -101,6 +109,7 @@ export interface DebtTicketListResponse {
 export interface DebtTicketParams {
   search?: string;
   status?: DebtTicketStatus;
+  ticketType?: DebtTicketType;
   openOnly?: "true" | "false";
   assigneeId?: number;
   customerId?: number;
@@ -123,6 +132,7 @@ export interface CreateDebtTicketPayload {
   assigneeId: number;
   status?: DebtTicketStatus;
   note?: string;
+  ticketType?: DebtTicketType;
   customers: DebtTicketCustomerInput[];
 }
 

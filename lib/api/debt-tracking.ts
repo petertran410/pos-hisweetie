@@ -93,6 +93,8 @@ export interface DebtOpenTicket {
   debtAtCreate: number;
   lineStatus: "PENDING" | "PARTIAL" | "PAID";
   isPaid: boolean;
+  ticketType: string;
+  requiredPaymentAmount: number;
 }
 
 export interface DebtPolicyView {
@@ -106,6 +108,9 @@ export interface DebtPolicyView {
   paymentHistory?: AppliedPaymentHistoryInfo;
   salePic: { id: number; name: string } | null;
   accountantPic: { id: number; name: string } | null;
+  salePicId?: number | null;
+  accountantPicId?: number | null;
+  requireFullPaymentForInvoice?: boolean;
 }
 
 export interface DebtTrackingRow {
@@ -208,6 +213,7 @@ export interface DebtPolicy {
   salePicId: number | null;
   accountantPicId: number | null;
   isActive: boolean;
+  requireFullPaymentForInvoice: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -222,6 +228,7 @@ export interface UpsertDebtPolicyPayload {
   salePicId?: number | null;
   accountantPicId?: number | null;
   isActive?: boolean;
+  requireFullPaymentForInvoice?: boolean;
 }
 
 export interface DebtNote {

@@ -26,6 +26,7 @@ export interface DebtPolicyFormValue {
   debtForm: DebtForm | "";
   salePicId: number | "";
   accountantPicId: number | "";
+  requireFullPaymentForInvoice: boolean;
 }
 
 export const EMPTY_DEBT_POLICY_FORM: DebtPolicyFormValue = {
@@ -37,6 +38,7 @@ export const EMPTY_DEBT_POLICY_FORM: DebtPolicyFormValue = {
   debtForm: "",
   salePicId: "",
   accountantPicId: "",
+  requireFullPaymentForInvoice: false,
 };
 
 /**
@@ -71,6 +73,7 @@ export function toDebtPolicyPayload(v: DebtPolicyFormValue) {
     debtForm: v.debtForm || null,
     salePicId: v.salePicId || null,
     accountantPicId: v.accountantPicId || null,
+    requireFullPaymentForInvoice: v.requireFullPaymentForInvoice,
   };
 }
 
@@ -157,6 +160,30 @@ export function DebtPolicyFields({
               )}
             </div>
           )}
+        </div>
+
+        <div className="border-t pt-4">
+          <label className="flex items-start gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={value.requireFullPaymentForInvoice}
+              onChange={(e) =>
+                onChange({
+                  requireFullPaymentForInvoice: e.target.checked,
+                })
+              }
+              className="mt-0.5"
+            />
+            <span>
+              <span className="block text-sm font-medium">
+                Bắt buộc thanh toán đủ trước khi tạo hóa đơn
+              </span>
+              <span className="block text-xs text-gray-500 mt-0.5">
+                Chỉ áp dụng khi bật tùy chọn này; không ảnh hưởng việc tạo đơn
+                hàng. Khách cũ chưa có chính sách vẫn được phép tạo hóa đơn.
+              </span>
+            </span>
+          </label>
         </div>
 
         <div>

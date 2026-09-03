@@ -29,6 +29,8 @@ export function useDebtTicket(id?: number) {
     queryKey: [KEY, id],
     queryFn: () => debtTicketsApi.getOne(id as number),
     enabled: !!id,
+    refetchInterval: (query) =>
+      query.state.data?.isOpen ? 5000 : false,
   });
 }
 

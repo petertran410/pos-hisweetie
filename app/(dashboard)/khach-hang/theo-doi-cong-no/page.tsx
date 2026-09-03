@@ -23,6 +23,8 @@ import {
   DebtForm,
   DebtTrackingParams,
   DEBT_FORM_LABELS,
+  DebtTrackingRow,
+  debtTrackingApi,
 } from "@/lib/api/debt-tracking";
 import { formatCurrency } from "@/lib/utils";
 
@@ -41,7 +43,12 @@ export default function TheoDoiCongNoPage() {
   const [overLimitOnly, setOverLimitOnly] = useState(false);
   const [withoutOpenTicket, setWithoutOpenTicket] = useState(false);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(30);
   const [selected, setSelected] = useState<number[]>([]);
+  const [selectedRowsById, setSelectedRowsById] = useState<
+    Record<number, DebtTrackingRow>
+  >({});
+  const [selectAllPending, setSelectAllPending] = useState(false);
   const [showCreateTicket, setShowCreateTicket] = useState(false);
 
   const canCreateTicket = usePermission("debt_tickets", "create");
@@ -55,9 +62,9 @@ export default function TheoDoiCongNoPage() {
       overLimitOnly: overLimitOnly || undefined,
       withoutOpenTicket: withoutOpenTicket || undefined,
       page,
-      pageSize: 30,
+      pageSize,
     }),
-    [search, tab, debtForm, overLimitOnly, withoutOpenTicket, page]
+    [search, tab, debtForm, overLimitOnly, withoutOpenTicket, page, pageSize]
   );
 
   // Summary dùng chung filter nhưng bỏ debtStatus để luôn thấy bức tranh
@@ -71,14 +78,78 @@ export default function TheoDoiCongNoPage() {
   const { data: listData } = useDebtTracking(params);
   const exportMut = useExportDebtTracking();
 
-  const selectedRows = useMemo(
-    () => (listData?.data ?? []).filter((r) => selected.includes(r.customerId)),
-    [listData, selected]
-  );
+  const selectedRows = useMemo(() => {
+    const rowsById = new Map<number, DebtTrackingRow>(
+      Object.values(selectedRowsById).map((row) => [row.customerId, row])
+    );
+    for (const row of listData?.data ?? []) {
+      if (selected.includes(row.customerId)) rowsById.set(row.customerId, row);
+    }
+    return selected
+      .map((customerId) => rowsById.get(customerId))
+      .filter((row): row is DebtTrackingRow => Boolean(row));
+  }, [listData, selected, selectedRowsById]);
+
+  const handleSelectedChange = (ids: number[]) => {
+    setSelected(ids);
+    const currentRows = new Map(
+      (listData?.data ?? []).map((row) => [row.customerId, row])
+    );
+    setSelectedRowsById((previous) => {
+      const next: Record<number, DebtTrackingRow> = {};
+      for (const customerId of ids) {
+        const row = currentRows.get(customerId) ?? previous[customerId];
+        if (row) next[customerId] = row;
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelected([]);
+    setSelectedRowsById({});
+  };
+
+  const handleSelectAll = async (checked: boolean) => {
+    if (!checked) {
+      clearSelection();
+      return;
+    }
+
+    setSelectAllPending(true);
+    try {
+      const allRows: DebtTrackingRow[] = [];
+      let currentPage = 1;
+      let totalPages = 1;
+
+      do {
+        const response = await debtTrackingApi.getList({
+          ...params,
+          page: currentPage,
+          pageSize: 200,
+        });
+        allRows.push(...response.data);
+        totalPages = response.pagination.totalPages;
+        currentPage += 1;
+      } while (currentPage <= totalPages);
+
+      setSelected(allRows.map((row) => row.customerId));
+      setSelectedRowsById(
+        Object.fromEntries(
+          allRows.map((row) => [row.customerId, row] as const)
+        )
+      );
+    } catch (error) {
+      console.error("Không thể chọn toàn bộ khách hàng công nợ:", error);
+    } finally {
+      setSelectAllPending(false);
+    }
+  };
 
   const applySearch = () => {
     setSearch(searchInput.trim());
     setPage(1);
+    clearSelection();
   };
 
   const resetFilters = () => {
@@ -89,6 +160,7 @@ export default function TheoDoiCongNoPage() {
     setWithoutOpenTicket(false);
     setTab("ALL");
     setPage(1);
+    clearSelection();
   };
 
   const hasFilter =
@@ -172,10 +244,11 @@ export default function TheoDoiCongNoPage() {
 
             <select
               value={debtForm}
-              onChange={(e) => {
-                setDebtForm(e.target.value as DebtForm | "");
-                setPage(1);
-              }}
+               onChange={(e) => {
+                 setDebtForm(e.target.value as DebtForm | "");
+                 setPage(1);
+                 clearSelection();
+               }}
               className="border rounded px-2.5 py-1.5 text-sm"
             >
               <option value="">Mọi hình thức công nợ</option>
@@ -190,10 +263,11 @@ export default function TheoDoiCongNoPage() {
               <input
                 type="checkbox"
                 checked={overLimitOnly}
-                onChange={(e) => {
-                  setOverLimitOnly(e.target.checked);
-                  setPage(1);
-                }}
+                 onChange={(e) => {
+                   setOverLimitOnly(e.target.checked);
+                   setPage(1);
+                   clearSelection();
+                 }}
               />
               Vượt hạn mức
             </label>
@@ -202,10 +276,11 @@ export default function TheoDoiCongNoPage() {
               <input
                 type="checkbox"
                 checked={withoutOpenTicket}
-                onChange={(e) => {
-                  setWithoutOpenTicket(e.target.checked);
-                  setPage(1);
-                }}
+                 onChange={(e) => {
+                   setWithoutOpenTicket(e.target.checked);
+                   setPage(1);
+                   clearSelection();
+                 }}
               />
               Chưa có phiếu
             </label>
@@ -263,8 +338,15 @@ export default function TheoDoiCongNoPage() {
           <DebtTrackingTable
             params={params}
             selected={selected}
-            onSelectedChange={setSelected}
+            onSelectedChange={handleSelectedChange}
+            onSelectAll={handleSelectAll}
+            selectAllPending={selectAllPending}
             onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize);
+              setPage(1);
+            }}
           />
         </div>
       </div>

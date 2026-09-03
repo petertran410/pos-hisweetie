@@ -18,7 +18,6 @@ import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuar
 import {
   useDebtTicket,
   useCloseDebtTicket,
-  useCancelDebtTicket,
   useUpdateDebtTicket,
   useUpdateDebtTicketLine,
   useRemoveTicketCustomer,
@@ -28,6 +27,7 @@ import {
   DebtTicketStatus,
   DebtTicketLineStatus,
   TICKET_STATUS_LABELS,
+  TICKET_TYPE_LABELS,
   TICKET_LINE_STATUS_LABELS,
 } from "@/lib/api/debt-tickets";
 import {
@@ -86,7 +86,6 @@ export default function TicketDetailPage() {
 
   const { data: ticket, isLoading } = useDebtTicket(id);
   const closeMut = useCloseDebtTicket();
-  const cancelMut = useCancelDebtTicket();
   const updateTicket = useUpdateDebtTicket();
   const updateLine = useUpdateDebtTicketLine();
   const removeCustomer = useRemoveTicketCustomer();
@@ -127,7 +126,7 @@ export default function TicketDetailPage() {
 
     const res = await Swal.fire({
       title: "Kết thúc phiếu?",
-      html: `${html}<br/><br/>Vui lòng nhập lý do:`,
+      html: `${html}<br/><br/>Kết thúc thủ công sẽ mở lại quyền tạo hóa đơn/đi hàng dù chưa thanh toán đủ.<br/><br/>Vui lòng nhập lý do:`,
       input: "text",
       inputPlaceholder: "Lý do kết thúc…",
       showCancelButton: true,
@@ -138,24 +137,6 @@ export default function TicketDetailPage() {
 
     if (res.isConfirmed && res.value) {
       closeMut.mutate({ id, reason: res.value, finalStatus: "DONE" });
-    }
-  };
-
-  const handleCancel = async () => {
-    const res = await Swal.fire({
-      title: "Dừng phiếu?",
-      text: "Phiếu bị dừng sẽ không còn theo dõi nữa.",
-      input: "text",
-      inputPlaceholder: "Lý do dừng…",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Dừng phiếu",
-      cancelButtonText: "Quay lại",
-      inputValidator: (v) => (!v?.trim() ? "Vui lòng nhập lý do" : undefined),
-    });
-
-    if (res.isConfirmed && res.value) {
-      cancelMut.mutate({ id, reason: res.value });
     }
   };
 
@@ -238,7 +219,7 @@ export default function TicketDetailPage() {
 
   return (
     <PagePermissionGuard resource="debt_tickets" action="view">
-      <div className="p-4 space-y-3">
+      <div className="h-full min-h-0 overflow-y-auto p-4 space-y-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
             <button
@@ -255,6 +236,9 @@ export default function TicketDetailPage() {
                 >
                   <st.Icon className="w-3 h-3" />
                   {TICKET_STATUS_LABELS[ticket.status]}
+                </span>
+                <span className="text-xs text-gray-500">
+                  {TICKET_TYPE_LABELS[ticket.ticketType]}
                 </span>
                 {ticket.closeMode === "AUTO" && (
                   <span className="text-xs text-gray-400">
@@ -300,22 +284,13 @@ export default function TicketDetailPage() {
                 </select>
               )}
               {canClose && (
-                <>
-                  <button
-                    onClick={handleCancel}
-                    disabled={cancelMut.isPending}
-                    className="px-3 py-1.5 text-sm border rounded hover:bg-gray-50 text-gray-600"
-                  >
-                    Dừng phiếu
-                  </button>
-                  <button
-                    onClick={handleClose}
-                    disabled={closeMut.isPending}
-                    className="px-3 py-1.5 text-sm bg-brand text-white rounded hover:opacity-90 disabled:opacity-50"
-                  >
-                    Kết thúc
-                  </button>
-                </>
+                <button
+                  onClick={handleClose}
+                  disabled={closeMut.isPending}
+                  className="px-3 py-1.5 text-sm bg-brand text-white rounded hover:opacity-90 disabled:opacity-50"
+                >
+                  Kết thúc
+                </button>
               )}
             </div>
           )}
@@ -338,8 +313,19 @@ export default function TicketDetailPage() {
             value={formatCurrency(ticket.summary.totalCurrentDebt)}
           />
           <Card
-            label="Tối thiểu cần thu"
-            value={formatCurrency(ticket.summary.totalMinimum)}
+            label={
+              ticket.ticketType === "STOP_DELIVERY"
+                ? "Cần thu để đi hàng"
+                : "Tối thiểu cần thu"
+            }
+            value={formatCurrency(
+              ticket.ticketType === "STOP_DELIVERY"
+                ? ticket.customers.reduce(
+                    (sum, line) => sum + line.requiredPaymentAmount,
+                    0
+                  )
+                : ticket.summary.totalMinimum
+            )}
           />
           <Card
             label="Đã thu"
@@ -388,6 +374,9 @@ export default function TicketDetailPage() {
                 <th className="text-left px-3 py-2.5 font-medium">
                   Ngày xác nhận
                 </th>
+                <th className="text-left px-3 py-2.5 font-medium min-w-56">
+                  Ghi chú kế toán
+                </th>
                 <th className="text-left px-3 py-2.5 font-medium">Trạng thái</th>
                 <th className="text-left px-3 py-2.5 font-medium">Đã thu</th>
                 <th className="px-3 py-2.5 w-10"></th>
@@ -402,11 +391,6 @@ export default function TicketDetailPage() {
                       {l.customerCode}
                       {l.contactNumber ? ` · ${l.contactNumber}` : ""}
                     </div>
-                    {l.note && (
-                      <div className="text-xs text-gray-500 mt-0.5">
-                        {l.note}
-                      </div>
-                    )}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">
                     {formatCurrency(l.debtAtCreate)}
@@ -417,11 +401,17 @@ export default function TicketDetailPage() {
                       : "—"}
                   </td>
                   <td className="px-3 py-2 text-right">
-                    {renderMoneyCell(
-                      l,
-                      "minimumPayment",
-                      l.debtAtCreate,
-                      l.belowMinRatio
+                    {ticket.ticketType === "STOP_DELIVERY" ? (
+                      <span className="font-medium text-red-700 tabular-nums">
+                        {formatCurrency(l.requiredPaymentAmount)}
+                      </span>
+                    ) : (
+                      renderMoneyCell(
+                        l,
+                        "minimumPayment",
+                        l.debtAtCreate,
+                        l.belowMinRatio
+                      )
                     )}
                     {l.belowMinRatio && (
                       <div className="text-[11px] text-amber-600">
@@ -434,6 +424,9 @@ export default function TicketDetailPage() {
                   </td>
                   <td className="px-3 py-2 text-xs">
                     {fmtDate(l.confirmedDate)}
+                  </td>
+                  <td className="px-3 py-2 text-xs text-gray-600 max-w-xs">
+                    {l.note || <span className="text-gray-300">—</span>}
                   </td>
                   <td className="px-3 py-2">
                     <span

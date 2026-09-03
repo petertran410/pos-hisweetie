@@ -6,6 +6,7 @@ import {
   DebtTrackingRow,
   MIN_PAYMENT_RATIO_WARN,
 } from "@/lib/api/debt-tracking";
+import { DebtTicketType } from "@/lib/api/debt-tickets";
 import { useCreateDebtTicket } from "@/lib/hooks/useDebtTickets";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useDebtTrackingSearch } from "@/lib/hooks/useDebtTracking";
@@ -27,6 +28,7 @@ interface TicketLine {
   confirmedAmount: string;
   confirmedDate: string;
   note: string;
+  requiredPaymentAmount: number;
 }
 
 /** Số tiền tối thiểu mặc định là khoản hệ thống đã so sánh giữa hạn mức và
@@ -42,7 +44,8 @@ const toLine = (r: DebtTrackingRow): TicketLine => {
     minimumPayment: formatNumberInput(String(Math.round(suggested))),
     confirmedAmount: "",
     confirmedDate: "",
-    note: "",
+    note: r.accountantNote ?? "",
+    requiredPaymentAmount: suggested,
   };
 };
 
@@ -63,6 +66,9 @@ export function CreateDebtTicketModal({
   const [assigneeId, setAssigneeId] = useState<number | "">("");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [ticketType, setTicketType] = useState<DebtTicketType>(
+    "DEBT_COLLECTION"
+  );
 
   // Khách ban đầu = các dòng đã tick ở trang theo dõi công nợ; sau đó có thể
   // tìm thêm trực tiếp trong phiếu.
@@ -170,6 +176,7 @@ export function CreateDebtTicketModal({
         title: title.trim() || undefined,
         assigneeId: Number(assigneeId),
         note: note.trim() || undefined,
+        ticketType,
         customers: lines.map((l) => ({
           customerId: l.customerId,
           minimumPayment:
@@ -195,10 +202,14 @@ export function CreateDebtTicketModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-3 border-b">
           <div>
-            <h3 className="font-semibold">Tạo phiếu thu hồi nợ</h3>
+            <h3 className="font-semibold">
+              {ticketType === "STOP_DELIVERY"
+                ? "Tạo phiếu ngừng đi hàng"
+                : "Tạo phiếu thu hồi nợ"}
+            </h3>
             <p className="text-xs text-gray-500 mt-0.5">
               {lines.length} khách hàng · Tổng nợ {formatCurrency(totalDebt)} đ
             </p>
@@ -210,6 +221,21 @@ export function CreateDebtTicketModal({
 
         <div className="p-5 space-y-4 overflow-auto flex-1">
           <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1.5">
+                Loại phiếu
+              </label>
+              <select
+                value={ticketType}
+                onChange={(e) =>
+                  setTicketType(e.target.value as DebtTicketType)
+                }
+                className="w-full border rounded px-2.5 py-2 text-sm"
+              >
+                <option value="DEBT_COLLECTION">Thu hồi công nợ</option>
+                <option value="STOP_DELIVERY">Ngừng đi hàng</option>
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-medium mb-1.5">
                 Nhân viên phụ trách <span className="text-red-500">*</span>
@@ -255,9 +281,18 @@ export function CreateDebtTicketModal({
                 Danh sách khách ({lines.length})
               </label>
               <span className="text-xs text-gray-500">
-                Tổng tối thiểu cần thu:{" "}
+                {ticketType === "STOP_DELIVERY"
+                  ? "Tổng cần thu để đi hàng:"
+                  : "Tổng tối thiểu cần thu:"}{" "}
                 <b className="text-gray-800">
-                  {formatCurrency(totalMinimum)} đ
+                  {formatCurrency(
+                    ticketType === "STOP_DELIVERY"
+                      ? lines.reduce(
+                          (sum, line) => sum + line.requiredPaymentAmount,
+                          0
+                        )
+                      : totalMinimum
+                  )} đ
                 </b>
               </span>
             </div>
@@ -351,23 +386,37 @@ export function CreateDebtTicketModal({
             </div>
 
             <div className="border rounded overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[1120px] table-fixed text-sm">
+                <colgroup>
+                  <col className="w-[25%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[15%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[17%]" />
+                  <col className="w-[3%]" />
+                </colgroup>
                 <thead className="bg-gray-50 text-xs text-gray-600">
                   <tr>
                     <th className="text-left px-3 py-2 font-medium">
                       Khách hàng
                     </th>
-                    <th className="text-right px-3 py-2 font-medium">
+                    <th className="text-right px-3 py-2 font-medium whitespace-nowrap">
                       Nợ đầu kì
                     </th>
-                    <th className="text-right px-3 py-2 font-medium w-44">
-                      Số tiền tối thiểu
+                    <th className="text-right px-3 py-2 font-medium whitespace-nowrap">
+                      {ticketType === "STOP_DELIVERY"
+                        ? "Cần thanh toán để đi hàng"
+                        : "Số tiền tối thiểu"}
                     </th>
-                    <th className="text-right px-3 py-2 font-medium w-44">
+                    <th className="text-right px-3 py-2 font-medium whitespace-nowrap">
                       Khách xác nhận
                     </th>
-                    <th className="text-left px-3 py-2 font-medium w-36">
+                    <th className="text-left px-3 py-2 font-medium whitespace-nowrap">
                       Ngày xác nhận
+                    </th>
+                    <th className="text-left px-3 py-2 font-medium">
+                      Ghi chú kế toán
                     </th>
                     <th className="w-10"></th>
                   </tr>
@@ -376,7 +425,7 @@ export function CreateDebtTicketModal({
                   {lines.length === 0 && (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={7}
                         className="px-3 py-6 text-center text-sm text-gray-400"
                       >
                         Chưa có khách nào — tìm và thêm khách qua ô tìm kiếm
@@ -388,28 +437,40 @@ export function CreateDebtTicketModal({
                     const below = isBelowRatio(l);
                     return (
                       <tr key={l.customerId}>
-                        <td className="px-3 py-2">
-                          <div className="font-medium">{l.customerName}</div>
+                        <td className="px-3 py-2 align-middle">
+                          <div className="font-medium break-words">
+                            {l.customerName}
+                          </div>
                           <div className="text-xs text-gray-400">
                             {l.customerCode}
                             {l.contactNumber ? ` · ${l.contactNumber}` : ""}
                           </div>
                         </td>
-                        <td className="px-3 py-2 text-right tabular-nums">
+                        <td className="px-3 py-2 text-right align-middle tabular-nums">
                           {formatCurrency(l.totalDebt)}
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2 align-middle">
                           <input
                             type="text"
                             inputMode="numeric"
-                            value={l.minimumPayment}
-                            onChange={(e) =>
-                              setLine(i, {
-                                minimumPayment: formatNumberInput(
-                                  e.target.value
-                                ),
-                              })
+                            value={
+                              ticketType === "STOP_DELIVERY"
+                                ? formatNumberInput(
+                                    String(l.requiredPaymentAmount)
+                                  )
+                                : l.minimumPayment
                             }
+                            onChange={(e) =>
+                              ticketType === "STOP_DELIVERY"
+                                ? undefined
+                                : setLine(i, {
+                                    minimumPayment: formatNumberInput(
+                                      e.target.value
+                                    ),
+                                  })
+                            }
+                            readOnly={ticketType === "STOP_DELIVERY"}
+                            tabIndex={ticketType === "STOP_DELIVERY" ? -1 : 0}
                             className={`w-full border rounded px-2 py-1 text-sm text-right tabular-nums ${
                               below ? "border-amber-400 bg-amber-50" : ""
                             }`}
@@ -420,7 +481,7 @@ export function CreateDebtTicketModal({
                             </div>
                           )}
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2 align-middle">
                           <input
                             type="text"
                             inputMode="numeric"
@@ -436,10 +497,22 @@ export function CreateDebtTicketModal({
                             className="w-full border rounded px-2 py-1 text-sm text-right tabular-nums"
                           />
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2 align-middle">
                           <DatePickerInput
                             value={l.confirmedDate}
                             onChange={(v) => setLine(i, { confirmedDate: v })}
+                          />
+                        </td>
+                        <td className="px-3 py-2 align-middle">
+                          <input
+                            type="text"
+                            value={l.note}
+                            onChange={(e) =>
+                              setLine(i, { note: e.target.value })
+                            }
+                            placeholder="Ghi chú cho khách..."
+                            maxLength={1000}
+                            className="w-full min-w-0 border rounded px-2 py-1 text-sm"
                           />
                         </td>
                         <td className="px-2 py-2 align-middle">
@@ -462,10 +535,20 @@ export function CreateDebtTicketModal({
               <div className="flex items-start gap-1.5 text-xs text-gray-500">
                 <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                 <span>
-                  <b>Số tiền tối thiểu</b> do hệ thống gợi ý (phần nợ đã đến
-                  hạn), sửa được. <b>Khách xác nhận</b> là số khách cam kết trả
-                  — có thể nhỏ hơn mức tối thiểu và chính là mốc đối chiếu để
-                  đánh dấu đã thu.
+                          {ticketType === "STOP_DELIVERY" ? (
+                            <>
+                              <b>Cần thanh toán để đi hàng</b> mặc định lấy từ
+                              requiredPaymentAmount và được lưu snapshot trên
+                              phiếu. Khi đã thu đủ, phiếu tự động hoàn thành.
+                            </>
+                          ) : (
+                            <>
+                              <b>Số tiền tối thiểu</b> do hệ thống gợi ý (phần nợ
+                              đã đến hạn), sửa được. <b>Khách xác nhận</b> là số
+                              khách cam kết trả — có thể nhỏ hơn mức tối thiểu
+                              và chính là mốc đối chiếu để đánh dấu đã thu.
+                            </>
+                          )}
                 </span>
               </div>
               {belowCount > 0 && (

@@ -360,7 +360,7 @@ export function DashboardHeader() {
                     </span>
                   )}
                 </div>
-                <span className="text-sm">{user?.name}</span>
+                {/* <span className="text-sm">{user?.name}</span> */}
               </button>
 
               {showUserMenu && (

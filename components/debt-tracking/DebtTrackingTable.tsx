@@ -32,12 +32,20 @@ export function DebtTrackingTable({
   params,
   selected,
   onSelectedChange,
+  onSelectAll,
+  selectAllPending = false,
   onPageChange,
+  pageSize,
+  onPageSizeChange,
 }: {
   params: DebtTrackingParams;
   selected: number[];
   onSelectedChange: (ids: number[]) => void;
+  onSelectAll?: (checked: boolean) => void | Promise<void>;
+  selectAllPending?: boolean;
   onPageChange: (page: number) => void;
+  pageSize: number;
+  onPageSizeChange: (pageSize: number) => void;
 }) {
   const { data, isLoading, isFetching } = useDebtTracking(params);
   const canEditPolicy = usePermission("debt_tracking", "update_policy");
@@ -56,9 +64,15 @@ export function DebtTrackingTable({
   const pg = data?.pagination;
 
   const allSelected =
-    rows.length > 0 && rows.every((r) => selected.includes(r.customerId));
+    rows.length > 0 &&
+    (pg ? selected.length >= pg.total : rows.every((r) => selected.includes(r.customerId)));
 
   const toggleAll = () => {
+    if (onSelectAll) {
+      void onSelectAll(!allSelected);
+      return;
+    }
+
     if (allSelected) {
       onSelectedChange(
         selected.filter((id) => !rows.some((r) => r.customerId === id))
@@ -106,12 +120,13 @@ export function DebtTrackingTable({
           <thead className="sticky top-0 z-10 bg-gray-50 text-xs text-gray-600">
             <tr className="border-b">
               <th className="px-3 py-2.5 w-10">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={toggleAll}
-                  className="cursor-pointer"
-                />
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleAll}
+                    disabled={selectAllPending}
+                    className="cursor-pointer"
+                  />
               </th>
               <th className="text-left px-3 py-2.5 font-medium">Khách hàng</th>
               <th className="text-left px-3 py-2.5 font-medium">
@@ -394,31 +409,54 @@ export function DebtTrackingTable({
         </table>
       </div>
 
-      {pg && pg.totalPages > 1 && (
+      {pg && (
         <div className="flex items-center justify-between px-4 py-2.5 border-t bg-white text-sm">
-          <span className="text-gray-500">
-            {(pg.page - 1) * pg.pageSize + 1}–
-            {Math.min(pg.page * pg.pageSize, pg.total)} / {pg.total}
-            {isFetching && (
-              <Loader2 className="w-3 h-3 animate-spin inline ml-2" />
-            )}
-          </span>
-          <div className="flex items-center gap-1">
-            <button
-              disabled={pg.page <= 1}
-              onClick={() => onPageChange(pg.page - 1)}
-              className="p-1.5 border rounded disabled:opacity-40 hover:bg-gray-50">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="px-2">
-              {pg.page} / {pg.totalPages}
+          <div className="flex items-center gap-3 text-gray-500">
+            <span>
+              {(pg.page - 1) * pg.pageSize + 1}–
+              {Math.min(pg.page * pg.pageSize, pg.total)} / {pg.total}
+              {isFetching && (
+                <Loader2 className="w-3 h-3 animate-spin inline ml-2" />
+              )}
             </span>
-            <button
-              disabled={pg.page >= pg.totalPages}
-              onClick={() => onPageChange(pg.page + 1)}
-              className="p-1.5 border rounded disabled:opacity-40 hover:bg-gray-50">
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            <label className="flex items-center gap-1.5 whitespace-nowrap">
+              Hiển thị
+              <select
+                value={pageSize}
+                onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                className="border rounded px-2 py-1 text-sm text-gray-700 bg-white"
+              >
+                {[20, 30, 50, 100, 200].map((size) => (
+                  <option key={size} value={size}>
+                    {size} dòng/trang
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="flex items-center gap-1">
+            {selectAllPending && (
+              <span className="text-xs text-brand mr-2">Đang chọn toàn bộ...</span>
+            )}
+            {pg.totalPages > 1 && (
+              <>
+                <button
+                  disabled={pg.page <= 1}
+                  onClick={() => onPageChange(pg.page - 1)}
+                  className="p-1.5 border rounded disabled:opacity-40 hover:bg-gray-50">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="px-2">
+                  {pg.page} / {pg.totalPages}
+                </span>
+                <button
+                  disabled={pg.page >= pg.totalPages}
+                  onClick={() => onPageChange(pg.page + 1)}
+                  className="p-1.5 border rounded disabled:opacity-40 hover:bg-gray-50">
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

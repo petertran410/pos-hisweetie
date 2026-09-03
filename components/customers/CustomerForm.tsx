@@ -187,6 +187,8 @@ export function CustomerForm({
       debtForm: loadedPolicy.debtForm ?? "",
       salePicId: loadedPolicy.salePicId ?? "",
       accountantPicId: loadedPolicy.accountantPicId ?? "",
+      requireFullPaymentForInvoice:
+        loadedPolicy.requireFullPaymentForInvoice ?? false,
     });
   }
 

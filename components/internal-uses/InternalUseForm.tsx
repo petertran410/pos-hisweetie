@@ -33,6 +33,8 @@ interface ProductItem {
   quantity: number;
   cost: number;
   value: number;
+  /** Tồn kho hiện tại tại chi nhánh của phiếu. */
+  onHand?: number;
 }
 
 export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) {
@@ -64,6 +66,7 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [showPurposeForm, setShowPurposeForm] = useState(false);
+  const productIdsKey = products.map((product) => product.productId).join(",");
 
   const canManagePurpose = usePermission("internal-use-purpose", "manage");
   const canViewCost = usePermission("internal-use", "view_cost_price");
@@ -88,10 +91,52 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
         quantity: Number(detail.quantity),
         cost: Number(detail.cost),
         value: Number(detail.value),
+        onHand: undefined,
       }));
       setProducts(loaded);
     }
   }, [internalUse, branchId]);
+
+  // Lấy tồn kho hiện tại cho các dòng của phiếu, kể cả phiếu đã được tạo trước đó.
+  // Không dùng dữ liệu chi tiết phiếu vì API chi tiết chỉ lưu tồn tại thời điểm lập.
+  useEffect(() => {
+    if (!branchId || products.length === 0) return;
+
+    let cancelled = false;
+    Promise.all(
+      products.map(async (product) => {
+        try {
+          const currentProduct = await productsApi.getProduct(product.productId);
+          const inventory = currentProduct.inventories?.find(
+            (inv) => inv.branchId === branchId
+          );
+          return {
+            productId: product.productId,
+            onHand: Number(inventory?.onHand || 0),
+          };
+        } catch {
+          return { productId: product.productId, onHand: undefined };
+        }
+      })
+    ).then((stockLevels) => {
+      if (cancelled) return;
+      const stockByProductId = new Map(
+        stockLevels.map(({ productId, onHand }) => [productId, onHand])
+      );
+      setProducts((current) =>
+        current.map((product) => ({
+          ...product,
+          onHand: stockByProductId.get(product.productId),
+        }))
+      );
+    });
+
+    return () => {
+      cancelled = true;
+    };
+    // productIdsKey intentionally tracks only item identities, not quantity/cost edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchId, productIdsKey]);
 
   // Khi đổi chi nhánh ở header (chỉ với phiếu tạo mới): giữ nguyên các dòng
   // sản phẩm, cập nhật lại giá vốn theo chi nhánh mới. Bỏ qua lần mount đầu
@@ -124,7 +169,8 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
             (i: any) => i.branchId === newBranchId
           );
           const cost = inv ? Number(inv.cost) : p.cost;
-          return { ...p, cost, value: p.quantity * cost };
+          const onHand = inv ? Number(inv.onHand) : p.onHand;
+          return { ...p, cost, onHand, value: p.quantity * cost };
         } catch {
           return p;
         }
@@ -171,6 +217,7 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
       quantity: 1,
       cost,
       value: cost,
+      onHand: Number(inventory?.onHand || 0),
     };
 
     setProducts((prev) => [newProduct, ...prev]);
@@ -397,11 +444,14 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
                         Tên hàng
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                        ĐVT
-                      </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                        SL xuất
+                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                         ĐVT
+                       </th>
+                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                         Tồn hiện tại
+                       </th>
+                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                         SL xuất
                       </th>
                       {canViewCost && (
                         <>
@@ -428,10 +478,20 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
                         <td className="px-4 py-3 text-sm text-gray-900 min-w-[200px]">
                           {item.productName}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-900">
-                          {item.unit || "-"}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-center">
+                         <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-900">
+                           {item.unit || "-"}
+                         </td>
+                         <td
+                           className={`px-4 py-3 whitespace-nowrap text-sm text-right font-medium ${
+                             item.onHand !== undefined && item.quantity > item.onHand
+                               ? "text-red-600"
+                               : "text-gray-900"
+                           }`}>
+                           {item.onHand === undefined
+                             ? "Đang tải..."
+                             : item.onHand.toLocaleString("vi-VN")}
+                         </td>
+                         <td className="px-4 py-3 whitespace-nowrap text-center">
                           <input
                             type="number"
                             value={item.quantity}
@@ -497,9 +557,19 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
                       <div className="text-sm text-gray-900 leading-tight">
                         {item.productName}
                       </div>
-                      <div className="text-xs text-gray-500 mt-0.5">
-                        ĐVT: {item.unit || "-"}
-                      </div>
+                       <div className="text-xs text-gray-500 mt-0.5">
+                         ĐVT: {item.unit || "-"}
+                       </div>
+                       <div
+                         className={`text-xs mt-0.5 ${
+                           item.onHand !== undefined && item.quantity > item.onHand
+                             ? "text-red-600"
+                             : "text-gray-500"
+                         }`}>
+                         Tồn hiện tại: {item.onHand === undefined
+                           ? "Đang tải..."
+                           : item.onHand.toLocaleString("vi-VN")}
+                       </div>
                     </div>
                     {!isFormDisabled && (
                       <button
