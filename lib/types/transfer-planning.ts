@@ -4,12 +4,6 @@
 
 export type AlertLevel = "GREEN" | "YELLOW" | "RED" | "DARK_RED";
 
-export type QuickFilterType =
-  | "ALL"
-  | "NEED_TRANSFER"
-  | "NO_TRANSFER"
-  | "HAS_CONFIRMED_ORDERS";
-
 export type AlertFilterType = "ALL" | AlertLevel;
 
 export interface CalculationTrace {
@@ -18,8 +12,11 @@ export interface CalculationTrace {
   avg90PerDay: number;
   demandPerDay: number;
   safetyStock: number;
+  leadtimeDays: number;
+  cycleDays: number;
   transferPoint: number;
   availableStockSG: number;
+  availableDays: number;
   targetStockSG: number;
   suggestedQuantity: number;
   alert: AlertLevel;
@@ -60,7 +57,6 @@ export interface TransferPlanningSummary {
 
 export interface TransferPlanningFilters {
   search?: string;
-  quickFilter?: QuickFilterType;
   alertFilter?: AlertFilterType;
 
   // ── 5 BỘ LỌC HÀNG HÓA TƯƠNG TỰ /san-pham/danh-sach ──
@@ -68,7 +64,8 @@ export interface TransferPlanningFilters {
   middleNames?: string[];      // Nguồn Gốc (Category Cấp 2)
   childNames?: string[];       // Danh Mục (Category Cấp 3)
   cargoType?: "COLD" | "NORMAL" | ""; // Loại vận chuyển (Lạnh / Thường)
-  tradeMarkIds?: number[];     // Thương hiệu
+  tradeMarkIds?: number[];     // Thương hiệu (include)
+  excludeTradeMarkIds?: number[]; // Thương hiệu loại trừ (exclude)
 
   page?: number;
   limit?: number;
