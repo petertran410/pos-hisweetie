@@ -4,7 +4,6 @@ import React, { useMemo } from "react";
 import { Filter, RotateCcw, Layers } from "lucide-react";
 import type {
   TransferPlanningFilters,
-  QuickFilterType,
   AlertFilterType,
 } from "@/lib/types/transfer-planning";
 import { FilterMultiSelect } from "@/components/ui/filters/FilterMultiSelect";
@@ -38,7 +37,6 @@ export function TransferPlanningSidebar({
   onReset,
   totalFiltered,
 }: TransferPlanningSidebarProps) {
-  const activeQuick = filters.quickFilter || "ALL";
   const activeAlert = filters.alertFilter || "ALL";
 
   // Data cho các bộ lọc Hàng hoá từ API thật
@@ -137,13 +135,6 @@ export function TransferPlanningSidebar({
     ];
   }, [trademarks]);
 
-  const quickFilterOptions: Array<{ key: QuickFilterType; label: string }> = [
-    { key: "ALL", label: "Tất cả" },
-    { key: "NEED_TRANSFER", label: "Cần chuyển (SL > 0)" },
-    { key: "NO_TRANSFER", label: "Không cần chuyển" },
-    { key: "HAS_CONFIRMED_ORDERS", label: "Có đơn xác nhận" },
-  ];
-
   const alertFilterOptions: Array<{
     key: AlertFilterType;
     label: string;
@@ -158,7 +149,6 @@ export function TransferPlanningSidebar({
 
   const hasActiveFilters =
     Boolean(filters.search) ||
-    activeQuick !== "ALL" ||
     activeAlert !== "ALL" ||
     (filters.parentNames && filters.parentNames.length > 0) ||
     (filters.middleNames && filters.middleNames.length > 0) ||
@@ -203,31 +193,6 @@ export function TransferPlanningSidebar({
           </div>
           <div className="text-[11px] text-gray-500 mt-1">
             Lead time: 5 ngày · An toàn: 2 ngày
-          </div>
-        </div>
-
-        {/* 1. Nhu cầu điều chuyển */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-            Nhu cầu điều chuyển
-          </label>
-          <div className="space-y-1">
-            {quickFilterOptions.map((opt) => {
-              const isSelected = activeQuick === opt.key;
-              return (
-                <button
-                  key={opt.key}
-                  type="button"
-                  onClick={() => onFiltersChange({ quickFilter: opt.key, page: 1 })}
-                  className={`w-full text-left px-3 py-1.5 rounded-md text-xs transition-colors flex items-center justify-between ${
-                    isSelected
-                      ? "bg-primary text-white font-medium shadow-sm"
-                      : "text-gray-700 hover:bg-gray-100"
-                  }`}>
-                  <span>{opt.label}</span>
-                </button>
-              );
-            })}
           </div>
         </div>
 

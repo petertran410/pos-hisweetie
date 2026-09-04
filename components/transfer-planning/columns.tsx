@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import type { ColumnConfig } from "@/lib/hooks/useColumnVisibility";
 import type { TransferPlanningItem } from "@/lib/types/transfer-planning";
-import { formatNumber, formatQuantity } from "@/lib/utils/transfer-planning-calc";
+import { formatNumber, formatQuantity, formatWholeQuantity } from "@/lib/utils/transfer-planning-calc";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 
 export interface TransferPlanningColumnCtx {
@@ -91,7 +91,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
       width: "90px",
       render: (item) => (
         <span className="font-mono text-sm text-gray-700 block text-right">
-          {formatQuantity(item.stockHN)}
+          {formatWholeQuantity(item.stockHN)}
         </span>
       ),
       exportValue: (item) => item.stockHN,
@@ -103,7 +103,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
       width: "90px",
       render: (item) => (
         <span className="font-mono text-sm text-gray-700 block text-right">
-          {formatQuantity(item.stockSG)}
+          {formatWholeQuantity(item.stockSG)}
         </span>
       ),
       exportValue: (item) => item.stockSG,
@@ -118,7 +118,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
         if (item.inTransit <= 0) {
           return (
             <span className="font-mono text-sm block text-right text-gray-400">
-              {formatQuantity(item.inTransit)}
+              {formatWholeQuantity(item.inTransit)}
             </span>
           );
         }
@@ -130,7 +130,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
               ctx?.onOpenInTransit?.(item);
             }}
             className="font-mono text-sm block text-right text-brand hover:underline font-medium w-full cursor-pointer">
-            {formatQuantity(item.inTransit)}
+            {formatWholeQuantity(item.inTransit)}
           </button>
         );
       },
@@ -147,7 +147,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
           className={`font-mono text-sm block text-right ${
             item.committed > 0 ? "text-gray-900 font-medium" : "text-gray-400"
           }`}>
-          {formatQuantity(item.committed)}
+          {formatWholeQuantity(item.committed)}
         </span>
       ),
       exportValue: (item) => item.committed,
@@ -166,7 +166,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
                 ? "text-gray-900 font-bold"
                 : "text-gray-400"
             }`}>
-            {formatQuantity(item.confirmedOrders)}
+            {formatWholeQuantity(item.confirmedOrders)}
           </span>
         </div>
       ),
@@ -198,7 +198,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
               ? "text-red-600 font-semibold"
               : "text-gray-800"
           }`}>
-          {formatQuantity(item.computed.availableStockSG)}
+          {formatWholeQuantity(item.computed.availableStockSG)}
         </span>
       ),
       exportValue: (item) => item.computed.availableStockSG,
@@ -282,7 +282,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
         if (item.pendingTransfer <= 0) {
           return (
             <span className="font-mono text-sm block text-right text-gray-400">
-              {formatQuantity(item.pendingTransfer)}
+              {formatWholeQuantity(item.pendingTransfer)}
             </span>
           );
         }
@@ -294,7 +294,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
               ctx?.onOpenPending?.(item);
             }}
             className="font-mono text-sm block text-right text-orange-600 hover:underline font-medium w-full cursor-pointer">
-            {formatQuantity(item.pendingTransfer)}
+            {formatWholeQuantity(item.pendingTransfer)}
           </button>
         );
       },

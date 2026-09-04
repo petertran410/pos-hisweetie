@@ -50,8 +50,14 @@ export function useFilteredNav(): NavSection[] {
   return useMemo(() => {
     if (superAdmin) return NAV_CONFIG.filter((s) => s.items.length > 0);
 
-    const check = (def: PermissionDef) =>
-      permissions.includes(`${def.resource}:${def.action}`);
+    const check = (def: PermissionDef | PermissionDef[]) => {
+      if (Array.isArray(def)) {
+        return def.some((d) =>
+          permissions.includes(`${d.resource}:${d.action}`)
+        );
+      }
+      return permissions.includes(`${def.resource}:${def.action}`);
+    };
 
     return NAV_CONFIG.map((section) => {
       if (section.items.length === 0) return section;
@@ -72,11 +78,10 @@ export function useFilteredPosActions(): NavItem[] {
   return useMemo(() => {
     if (superAdmin) return POS_ACTIONS;
 
-    return POS_ACTIONS.filter((item) =>
-      permissions.includes(
-        `${item.permission.resource}:${item.permission.action}`
-      )
-    );
+    return POS_ACTIONS.filter((item) => {
+      const def = item.permission as PermissionDef;
+      return permissions.includes(`${def.resource}:${def.action}`);
+    });
   }, [permissions, superAdmin]);
 }
 

@@ -6,6 +6,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   price_books: "Bảng giá",
   inventory: "Tồn kho",
   transfers: "Chuyển kho",
+  transfer_planning: "Dự kiến chuyển kho",
   productions: "Sản xuất",
   destructions: "Hủy hàng",
   internal_use: "Xuất dùng nội bộ",

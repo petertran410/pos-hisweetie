@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { X, ArrowRight, Info, Calculator, AlertCircle, PackageCheck, Plus } from "lucide-react";
 import type { TransferPlanningItem } from "@/lib/types/transfer-planning";
-import { formatNumber, formatQuantity } from "@/lib/utils/transfer-planning-calc";
+import { formatNumber, formatQuantity, formatWholeQuantity } from "@/lib/utils/transfer-planning-calc";
 import { renderAlertBadge } from "./columns";
 import { AddToTransferModal } from "./AddToTransferModal";
 
@@ -111,28 +111,28 @@ export function TransferPlanningDetailPanel({
             <div className="p-2.5 rounded-lg border bg-gray-50/50">
               <span className="text-gray-500 block">Tồn kho Hà Nội (Nguồn):</span>
               <strong className="text-sm font-mono text-gray-900 mt-0.5 block">
-                {formatQuantity(item.stockHN)} {item.unit}
+                {formatWholeQuantity(item.stockHN)} {item.unit}
               </strong>
             </div>
 
             <div className="p-2.5 rounded-lg border bg-gray-50/50">
               <span className="text-gray-500 block">Tồn kho Sài Gòn (Đích):</span>
               <strong className={`text-sm font-mono mt-0.5 block ${alertColor}`}>
-                {formatQuantity(item.stockSG)} {item.unit}
+                {formatWholeQuantity(item.stockSG)} {item.unit}
               </strong>
             </div>
 
             <div className="p-2.5 rounded-lg border bg-gray-50/50">
               <span className="text-gray-500 block">Đang chuyển nội bộ:</span>
               <strong className="text-sm font-mono text-blue-700 mt-0.5 block">
-                {formatQuantity(item.inTransit)} {item.unit}
+                {formatWholeQuantity(item.inTransit)} {item.unit}
               </strong>
             </div>
 
             <div className="p-2.5 rounded-lg border bg-gray-50/50">
               <span className="text-gray-500 block">Đơn tạm (PENDING):</span>
               <strong className="text-sm font-mono text-gray-900 mt-0.5 block">
-                {formatQuantity(item.committed)} {item.unit}
+                {formatWholeQuantity(item.committed)} {item.unit}
               </strong>
             </div>
 
@@ -147,7 +147,7 @@ export function TransferPlanningDetailPanel({
                     ? "bg-rose-100 text-rose-800 font-bold"
                     : "text-gray-600"
                 }`}>
-                {formatQuantity(item.confirmedOrders)} {item.unit}
+                {formatWholeQuantity(item.confirmedOrders)} {item.unit}
               </strong>
             </div>
           </div>
@@ -219,7 +219,7 @@ export function TransferPlanningDetailPanel({
               <div className="flex items-center justify-between py-1 border-b border-gray-200">
                 <span className="text-gray-600">Tồn khả dụng SG (Tồn SG + Chuyển − Đơn tạm − Đơn xác nhận):</span>
                 <span className="font-mono font-bold text-gray-900">
-                  {formatQuantity(c.availableStockSG)}
+                  {formatWholeQuantity(c.availableStockSG)}
                 </span>
               </div>
 
