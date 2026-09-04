@@ -31,6 +31,7 @@ export const ROUTE_PERMISSIONS: Record<
   "/san-pham/danh-sach": { resource: "products", action: "view" },
   "/san-pham/thiet-lap-gia": { resource: "price_books", action: "view" },
   "/san-pham/chuyen-hang": { resource: "transfers", action: "view" },
+  "/san-pham/du-kien-chuyen-kho": { resource: "transfers", action: "view" },
   "/san-pham/kiem-hang-loai-b": {
     resource: "stock_condition_transfers",
     action: "view",
@@ -120,6 +121,12 @@ export const NAV_CONFIG: NavSection[] = [
         key: "transfers",
         label: "Chuyển hàng",
         href: "/san-pham/chuyen-hang",
+        permission: { resource: "transfers", action: "view" },
+      },
+      {
+        key: "transfer-planning",
+        label: "Dự kiến chuyển kho",
+        href: "/san-pham/du-kien-chuyen-kho",
         permission: { resource: "transfers", action: "view" },
       },
       {

@@ -71,6 +71,10 @@ export function DashboardHeader() {
         title: "Kho hàng",
         items: [
           { label: "Chuyển hàng", href: "/san-pham/chuyen-hang" },
+          {
+            label: "Dự kiến chuyển kho",
+            href: "/san-pham/du-kien-chuyen-kho",
+          },
           { label: "Sản xuất", href: "/san-pham/san-xuat" },
           { label: "Công thức pha chế", href: "/san-pham/pha-che" },
           { label: "Xuất hủy", href: "/san-pham/xuat-huy" },
