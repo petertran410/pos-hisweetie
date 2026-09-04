@@ -3,6 +3,7 @@
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useTransferDrilldownByProduct } from "@/lib/hooks/useTransfers";
+import { formatWholeQuantity } from "@/lib/utils/transfer-planning-calc";
 import { CodeLink } from "../shared/CodeLink";
 
 export type TransferDrilldownVariant = "in-transit" | "pending";
@@ -165,11 +166,11 @@ export function TransferDrilldownModal({
                     </td>
                     {isInTransit && (
                       <td className="px-4 py-2.5 text-right text-gray-900 whitespace-nowrap">
-                        {Number(r.sendQuantity).toLocaleString()}
+                        {formatWholeQuantity(r.sendQuantity)}
                       </td>
                     )}
                     <td className="px-4 py-2.5 text-right text-gray-900 font-medium whitespace-nowrap">
-                      {Number(r.quantity).toLocaleString()}
+                      {formatWholeQuantity(r.quantity)}
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       <span
@@ -191,7 +192,7 @@ export function TransferDrilldownModal({
         <div className="px-5 py-3 border-t bg-gray-50 flex items-center justify-between text-xs text-gray-600">
           <span>
             {records.length > 0
-              ? `${records.length} phiếu — ${config.footerLabel}: ${sumQuantity.toLocaleString()}`
+              ? `${records.length} phiếu — ${config.footerLabel}: ${formatWholeQuantity(sumQuantity)}`
               : ""}
           </span>
           <button

@@ -109,6 +109,7 @@ export function TransferPlanningTable({
                 "confirmedOrders",
                 "demandPerDay",
                 "availableStockSG",
+                "availableDays",
                 "targetStockSG",
                 "suggestedQuantity",
                 "pendingTransfer",

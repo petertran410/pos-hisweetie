@@ -125,6 +125,13 @@ export function formatQuantity(value: number | null | undefined): string {
   if (value === null || value === undefined || isNaN(value)) return "0";
   return new Intl.NumberFormat("vi-VN", {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 1,
+    maximumFractionDigits: 0,
   }).format(value);
+}
+
+export function formatWholeQuantity(value: number | null | undefined): string {
+  if (value === null || value === undefined || isNaN(value)) return "0";
+  return new Intl.NumberFormat("vi-VN", {
+    maximumFractionDigits: 0,
+  }).format(Math.round(value));
 }

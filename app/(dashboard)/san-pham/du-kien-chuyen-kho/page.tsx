@@ -12,6 +12,7 @@ import {
   TransferDrilldownModal,
   type TransferDrilldownVariant,
 } from "@/components/transfer-planning/TransferDrilldownModal";
+import { AddToTransferModal } from "@/components/transfer-planning/AddToTransferModal";
 import { buildTransferPlanningColumns } from "@/components/transfer-planning/columns";
 import { useColumnVisibility } from "@/lib/hooks/useColumnVisibility";
 import {
@@ -21,21 +22,26 @@ import {
 import { exportTransferPlanningToExcel } from "@/lib/utils/transfer-planning-export";
 import type {
   TransferPlanningFilters,
-  QuickFilterType,
   AlertFilterType,
+  TransferPlanningItem,
 } from "@/lib/types/transfer-planning";
 
 export default function TransferPlanningPage() {
-  // ── Filters state ──
-  const [filters, setFilters] = useState<TransferPlanningFilters>({
+  // ── Default filters (áp dụng lần đầu vào trang + khi reset) ──
+  const DEFAULT_FILTERS: TransferPlanningFilters = {
     search: "",
-    quickFilter: "ALL",
     alertFilter: "ALL",
+    parentNames: ["Hàng thương hiệu", "Hàng thương mại"],
+    middleNames: ["Nhập khẩu chính ngạch"],
+    excludeTradeMarkIds: [17], // Loại trừ Boduo
     page: 1,
     limit: 25,
     sortBy: "suggestedQuantity",
     sortDirection: "desc",
-  });
+  };
+
+  // ── Filters state ──
+  const [filters, setFilters] = useState<TransferPlanningFilters>(DEFAULT_FILTERS);
 
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [drilldownItem, setDrilldownItem] = useState<{
@@ -44,6 +50,7 @@ export default function TransferPlanningPage() {
     sku: string;
     variant: TransferDrilldownVariant;
   } | null>(null);
+  const [addToTransferItem, setAddToTransferItem] = useState<TransferPlanningItem | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
   // ── Column visibility with local storage persistence ──
@@ -77,15 +84,7 @@ export default function TransferPlanningPage() {
   );
 
   const handleResetFilters = useCallback(() => {
-    setFilters({
-      search: "",
-      quickFilter: "ALL",
-      alertFilter: "ALL",
-      page: 1,
-      limit: 25,
-      sortBy: "suggestedQuantity",
-      sortDirection: "desc",
-    });
+    setFilters(DEFAULT_FILTERS);
   }, []);
 
   const handleSort = useCallback((columnKey: string) => {
@@ -137,7 +136,7 @@ export default function TransferPlanningPage() {
   }, [filters, visibleColumns]);
 
   return (
-    <PagePermissionGuard resource="transfers" action="view">
+    <PagePermissionGuard resource="transfer_planning" action="view">
       <div className="flex h-full w-full overflow-hidden bg-gray-100">
         {/* Sidebar Filters on Left */}
         <TransferPlanningSidebar
@@ -186,6 +185,7 @@ export default function TransferPlanningPage() {
                   sku: item.sku,
                   variant: "pending",
                 }),
+              onOpenAddToTransfer: (item) => setAddToTransferItem(item),
             }}
           />
 
@@ -213,6 +213,14 @@ export default function TransferPlanningPage() {
             productName={drilldownItem.name}
             productSku={drilldownItem.sku}
             onClose={() => setDrilldownItem(null)}
+          />
+        )}
+
+        {/* Add to Transfer Modal */}
+        {addToTransferItem && (
+          <AddToTransferModal
+            item={addToTransferItem}
+            onClose={() => setAddToTransferItem(null)}
           />
         )}
       </div>

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Search, Download, FileSpreadsheet, AlertOctagon, PackageCheck, Boxes, ArrowRightLeft } from "lucide-react";
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
+import { PermissionGate } from "@/components/permissions/PermissionGate";
 import type { TransferPlanningSummary } from "@/lib/types/transfer-planning";
 import { formatNumber } from "@/lib/utils/transfer-planning-calc";
 
@@ -116,14 +117,16 @@ export function TransferPlanningToolbar({
         <div className="flex items-center gap-2 shrink-0">
           <ColumnToggle columns={columns} onToggle={onToggleColumn} label="Cột hiển thị" />
 
-          <button
-            type="button"
-            onClick={onExportExcel}
-            disabled={isExporting}
-            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-colors disabled:opacity-50">
-            <Download className="w-4 h-4 text-emerald-600" />
-            <span>{isExporting ? "Đang xuất..." : "Xuất file"}</span>
-          </button>
+          <PermissionGate resource="transfer_planning" action="export">
+            <button
+              type="button"
+              onClick={onExportExcel}
+              disabled={isExporting}
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-colors disabled:opacity-50">
+              <Download className="w-4 h-4 text-emerald-600" />
+              <span>{isExporting ? "Đang xuất..." : "Xuất file"}</span>
+            </button>
+          </PermissionGate>
         </div>
       </div>
     </div>
