@@ -130,7 +130,7 @@ export function TransferPlanningDetailPanel({
             </div>
 
             <div className="p-2.5 rounded-lg border bg-gray-50/50">
-              <span className="text-gray-500 block">Giữ / Đã cam kết:</span>
+              <span className="text-gray-500 block">Đơn tạm (PENDING):</span>
               <strong className="text-sm font-mono text-gray-900 mt-0.5 block">
                 {formatQuantity(item.committed)} {item.unit}
               </strong>
@@ -139,7 +139,7 @@ export function TransferPlanningDetailPanel({
             <div className="p-2.5 rounded-lg border bg-gray-50/50 col-span-2 flex items-center justify-between">
               <div>
                 <span className="text-gray-500 block">Đơn hàng khách đã xác nhận:</span>
-                <span className="text-[11px] text-gray-400">Từ các đơn tạm/xác nhận tại chi nhánh SG</span>
+                <span className="text-[11px] text-gray-400">Chỉ đơn CONFIRMED tại Kho Sài Gòn</span>
               </div>
               <strong
                 className={`text-sm font-mono px-2 py-0.5 rounded ${
@@ -210,21 +210,37 @@ export function TransferPlanningDetailPanel({
               </div>
 
               <div className="flex items-center justify-between py-1 border-b border-gray-200">
-                <span className="text-gray-600">Điểm điều chuyển (An toàn + 5 ngày leadtime):</span>
+                <span className="text-gray-600">Điểm điều chuyển (An toàn + {c.leadtimeDays} ngày leadtime):</span>
                 <span className="font-mono font-semibold text-gray-800">
                   {formatNumber(c.transferPoint, 1)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between py-1 border-b border-gray-200">
-                <span className="text-gray-600">Tồn khả dụng SG (Tồn SG + Chuyển - Giữ):</span>
+                <span className="text-gray-600">Tồn khả dụng SG (Tồn SG + Chuyển − Đơn tạm − Đơn xác nhận):</span>
                 <span className="font-mono font-bold text-gray-900">
                   {formatQuantity(c.availableStockSG)}
                 </span>
               </div>
 
+              <div className="flex items-center justify-between py-1 border-b border-gray-200">
+                <span className="text-gray-600">Khả dụng (ngày) (Tồn khả dụng ÷ Demand):</span>
+                {c.demandPerDay <= 0 ? (
+                  <span className="font-mono font-semibold text-gray-400">—</span>
+                ) : (
+                  <span
+                    className={`font-mono font-bold ${
+                      Math.round(c.availableStockSG / c.demandPerDay) < 2
+                        ? "text-red-600"
+                        : "text-gray-900"
+                    }`}>
+                    {Math.round(c.availableStockSG / c.demandPerDay)} ngày
+                  </span>
+                )}
+              </div>
+
               <div className="flex items-center justify-between py-1">
-                <span className="text-gray-600">Tồn mục tiêu (An toàn + 7 ngày chu kỳ):</span>
+                <span className="text-gray-600">Tồn mục tiêu (An toàn + {c.cycleDays} ngày chu kỳ):</span>
                 <span className="font-mono font-bold text-gray-900">
                   {formatNumber(c.targetStockSG, 1)}
                 </span>

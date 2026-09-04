@@ -26,6 +26,7 @@ export interface RawRealProduct {
   cargoType?: "COLD" | "NORMAL";
   trademarkId?: number;
   trademarkName?: string;
+  packSize?: number;
   stockHN: number;
   stockSG: number;
   inTransit: number;
@@ -53,12 +54,14 @@ export function buildRealTransferPlanningItems(): TransferPlanningItem[] {
       inTransit: raw.inTransit,
       committed: raw.committed,
       confirmedOrders: raw.confirmedOrders,
+      cargoType: raw.cargoType,
+      packSize: raw.packSize ?? 1,
     });
 
     return {
       ...raw,
       pendingTransfer: raw.pendingTransfer || 0,
-      packSize: 1,
+      packSize: raw.packSize ?? 1,
       computed,
     };
   });
@@ -79,24 +82,7 @@ export function filterAndPaginateRealPlanning(
     );
   }
 
-  // 2. Quick filter
-  if (filters.quickFilter && filters.quickFilter !== "ALL") {
-    switch (filters.quickFilter) {
-      case "NEED_TRANSFER":
-        filtered = filtered.filter((item) => item.computed.suggestedQuantity > 0);
-        break;
-      case "NO_TRANSFER":
-        filtered = filtered.filter(
-          (item) => item.computed.suggestedQuantity === 0
-        );
-        break;
-      case "HAS_CONFIRMED_ORDERS":
-        filtered = filtered.filter((item) => item.confirmedOrders > 0);
-        break;
-    }
-  }
-
-  // 3. Mức độ cảnh báo
+  // 2. Mức độ cảnh báo
   if (filters.alertFilter && filters.alertFilter !== "ALL") {
     filtered = filtered.filter(
       (item) => item.computed.alert === filters.alertFilter
@@ -135,6 +121,14 @@ export function filterAndPaginateRealPlanning(
     filtered = filtered.filter(
       (item) =>
         item.trademarkId && filters.tradeMarkIds?.includes(item.trademarkId)
+    );
+  }
+
+  // e2) Thương hiệu loại trừ (excludeTradeMarkIds)
+  if (filters.excludeTradeMarkIds && filters.excludeTradeMarkIds.length > 0) {
+    filtered = filtered.filter(
+      (item) =>
+        !item.trademarkId || !filters.excludeTradeMarkIds?.includes(item.trademarkId)
     );
   }
 
@@ -199,8 +193,12 @@ export const transferPlanningApi = {
         "/transfers/planning-summary",
         {
           search: filters.search || undefined,
+          parentNames: filters.parentNames?.length ? filters.parentNames : undefined,
+          middleNames: filters.middleNames?.length ? filters.middleNames : undefined,
+          childNames: filters.childNames?.length ? filters.childNames : undefined,
           cargoType: filters.cargoType || undefined,
-          quickFilter: filters.quickFilter !== "ALL" ? filters.quickFilter : undefined,
+          tradeMarkIds: filters.tradeMarkIds?.length ? filters.tradeMarkIds : undefined,
+          excludeTradeMarkIds: filters.excludeTradeMarkIds?.length ? filters.excludeTradeMarkIds : undefined,
           alertFilter: filters.alertFilter !== "ALL" ? filters.alertFilter : undefined,
           page: filters.page || 1,
           limit: filters.limit || 25,
