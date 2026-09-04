@@ -91,7 +91,7 @@ export default function TicketDetailPage() {
   const removeCustomer = useRemoveTicketCustomer();
 
   const canUpdate = usePermission("debt_tickets", "update");
-  const canClose = usePermission("debt_tickets", "close");
+  const canClose = usePermission("debt_tickets", "cancel");
 
   const [editing, setEditing] = useState<{
     customerId: number;

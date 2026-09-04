@@ -52,6 +52,7 @@ export default function TheoDoiCongNoPage() {
   const [showCreateTicket, setShowCreateTicket] = useState(false);
 
   const canCreateTicket = usePermission("debt_tickets", "create");
+  const canViewTickets = usePermission("debt_tickets", "view");
   const canExport = usePermission("debt_tracking", "export");
 
   const params: DebtTrackingParams = useMemo(
@@ -297,13 +298,15 @@ export default function TheoDoiCongNoPage() {
 
             <div className="flex-1" />
 
-            <Link
-              href="/khach-hang/ticket-cong-no"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded hover:bg-gray-50"
-            >
-              <TicketIcon className="w-4 h-4" />
-              Phiếu thu hồi nợ
-            </Link>
+            {canViewTickets && (
+              <Link
+                href="/khach-hang/ticket-cong-no"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded hover:bg-gray-50"
+              >
+                <TicketIcon className="w-4 h-4" />
+                Phiếu thu hồi nợ
+              </Link>
+            )}
 
             {canExport && (
               <button

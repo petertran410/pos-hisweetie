@@ -39,7 +39,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   return_orders: "Trả hàng",
   debt_offsets: "Cấn trừ công nợ",
   debt_tracking: "Theo dõi công nợ",
-  debt_tickets: "Ticket đòi nợ",
+  debt_tickets: "Thu hồi nợ",
   stock_audits: "Kiểm kho",
   stock_condition_transfers: "Chuyển loại tồn",
   settings: "Cài đặt hệ thống",
