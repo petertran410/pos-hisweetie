@@ -318,10 +318,12 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                   productName: detail.productName,
                   unit: product.unit,
                   sendQuantity: Number(detail.sendQuantity),
+                  // Bên gửi hiển thị SL nhận = 0 (chưa nhận) — không gán
+                  // mặc định = sendQuantity để tránh lưu dữ liệu bẩn.
                   receivedQuantity: isReceiver
                     ? Number(detail.receivedQuantity) ||
                       Number(detail.sendQuantity)
-                    : Number(detail.sendQuantity),
+                    : 0,
                   price: Number(detail.sendPrice),
                   fromInventory: Number(fromInventory?.onHand || 0),
                   toInventory: Number(toInventory?.onHand || 0),
@@ -341,7 +343,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                   receivedQuantity: isReceiver
                     ? Number(detail.receivedQuantity) ||
                       Number(detail.sendQuantity)
-                    : Number(detail.sendQuantity),
+                    : 0,
                   price: Number(detail.sendPrice),
                   fromInventory: 0,
                   toInventory: 0,
@@ -580,7 +582,11 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
         productCode: p.productCode,
         productId: p.productId,
         sendQuantity: p.sendQuantity,
-        receivedQuantity: isReceiver ? p.receivedQuantity : p.sendQuantity,
+        // Bên gửi KHÔNG gửi receivedQuantity bẩn (= sendQuantity): chỉ bên
+        // nhận (status 3) mới nhập SL nhận, còn lại phải là 0. Nếu gửi
+        // sendQuantity, DB lưu receivedQuantity = sendQuantity làm phép tính
+        // "Đang chuyển" ở planning-summary triệt tiêu về 0 (bug TRF002449).
+        receivedQuantity: isReceiver ? p.receivedQuantity : 0,
         price: p.price,
       })),
     };
@@ -637,7 +643,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
         productCode: p.productCode,
         productId: p.productId,
         sendQuantity: p.sendQuantity,
-        receivedQuantity: isReceiver ? p.receivedQuantity : p.sendQuantity,
+        receivedQuantity: isReceiver ? p.receivedQuantity : 0,
         price: p.price,
       })),
     };

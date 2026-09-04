@@ -68,6 +68,34 @@ export interface CancelTransferData {
   cancelReason?: string;
 }
 
+export interface DraftTransferCandidate {
+  id: number;
+  code: string;
+  createdAt: string;
+  noteBySource?: string | null;
+  itemCount: number;
+}
+
+export interface TransferDrilldownRecord {
+  transferId: number;
+  code: string;
+  fromBranchName: string;
+  toBranchName: string;
+  transferredDate: string | null;
+  createdAt: string;
+  sendQuantity: number;
+  receivedQuantity: number;
+  quantity: number;
+  status: number;
+  statusLabel: string;
+}
+
+export interface TransferDrilldownResponse {
+  data: TransferDrilldownRecord[];
+  total: number;
+  sumQuantity: number;
+}
+
 export const transfersApi = {
   getAll: (params?: TransferQueryParams) =>
     apiClient.get<{ total: number; pageSize: number; data: Transfer[] }>(
@@ -87,4 +115,19 @@ export const transfersApi = {
 
   cancel: (id: number, data?: CancelTransferData) =>
     apiClient.put(`/transfers/${id}/cancel`, data || {}),
+
+  getDraftCandidates: () =>
+    apiClient.get<{ data: DraftTransferCandidate[] }>(
+      "/transfers/draft-candidates"
+    ),
+
+  getInTransitByProduct: (productId: number) =>
+    apiClient.get<TransferDrilldownResponse>(
+      `/transfers/in-transit-by-product?productId=${productId}`
+    ),
+
+  getPendingByProduct: (productId: number) =>
+    apiClient.get<TransferDrilldownResponse>(
+      `/transfers/pending-by-product?productId=${productId}`
+    ),
 };

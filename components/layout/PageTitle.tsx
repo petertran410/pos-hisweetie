@@ -28,6 +28,8 @@ const TITLE_MAP: Array<{ prefix: string; title: string }> = [
   { prefix: "/san-pham/kiem-kho", title: "Kiểm kho" },
   { prefix: "/san-pham/chuyen-loai-ton", title: "Chuyển loại tồn" },
   { prefix: "/san-pham/chuyen-hang", title: "Chuyển hàng" },
+  { prefix: "/san-pham/du-kien-chuyen-kho", title: "Dự kiến chuyển kho" },
+  { prefix: "/san-pham/du-kien-dat-hang", title: "Dự kiến đặt hàng" },
   { prefix: "/san-pham/san-xuat", title: "Sản xuất" },
   { prefix: "/san-pham/xuat-huy", title: "Xuất hủy" },
   { prefix: "/san-pham/xuat-dung-noi-bo", title: "Xuất dùng nội bộ" },

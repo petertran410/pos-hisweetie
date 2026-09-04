@@ -26,6 +26,20 @@ export function useTransfer(id: number) {
   });
 }
 
+export function useTransferDrilldownByProduct(
+  productId: number | null,
+  status: 1 | 2
+) {
+  return useQuery({
+    queryKey: ["transfers-drilldown", productId, status],
+    queryFn: () =>
+      status === 1
+        ? transfersApi.getPendingByProduct(productId!)
+        : transfersApi.getInTransitByProduct(productId!),
+    enabled: !!productId,
+  });
+}
+
 export function useCreateTransfer() {
   const queryClient = useQueryClient();
 
@@ -33,6 +47,7 @@ export function useCreateTransfer() {
     mutationFn: (data: CreateTransferData) => transfersApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transfers"] });
+      queryClient.invalidateQueries({ queryKey: ["transfer-planning"] });
     },
     onError: () => {
       toast.error("Không thể tạo phiếu chuyển hàng");
@@ -53,6 +68,7 @@ export function useUpdateTransfer() {
     }) => transfersApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transfers"] });
+      queryClient.invalidateQueries({ queryKey: ["transfer-planning"] });
     },
     onError: () => {
       toast.error("Không thể cập nhật phiếu chuyển hàng");
@@ -83,6 +99,7 @@ export function useCancelTransfer() {
       transfersApi.cancel(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transfers"] });
+      queryClient.invalidateQueries({ queryKey: ["transfer-planning"] });
     },
   });
 }

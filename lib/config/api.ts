@@ -61,6 +61,11 @@ const fetchWithTimeout = async (
 
 const handleApiError = async (res: Response) => {
   if (res.status === 401) {
+    const token = useAuthStore.getState().token;
+    if (token === "test-token" || token === "mock-token-for-testing") {
+      // Mock mode cho test browser — không clear auth
+      return;
+    }
     let errorMessage = "Phiên đăng nhập đã hết hạn";
 
     try {
