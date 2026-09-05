@@ -150,9 +150,24 @@ export interface DebtTrackingRow {
 
   note: string | null;
   noteAt: string | null;
+  accountantCollectionAttempts: CollectionAttempt[];
+  salesCollectionAttempts: CollectionAttempt[];
 
   openTicket: DebtOpenTicket | null;
   latestStopTicket?: DebtOpenTicket | null;
+}
+
+export type CollectionAttemptRole = "ACCOUNTANT" | "SALES";
+
+export interface CollectionAttempt {
+  id: number;
+  role: CollectionAttemptRole;
+  attemptDate: string;
+  recordedAt: string;
+  recordedBy: { id: number; name: string };
+  isActive: boolean;
+  actionType: string;
+  supersedesId: number | null;
 }
 
 export interface DebtTrackingListResponse {
@@ -407,6 +422,28 @@ export const debtTrackingApi = {
     payload: { note?: string | null }
   ): Promise<DebtNote> =>
     apiClient.patch(`/debt-tracking/note/${customerId}`, payload),
+
+  getCollectionAttempts: (customerId: number): Promise<{
+    customerId: number;
+    accountant: CollectionAttempt[];
+    sales: CollectionAttempt[];
+  }> => apiClient.get(`/debt-tracking/${customerId}/collection-attempts`),
+
+  createCollectionAttempt: (
+    customerId: number,
+    payload: { role: CollectionAttemptRole; attemptDate: string },
+  ): Promise<CollectionAttempt> =>
+    apiClient.post(`/debt-tracking/${customerId}/collection-attempts`, payload),
+
+  editCollectionAttempt: (
+    customerId: number,
+    attemptId: number,
+    payload: { attemptDate: string; reason: string },
+  ): Promise<CollectionAttempt> =>
+    apiClient.patch(
+      `/debt-tracking/${customerId}/collection-attempts/${attemptId}`,
+      payload,
+    ),
 
   /** Ghi đè đánh giá tự động, bắt buộc nêu lý do. */
   updatePaymentHistory: (

@@ -26,12 +26,14 @@ export function MiniCalendar({
   onChange,
   onClose,
   minDate,
+  maxDate,
   withTime = false,
 }: {
   value: string;
   onChange: (d: string) => void;
   onClose: () => void;
   minDate?: string;
+  maxDate?: string;
   withTime?: boolean;
 }) {
   const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -129,7 +131,8 @@ export function MiniCalendar({
             todayObj.getFullYear() === vy &&
             todayObj.getMonth() === vm &&
             todayObj.getDate() === day;
-          const isDisabled = !!minDate && ds < minDate;
+           const isDisabled =
+             (!!minDate && ds < minDate) || (!!maxDate && ds > maxDate);
 
           return (
             <button

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   debtTrackingApi,
+  CollectionAttemptRole,
   DebtTrackingParams,
   UpsertDebtPolicyPayload,
 } from "../api/debt-tracking";
@@ -14,6 +15,52 @@ export function useDebtTracking(params?: DebtTrackingParams) {
     queryKey: [KEY, params],
     queryFn: () => debtTrackingApi.getList(params),
     placeholderData: (prev) => prev,
+  });
+}
+
+export function useCreateCollectionAttempt() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: {
+      customerId: number;
+      role: CollectionAttemptRole;
+      attemptDate: string;
+    }) =>
+      debtTrackingApi.createCollectionAttempt(vars.customerId, {
+        role: vars.role,
+        attemptDate: vars.attemptDate,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [KEY] });
+      toast.success("Đã thêm lần đòi nợ");
+    },
+    onError: (error: unknown) => {
+      toast.error(error instanceof Error ? error.message : "Thêm lần đòi nợ thất bại");
+    },
+  });
+}
+
+export function useEditCollectionAttempt() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: {
+      customerId: number;
+      attemptId: number;
+      attemptDate: string;
+      reason: string;
+    }) =>
+      debtTrackingApi.editCollectionAttempt(
+        vars.customerId,
+        vars.attemptId,
+        { attemptDate: vars.attemptDate, reason: vars.reason },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [KEY] });
+      toast.success("Đã cập nhật ngày đòi nợ");
+    },
+    onError: (error: unknown) => {
+      toast.error(error instanceof Error ? error.message : "Cập nhật ngày đòi nợ thất bại");
+    },
   });
 }
 

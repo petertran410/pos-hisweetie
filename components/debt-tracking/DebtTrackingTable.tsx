@@ -23,6 +23,7 @@ import { useDebtTracking } from "@/lib/hooks/useDebtTracking";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { DebtStatusBadge, ROW_TINT } from "./DebtStatusBadge";
 import { DebtNoteCell } from "./DebtNoteCell";
+import { DebtCollectionAttemptCell } from "./DebtCollectionAttemptCell";
 import { DebtPolicyModal } from "./DebtPolicyModal";
 import { StopDeliveryDetailModal } from "./StopDeliveryDetailModal";
 import { useCreateStopDeliveryTicket } from "@/lib/hooks/useDebtTickets";
@@ -134,6 +135,12 @@ export function DebtTrackingTable({
               </th>
               <th className="text-left px-3 py-2.5 font-medium">
                 Thanh toán gần nhất
+              </th>
+              <th className="text-left px-3 py-2.5 font-medium">
+                Kế toán đòi nợ
+              </th>
+              <th className="text-left px-3 py-2.5 font-medium">
+                Sale đòi nợ
               </th>
               <th className="text-left px-3 py-2.5 font-medium">
                 Trạng thái nợ
@@ -314,6 +321,22 @@ export function DebtTrackingTable({
                       {r.paymentFrequency.required} lần
                     </div>
                   )}
+                </td>
+
+                <td className="px-3 py-2 align-top">
+                  <DebtCollectionAttemptCell
+                    customerId={r.customerId}
+                    role="ACCOUNTANT"
+                    attempts={r.accountantCollectionAttempts}
+                  />
+                </td>
+
+                <td className="px-3 py-2 align-top">
+                  <DebtCollectionAttemptCell
+                    customerId={r.customerId}
+                    role="SALES"
+                    attempts={r.salesCollectionAttempts}
+                  />
                 </td>
 
                 <td className="px-3 py-2 align-top">
