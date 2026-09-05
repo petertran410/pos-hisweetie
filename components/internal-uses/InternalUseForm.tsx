@@ -75,6 +75,7 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
     search: searchQuery,
     limit: 20,
     branchId: branchId || undefined,
+    isActive: true,
   });
 
   // Load lại details khi edit
