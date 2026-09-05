@@ -187,18 +187,18 @@ export function TransferPlanningTable({
             const isDarkRed = item.computed.alert === "DARK_RED";
 
             // Xác định màu nền cụ thể cho từng dòng để áp dụng cho sticky cells
-            let cellBgClass = "bg-white group-hover:bg-gray-50/80";
-            let rowBgClass = "hover:bg-gray-50/80";
+            let cellBgClass = "bg-white group-hover:bg-gray-50";
+            let rowBgClass = "hover:bg-gray-50";
 
             if (isSelected) {
-              cellBgClass = "bg-sky-50 font-medium";
-              rowBgClass = "bg-sky-50";
+              cellBgClass = "bg-sky-50 font-medium group-hover:bg-sky-100";
+              rowBgClass = "bg-sky-50 hover:bg-sky-100";
             } else if (isDarkRed) {
-              cellBgClass = "bg-rose-50/60 group-hover:bg-rose-50/80";
-              rowBgClass = "bg-rose-50/60 hover:bg-rose-50/80";
+              cellBgClass = "bg-rose-50 group-hover:bg-rose-100";
+              rowBgClass = "bg-rose-50 hover:bg-rose-100";
             } else if (isNeedTransfer) {
-              cellBgClass = "bg-amber-50/20 group-hover:bg-amber-50/40";
-              rowBgClass = "bg-amber-50/20 hover:bg-amber-50/40";
+              cellBgClass = "bg-amber-50 group-hover:bg-amber-100";
+              rowBgClass = "bg-amber-50 hover:bg-amber-100";
             }
 
             return (

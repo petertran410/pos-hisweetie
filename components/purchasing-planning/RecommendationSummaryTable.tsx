@@ -85,17 +85,18 @@ export function RecommendationSummaryTable({
               const sortKey = COLUMN_SORT_KEY[col.key];
               const sortable = !!sortKey;
               const active = sortable && filters.sortBy === sortKey;
-              const isSticky = idx < STICKY_COUNT;
+const isSticky = idx < STICKY_COUNT;
+          const isLastSticky = idx === STICKY_COUNT - 1;
 
-              return (
-                <th
-                  key={col.key}
-                  onClick={() => sortable && handleSort(col.key)}
-                  className={`group border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-600 uppercase ${
-                    sortable
-                      ? "cursor-pointer select-none hover:bg-gray-100"
-                      : ""
-                  } ${isSticky ? "sticky z-10" : ""}`}
+          return (
+            <th
+              key={col.key}
+              onClick={() => sortable && handleSort(col.key)}
+              className={`group border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-600 uppercase ${
+                sortable
+                  ? "cursor-pointer select-none hover:bg-gray-100"
+                  : ""
+              } ${isSticky ? "sticky z-30" : ""} ${isLastSticky ? "shadow-[2px_0_5px_-2px_rgba(0,0,0,0.15)]" : ""}`}
                   style={{
                     width: col.width,
                     minWidth: col.width,
@@ -141,12 +142,13 @@ export function RecommendationSummaryTable({
           <tr className="font-medium">
             {visibleColumns.map((col, idx) => {
               const isSticky = idx < STICKY_COUNT;
+              const isLastSticky = idx === STICKY_COUNT - 1;
               return (
                 <td
                   key={col.key}
                   className={`bg-brand-soft border-b border-gray-200 px-4 py-2.5 whitespace-nowrap ${
                     isSticky ? "sticky z-10" : ""
-                  }`}
+                  } ${isLastSticky ? "shadow-[2px_0_5px_-2px_rgba(0,0,0,0.12)]" : ""}`}
                   style={
                     isSticky ? { left: `${stickyOffsets[idx]}px` } : undefined
                   }>
@@ -164,30 +166,30 @@ export function RecommendationSummaryTable({
           {items.map((item) => {
             const style = PRIORITY_STYLE[item.priority];
             const selected = selectedItemId === item.itemId;
-            // Cột sticky phải có nền đục, nếu không chữ bên dưới sẽ lộ ra khi cuộn
             const stickyBg = selected
-              ? "bg-brand-soft"
+              ? "bg-brand-soft group-hover:bg-brand-soft"
               : item.priority === "CRITICAL"
-                ? "bg-red-50"
+                ? "bg-red-50 group-hover:bg-red-100"
                 : item.priority === "HIGH"
-                  ? "bg-orange-50"
-                  : "bg-white";
+                  ? "bg-orange-50 group-hover:bg-orange-100"
+                  : "bg-white group-hover:bg-gray-50";
 
             return (
               <tr
                 key={item.itemId}
                 onClick={() => onSelectItem(item.itemId)}
-                className={`cursor-pointer transition-colors hover:bg-gray-50 ${
+                className={`group cursor-pointer transition-colors hover:bg-gray-50 ${
                   selected ? "bg-brand-soft" : (style.row ?? "")
                 }`}>
                 {visibleColumns.map((col, idx) => {
                   const isSticky = idx < STICKY_COUNT;
+                  const isLastSticky = idx === STICKY_COUNT - 1;
                   return (
                     <td
                       key={col.key}
                       className={`border-b border-gray-100 px-4 py-2.5 ${
                         isSticky ? `sticky z-10 ${stickyBg}` : ""
-                      }`}
+                      } ${isLastSticky ? "shadow-[2px_0_5px_-2px_rgba(0,0,0,0.12)]" : ""}`}
                       style={
                         isSticky
                           ? { left: `${stickyOffsets[idx]}px` }
