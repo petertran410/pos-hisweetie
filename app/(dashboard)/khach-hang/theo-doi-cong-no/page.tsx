@@ -1,19 +1,15 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Link from "next/link";
 import {
   Search,
   Download,
-  Ticket as TicketIcon,
   RefreshCw,
   X,
 } from "lucide-react";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { DebtTrackingTable } from "@/components/debt-tracking/DebtTrackingTable";
-import { CreateDebtTicketModal } from "@/components/debt-tracking/CreateDebtTicketModal";
 import {
-  useDebtTracking,
   useDebtTrackingSummary,
   useExportDebtTracking,
 } from "@/lib/hooks/useDebtTracking";
@@ -23,8 +19,6 @@ import {
   DebtForm,
   DebtTrackingParams,
   DEBT_FORM_LABELS,
-  DebtTrackingRow,
-  debtTrackingApi,
 } from "@/lib/api/debt-tracking";
 import { formatCurrency } from "@/lib/utils";
 
@@ -44,15 +38,6 @@ export default function TheoDoiCongNoPage() {
   const [withoutOpenTicket, setWithoutOpenTicket] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(30);
-  const [selected, setSelected] = useState<number[]>([]);
-  const [selectedRowsById, setSelectedRowsById] = useState<
-    Record<number, DebtTrackingRow>
-  >({});
-  const [selectAllPending, setSelectAllPending] = useState(false);
-  const [showCreateTicket, setShowCreateTicket] = useState(false);
-
-  const canCreateTicket = usePermission("debt_tickets", "create");
-  const canViewTickets = usePermission("debt_tickets", "view");
   const canExport = usePermission("debt_tracking", "export");
 
   const params: DebtTrackingParams = useMemo(
@@ -76,81 +61,11 @@ export default function TheoDoiCongNoPage() {
   );
 
   const { data: summary } = useDebtTrackingSummary(summaryParams);
-  const { data: listData } = useDebtTracking(params);
   const exportMut = useExportDebtTracking();
-
-  const selectedRows = useMemo(() => {
-    const rowsById = new Map<number, DebtTrackingRow>(
-      Object.values(selectedRowsById).map((row) => [row.customerId, row])
-    );
-    for (const row of listData?.data ?? []) {
-      if (selected.includes(row.customerId)) rowsById.set(row.customerId, row);
-    }
-    return selected
-      .map((customerId) => rowsById.get(customerId))
-      .filter((row): row is DebtTrackingRow => Boolean(row));
-  }, [listData, selected, selectedRowsById]);
-
-  const handleSelectedChange = (ids: number[]) => {
-    setSelected(ids);
-    const currentRows = new Map(
-      (listData?.data ?? []).map((row) => [row.customerId, row])
-    );
-    setSelectedRowsById((previous) => {
-      const next: Record<number, DebtTrackingRow> = {};
-      for (const customerId of ids) {
-        const row = currentRows.get(customerId) ?? previous[customerId];
-        if (row) next[customerId] = row;
-      }
-      return next;
-    });
-  };
-
-  const clearSelection = () => {
-    setSelected([]);
-    setSelectedRowsById({});
-  };
-
-  const handleSelectAll = async (checked: boolean) => {
-    if (!checked) {
-      clearSelection();
-      return;
-    }
-
-    setSelectAllPending(true);
-    try {
-      const allRows: DebtTrackingRow[] = [];
-      let currentPage = 1;
-      let totalPages = 1;
-
-      do {
-        const response = await debtTrackingApi.getList({
-          ...params,
-          page: currentPage,
-          pageSize: 200,
-        });
-        allRows.push(...response.data);
-        totalPages = response.pagination.totalPages;
-        currentPage += 1;
-      } while (currentPage <= totalPages);
-
-      setSelected(allRows.map((row) => row.customerId));
-      setSelectedRowsById(
-        Object.fromEntries(
-          allRows.map((row) => [row.customerId, row] as const)
-        )
-      );
-    } catch (error) {
-      console.error("Không thể chọn toàn bộ khách hàng công nợ:", error);
-    } finally {
-      setSelectAllPending(false);
-    }
-  };
 
   const applySearch = () => {
     setSearch(searchInput.trim());
     setPage(1);
-    clearSelection();
   };
 
   const resetFilters = () => {
@@ -161,7 +76,6 @@ export default function TheoDoiCongNoPage() {
     setWithoutOpenTicket(false);
     setTab("ALL");
     setPage(1);
-    clearSelection();
   };
 
   const hasFilter =
@@ -196,7 +110,7 @@ export default function TheoDoiCongNoPage() {
             tone="text-red-600"
           />
           <SummaryCard
-            label="Đang có phiếu thu hồi"
+            label="Đang ngừng đi hàng"
             value={summary ? String(summary.customersWithOpenTicket) : "—"}
           />
         </div>
@@ -248,7 +162,6 @@ export default function TheoDoiCongNoPage() {
                onChange={(e) => {
                  setDebtForm(e.target.value as DebtForm | "");
                  setPage(1);
-                 clearSelection();
                }}
               className="border rounded px-2.5 py-1.5 text-sm"
             >
@@ -267,7 +180,6 @@ export default function TheoDoiCongNoPage() {
                  onChange={(e) => {
                    setOverLimitOnly(e.target.checked);
                    setPage(1);
-                   clearSelection();
                  }}
               />
               Vượt hạn mức
@@ -280,7 +192,6 @@ export default function TheoDoiCongNoPage() {
                  onChange={(e) => {
                    setWithoutOpenTicket(e.target.checked);
                    setPage(1);
-                   clearSelection();
                  }}
               />
               Chưa có phiếu
@@ -298,16 +209,6 @@ export default function TheoDoiCongNoPage() {
 
             <div className="flex-1" />
 
-            {canViewTickets && (
-              <Link
-                href="/khach-hang/ticket-cong-no"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded hover:bg-gray-50"
-              >
-                <TicketIcon className="w-4 h-4" />
-                Phiếu thu hồi nợ
-              </Link>
-            )}
-
             {canExport && (
               <button
                 onClick={() => exportMut.mutate(params)}
@@ -323,16 +224,6 @@ export default function TheoDoiCongNoPage() {
               </button>
             )}
 
-            {canCreateTicket && (
-              <button
-                onClick={() => setShowCreateTicket(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-brand text-white rounded hover:opacity-90"
-              >
-                <TicketIcon className="w-4 h-4" />
-                Tạo phiếu
-                {selectedRows.length > 0 && ` (${selectedRows.length})`}
-              </button>
-            )}
           </div>
         </div>
 
@@ -340,10 +231,6 @@ export default function TheoDoiCongNoPage() {
         <div className="flex-1 bg-white border rounded-lg overflow-hidden flex flex-col">
           <DebtTrackingTable
             params={params}
-            selected={selected}
-            onSelectedChange={handleSelectedChange}
-            onSelectAll={handleSelectAll}
-            selectAllPending={selectAllPending}
             onPageChange={setPage}
             pageSize={pageSize}
             onPageSizeChange={(nextPageSize) => {
@@ -354,13 +241,6 @@ export default function TheoDoiCongNoPage() {
         </div>
       </div>
 
-      {showCreateTicket && (
-        <CreateDebtTicketModal
-          rows={selectedRows}
-          onClose={() => setShowCreateTicket(false)}
-          onCreated={() => setSelected([])}
-        />
-      )}
     </PagePermissionGuard>
   );
 }

@@ -148,12 +148,11 @@ export interface DebtTrackingRow {
   debtStatus: DebtStatus;
   outstandingCount: number;
 
-  accountantNote: string | null;
-  accountantNoteAt: string | null;
-  saleNote: string | null;
-  saleNoteAt: string | null;
+  note: string | null;
+  noteAt: string | null;
 
   openTicket: DebtOpenTicket | null;
+  latestStopTicket?: DebtOpenTicket | null;
 }
 
 export interface DebtTrackingListResponse {
@@ -234,10 +233,9 @@ export interface UpsertDebtPolicyPayload {
 export interface DebtNote {
   id: number;
   customerId: number;
-  accountantNote: string | null;
-  accountantNoteAt: string | null;
-  saleNote: string | null;
-  saleNoteAt: string | null;
+  note: string | null;
+  noteBy: number | null;
+  noteAt: string | null;
 }
 
 export interface OutstandingInvoice {
@@ -406,7 +404,7 @@ export const debtTrackingApi = {
    */
   updateNote: (
     customerId: number,
-    payload: { accountantNote?: string | null; saleNote?: string | null }
+    payload: { note?: string | null }
   ): Promise<DebtNote> =>
     apiClient.patch(`/debt-tracking/note/${customerId}`, payload),
 

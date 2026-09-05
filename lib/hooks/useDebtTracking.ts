@@ -96,8 +96,7 @@ export function useUpdateDebtNote() {
   return useMutation({
     mutationFn: (vars: {
       customerId: number;
-      accountantNote?: string | null;
-      saleNote?: string | null;
+      note?: string | null;
     }) => {
       const { customerId, ...payload } = vars;
       return debtTrackingApi.updateNote(customerId, payload);
