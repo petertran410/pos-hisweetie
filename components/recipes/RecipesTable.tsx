@@ -1,10 +1,10 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useCallback, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Swal from "sweetalert2";
-import { AlertCircle, Archive, Beaker, ChevronDown, ChevronLeft, ChevronRight, EyeOff, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { AlertCircle, Archive, Beaker, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, EyeOff, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { RecipeQueryParams } from "@/lib/api/recipes";
 import { useArchiveRecipe, useDeleteRecipe, useRecipes, useRestoreRecipe, useUnpublishRecipe } from "@/lib/hooks/useRecipes";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
@@ -14,6 +14,7 @@ import { RecipeDetailRow } from "@/components/recipes/RecipeDetailRow";
 interface Props {
   filters: RecipeQueryParams & { page: number; limit: number };
   onPageChange: (page: number) => void;
+  onLimitChange: (limit: number) => void;
 }
 
 const statusStyle: Record<string, string> = {
@@ -31,7 +32,7 @@ const money = (value?: number | null) =>
     ? "—"
     : `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(Math.round(Number(value)))}đ`;
 
-export function RecipesTable({ filters, onPageChange }: Props) {
+export function RecipesTable({ filters, onPageChange, onLimitChange }: Props) {
   const { data, isLoading, isError, refetch } = useRecipes(filters);
   const archiveRecipe = useArchiveRecipe();
   const deleteRecipe = useDeleteRecipe();
@@ -42,6 +43,15 @@ export function RecipesTable({ filters, onPageChange }: Props) {
   const rows = data?.data || [];
   const total = data?.total || 0;
   const pages = Math.max(Math.ceil(total / filters.limit), 1);
+  const [jumpPage, setJumpPage] = useState("");
+
+  const handleJump = useCallback(() => {
+    const target = parseInt(jumpPage, 10);
+    if (Number.isFinite(target) && target >= 1 && target <= pages) {
+      onPageChange(target);
+    }
+    setJumpPage("");
+  }, [jumpPage, pages, onPageChange]);
 
   const filterKey = JSON.stringify(filters);
 
@@ -185,12 +195,115 @@ export function RecipesTable({ filters, onPageChange }: Props) {
           ); })}</div>
         )}
       </div>
-      <footer className="flex items-center justify-between border-t px-4 py-3 text-sm text-gray-500" style={{ borderColor: "var(--dt-border)" }}>
-        <span>Trang {filters.page}/{pages}</span>
-        <div className="flex gap-2">
-          <button aria-label="Trang trước" disabled={filters.page <= 1} onClick={() => onPageChange(filters.page - 1)} className="flex h-11 w-11 items-center justify-center rounded-lg border disabled:opacity-30" style={{ borderColor: "var(--dt-border)" }}><ChevronLeft className="h-4 w-4" /></button>
-          <button aria-label="Trang sau" disabled={filters.page >= pages} onClick={() => onPageChange(filters.page + 1)} className="flex h-11 w-11 items-center justify-center rounded-lg border disabled:opacity-30" style={{ borderColor: "var(--dt-border)" }}><ChevronRight className="h-4 w-4" /></button>
+      <footer className="flex shrink-0 flex-wrap items-center justify-between gap-y-2 border-t bg-white px-4 py-2.5" style={{ borderColor: "var(--dt-border)" }}>
+        {/* ── Trái: Hiển thị N / trang ── */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500">Hiển thị</span>
+          <select
+            value={filters.limit}
+            onChange={(e) => onLimitChange(Number(e.target.value))}
+            className="rounded border bg-white px-2 py-1 text-xs focus:ring-1 focus:ring-brand focus:outline-none"
+            style={{ borderColor: "var(--dt-border)" }}>
+            {[25, 50, 100].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-gray-500">/ trang</span>
         </div>
+
+        {/* ── Giữa: Pagination ── */}
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onPageChange(1)}
+            disabled={filters.page <= 1}
+            className="rounded border p-1 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            style={{ borderColor: "var(--dt-border)" }}>
+            <ChevronsLeft className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onPageChange(filters.page - 1)}
+            disabled={filters.page <= 1}
+            className="rounded border p-1 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            style={{ borderColor: "var(--dt-border)" }}>
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+
+          {(() => {
+            const MAX_BUTTONS = 5;
+            const buttons: (number | "ellipsis")[] = [];
+            if (pages <= MAX_BUTTONS + 2) {
+              for (let i = 1; i <= pages; i++) buttons.push(i);
+            } else {
+              buttons.push(1);
+              let start = Math.max(2, filters.page - 1);
+              let end = Math.min(pages - 1, filters.page + 1);
+              if (filters.page <= 3) { start = 2; end = 4; }
+              if (filters.page >= pages - 2) { start = pages - 3; end = pages - 1; }
+              if (start > 2) buttons.push("ellipsis");
+              for (let i = start; i <= end; i++) buttons.push(i);
+              if (end < pages - 1) buttons.push("ellipsis");
+              buttons.push(pages);
+            }
+            return buttons.map((item, idx) =>
+              item === "ellipsis" ? (
+                <span key={`ellipsis-${idx}`} className="px-1 text-xs text-gray-400">
+                  ...
+                </span>
+              ) : (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => onPageChange(item)}
+                  className={`h-7 w-7 rounded border text-xs font-medium transition-colors ${
+                    item === filters.page
+                      ? "border-brand bg-brand text-white"
+                      : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                  }`}>
+                  {item}
+                </button>
+              )
+            );
+          })()}
+
+          <button
+            type="button"
+            onClick={() => onPageChange(filters.page + 1)}
+            disabled={filters.page >= pages}
+            className="rounded border p-1 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            style={{ borderColor: "var(--dt-border)" }}>
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onPageChange(pages)}
+            disabled={filters.page >= pages}
+            className="rounded border p-1 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            style={{ borderColor: "var(--dt-border)" }}>
+            <ChevronsRight className="h-4 w-4" />
+          </button>
+
+          <span className="mx-1 text-xs text-gray-500">Nhảy đến:</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={jumpPage}
+            onChange={(e) => setJumpPage(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleJump(); }}
+            onBlur={handleJump}
+            placeholder={`${filters.page}`}
+            className="w-10 rounded border px-1.5 py-0.5 text-center text-xs focus:ring-1 focus:ring-brand focus:outline-none"
+            style={{ borderColor: "var(--dt-border)" }}
+          />
+        </div>
+
+        {/* ── Phải: Đang hiển thị X–Y / Z ── */}
+        <span className="text-xs text-gray-400">
+          Đang hiển thị {total === 0 ? 0 : (filters.page - 1) * filters.limit + 1}–{Math.min(filters.page * filters.limit, total)} / {total}
+        </span>
       </footer>
     </section>
   );
