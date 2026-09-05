@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { X, Plus, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -10,11 +10,32 @@ import {
 } from "@/lib/api/transfers";
 import { productsApi } from "@/lib/api/products";
 import type { TransferPlanningItem } from "@/lib/types/transfer-planning";
-import { formatNumber } from "@/lib/utils/transfer-planning-calc";
 import { TransferPreviewPopup } from "./TransferPreviewPopup";
 
 const HN_BRANCH_ID = 6;
 const SG_BRANCH_ID = 1;
+
+// ── vi-VN number helpers ──
+// Quy tắc: , = dấu thập phân, . = phân cách hàng nghìn
+
+function formatViInteger(n: number): string {
+  if (!Number.isFinite(n)) return "";
+  return Math.round(n).toLocaleString("vi-VN");
+}
+
+function formatViDecimal(n: number, decimals = 1): string {
+  if (!Number.isFinite(n)) return "";
+  return n.toLocaleString("vi-VN", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: decimals,
+  });
+}
+
+function parseViNumber(str: string): number {
+  const s = str.trim();
+  if (!s) return NaN;
+  return parseFloat(s.replace(/\./g, "").replace(",", "."));
+}
 
 interface AddToTransferModalProps {
   item: TransferPlanningItem;
@@ -23,8 +44,16 @@ interface AddToTransferModalProps {
 
 export function AddToTransferModal({ item, onClose }: AddToTransferModalProps) {
   const queryClient = useQueryClient();
+  const packSize = item.packSize > 1 ? item.packSize : 1;
+  const hasCarton = packSize > 1;
+
   const [quantity, setQuantity] = useState<string>(
-    String(formatNumber(item.computed.suggestedQuantity, 2))
+    formatViInteger(Math.round(item.computed.suggestedQuantity))
+  );
+  const [cartonQuantity, setCartonQuantity] = useState<string>(() =>
+    hasCarton
+      ? formatViDecimal(item.computed.suggestedQuantity / packSize, 1)
+      : ""
   );
   const [selectedId, setSelectedId] = useState<number | "new">("new");
   const [previewTransferId, setPreviewTransferId] = useState<number | null>(null);
@@ -138,9 +167,68 @@ export function AddToTransferModal({ item, onClose }: AddToTransferModalProps) {
     },
   });
 
-  const parsedQty = parseFloat(quantity.replace(/,/g, ""));
-  const isValidQty = !isNaN(parsedQty) && parsedQty > 0;
+  const parsedQty = parseViNumber(quantity);
+  const isValidQty = Number.isFinite(parsedQty) && parsedQty > 0 && Number.isInteger(parsedQty);
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
+
+  const handleQuantityChange = useCallback((val: string) => {
+    // Chỉ cho phép chữ số và tối đa 1 dấu phẩy (thập phân). Không cho gõ dấu chấm.
+    let cleaned = val.replace(/[^0-9,]/g, "");
+    const firstComma = cleaned.indexOf(",");
+    if (firstComma >= 0) {
+      cleaned = cleaned.slice(0, firstComma + 1) + cleaned.slice(firstComma + 1).replace(/,/g, "");
+      const afterComma = cleaned.slice(firstComma + 1);
+      if (afterComma.length > 1) {
+        cleaned = cleaned.slice(0, firstComma + 2);
+      }
+    }
+    setQuantity(cleaned);
+    if (hasCarton) {
+      const num = parseViNumber(cleaned);
+      if (!isNaN(num) && num >= 0) {
+        setCartonQuantity(formatViDecimal(num / packSize, 1));
+      } else {
+        setCartonQuantity("");
+      }
+    }
+  }, [hasCarton, packSize]);
+
+  const handleQuantityBlur = useCallback(() => {
+    const num = parseViNumber(quantity);
+    if (!isNaN(num) && num > 0) {
+      setQuantity(formatViDecimal(num, 1));
+    }
+  }, [quantity]);
+
+  const handleCartonChange = useCallback((val: string) => {
+    // Cho phép chữ số và tối đa 1 dấu phẩy (thập phân). Không cho gõ dấu chấm.
+    let cleaned = val.replace(/[^0-9,]/g, "");
+    const firstComma = cleaned.indexOf(",");
+    if (firstComma >= 0) {
+      cleaned = cleaned.slice(0, firstComma + 1) + cleaned.slice(firstComma + 1).replace(/,/g, "");
+      const afterComma = cleaned.slice(firstComma + 1);
+      if (afterComma.length > 1) {
+        cleaned = cleaned.slice(0, firstComma + 2);
+      }
+    }
+    setCartonQuantity(cleaned);
+    const num = parseViNumber(cleaned);
+    if (!isNaN(num) && num >= 0) {
+      const unitQty = num * packSize;
+      setQuantity(formatViDecimal(unitQty, 1));
+    } else {
+      setQuantity("");
+    }
+  }, [packSize]);
+
+  const handleCartonBlur = useCallback(() => {
+    const num = parseViNumber(cartonQuantity);
+    if (!isNaN(num) && num > 0) {
+      setCartonQuantity(formatViDecimal(num, 1));
+      const unitQty = num * packSize;
+      setQuantity(formatViDecimal(unitQty, 1));
+    }
+  }, [cartonQuantity, packSize]);
 
   const handleSubmit = () => {
     if (!isValidQty) return;
@@ -199,18 +287,54 @@ export function AddToTransferModal({ item, onClose }: AddToTransferModalProps) {
             <label className="block text-xs font-semibold text-gray-600 mb-1.5">
               Số lượng chuyển
             </label>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              disabled={isSubmitting}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-50 disabled:cursor-not-allowed"
-              placeholder="Nhập số lượng..."
-            />
+            {hasCarton ? (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={quantity}
+                    onChange={(e) => handleQuantityChange(e.target.value)}
+                    onBlur={handleQuantityBlur}
+                    disabled={isSubmitting}
+                    className="w-full border border-gray-300 rounded-lg pl-3 pr-12 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-50 disabled:cursor-not-allowed"
+                    placeholder={`Số ${item.unit}...`}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">
+                    {item.unit}
+                  </span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={cartonQuantity}
+                    onChange={(e) => handleCartonChange(e.target.value)}
+                    onBlur={handleCartonBlur}
+                    disabled={isSubmitting}
+                    className="w-full border border-gray-300 rounded-lg pl-3 pr-12 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-50 disabled:cursor-not-allowed"
+                    placeholder="Số thùng..."
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">
+                    Thùng
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <input
+                type="text"
+                inputMode="decimal"
+                value={quantity}
+                onChange={(e) => handleQuantityChange(e.target.value)}
+                onBlur={handleQuantityBlur}
+                disabled={isSubmitting}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-50 disabled:cursor-not-allowed"
+                placeholder="Nhập số lượng..."
+              />
+            )}
             {!isValidQty && quantity.trim() !== "" && (
               <p className="text-xs text-red-500 mt-1">
-                Số lượng phải lớn hơn 0
+                Số lượng đơn vị gốc phải là số nguyên lớn hơn 0
               </p>
             )}
           </div>
