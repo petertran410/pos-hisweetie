@@ -172,6 +172,13 @@ export function CustomerForm({
   if (loadedPolicy && loadedDebtPolicyId !== loadedPolicy.id) {
     setLoadedDebtPolicyId(loadedPolicy.id);
     setDebtPolicyForm({
+      debtRuleType:
+        loadedPolicy.debtRuleType ??
+        (loadedPolicy.hasCreditLimit
+          ? "CREDIT_LIMIT"
+          : loadedPolicy.hasTermDays
+            ? "TERM_DAYS"
+            : "NONE"),
       hasCreditLimit: loadedPolicy.hasCreditLimit,
       creditLimit:
         loadedPolicy.creditLimit != null
@@ -189,6 +196,8 @@ export function CustomerForm({
       accountantPicId: loadedPolicy.accountantPicId ?? "",
       requireFullPaymentForInvoice:
         loadedPolicy.requireFullPaymentForInvoice ?? false,
+      paymentScheduleType: loadedPolicy.paymentScheduleType ?? "",
+      paymentScheduleDays: loadedPolicy.paymentScheduleDays ?? [],
     });
   }
 

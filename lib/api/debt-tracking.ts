@@ -16,6 +16,13 @@ export const DEBT_STATUS_LABELS: Record<DebtStatus, string> = {
 
 /** Hình thức công nợ. */
 export type DebtForm = "TRUST" | "CONTRACT" | "COD" | "PREPAID";
+export type DebtRuleType =
+  | "NONE"
+  | "CREDIT_LIMIT"
+  | "TERM_DAYS"
+  | "MONTHLY_SCHEDULE"
+  | "WEEKLY_SCHEDULE";
+export type PaymentScheduleType = "MONTHLY" | "WEEKLY";
 
 export const DEBT_FORM_LABELS: Record<DebtForm, string> = {
   TRUST: "Công Nợ Tín Nhiệm",
@@ -98,6 +105,7 @@ export interface DebtOpenTicket {
 }
 
 export interface DebtPolicyView {
+  debtRuleType?: DebtRuleType;
   hasCreditLimit: boolean;
   creditLimit: number | null;
   hasTermDays: boolean;
@@ -111,6 +119,8 @@ export interface DebtPolicyView {
   salePicId?: number | null;
   accountantPicId?: number | null;
   requireFullPaymentForInvoice?: boolean;
+  paymentScheduleType?: PaymentScheduleType | null;
+  paymentScheduleDays?: number[] | null;
 }
 
 export interface DebtTrackingRow {
@@ -199,6 +209,7 @@ export interface DebtTrackingSummary {
 }
 
 export interface DebtTrackingParams {
+  debtRuleType?: DebtRuleType;
   search?: string;
   debtStatus?: DebtStatus;
   hasCreditLimit?: boolean;
@@ -218,6 +229,7 @@ export interface DebtTrackingParams {
 export interface DebtPolicy {
   id: number;
   customerId: number;
+  debtRuleType: DebtRuleType;
   hasCreditLimit: boolean;
   creditLimit: string | number | null;
   hasTermDays: boolean;
@@ -228,11 +240,14 @@ export interface DebtPolicy {
   accountantPicId: number | null;
   isActive: boolean;
   requireFullPaymentForInvoice: boolean;
+  paymentScheduleType: PaymentScheduleType | null;
+  paymentScheduleDays: number[] | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface UpsertDebtPolicyPayload {
+  debtRuleType?: DebtRuleType;
   hasCreditLimit: boolean;
   creditLimit?: number;
   hasTermDays: boolean;
@@ -243,6 +258,8 @@ export interface UpsertDebtPolicyPayload {
   accountantPicId?: number | null;
   isActive?: boolean;
   requireFullPaymentForInvoice?: boolean;
+  paymentScheduleType?: PaymentScheduleType | null;
+  paymentScheduleDays?: number[] | null;
 }
 
 export interface DebtNote {
@@ -329,6 +346,10 @@ export interface PolicyImportRow {
   debtForm: string;
   debtType: string;
   creditLimit: string;
+  paymentSchedule: string;
+  debtRuleType: DebtRuleType | null;
+  paymentScheduleType: PaymentScheduleType | null;
+  paymentScheduleDays: number[] | null;
 
   hasCreditLimit: boolean;
   hasTermDays: boolean;
@@ -371,6 +392,16 @@ export interface PolicyImportResult {
 /** Mô tả loại công nợ theo hai chiều đang bật. */
 export function describeDebtPolicy(p?: DebtPolicyView | null): string {
   if (!p) return "Không Công Nợ";
+  if (p.debtRuleType === "MONTHLY_SCHEDULE") {
+    return `Thanh toán cố định tháng (ngày ${(p.paymentScheduleDays ?? []).join(", ")})`;
+  }
+  if (p.debtRuleType === "WEEKLY_SCHEDULE") {
+    const weekdayLabels = ["", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"];
+    return `Thanh toán cố định tuần (${(p.paymentScheduleDays ?? [])
+      .map((day) => weekdayLabels[day] ?? day)
+      .join(", ")})`;
+  }
+  if (p.debtRuleType === "NONE") return "Không Công Nợ";
   const parts: string[] = [];
   if (p.hasCreditLimit) parts.push("Hạn Mức");
   if (p.hasTermDays && p.termDays != null) {
