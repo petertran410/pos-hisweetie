@@ -50,6 +50,21 @@ export function useCreateDebtTicket() {
   });
 }
 
+export function useCreateStopDeliveryTicket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { customerId: number }) =>
+      debtTicketsApi.createStopDelivery(payload),
+    onSuccess: (ticket) => {
+      invalidateAll(qc);
+      toast.success(`Đã tạo phiếu ${ticket.code}`);
+    },
+    onError: (e: unknown) => {
+      toast.error(e instanceof Error ? e.message : "Tạo phiếu ngừng đi hàng thất bại");
+    },
+  });
+}
+
 export function useUpdateDebtTicket() {
   const qc = useQueryClient();
   return useMutation({

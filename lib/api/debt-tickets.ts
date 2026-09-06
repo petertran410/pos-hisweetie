@@ -96,6 +96,10 @@ export interface DebtTicket {
   warnings?: string[];
 }
 
+export interface CreateStopDeliveryPayload {
+  customerId: number;
+}
+
 export interface DebtTicketListResponse {
   data: DebtTicket[];
   pagination: {
@@ -145,6 +149,9 @@ export const debtTicketsApi = {
 
   create: (payload: CreateDebtTicketPayload): Promise<DebtTicket> =>
     apiClient.post(`/debt-tickets`, payload),
+
+  createStopDelivery: (payload: CreateStopDeliveryPayload): Promise<DebtTicket> =>
+    apiClient.post(`/debt-tickets/stop-delivery`, payload),
 
   update: (
     id: number,

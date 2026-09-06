@@ -43,6 +43,13 @@ export function DebtPolicyModal({
   if (policy && loadedId !== policy.id) {
     setLoadedId(policy.id);
     setForm({
+      debtRuleType:
+        policy.debtRuleType ??
+        (policy.hasCreditLimit
+          ? "CREDIT_LIMIT"
+          : policy.hasTermDays
+            ? "TERM_DAYS"
+            : "NONE"),
       hasCreditLimit: policy.hasCreditLimit,
       creditLimit:
         policy.creditLimit != null ? String(Number(policy.creditLimit)) : "",
@@ -55,6 +62,8 @@ export function DebtPolicyModal({
       accountantPicId: policy.accountantPicId ?? "",
       requireFullPaymentForInvoice:
         policy.requireFullPaymentForInvoice ?? false,
+      paymentScheduleType: policy.paymentScheduleType ?? "",
+      paymentScheduleDays: policy.paymentScheduleDays ?? [],
     });
   }
 
