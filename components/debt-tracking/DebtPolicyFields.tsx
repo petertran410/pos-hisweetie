@@ -97,7 +97,10 @@ export function toDebtPolicyPayload(
     debtForm: v.debtForm || null,
     salePicId: v.salePicId || null,
     accountantPicId: v.accountantPicId || null,
-    requireFullPaymentForInvoice: v.requireFullPaymentForInvoice,
+    // Quy tắc mới là nguồn chân lý của chính sách thanh toán. Cờ này vẫn
+    // được gửi để tương thích với policy cũ, nhưng không còn do người dùng
+    // chỉnh trực tiếp trên giao diện.
+    requireFullPaymentForInvoice: v.debtRuleType === "NONE",
     debtRuleType: v.debtRuleType,
     paymentScheduleType: (
       v.debtRuleType === "MONTHLY_SCHEDULE"
@@ -304,34 +307,10 @@ export function DebtPolicyFields({
           </div>
         )}
 
-        <div className="border-t pt-4">
-          <label className="flex items-start gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={value.requireFullPaymentForInvoice}
-              onChange={(e) =>
-                onChange({
-                  requireFullPaymentForInvoice: e.target.checked,
-                })
-              }
-              className="mt-0.5"
-            />
-            <span>
-              <span className="block text-sm font-medium">
-                Bắt buộc thanh toán đủ trước khi tạo hóa đơn
-              </span>
-              <span className="block text-xs text-gray-500 mt-0.5">
-                Chỉ áp dụng khi bật tùy chọn này; không ảnh hưởng việc tạo đơn
-                hàng. Khách cũ chưa có chính sách vẫn được phép tạo hóa đơn.
-              </span>
-            </span>
-          </label>
-        </div>
-
         {noPolicy && (
           <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5">
-            Chưa bật chiều nào — khách này sẽ không hiện trong danh sách theo
-            dõi công nợ.
+            Khách không được phép phát sinh công nợ. Phải thanh toán đủ trên
+            đơn hàng trước khi xuất hóa đơn.
           </p>
         )}
       </div>
