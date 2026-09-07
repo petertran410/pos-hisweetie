@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, Download, FileSpreadsheet, AlertOctagon, PackageCheck, Boxes, ArrowRightLeft } from "lucide-react";
+import {
+  Search,
+  Download,
+  AlertOctagon,
+  PackageCheck,
+  Boxes,
+  ArrowRightLeft,
+  Plus,
+} from "lucide-react";
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import type { TransferPlanningSummary } from "@/lib/types/transfer-planning";
@@ -16,6 +24,8 @@ interface TransferPlanningToolbarProps {
   onToggleColumn: (key: string) => void;
   onExportExcel: () => void;
   isExporting?: boolean;
+  tempDraftCount: number;
+  onQuickCreate: () => void;
 }
 
 export function TransferPlanningToolbar({
@@ -27,6 +37,8 @@ export function TransferPlanningToolbar({
   onToggleColumn,
   onExportExcel,
   isExporting = false,
+  tempDraftCount,
+  onQuickCreate,
 }: TransferPlanningToolbarProps) {
   const [localSearch, setLocalSearch] = useState(searchValue);
 
@@ -52,7 +64,10 @@ export function TransferPlanningToolbar({
   }, [localSearch, searchValue, onSearchChange]);
 
   return (
-    <div className="p-4 border-b space-y-4 bg-white" style={{ borderColor: "var(--dt-border)" }}>
+    <div
+      className="p-4 border-b space-y-4 bg-white"
+      style={{ borderColor: "var(--dt-border)" }}
+    >
       {/* 1. Summary Cards Compact */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Tổng SKU */}
@@ -61,7 +76,9 @@ export function TransferPlanningToolbar({
             <Boxes className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs text-gray-500 font-medium">Tổng SKU kế hoạch</div>
+            <div className="text-xs text-gray-500 font-medium">
+              Tổng SKU kế hoạch
+            </div>
             <div className="text-lg font-bold text-gray-900 font-mono">
               {stat(summary?.totalSku)}
             </div>
@@ -74,7 +91,9 @@ export function TransferPlanningToolbar({
             <ArrowRightLeft className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs text-primary font-semibold">SKU cần chuyển</div>
+            <div className="text-xs text-primary font-semibold">
+              SKU cần chuyển
+            </div>
             <div className="text-lg font-bold text-primary font-mono">
               {stat(summary?.needTransferSku)}
             </div>
@@ -87,7 +106,9 @@ export function TransferPlanningToolbar({
             <AlertOctagon className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs text-rose-700 font-semibold">SKU cảnh báo (CHUYỂN GẤP / Cần chuyển)</div>
+            <div className="text-xs text-rose-700 font-semibold">
+              SKU cảnh báo (CHUYỂN GẤP / Cần chuyển)
+            </div>
             <div className="text-lg font-bold text-rose-700 font-mono">
               {stat(summary?.warningSku)}
             </div>
@@ -100,7 +121,9 @@ export function TransferPlanningToolbar({
             <PackageCheck className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs text-emerald-800 font-semibold">Tổng SL đề xuất chuyển</div>
+            <div className="text-xs text-emerald-800 font-semibold">
+              Tổng SL đề xuất chuyển
+            </div>
             <div className="text-lg font-bold text-emerald-800 font-mono">
               {stat(summary?.totalSuggestedQuantity, (n) => formatNumber(n, 1))}
             </div>
@@ -124,14 +147,35 @@ export function TransferPlanningToolbar({
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 shrink-0">
-          <ColumnToggle columns={columns} onToggle={onToggleColumn} label="Cột hiển thị" />
+          <PermissionGate resource="transfers" action="create">
+            <button
+              type="button"
+              onClick={onQuickCreate}
+              disabled={tempDraftCount === 0}
+              className="inline-flex items-center gap-2 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Tạo đơn nhanh</span>
+              {tempDraftCount > 0 && (
+                <span className="rounded-full bg-white/20 px-1.5 text-xs">
+                  {tempDraftCount}
+                </span>
+              )}
+            </button>
+          </PermissionGate>
+          <ColumnToggle
+            columns={columns}
+            onToggle={onToggleColumn}
+            label="Cột hiển thị"
+          />
 
           <PermissionGate resource="transfer_planning" action="export">
             <button
               type="button"
               onClick={onExportExcel}
               disabled={isExporting}
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-colors disabled:opacity-50">
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg bg-white hover:bg-gray-50 text-gray-700 transition-colors disabled:opacity-50"
+            >
               <Download className="w-4 h-4 text-emerald-600" />
               <span>{isExporting ? "Đang xuất..." : "Xuất file"}</span>
             </button>

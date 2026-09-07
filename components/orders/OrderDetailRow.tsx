@@ -289,7 +289,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
           Number(order.totalAmount) || 0,
         ],
         [...blank, "Giảm giá đơn hàng", Number(order.discount) || 0],
-        [...blank, "Phí ship", 0],
+        ...(shippingFee > 0 ? [[...blank, "Phí ship", shippingFee]] : []),
         [...blank, "Tổng cộng", Number(order.grandTotal) || 0],
         [...blank, "Khách đã trả", Number(order.paidAmount) || 0],
         [...blank, "Khách cần trả", Number(order.debtAmount) || 0],
@@ -417,6 +417,8 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
     order.status === ORDER_STATUS.CANCELLED;
 
   const isStatusEditable = !isFinalState && !hasDeliveryInvoice;
+  const shippingFee =
+    Number((order as typeof order & { shippingFee?: number }).shippingFee) || 0;
 
   const getConditionLabel = (conditionType?: string) => {
     switch (conditionType) {
@@ -881,12 +883,14 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                             </span>
                           </div>
 
-                          <div className="flex justify-between items-center text-md">
-                            <span className="text-gray-600">Phí ship:</span>
-                            <span className="font-semibold text-gray-900">
-                              0
-                            </span>
-                          </div>
+                          {shippingFee > 0 && (
+                            <div className="flex justify-between items-center text-md">
+                              <span className="text-gray-600">Phí ship:</span>
+                              <span className="font-semibold text-gray-900">
+                                {formatCurrency(shippingFee)}
+                              </span>
+                            </div>
+                          )}
 
                           <div className="border-t border-gray-300 pt-3">
                             <div className="flex justify-between items-center">

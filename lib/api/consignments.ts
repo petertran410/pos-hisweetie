@@ -2,6 +2,20 @@ import { apiClient } from "@/lib/config/api";
 import type { Consignment, ConsignmentFilters } from "../types/consignment";
 import { CONSIGNMENT_STATUS_KEY } from "../types/consignment";
 
+export interface CreateConsignmentRequest {
+  customerId: number;
+  shippingFee?: number;
+  items: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+}
+
+export type UpdateConsignmentRequest = Partial<CreateConsignmentRequest>;
+
+export interface CreateInvoiceFromConsignmentRequest {
+  shippingFee: number;
+  items: Array<Record<string, unknown>>;
+}
+
 // BE nhận field `statuses: string[]` (string key), không phải `status: number[]`.
 // Map tại ranh giới API để FE giữ nguyên kiểu number[] ở UI/state.
 const mapStatusFilter = (params?: ConsignmentFilters) => {
@@ -40,11 +54,11 @@ export const consignmentsApi = {
     return apiClient.get<Consignment>(`/consignments/${id}`);
   },
 
-  create: async (data: any) => {
+  create: async (data: CreateConsignmentRequest) => {
     return apiClient.post<Consignment>("/consignments", data);
   },
 
-  update: async (id: number, data: any) => {
+  update: async (id: number, data: UpdateConsignmentRequest) => {
     return apiClient.put<Consignment>(`/consignments/${id}`, data);
   },
 
@@ -78,7 +92,10 @@ export const consignmentsApi = {
   },
 
   /** B3 — xuất hóa đơn từ phiếu ký gửi (hỗ trợ xuất từng phần). */
-  createInvoiceFromConsignment: async (consignmentId: number, data: any) => {
+  createInvoiceFromConsignment: async (
+    consignmentId: number,
+    data: CreateInvoiceFromConsignmentRequest
+  ) => {
     return apiClient.post(`/invoices/from-consignment/${consignmentId}`, data);
   },
 

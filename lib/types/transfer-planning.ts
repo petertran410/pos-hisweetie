@@ -39,6 +39,7 @@ export interface TransferPlanningItem {
   stockSG: number;
   inTransit: number;
   pendingTransfer: number;
+  tempQty: number;
   committed: number;
   confirmedOrders: number;
   packSize: number;
@@ -53,6 +54,7 @@ export interface TransferPlanningSummary {
   needTransferSku: number;
   warningSku: number;
   totalSuggestedQuantity: number;
+  tempDraftCount: number;
 }
 
 export interface TransferPlanningFilters {
@@ -60,11 +62,11 @@ export interface TransferPlanningFilters {
   alertFilter?: AlertFilterType;
 
   // ── 5 BỘ LỌC HÀNG HÓA TƯƠNG TỰ /san-pham/danh-sach ──
-  parentNames?: string[];      // Loại Hàng (Category Cấp 1)
-  middleNames?: string[];      // Nguồn Gốc (Category Cấp 2)
-  childNames?: string[];       // Danh Mục (Category Cấp 3)
+  parentNames?: string[]; // Loại Hàng (Category Cấp 1)
+  middleNames?: string[]; // Nguồn Gốc (Category Cấp 2)
+  childNames?: string[]; // Danh Mục (Category Cấp 3)
   cargoType?: "COLD" | "NORMAL" | ""; // Loại vận chuyển (Lạnh / Thường)
-  tradeMarkIds?: number[];     // Thương hiệu (include)
+  tradeMarkIds?: number[]; // Thương hiệu (include)
   excludeTradeMarkIds?: number[]; // Thương hiệu loại trừ (exclude)
 
   page?: number;
@@ -79,4 +81,8 @@ export interface TransferPlanningResponse {
   page: number;
   limit: number;
   summary: TransferPlanningSummary;
+}
+
+export interface TempTransferDraftResponse {
+  data: TransferPlanningItem[];
 }

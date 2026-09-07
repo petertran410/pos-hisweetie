@@ -11,6 +11,7 @@ export interface Invoice {
   totalAmount: number;
   discount: number;
   discountRatio: number;
+  shippingFee: number;
   grandTotal: number;
   paidAmount: number;
   debtAmount: number;

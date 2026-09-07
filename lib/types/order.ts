@@ -38,6 +38,7 @@ export interface Order {
   totalAmount: number;
   discount: number;
   discountRatio: number;
+  shippingFee: number;
   grandTotal: number;
   paidAmount: number;
   debtAmount: number;
@@ -127,6 +128,7 @@ export interface Order {
     totalAmount: string;
     discount: string;
     discountRatio: string;
+    shippingFee?: string | number;
     grandTotal: string;
     paidAmount: string;
     debtAmount: string;

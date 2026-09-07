@@ -2,8 +2,12 @@ import React from "react";
 import Link from "next/link";
 import type { ColumnConfig } from "@/lib/hooks/useColumnVisibility";
 import type { TransferPlanningItem } from "@/lib/types/transfer-planning";
-import { formatNumber, formatQuantity, formatWholeQuantity } from "@/lib/utils/transfer-planning-calc";
+import {
+  formatNumber,
+  formatWholeQuantity,
+} from "@/lib/utils/transfer-planning-calc";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
+import { TempTransferInput } from "./TempTransferInput";
 
 export interface TransferPlanningColumnCtx {
   onOpenInTransit?: (item: TransferPlanningItem) => void;
@@ -36,7 +40,8 @@ export function renderAlertBadge(item: TransferPlanningItem) {
     <div className="flex items-center justify-center">
       <span
         className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs border ${bgStyle} ${textStyle}`}
-        title={alertReason}>
+        title={alertReason}
+      >
         <span className={`w-1.5 h-1.5 rounded-full ${dotStyle}`} />
         <span>{alertLabel}</span>
       </span>
@@ -44,7 +49,10 @@ export function renderAlertBadge(item: TransferPlanningItem) {
   );
 }
 
-export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningItem, TransferPlanningColumnCtx>[] {
+export function buildTransferPlanningColumns(): ColumnConfig<
+  TransferPlanningItem,
+  TransferPlanningColumnCtx
+>[] {
   return [
     {
       key: "sku",
@@ -58,7 +66,8 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
           rel="noopener noreferrer"
           className="font-mono text-sm font-semibold text-primary hover:underline"
           onClick={(e) => e.stopPropagation()}
-          title={`Xem chi tiết sản phẩm ${item.sku}`}>
+          title={`Xem chi tiết sản phẩm ${item.sku}`}
+        >
           {item.sku}
         </Link>
       ),
@@ -70,7 +79,10 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
       visible: true,
       width: "320px",
       render: (item) => (
-        <div className="max-w-[310px] truncate font-medium text-gray-900" title={item.name}>
+        <div
+          className="max-w-[310px] truncate font-medium text-gray-900"
+          title={item.name}
+        >
           {item.name}
         </div>
       ),
@@ -81,7 +93,11 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
       label: "ĐVT",
       visible: true,
       width: "70px",
-      render: (item) => <span className="text-xs text-gray-500 block text-center">{item.unit}</span>,
+      render: (item) => (
+        <span className="text-xs text-gray-500 block text-center">
+          {item.unit}
+        </span>
+      ),
       exportValue: (item) => item.unit,
     },
     {
@@ -129,7 +145,8 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
               e.stopPropagation();
               ctx?.onOpenInTransit?.(item);
             }}
-            className="font-mono text-sm block text-right text-brand hover:underline font-medium w-full cursor-pointer">
+            className="font-mono text-sm block text-right text-brand hover:underline font-medium w-full cursor-pointer"
+          >
             {formatWholeQuantity(item.inTransit)}
           </button>
         );
@@ -146,7 +163,8 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
         <span
           className={`font-mono text-sm block text-right ${
             item.committed > 0 ? "text-gray-900 font-medium" : "text-gray-400"
-          }`}>
+          }`}
+        >
           {formatWholeQuantity(item.committed)}
         </span>
       ),
@@ -165,7 +183,8 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
               item.confirmedOrders > 0
                 ? "text-gray-900 font-bold"
                 : "text-gray-400"
-            }`}>
+            }`}
+          >
             {formatWholeQuantity(item.confirmedOrders)}
           </span>
         </div>
@@ -197,7 +216,8 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
             item.computed.availableStockSG <= 0
               ? "text-red-600 font-semibold"
               : "text-gray-800"
-          }`}>
+          }`}
+        >
           {formatWholeQuantity(item.computed.availableStockSG)}
         </span>
       ),
@@ -212,21 +232,28 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
       render: (item) => {
         const demand = item.computed.demandPerDay;
         if (demand <= 0) {
-          return <span className="font-mono text-sm text-gray-400 block text-right">—</span>;
+          return (
+            <span className="font-mono text-sm text-gray-400 block text-right">
+              —
+            </span>
+          );
         }
         const days = Math.round(item.computed.availableStockSG / demand);
         return (
           <span
             className={`font-mono text-sm block text-right ${
               days < 2 ? "text-red-600 font-semibold" : "text-gray-800"
-            }`}>
+            }`}
+          >
             {days} ngày
           </span>
         );
       },
       exportValue: (item) =>
         item.computed.demandPerDay > 0
-          ? Math.round(item.computed.availableStockSG / item.computed.demandPerDay)
+          ? Math.round(
+              item.computed.availableStockSG / item.computed.demandPerDay,
+            )
           : null,
     },
     {
@@ -234,7 +261,8 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
       label: "Tồn mục tiêu",
       visible: true,
       width: "115px",
-      tooltip: "Tồn an toàn (2 ngày) + Demand × Chu kỳ (5-7 ngày tùy loại vận chuyển)",
+      tooltip:
+        "Tồn an toàn (2 ngày) + Demand × Chu kỳ (5-7 ngày tùy loại vận chuyển)",
       render: (item) => (
         <span className="font-mono text-sm text-gray-700 block text-right">
           {formatNumber(item.computed.targetStockSG, 1)}
@@ -251,7 +279,11 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
       render: (item, ctx) => {
         const qty = item.computed.suggestedQuantity;
         if (qty <= 0) {
-          return <span className="font-mono text-sm text-gray-300 block text-right">0</span>;
+          return (
+            <span className="font-mono text-sm text-gray-300 block text-right">
+              0
+            </span>
+          );
         }
         return (
           <PermissionGate resource="transfers" action="create">
@@ -263,7 +295,8 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
                   ctx?.onOpenAddToTransfer?.(item);
                 }}
                 title="Thêm vào danh sách chuyển kho"
-                className="inline-block px-2 py-0.5 rounded font-mono text-sm font-bold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors cursor-pointer">
+                className="inline-block px-2 py-0.5 rounded font-mono text-sm font-bold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors cursor-pointer"
+              >
                 {formatNumber(qty, 1)}
               </button>
             </div>
@@ -271,6 +304,28 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
         );
       },
       exportValue: (item) => item.computed.suggestedQuantity,
+    },
+    {
+      key: "tempQty",
+      label: "Tạm chuyển",
+      visible: true,
+      width: "115px",
+      tooltip:
+        "Số lượng bạn dự kiến thực tế chuyển; tự động lưu theo tài khoản",
+      render: (item) => (
+        <PermissionGate
+          resource="transfers"
+          action="create"
+          fallback={
+            <span className="font-mono text-sm text-gray-500 block text-right">
+              {item.tempQty}
+            </span>
+          }
+        >
+          <TempTransferInput productId={item.id} quantity={item.tempQty} />
+        </PermissionGate>
+      ),
+      exportValue: (item) => item.tempQty,
     },
     {
       key: "pendingTransfer",
@@ -293,7 +348,8 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
               e.stopPropagation();
               ctx?.onOpenPending?.(item);
             }}
-            className="font-mono text-sm block text-right text-orange-600 hover:underline font-medium w-full cursor-pointer">
+            className="font-mono text-sm block text-right text-orange-600 hover:underline font-medium w-full cursor-pointer"
+          >
             {formatWholeQuantity(item.pendingTransfer)}
           </button>
         );
@@ -314,7 +370,10 @@ export function buildTransferPlanningColumns(): ColumnConfig<TransferPlanningIte
       visible: true,
       width: "210px",
       render: (item) => (
-        <span className="text-xs text-gray-600 truncate max-w-[200px] block" title={item.computed.alertReason}>
+        <span
+          className="text-xs text-gray-600 truncate max-w-[200px] block"
+          title={item.computed.alertReason}
+        >
           {item.computed.alertReason}
         </span>
       ),

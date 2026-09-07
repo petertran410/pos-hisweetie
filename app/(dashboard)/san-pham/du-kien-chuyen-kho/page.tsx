@@ -22,26 +22,27 @@ import {
 import { exportTransferPlanningToExcel } from "@/lib/utils/transfer-planning-export";
 import type {
   TransferPlanningFilters,
-  AlertFilterType,
   TransferPlanningItem,
 } from "@/lib/types/transfer-planning";
+import { QuickCreateTransferModal } from "@/components/transfer-planning/QuickCreateTransferModal";
+import { ResetTempQuantitiesDialog } from "@/components/transfer-planning/ResetTempQuantitiesDialog";
+
+const DEFAULT_FILTERS: TransferPlanningFilters = {
+  search: "",
+  alertFilter: "ALL",
+  parentNames: ["Hàng thương hiệu", "Hàng thương mại"],
+  middleNames: ["Nhập khẩu chính ngạch"],
+  excludeTradeMarkIds: [17],
+  page: 1,
+  limit: 25,
+  sortBy: "suggestedQuantity",
+  sortDirection: "desc",
+};
 
 export default function TransferPlanningPage() {
-  // ── Default filters (áp dụng lần đầu vào trang + khi reset) ──
-  const DEFAULT_FILTERS: TransferPlanningFilters = {
-    search: "",
-    alertFilter: "ALL",
-    parentNames: ["Hàng thương hiệu", "Hàng thương mại"],
-    middleNames: ["Nhập khẩu chính ngạch"],
-    excludeTradeMarkIds: [17], // Loại trừ Boduo
-    page: 1,
-    limit: 25,
-    sortBy: "suggestedQuantity",
-    sortDirection: "desc",
-  };
-
   // ── Filters state ──
-  const [filters, setFilters] = useState<TransferPlanningFilters>(DEFAULT_FILTERS);
+  const [filters, setFilters] =
+    useState<TransferPlanningFilters>(DEFAULT_FILTERS);
 
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [drilldownItem, setDrilldownItem] = useState<{
@@ -50,25 +51,28 @@ export default function TransferPlanningPage() {
     sku: string;
     variant: TransferDrilldownVariant;
   } | null>(null);
-  const [addToTransferItem, setAddToTransferItem] = useState<TransferPlanningItem | null>(null);
+  const [addToTransferItem, setAddToTransferItem] =
+    useState<TransferPlanningItem | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+  const [isResetTempOpen, setIsResetTempOpen] = useState(false);
 
   // ── Column visibility with local storage persistence ──
   const { columns, visibleColumns, toggleColumn } = useColumnVisibility(
     "transferPlanningColumns",
-    buildTransferPlanningColumns()
+    buildTransferPlanningColumns(),
   );
 
   // ── Data Query ──
   const { data, isLoading, isError, refetch } = useTransferPlanning(filters);
 
-  const items = data?.data ?? [];
+  const items = useMemo(() => data?.data ?? [], [data]);
 
   // Side panel dùng CHÍNH object item từ dữ liệu bảng (cùng nguồn backend live)
   // để đảm bảo 100% đồng nhất với cột hiển thị, tránh lệch do dữ liệu tĩnh cũ.
   const selectedItem = useMemo(
     () => items.find((i) => i.id === selectedItemId) ?? null,
-    [items, selectedItemId]
+    [items, selectedItemId],
   );
   const total = data?.total ?? 0;
   const summary = data?.summary;
@@ -80,7 +84,7 @@ export default function TransferPlanningPage() {
         ...newFilters,
       }));
     },
-    []
+    [],
   );
 
   const handleResetFilters = useCallback(() => {
@@ -123,13 +127,13 @@ export default function TransferPlanningPage() {
 
       const count = exportTransferPlanningToExcel(
         allResponse.data,
-        visibleColumns
+        visibleColumns,
       );
-      toast.success(`Đã xuất ${count.toLocaleString("vi-VN")} dòng ra file Excel`);
+      toast.success(
+        `Đã xuất ${count.toLocaleString("vi-VN")} dòng ra file Excel`,
+      );
     } catch (e) {
-      toast.error(
-        e instanceof Error ? e.message : "Không thể xuất file Excel"
-      );
+      toast.error(e instanceof Error ? e.message : "Không thể xuất file Excel");
     } finally {
       setIsExporting(false);
     }
@@ -153,11 +157,15 @@ export default function TransferPlanningPage() {
             summary={summary}
             isError={isError}
             searchValue={filters.search || ""}
-            onSearchChange={(search) => handleFiltersChange({ search, page: 1 })}
+            onSearchChange={(search) =>
+              handleFiltersChange({ search, page: 1 })
+            }
             columns={columns}
             onToggleColumn={toggleColumn}
             onExportExcel={handleExport}
             isExporting={isExporting}
+            tempDraftCount={summary?.tempDraftCount ?? 0}
+            onQuickCreate={() => setIsQuickCreateOpen(true)}
           />
 
           {/* Table */}
@@ -190,6 +198,8 @@ export default function TransferPlanningPage() {
                 }),
               onOpenAddToTransfer: (item) => setAddToTransferItem(item),
             }}
+            tempDraftCount={summary?.tempDraftCount ?? 0}
+            onResetTempQuantities={() => setIsResetTempOpen(true)}
           />
 
           {/* Pagination Footer */}
@@ -224,6 +234,18 @@ export default function TransferPlanningPage() {
           <AddToTransferModal
             item={addToTransferItem}
             onClose={() => setAddToTransferItem(null)}
+          />
+        )}
+
+        {isQuickCreateOpen && (
+          <QuickCreateTransferModal
+            onClose={() => setIsQuickCreateOpen(false)}
+          />
+        )}
+
+        {isResetTempOpen && (
+          <ResetTempQuantitiesDialog
+            onClose={() => setIsResetTempOpen(false)}
           />
         )}
       </div>

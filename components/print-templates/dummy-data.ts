@@ -15,6 +15,9 @@ export const DUMMY_DATA: Record<string, Record<string, any>> = {
     Khu_Vuc_Khach_Hang_QH_TP: "Thành phố Hồ Chí Minh",
     So_Dien_Thoai: "0978034316",
     Giam_Gia: "0",
+    Phi_Giao_Hang: "20,000",
+    Dong_Phi_Giao_Hang: "<div>Phí giao hàng: 20,000</div>",
+    Style_Dong_Phi_Giao_Hang: "",
     Dia_Chi_Khach_Hang: "Trảng Bom, Đồng Nai",
     Ghi_Chu_Khach_Hang: "Testing ghi chú",
     Nhan_Vien_Ban_Hang: "Admin",
@@ -76,6 +79,9 @@ export const DUMMY_DATA: Record<string, Record<string, any>> = {
     Ghi_Chu: "",
     Tong_Tien_Hang: "3,200,000",
     Giam_Gia: "0",
+    Phi_Giao_Hang: "20,000",
+    Dong_Phi_Giao_Hang: "<div>Phí giao hàng: 20,000</div>",
+    Style_Dong_Phi_Giao_Hang: "",
     Chiet_Khau_Hoa_Don: "0",
     Tong_Can_Thanh_Toan: "3,200,000",
     Da_Thanh_Toan: "0",
@@ -366,6 +372,9 @@ export const DUMMY_DATA: Record<string, Record<string, any>> = {
     Nguoi_Lap: "Admin",
     Tong_Tien_Hang: "3,200,000",
     Giam_Gia: "0",
+    Phi_Giao_Hang: "20,000",
+    Dong_Phi_Giao_Hang: "<div>Phí giao hàng: 20,000</div>",
+    Style_Dong_Phi_Giao_Hang: "",
     Tong_Can_Thanh_Toan: "3,200,000",
     Tong_Can_Thanh_Toan_Bang_Chu: "Ba triệu hai trăm nghìn đồng chẵn",
     // Biến phiếu hoàn ký gửi (template KG_RETURN, in với entityType consignment_return).
@@ -449,7 +458,7 @@ export const DUMMY_DATA: Record<string, Record<string, any>> = {
 export function replaceTokensWithDummy(
   content: string,
   templateFor: string,
-  itemVariableKeys: Set<string>
+  itemVariableKeys: Set<string>,
 ): string {
   const data = DUMMY_DATA[templateFor] || {};
   const items = (data.items as any[]) || [];
@@ -462,7 +471,7 @@ export function replaceTokensWithDummy(
 
     for (const row of rows) {
       const hasItemVar = Array.from(itemVariableKeys).some((k) =>
-        row.includes(`{${k}}`)
+        row.includes(`{${k}}`),
       );
       if (!hasItemVar) continue;
 
@@ -473,7 +482,7 @@ export function replaceTokensWithDummy(
             const value = item[key] ?? "";
             itemRow = itemRow.replace(
               new RegExp(`{${key}}`, "g"),
-              String(value)
+              String(value),
             );
           }
           return itemRow;

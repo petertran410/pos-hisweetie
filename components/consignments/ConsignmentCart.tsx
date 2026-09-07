@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from "react";
 import { DeliveryAddressDropdown } from "@/components/pos/DeliveryAddressDropdown";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { UnitPicker } from "@/components/pos/UnitPicker";
+import { formatNumberInput, parseNumberInput } from "@/lib/utils";
 
 interface ConsignmentCartProps {
   cartItems: CartItem[];
@@ -33,6 +34,8 @@ interface ConsignmentCartProps {
   discountRatio: number;
   onDiscountChange: (discount: number) => void;
   onDiscountRatioChange?: (discountRatio: number) => void;
+  shippingFee: number;
+  onShippingFeeChange: (shippingFee: number) => void;
   deliveryInfo: DeliveryInfo;
   onDeliveryInfoChange: (info: DeliveryInfo) => void;
   onSelectAddress?: (address: any) => void;
@@ -198,6 +201,8 @@ export function ConsignmentCart({
   discountRatio,
   onDiscountChange,
   onDiscountRatioChange,
+  shippingFee,
+  onShippingFeeChange,
   deliveryInfo,
   onDeliveryInfoChange,
   onSelectAddress,
@@ -237,7 +242,7 @@ export function ConsignmentCart({
   const calculateTotal = () => {
     const effectiveDiscount =
       discount > 0 ? discount : (subtotal * discountRatio) / 100;
-    return subtotal - effectiveDiscount;
+    return subtotal - effectiveDiscount + shippingFee;
   };
 
   const [discountMode, setDiscountMode] = useState<"amount" | "percent">(
@@ -249,10 +254,42 @@ export function ConsignmentCart({
   const [percentDraft, setPercentDraft] = useState(() =>
     discountRatio > 0 ? String(discountRatio) : "",
   );
+  const [shippingFeeDraft, setShippingFeeDraft] = useState(() =>
+    formatNumberInput(String(shippingFee || 0)),
+  );
+  const isShippingFeeFocusedRef = useRef(false);
   const lastPushedDiscountRef = useRef<{
     discount: number;
     ratio: number;
   } | null>(null);
+
+  useEffect(() => {
+    if (!isShippingFeeFocusedRef.current) {
+      setShippingFeeDraft(formatNumberInput(String(shippingFee || 0)));
+    }
+  }, [shippingFee]);
+
+  const handleShippingFeeChange = (value: string) => {
+    const digits = value.replace(/\D/g, "");
+    if (digits === "") {
+      setShippingFeeDraft("");
+      onShippingFeeChange(0);
+      return;
+    }
+
+    const amount = parseNumberInput(digits);
+    if (!Number.isFinite(amount) || amount < 0) return;
+    setShippingFeeDraft(formatNumberInput(digits));
+    onShippingFeeChange(amount);
+  };
+
+  const handleShippingFeeBlur = () => {
+    isShippingFeeFocusedRef.current = false;
+    const amount = parseNumberInput(shippingFeeDraft);
+    const normalized = Number.isFinite(amount) && amount >= 0 ? amount : 0;
+    setShippingFeeDraft(formatNumberInput(String(normalized)));
+    onShippingFeeChange(normalized);
+  };
 
   useEffect(() => {
     const lastPushed = lastPushedDiscountRef.current;
@@ -533,6 +570,24 @@ export function ConsignmentCart({
               {discountMode === "amount" ? "₫" : "%"}
             </button>
           </div>
+        </div>
+
+        <div className="flex items-center justify-between text-sm lg:text-sm gap-2">
+          <span>Phí ship</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={shippingFeeDraft}
+            disabled={disabled}
+            onFocus={() => {
+              isShippingFeeFocusedRef.current = true;
+              if (shippingFeeDraft === "0") setShippingFeeDraft("");
+            }}
+            onChange={(e) => handleShippingFeeChange(e.target.value)}
+            onBlur={handleShippingFeeBlur}
+            placeholder="0"
+            className={`border rounded-xl px-2 lg:px-3 py-1 lg:py-1.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-brand w-28 disabled:bg-gray-100 ${shippingFeeDraft === "0" ? "text-gray-400" : "text-gray-900"}`}
+          />
         </div>
 
         <div className="flex items-center justify-between text-sm lg:text-sm border-t pt-2">

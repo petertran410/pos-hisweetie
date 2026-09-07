@@ -641,11 +641,21 @@ export function OrdersMobileDetailSheet({
                   </span>
                 </div>
 
-                {/* Phí ship — hardcode 0, match desktop */}
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Phí ship</span>
-                  <span className="font-medium text-gray-800">0</span>
-                </div>
+                {Number(
+                  (order as typeof order & { shippingFee?: number }).shippingFee
+                ) > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Phí ship</span>
+                    <span className="font-medium text-gray-800">
+                      {formatCurrency(
+                        Number(
+                          (order as typeof order & { shippingFee?: number })
+                            .shippingFee
+                        )
+                      )}
+                    </span>
+                  </div>
+                )}
 
                 {/* Tổng cộng */}
                 <div className="border-t border-gray-200 pt-2.5 flex justify-between">

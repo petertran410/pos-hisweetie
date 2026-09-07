@@ -13,6 +13,7 @@ export interface Invoice {
   totalAmount: number;
   discount: number;
   discountRatio: number;
+  shippingFee: number;
   grandTotal: number;
   paidAmount: number;
   debtAmount: number;
@@ -91,6 +92,30 @@ export interface InvoicesVatTotalsResponse {
   totalAfterTax: number;
 }
 
+export interface CreateInvoiceRequest {
+  customerId: number;
+  shippingFee?: number;
+  items: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+}
+
+export type UpdateInvoiceRequest = Partial<CreateInvoiceRequest>;
+
+export interface CreateInvoiceFromOrderRequest {
+  orderId: number;
+  additionalPayment?: number;
+  items?: unknown[];
+  payments?: Array<{ method: string; amount: number }>;
+  soldById?: number;
+  forceComplete?: boolean;
+  appliedPromotions?: unknown[];
+  appliedPromotionIds?: number[];
+  skipPromotions?: boolean;
+  discountAmount?: number;
+  discountRatio?: number;
+  shippingFee?: number;
+}
+
 export const invoicesApi = {
   getInvoices: (params?: any): Promise<InvoicesResponse> => {
     return apiClient.get("/invoices", params);
@@ -111,32 +136,22 @@ export const invoicesApi = {
     );
     return response;
   },
-  createInvoice: (data: any): Promise<Invoice> => {
+  createInvoice: (data: CreateInvoiceRequest): Promise<Invoice> => {
     return apiClient.post("/invoices", data);
   },
   /** Route POS có rule khách PREPAID + Không công nợ phải trả đủ. */
-  createPosInvoice: (data: any): Promise<Invoice> => {
+  createPosInvoice: (data: CreateInvoiceRequest): Promise<Invoice> => {
     return apiClient.post("/invoices/pos", data);
   },
-  updateInvoice: (id: number, data: any): Promise<Invoice> => {
+  updateInvoice: (id: number, data: UpdateInvoiceRequest): Promise<Invoice> => {
     return apiClient.put(`/invoices/${id}`, data);
   },
   deleteInvoice: (id: number): Promise<void> => {
     return apiClient.delete(`/invoices/${id}`);
   },
-  createInvoiceFromOrder: (params: {
-    orderId: number;
-    additionalPayment?: number;
-    items?: any[];
-    payments?: Array<{ method: string; amount: number }>;
-    soldById?: number;
-    forceComplete?: boolean;
-    appliedPromotions?: any[];
-    appliedPromotionIds?: number[];
-    skipPromotions?: boolean;
-    discountAmount?: number;
-    discountRatio?: number;
-  }): Promise<Invoice> => {
+  createInvoiceFromOrder: (
+    params: CreateInvoiceFromOrderRequest
+  ): Promise<Invoice> => {
     const {
       orderId,
       additionalPayment,
@@ -149,6 +164,7 @@ export const invoicesApi = {
       skipPromotions,
       discountAmount,
       discountRatio,
+      shippingFee,
     } = params;
     return apiClient.post(`/invoices/from-order/${orderId}`, {
       additionalPayment: additionalPayment || 0,
@@ -161,22 +177,13 @@ export const invoicesApi = {
       ...(skipPromotions != null ? { skipPromotions } : {}),
       ...(discountAmount != null ? { discountAmount } : {}),
       ...(discountRatio != null ? { discountRatio } : {}),
+      ...(shippingFee != null ? { shippingFee } : {}),
     });
   },
   /** Route POS có rule khách PREPAID + Không công nợ phải trả đủ trên đơn. */
-  createPosInvoiceFromOrder: (params: {
-    orderId: number;
-    additionalPayment?: number;
-    items?: any[];
-    payments?: Array<{ method: string; amount: number }>;
-    soldById?: number;
-    forceComplete?: boolean;
-    appliedPromotions?: any[];
-    appliedPromotionIds?: number[];
-    skipPromotions?: boolean;
-    discountAmount?: number;
-    discountRatio?: number;
-  }): Promise<Invoice> => {
+  createPosInvoiceFromOrder: (
+    params: CreateInvoiceFromOrderRequest
+  ): Promise<Invoice> => {
     const {
       orderId,
       additionalPayment,
@@ -189,6 +196,7 @@ export const invoicesApi = {
       skipPromotions,
       discountAmount,
       discountRatio,
+      shippingFee,
     } = params;
     return apiClient.post(`/invoices/pos/from-order/${orderId}`, {
       additionalPayment: additionalPayment || 0,
@@ -201,6 +209,7 @@ export const invoicesApi = {
       ...(skipPromotions != null ? { skipPromotions } : {}),
       ...(discountAmount != null ? { discountAmount } : {}),
       ...(discountRatio != null ? { discountRatio } : {}),
+      ...(shippingFee != null ? { shippingFee } : {}),
     });
   },
   getInvoicesForReturnOrder: (params: {

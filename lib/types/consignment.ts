@@ -31,6 +31,7 @@ export interface Consignment {
   totalAmount: number;
   discount: number;
   discountRatio: number;
+  shippingFee: number;
   grandTotal: number;
   status: number;
   statusValue?: string;
@@ -68,6 +69,7 @@ export interface Consignment {
   invoices?: Array<{
     id: number;
     code: string;
+    shippingFee?: number;
     grandTotal: number;
     status: number;
     statusValue?: string;

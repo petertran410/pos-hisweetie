@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { consignmentsApi } from "../api/consignments";
+import type { UpdateConsignmentRequest } from "../api/consignments";
 import type { ConsignmentFilters } from "../types/consignment";
 import { toast } from "sonner";
 
@@ -42,7 +43,7 @@ export function useCreateConsignment() {
 export function useUpdateConsignment() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) =>
+    mutationFn: ({ id, data }: { id: number; data: UpdateConsignmentRequest }) =>
       consignmentsApi.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["consignments"] });

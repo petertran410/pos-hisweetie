@@ -129,6 +129,10 @@ export function ConsignmentDetailRow({
 
   // Cho sửa khi chưa xử lý kho.
   const canEdit = status < CONSIGNMENT_STATUS.PACKED && !isCancelled;
+  const shippingFee =
+    Number(
+      (consignment as typeof consignment & { shippingFee?: number }).shippingFee
+    ) || 0;
 
   const willRestoreStock =
     status >= CONSIGNMENT_STATUS.PACKED &&
@@ -270,6 +274,12 @@ export function ConsignmentDetailRow({
                 </div>
               )}
             </div>
+            {shippingFee > 0 && (
+              <div className="flex gap-2">
+                <span className="text-gray-500 w-28">Phí ship:</span>
+                <span>{formatCurrency(shippingFee)}</span>
+              </div>
+            )}
             <div className="flex gap-2">
               <span className="text-gray-500 w-28">Tổng cộng:</span>
               <span className="font-semibold text-brand">

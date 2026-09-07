@@ -339,6 +339,9 @@ export function InvoiceDetailRow({
   // - Admin: luôn thấy (kể cả đã Giao thành công / Hoàn thành / Hủy).
   const canReportDelivered =
     isAdmin || invoice.status !== INVOICE_STATUS.DELIVERED;
+  const shippingFee =
+    Number((invoice as typeof invoice & { shippingFee?: number }).shippingFee) ||
+    0;
 
   // Nút "Kết thúc" chỉ ẩn khi hóa đơn đã Hoàn thành hoặc Đã hủy.
   // KHÔNG ẩn khi mới ở DELIVERED (Giao thành công) — vì sau khi "Đã Báo Đơn"
@@ -726,6 +729,14 @@ export function InvoiceDetailRow({
                             })()}
                           </span>
                         </div>
+                        {shippingFee > 0 && (
+                          <div className="flex justify-between items-center text-md">
+                            <span className="text-gray-600">Phí ship:</span>
+                            <span className="font-semibold text-gray-900">
+                              {formatCurrency(shippingFee)}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex justify-between items-center text-md pt-2 border-t border-gray-200">
                           <span className="text-gray-600">Tổng cộng:</span>
                           <span className="text-md font-bold text-brand">

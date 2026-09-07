@@ -64,6 +64,7 @@ export function ConsignmentForm({ consignment }: ConsignmentFormProps) {
   >(null);
   const [discount, setDiscount] = useState(0);
   const [discountRatio, setDiscountRatio] = useState(0);
+  const [shippingFee, setShippingFee] = useState(0);
   const [orderNote, setOrderNote] = useState("");
   const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo>(EMPTY_DELIVERY);
   const [soldById, setSoldById] = useState<number | null>(null);
@@ -103,6 +104,11 @@ export function ConsignmentForm({ consignment }: ConsignmentFormProps) {
     setSelectedPriceBookName(consignment.priceBookName ?? null);
     setDiscount(Number(consignment.discount) || 0);
     setDiscountRatio(Number(consignment.discountRatio) || 0);
+    setShippingFee(
+      Number(
+        (consignment as Consignment & { shippingFee?: number }).shippingFee
+      ) || 0
+    );
     setOrderNote(consignment.description || "");
     setSoldById(consignment.soldById ?? null);
     setConsignStatus(
@@ -294,6 +300,7 @@ export function ConsignmentForm({ consignment }: ConsignmentFormProps) {
       description: orderNote,
       discountAmount: Number(discount) || 0,
       discountRatio: Number(discountRatio) || 0,
+      shippingFee: Number(shippingFee) || 0,
       // Ký gửi không quản lý loại tồn → không gửi conditionType (BE nhận ở DTO
       // nhưng service không lưu, model ConsignmentItem không có cột này).
       items: cartItems.map((it) => ({
@@ -386,6 +393,8 @@ export function ConsignmentForm({ consignment }: ConsignmentFormProps) {
           discountRatio={discountRatio}
           onDiscountChange={setDiscount}
           onDiscountRatioChange={setDiscountRatio}
+          shippingFee={shippingFee}
+          onShippingFeeChange={setShippingFee}
           deliveryInfo={deliveryInfo}
           onDeliveryInfoChange={setDeliveryInfo}
           onSelectAddress={handleSelectAddress}

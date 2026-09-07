@@ -1,15 +1,27 @@
 "use client";
 
 import React from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown, PackageOpen, HelpCircle, AlertTriangle } from "lucide-react";
+import {
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  PackageOpen,
+  HelpCircle,
+  AlertTriangle,
+  RotateCcw,
+} from "lucide-react";
 import type { ColumnConfig } from "@/lib/hooks/useColumnVisibility";
 import type { TransferPlanningItem } from "@/lib/types/transfer-planning";
 import type { TransferPlanningColumnCtx } from "./columns";
 import { CustomTooltip } from "@/components/ui/CustomTooltip";
+import { PermissionGate } from "@/components/permissions/PermissionGate";
 
 interface TransferPlanningTableProps {
   items: TransferPlanningItem[];
-  visibleColumns: ColumnConfig<TransferPlanningItem, TransferPlanningColumnCtx>[];
+  visibleColumns: ColumnConfig<
+    TransferPlanningItem,
+    TransferPlanningColumnCtx
+  >[];
   selectedItemId: number | null;
   onSelectItem: (id: number) => void;
   isLoading?: boolean;
@@ -20,6 +32,8 @@ interface TransferPlanningTableProps {
   onSort?: (key: string) => void;
   onResetFilters?: () => void;
   columnContext?: TransferPlanningColumnCtx;
+  tempDraftCount?: number;
+  onResetTempQuantities?: () => void;
 }
 
 const RIGHT_ALIGNED_KEYS = [
@@ -32,6 +46,7 @@ const RIGHT_ALIGNED_KEYS = [
   "availableStockSG",
   "targetStockSG",
   "suggestedQuantity",
+  "tempQty",
   "pendingTransfer",
 ];
 
@@ -50,6 +65,8 @@ export function TransferPlanningTable({
   onSort,
   onResetFilters,
   columnContext,
+  tempDraftCount = 0,
+  onResetTempQuantities,
 }: TransferPlanningTableProps) {
   if (isLoading) {
     return (
@@ -79,7 +96,8 @@ export function TransferPlanningTable({
           <button
             type="button"
             onClick={onRetry}
-            className="mt-4 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            className="mt-4 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
             Thử lại
           </button>
         )}
@@ -93,15 +111,19 @@ export function TransferPlanningTable({
         <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-3">
           <PackageOpen className="w-6 h-6" />
         </div>
-        <h3 className="text-sm font-semibold text-gray-800">Không tìm thấy sản phẩm nào</h3>
+        <h3 className="text-sm font-semibold text-gray-800">
+          Không tìm thấy sản phẩm nào
+        </h3>
         <p className="text-xs text-gray-500 mt-1 max-w-sm">
-          Thử thay đổi từ khóa tìm kiếm hoặc đặt lại các bộ lọc ở thanh bên trái.
+          Thử thay đổi từ khóa tìm kiếm hoặc đặt lại các bộ lọc ở thanh bên
+          trái.
         </p>
         {onResetFilters && (
           <button
             type="button"
             onClick={onResetFilters}
-            className="mt-4 px-3 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors">
+            className="mt-4 px-3 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors"
+          >
             Đặt lại bộ lọc
           </button>
         )}
@@ -120,7 +142,8 @@ export function TransferPlanningTable({
         {/* Sticky Header */}
         <thead
           className="sticky top-0 z-30 bg-gray-100 shadow-sm text-xs font-semibold text-gray-700 border-b"
-          style={{ borderColor: "var(--dt-border)" }}>
+          style={{ borderColor: "var(--dt-border)" }}
+        >
           <tr>
             {visibleColumns.map((col) => {
               const isPinnedSKU = col.key === "sku";
@@ -143,6 +166,7 @@ export function TransferPlanningTable({
                 "availableDays",
                 "targetStockSG",
                 "suggestedQuantity",
+                "tempQty",
                 "pendingTransfer",
                 "alert",
               ].includes(col.key);
@@ -152,10 +176,12 @@ export function TransferPlanningTable({
               // Tính left offset chính xác
               let pinnedLeft: string | undefined = undefined;
               if (isPinnedSKU) pinnedLeft = "0px";
-              if (isPinnedName) pinnedLeft = isSkuVisible ? `${skuWidth}px` : "0px";
+              if (isPinnedName)
+                pinnedLeft = isSkuVisible ? `${skuWidth}px` : "0px";
 
               const isLastPinned =
-                (isPinnedName && isSkuVisible) || (isPinnedSKU && !visibleColumns.some((c) => c.key === "name"));
+                (isPinnedName && isSkuVisible) ||
+                (isPinnedSKU && !visibleColumns.some((c) => c.key === "name"));
 
               return (
                 <th
@@ -167,7 +193,8 @@ export function TransferPlanningTable({
                   }}
                   className={`py-3 px-3.5 select-none whitespace-nowrap bg-gray-100 ${
                     isPinned ? "sticky z-30 bg-gray-100" : ""
-                  } ${isLastPinned ? "shadow-[2px_0_5px_-2px_rgba(0,0,0,0.15)]" : ""}`}>
+                  } ${isLastPinned ? "shadow-[2px_0_5px_-2px_rgba(0,0,0,0.15)]" : ""}`}
+                >
                   <div
                     className={`inline-flex items-center gap-1 ${
                       isSortable ? "cursor-pointer hover:text-gray-900" : ""
@@ -175,15 +202,41 @@ export function TransferPlanningTable({
                       isRight
                         ? "justify-end w-full"
                         : isCenter
-                        ? "justify-center w-full"
-                        : "justify-start"
+                          ? "justify-center w-full"
+                          : "justify-start"
                     }`}
-                    onClick={() => isSortable && onSort?.(col.key)}>
+                    onClick={() => isSortable && onSort?.(col.key)}
+                  >
                     <span>{col.label}</span>
+
+                    {col.key === "tempQty" && onResetTempQuantities && (
+                      <PermissionGate resource="transfers" action="create">
+                        <CustomTooltip
+                          content="Đặt lại toàn bộ Tạm chuyển về 0"
+                          delayMs={200}
+                        >
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onResetTempQuantities();
+                            }}
+                            disabled={tempDraftCount === 0}
+                            className="ml-1 inline-flex rounded p-0.5 text-gray-500 hover:bg-gray-200 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-30"
+                            aria-label="Đặt lại toàn bộ Tạm chuyển về 0"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                          </button>
+                        </CustomTooltip>
+                      </PermissionGate>
+                    )}
 
                     {/* Custom Tooltip với delay 200ms */}
                     {col.tooltip && (
-                      <span onClick={(e) => e.stopPropagation()} className="inline-flex items-center">
+                      <span
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center"
+                      >
                         <CustomTooltip content={col.tooltip} delayMs={200}>
                           <HelpCircle className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600 cursor-help" />
                         </CustomTooltip>
@@ -236,7 +289,8 @@ export function TransferPlanningTable({
               <tr
                 key={item.id}
                 onClick={() => onSelectItem(item.id)}
-                className={`group cursor-pointer transition-colors duration-150 ${rowBgClass}`}>
+                className={`group cursor-pointer transition-colors duration-150 ${rowBgClass}`}
+              >
                 {visibleColumns.map((col) => {
                   const isPinnedSKU = col.key === "sku";
                   const isPinnedName = col.key === "name";
@@ -244,10 +298,13 @@ export function TransferPlanningTable({
 
                   let pinnedLeft: string | undefined = undefined;
                   if (isPinnedSKU) pinnedLeft = "0px";
-                  if (isPinnedName) pinnedLeft = isSkuVisible ? `${skuWidth}px` : "0px";
+                  if (isPinnedName)
+                    pinnedLeft = isSkuVisible ? `${skuWidth}px` : "0px";
 
                   const isLastPinned =
-                    (isPinnedName && isSkuVisible) || (isPinnedSKU && !visibleColumns.some((c) => c.key === "name"));
+                    (isPinnedName && isSkuVisible) ||
+                    (isPinnedSKU &&
+                      !visibleColumns.some((c) => c.key === "name"));
 
                   return (
                     <td
@@ -258,11 +315,18 @@ export function TransferPlanningTable({
                       className={`py-2.5 px-3.5 whitespace-nowrap ${
                         isPinned
                           ? `sticky z-10 ${cellBgClass} ${
-                              isLastPinned ? "shadow-[2px_0_5px_-2px_rgba(0,0,0,0.12)]" : ""
+                              isLastPinned
+                                ? "shadow-[2px_0_5px_-2px_rgba(0,0,0,0.12)]"
+                                : ""
                             }`
                           : ""
-                      }`}>
-                      {col.render ? col.render(item, columnContext) : (item as any)[col.key]}
+                      }`}
+                    >
+                      {col.render
+                        ? col.render(item, columnContext)
+                        : (item as unknown as Record<string, React.ReactNode>)[
+                            col.key
+                          ]}
                     </td>
                   );
                 })}

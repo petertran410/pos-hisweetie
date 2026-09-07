@@ -71,6 +71,17 @@ export function CreateInvoiceFromConsignmentModal({
     [consignment.items, invoicedMap, receivedMap]
   );
 
+  const remainingShippingFee = useMemo(() => {
+    const invoicedShippingFee = (consignment.invoices || [])
+      .filter((invoice) => invoice.status !== 2)
+      .reduce((sum, invoice) => sum + (Number(invoice.shippingFee) || 0), 0);
+
+    return Math.max(
+      (Number(consignment.shippingFee) || 0) - invoicedShippingFee,
+      0
+    );
+  }, [consignment.invoices, consignment.shippingFee]);
+
   // Số lượng muốn xuất cho từng product (mặc định = toàn bộ phần còn lại).
   const [qtyMap, setQtyMap] = useState<Record<number, number>>(() =>
     remainingItems.reduce(
@@ -122,7 +133,7 @@ export function CreateInvoiceFromConsignmentModal({
     try {
       const invoice = await createInvoice.mutateAsync({
         consignmentId: consignment.id,
-        data: { items },
+        data: { items, shippingFee: remainingShippingFee },
       });
       onSuccess?.();
       onClose();
@@ -228,11 +239,17 @@ export function CreateInvoiceFromConsignmentModal({
         </div>
 
         <div className="flex items-center justify-between gap-3 p-5 border-t bg-gray-50">
-          <div className="text-sm">
-            <span className="text-gray-500">Tổng tiền hóa đơn: </span>
-            <span className="font-semibold text-brand">
-              {formatCurrency(selectedTotal)}
-            </span>
+          <div className="text-sm space-y-1">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-gray-500">Phí ship:</span>
+              <span>{formatCurrency(remainingShippingFee)}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-gray-500">Tổng tiền hóa đơn:</span>
+              <span className="font-semibold text-brand">
+                {formatCurrency(selectedTotal + remainingShippingFee)}
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <button

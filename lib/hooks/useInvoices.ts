@@ -1,5 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { invoicesApi } from "../api/invoices";
+import {
+  invoicesApi,
+  type CreateInvoiceFromOrderRequest,
+  type UpdateInvoiceRequest,
+} from "../api/invoices";
 import { toast } from "sonner";
 import { API_URL, apiClient } from "../config/api";
 import { useState } from "react";
@@ -124,7 +128,7 @@ export function useCreatePosInvoice() {
 export function useUpdateInvoice() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) =>
+    mutationFn: ({ id, data }: { id: number; data: UpdateInvoiceRequest }) =>
       invoicesApi.updateInvoice(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
@@ -167,19 +171,8 @@ export function useCreateInvoiceFromOrder() {
       skipPromotions,
       discountAmount,
       discountRatio,
-    }: {
-      orderId: number;
-      additionalPayment?: number;
-      items?: any[];
-      payments?: Array<{ method: string; amount: number }>;
-      soldById?: number;
-      forceComplete?: boolean;
-      appliedPromotions?: any[];
-      appliedPromotionIds?: number[];
-      skipPromotions?: boolean;
-      discountAmount?: number;
-      discountRatio?: number;
-    }) =>
+      shippingFee,
+    }: CreateInvoiceFromOrderRequest) =>
       invoicesApi.createInvoiceFromOrder({
         orderId,
         additionalPayment,
@@ -192,6 +185,7 @@ export function useCreateInvoiceFromOrder() {
         skipPromotions,
         discountAmount,
         discountRatio,
+        shippingFee,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
@@ -220,19 +214,8 @@ export function useCreatePosInvoiceFromOrder() {
       skipPromotions,
       discountAmount,
       discountRatio,
-    }: {
-      orderId: number;
-      additionalPayment?: number;
-      items?: any[];
-      payments?: Array<{ method: string; amount: number }>;
-      soldById?: number;
-      forceComplete?: boolean;
-      appliedPromotions?: any[];
-      appliedPromotionIds?: number[];
-      skipPromotions?: boolean;
-      discountAmount?: number;
-      discountRatio?: number;
-    }) =>
+      shippingFee,
+    }: CreateInvoiceFromOrderRequest) =>
       invoicesApi.createPosInvoiceFromOrder({
         orderId,
         additionalPayment,
@@ -245,6 +228,7 @@ export function useCreatePosInvoiceFromOrder() {
         skipPromotions,
         discountAmount,
         discountRatio,
+        shippingFee,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });

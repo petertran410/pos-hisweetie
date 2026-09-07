@@ -603,6 +603,23 @@ export function InvoicesMobileDetailSheet({
                   </div>
                 )}
 
+                {Number(
+                  (invoice as typeof invoice & { shippingFee?: number })
+                    .shippingFee
+                ) > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Phí ship</span>
+                    <span className="font-medium text-gray-800">
+                      {formatCurrency(
+                        Number(
+                          (invoice as typeof invoice & { shippingFee?: number })
+                            .shippingFee
+                        )
+                      )}
+                    </span>
+                  </div>
+                )}
+
                 {/* Tổng cộng */}
                 <div className="border-t border-gray-200 pt-2.5 flex justify-between">
                   <span className="font-bold text-gray-900">Tổng cộng</span>

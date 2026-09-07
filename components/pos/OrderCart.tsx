@@ -21,6 +21,7 @@ import { DeliveryAddressDropdown } from "./DeliveryAddressDropdown";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { UnitPicker } from "./UnitPicker";
 import { LoadingButton } from "@/components/ui/LoadingButton";
+import { formatNumberInput, parseNumberInput } from "@/lib/utils";
 
 interface OrderCartProps {
   cartItems: CartItem[];
@@ -48,8 +49,10 @@ interface OrderCartProps {
   onCreateInvoice?: () => void;
   discount: number;
   discountRatio: number;
+  shippingFee: number;
   onDiscountChange?: (discount: number) => void;
   onDiscountRatioChange?: (discountRatio: number) => void;
+  onShippingFeeChange: (shippingFee: number) => void;
   deliveryInfo: DeliveryInfo;
   onDeliveryInfoChange: (info: DeliveryInfo) => void;
   isEditMode?: boolean;
@@ -232,8 +235,10 @@ export function OrderCart({
   onCreateInvoice,
   discount,
   discountRatio,
+  shippingFee,
   onDiscountChange,
   onDiscountRatioChange,
+  onShippingFeeChange,
   deliveryInfo,
   onDeliveryInfoChange,
   isEditMode = false,
@@ -272,6 +277,10 @@ export function OrderCart({
   const [percentDraft, setPercentDraft] = useState(() =>
     discountRatio > 0 ? String(discountRatio) : "",
   );
+  const [shippingFeeDraft, setShippingFeeDraft] = useState(() =>
+    formatNumberInput(String(shippingFee || 0)),
+  );
+  const isShippingFeeFocusedRef = useRef(false);
   const lastPushedDiscountRef = useRef<{
     discount: number;
     ratio: number;
@@ -289,6 +298,34 @@ export function OrderCart({
     setAmountDraft(discount > 0 ? discount.toLocaleString("en-US") : "");
     setPercentDraft(discountRatio > 0 ? String(discountRatio) : "");
   }, [discount, discountRatio]);
+
+  useEffect(() => {
+    if (!isShippingFeeFocusedRef.current) {
+      setShippingFeeDraft(formatNumberInput(String(shippingFee || 0)));
+    }
+  }, [shippingFee]);
+
+  const handleShippingFeeChange = (value: string) => {
+    const digits = value.replace(/\D/g, "");
+    if (digits === "") {
+      setShippingFeeDraft("");
+      onShippingFeeChange(0);
+      return;
+    }
+
+    const amount = parseNumberInput(digits);
+    if (!Number.isFinite(amount) || amount < 0) return;
+    setShippingFeeDraft(formatNumberInput(digits));
+    onShippingFeeChange(amount);
+  };
+
+  const handleShippingFeeBlur = () => {
+    isShippingFeeFocusedRef.current = false;
+    const amount = parseNumberInput(shippingFeeDraft);
+    const normalized = Number.isFinite(amount) && amount >= 0 ? amount : 0;
+    setShippingFeeDraft(formatNumberInput(String(normalized)));
+    onShippingFeeChange(normalized);
+  };
 
   const formatNumber = (value: number): string => {
     if (!value) return "";
@@ -423,14 +460,14 @@ export function OrderCart({
 
   const effectiveDiscount =
     discount > 0 ? discount : (subtotal * discountRatio) / 100;
-  const totalAmount = subtotal - effectiveDiscount;
+  const totalAmount = subtotal - effectiveDiscount + shippingFee;
 
   const calculateTotal = () => {
     const subtotal = calculateSubtotal();
     // Giảm giá hiệu dụng: ưu tiên số tiền (discount), fallback sang % cho data cũ.
     const effectiveDiscount =
       discount > 0 ? discount : (subtotal * discountRatio) / 100;
-    return subtotal - effectiveDiscount;
+    return subtotal - effectiveDiscount + shippingFee;
   };
 
   const displayDebt = (() => {
@@ -651,6 +688,28 @@ export function OrderCart({
             >
               {discountMode === "amount" ? "₫" : "%"}
             </button>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-sm lg:text-md gap-2">
+          <span className="text-gray-600">Phí ship</span>
+          <div className="flex items-center gap-1">
+            <input
+              type="text"
+              inputMode="numeric"
+              value={shippingFeeDraft}
+              onFocus={() => {
+                isShippingFeeFocusedRef.current = true;
+                if (shippingFeeDraft === "0") setShippingFeeDraft("");
+              }}
+              onChange={(e) => handleShippingFeeChange(e.target.value)}
+              onBlur={handleShippingFeeBlur}
+              placeholder="0"
+              className={`w-32 lg:w-36 border rounded-lg px-3 py-1 text-right text-sm focus:outline-none focus:ring-1 focus:ring-brand ${shippingFeeDraft === "0" ? "text-gray-400" : "text-gray-900"}`}
+            />
+            <span className="px-2 py-1 text-xs font-medium min-w-[40px] text-center">
+              ₫
+            </span>
           </div>
         </div>
 

@@ -3,6 +3,15 @@ import { string, number } from "zod";
 import { apiClient } from "../config/api";
 import { Order } from "../types/order";
 
+export interface CreateOrderRequest {
+  customerId: number;
+  items: Array<Record<string, unknown>>;
+  shippingFee?: number;
+  [key: string]: unknown;
+}
+
+export type UpdateOrderRequest = Partial<CreateOrderRequest>;
+
 export const ordersApi = {
   getOrders: (params?: Record<string, any>): Promise<{
     data: Order[];
@@ -64,11 +73,13 @@ export const ordersApi = {
     );
   },
 
-  createOrder: (data: Order): Promise<{ order: Order; warnings: any[] }> => {
+  createOrder: (
+    data: CreateOrderRequest
+  ): Promise<{ order: Order; warnings: any[] }> => {
     return apiClient.post("/orders", data);
   },
 
-  updateOrder: (id: number, data: Partial<Order>): Promise<Order> => {
+  updateOrder: (id: number, data: UpdateOrderRequest): Promise<Order> => {
     return apiClient.put(`/orders/${id}`, data);
   },
 

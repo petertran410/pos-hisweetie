@@ -134,6 +134,7 @@ export interface Tab {
   orderNote: string;
   discount: number;
   discountRatio: number;
+  shippingFee: number;
   useCOD: boolean;
   paymentAmount: number;
   paymentMethods: Array<{ method: string; amount: number; accountId?: number }>;
@@ -168,6 +169,25 @@ const getPriceBookStorageKey = (userId?: number) =>
 
 const getEditStorageKey = (id: number, type: TabType): string => {
   return `${EDIT_STORAGE_KEY}-${type}-${id}`;
+};
+
+const normalizeShippingFee = (value: unknown): number => {
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount >= 0 ? amount : 0;
+};
+
+const getRemainingShippingFee = (
+  sourceShippingFee: unknown,
+  invoices: Array<{ shippingFee?: unknown; status?: number }> = [],
+): number => {
+  const allocated = invoices
+    .filter((invoice) => invoice.status !== INVOICE_STATUS.CANCELLED)
+    .reduce(
+      (sum, invoice) => sum + normalizeShippingFee(invoice.shippingFee),
+      0,
+    );
+
+  return Math.max(normalizeShippingFee(sourceShippingFee) - allocated, 0);
 };
 
 /**
@@ -508,6 +528,7 @@ const getDefaultTab = (type: TabType = "order", forceId?: string): Tab => ({
   orderNote: "",
   discount: 0,
   discountRatio: 0,
+  shippingFee: 0,
   useCOD: false,
   paymentAmount: 0,
   paymentMethods: [],
@@ -1361,6 +1382,7 @@ export default function BanHangPage() {
       orderNote: string;
       discount: number;
       discountRatio: number;
+      shippingFee: number;
       paymentAmount: number;
       paymentNoteType: "cash" | "transfer" | null;
       paymentNoteAmount: number | null;
@@ -1387,6 +1409,7 @@ export default function BanHangPage() {
       tab.orderNote !== initialData.orderNote ||
       tab.discount !== initialData.discount ||
       tab.discountRatio !== initialData.discountRatio ||
+      tab.shippingFee !== initialData.shippingFee ||
       tab.paymentAmount !== initialData.paymentAmount ||
       tab.paymentNoteType !== initialData.paymentNoteType ||
       tab.paymentNoteAmount !== initialData.paymentNoteAmount ||
@@ -1406,6 +1429,7 @@ export default function BanHangPage() {
         orderNote: tab.orderNote,
         discount: tab.discount,
         discountRatio: tab.discountRatio,
+        shippingFee: tab.shippingFee,
         paymentAmount: tab.paymentAmount,
         paymentNoteType: tab.paymentNoteType,
         paymentNoteAmount: tab.paymentNoteAmount,
@@ -1414,6 +1438,7 @@ export default function BanHangPage() {
         selectedAddressId: tab.selectedAddressId ?? null,
         deliveryInfo: tab.deliveryInfo,
         timestamp: Date.now(),
+        lastModified: new Date().toISOString(),
       };
 
       localStorage.setItem(key, JSON.stringify(editState));
@@ -1450,6 +1475,7 @@ export default function BanHangPage() {
               orderNote: editState.orderNote || "",
               discount: editState.discount || 0,
               discountRatio: editState.discountRatio || 0,
+              shippingFee: normalizeShippingFee(editState.shippingFee),
               useCOD: editState.useCOD || false,
               paymentAmount: editState.paymentAmount || 0,
               paymentMethods: [],
@@ -1486,6 +1512,7 @@ export default function BanHangPage() {
               orderNote: editTab.orderNote,
               discount: editTab.discount,
               discountRatio: editTab.discountRatio,
+              shippingFee: editTab.shippingFee,
               paymentAmount: editTab.paymentAmount,
               paymentNoteType: editTab.paymentNoteType,
               paymentNoteAmount: editTab.paymentNoteAmount,
@@ -1590,7 +1617,12 @@ export default function BanHangPage() {
       try {
         const parsed = JSON.parse(savedTabs);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          allTabs.push(...parsed);
+          allTabs.push(
+            ...parsed.map((tab: Tab) => ({
+              ...tab,
+              shippingFee: normalizeShippingFee(tab.shippingFee),
+            })),
+          );
         }
       } catch (error) {
         console.error("Error loading saved tabs:", error);
@@ -1653,11 +1685,16 @@ export default function BanHangPage() {
           const parsed = JSON.parse(savedTabsStr);
           if (Array.isArray(parsed)) {
             savedTabs.push(
-              ...parsed.filter(
-                (t: Tab) =>
-                  !t.documentId &&
-                  (t.cartItems.length > 0 || t.selectedCustomer),
-              ),
+              ...parsed
+                .filter(
+                  (t: Tab) =>
+                    !t.documentId &&
+                    (t.cartItems.length > 0 || t.selectedCustomer),
+                )
+                .map((tab: Tab) => ({
+                  ...tab,
+                  shippingFee: normalizeShippingFee(tab.shippingFee),
+                })),
             );
           }
         } catch (error) {
@@ -1733,7 +1770,9 @@ export default function BanHangPage() {
     if (savedEditState) {
       try {
         restoredState = JSON.parse(savedEditState);
-        const lastModified = new Date(restoredState.lastModified);
+        const lastModified = new Date(
+          restoredState.lastModified ?? restoredState.timestamp,
+        );
         const orderUpdated = new Date(existingOrder.updatedAt);
 
         if (lastModified > orderUpdated) {
@@ -1791,6 +1830,10 @@ export default function BanHangPage() {
         orderNote: existingOrder.description || "",
         discount: 0,
         discountRatio: 0,
+        shippingFee: getRemainingShippingFee(
+          existingOrder.shippingFee,
+          existingOrder.invoices,
+        ),
         useCOD: false,
         paymentAmount: 0,
         paymentMethods: [],
@@ -1859,6 +1902,9 @@ export default function BanHangPage() {
       discountRatio: restoredState
         ? restoredState.discountRatio
         : Number(existingOrder.discountRatio) || 0,
+      shippingFee: restoredState
+        ? normalizeShippingFee(restoredState.shippingFee)
+        : normalizeShippingFee(existingOrder.shippingFee),
       useCOD: restoredState ? restoredState.useCOD : false,
       paymentAmount: restoredState ? restoredState.paymentAmount : 0,
       paymentMethods: [],
@@ -1904,6 +1950,7 @@ export default function BanHangPage() {
       orderNote: editTab.orderNote,
       discount: editTab.discount,
       discountRatio: editTab.discountRatio,
+      shippingFee: editTab.shippingFee,
       paymentAmount: editTab.paymentAmount,
       paymentNoteType: editTab.paymentNoteType,
       paymentNoteAmount: editTab.paymentNoteAmount,
@@ -1961,7 +2008,9 @@ export default function BanHangPage() {
     if (savedEditState) {
       try {
         restoredState = JSON.parse(savedEditState);
-        const lastModified = new Date(restoredState.lastModified);
+        const lastModified = new Date(
+          restoredState.lastModified ?? restoredState.timestamp,
+        );
         const invoiceUpdated = new Date(existingInvoice.updatedAt);
 
         if (lastModified > invoiceUpdated) {
@@ -2008,6 +2057,9 @@ export default function BanHangPage() {
       discountRatio: restoredState
         ? restoredState.discountRatio
         : Number(existingInvoice.discountRatio) || 0,
+      shippingFee: restoredState
+        ? normalizeShippingFee(restoredState.shippingFee)
+        : normalizeShippingFee(existingInvoice.shippingFee),
       useCOD: restoredState
         ? restoredState.useCOD
         : existingInvoice.usingCod || false,
@@ -2068,6 +2120,7 @@ export default function BanHangPage() {
       orderNote: editTab.orderNote,
       discount: editTab.discount,
       discountRatio: editTab.discountRatio,
+      shippingFee: editTab.shippingFee,
       paymentAmount: editTab.paymentAmount,
       paymentNoteType: editTab.paymentNoteType,
       paymentNoteAmount: editTab.paymentNoteAmount,
@@ -2129,7 +2182,9 @@ export default function BanHangPage() {
     if (savedEditState) {
       try {
         restoredState = JSON.parse(savedEditState);
-        const lastModified = new Date(restoredState.lastModified);
+        const lastModified = new Date(
+          restoredState.lastModified ?? restoredState.timestamp,
+        );
         const consignmentUpdated = new Date(existingConsignment.updatedAt);
 
         if (lastModified > consignmentUpdated) {
@@ -2176,6 +2231,9 @@ export default function BanHangPage() {
       discountRatio: restoredState
         ? restoredState.discountRatio
         : Number(existingConsignment.discountRatio) || 0,
+      shippingFee: restoredState
+        ? normalizeShippingFee(restoredState.shippingFee)
+        : normalizeShippingFee(existingConsignment.shippingFee),
       useCOD: false,
       paymentAmount: 0,
       paymentMethods: [],
@@ -2232,6 +2290,7 @@ export default function BanHangPage() {
       orderNote: editTab.orderNote,
       discount: editTab.discount,
       discountRatio: editTab.discountRatio,
+      shippingFee: editTab.shippingFee,
       paymentAmount: editTab.paymentAmount,
       paymentNoteType: editTab.paymentNoteType,
       paymentNoteAmount: editTab.paymentNoteAmount,
@@ -2296,6 +2355,7 @@ export default function BanHangPage() {
       orderNote: copySourceOrder.description || "",
       discount: Number(copySourceOrder.discount) || 0,
       discountRatio: Number(copySourceOrder.discountRatio) || 0,
+      shippingFee: normalizeShippingFee(copySourceOrder.shippingFee),
       useCOD: false,
       paymentAmount: 0,
       paymentMethods: [],
@@ -2363,6 +2423,7 @@ export default function BanHangPage() {
       orderNote: copySourceInvoice.description || "",
       discount: Number(copySourceInvoice.discount) || 0,
       discountRatio: Number(copySourceInvoice.discountRatio) || 0,
+      shippingFee: normalizeShippingFee(copySourceInvoice.shippingFee),
       useCOD: copySourceInvoice.usingCod || false,
       paymentAmount: 0,
       paymentMethods: [],
@@ -2575,6 +2636,12 @@ export default function BanHangPage() {
           ? remainingDiscount
           : 0;
 
+    const sourceShippingFee = normalizeShippingFee(activeTab.shippingFee);
+    const remainingShippingFee = getRemainingShippingFee(
+      sourceShippingFee,
+      order.invoices,
+    );
+
     setTabs(
       tabs.map((tab) =>
         tab.id === activeTabId
@@ -2593,6 +2660,7 @@ export default function BanHangPage() {
                 order.priceBookName ?? tab.selectedPriceBookName,
               discount: invoiceDiscount,
               discountRatio: sourceDiscountRatio,
+              shippingFee: remainingShippingFee,
               paymentAmount: 0,
             }
           : tab,
@@ -2768,6 +2836,7 @@ export default function BanHangPage() {
           // gốc và bỏ qua số user vừa chỉnh.
           discountAmount: Number(activeTab.discount) || 0,
           discountRatio: Number(activeTab.discountRatio) || 0,
+          shippingFee: normalizeShippingFee(activeTab.shippingFee),
           // Gửi lựa chọn KM để BE re-validate + sinh lại dòng quà (xử lý cả
           // KM cộng dồn rewardSelections). Đặc biệt quan trọng khi đơn gốc
           // tạo trước tính năng KM và user áp KM lúc xuất HĐ.
@@ -3296,6 +3365,7 @@ export default function BanHangPage() {
           paidAmount: actualPayment,
           discountAmount: Number(activeTab.discount) || 0,
           discountRatio: Number(activeTab.discountRatio) || 0,
+          shippingFee: normalizeShippingFee(activeTab.shippingFee),
           items: activeTab.cartItems.map((item) => {
             const isGift = item.isPromoGift && item.promoLineType === "gift";
             const isDiscountedBuy =
@@ -3531,6 +3601,7 @@ export default function BanHangPage() {
         paidAmount: actualPayment,
         discountAmount: Number(activeTab.discount) || 0,
         discountRatio: Number(activeTab.discountRatio) || 0,
+        shippingFee: normalizeShippingFee(activeTab.shippingFee),
         // Gửi lựa chọn KM để BE re-validate + sinh lại dòng quà khi sửa HĐ
         // (xử lý cả reissue .xx lẫn in-place). Trước đây 2 luồng invoice
         // (tạo từ đơn + sửa) bị thiếu appliedPromotions nên dòng quà bị drop.
@@ -3677,6 +3748,7 @@ export default function BanHangPage() {
         soldById: activeTab.soldById ?? user?.id,
         discountAmount: Number(activeTab.discount) || 0,
         discountRatio: Number(activeTab.discountRatio) || 0,
+        shippingFee: normalizeShippingFee(activeTab.shippingFee),
         priceBookId: activeTab.selectedPriceBookId ?? 0,
         consignStatus: activeTab.consignStatus || "pending",
         description: activeTab.orderNote,
@@ -3790,6 +3862,7 @@ export default function BanHangPage() {
       soldById: activeTab.soldById ?? user?.id,
       discountAmount: Number(activeTab.discount) || 0,
       discountRatio: Number(activeTab.discountRatio) || 0,
+      shippingFee: normalizeShippingFee(activeTab.shippingFee),
       priceBookId: activeTab.selectedPriceBookId ?? 0,
     };
 
@@ -4274,9 +4347,13 @@ export default function BanHangPage() {
                 onCreateInvoice={handleConvertToInvoice}
                 discount={activeTab.discount}
                 discountRatio={activeTab.discountRatio}
+                shippingFee={activeTab.shippingFee}
                 onDiscountChange={(discount) => updateActiveTab({ discount })}
                 onDiscountRatioChange={(discountRatio) =>
                   updateActiveTab({ discountRatio })
+                }
+                onShippingFeeChange={(shippingFee) =>
+                  updateActiveTab({ shippingFee })
                 }
                 onDeliveryInfoChange={(deliveryInfo) =>
                   updateActiveTab({ deliveryInfo })
@@ -4403,9 +4480,13 @@ export default function BanHangPage() {
                 onPayment={handlePayment}
                 discount={activeTab.discount}
                 discountRatio={activeTab.discountRatio}
+                shippingFee={activeTab.shippingFee}
                 onDiscountChange={(discount) => updateActiveTab({ discount })}
                 onDiscountRatioChange={(discountRatio) =>
                   updateActiveTab({ discountRatio })
+                }
+                onShippingFeeChange={(shippingFee) =>
+                  updateActiveTab({ shippingFee })
                 }
                 onDeliveryInfoChange={(deliveryInfo) =>
                   updateActiveTab({ deliveryInfo })
