@@ -12,6 +12,7 @@ import { DebtTrackingTable } from "@/components/debt-tracking/DebtTrackingTable"
 import {
   useDebtTrackingSummary,
   useExportDebtTracking,
+  useNotifySaleDebt,
 } from "@/lib/hooks/useDebtTracking";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import {
@@ -21,6 +22,7 @@ import {
   DEBT_FORM_LABELS,
 } from "@/lib/api/debt-tracking";
 import { formatCurrency } from "@/lib/utils";
+import { toast } from "sonner";
 
 const TABS: { value: DebtStatus | "ALL"; label: string; tone: string }[] = [
   { value: "ALL", label: "Tất cả", tone: "text-gray-700" },
@@ -39,6 +41,9 @@ export default function TheoDoiCongNoPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(30);
   const canExport = usePermission("debt_tracking", "export");
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<number[]>([]);
+  const [notifyIssues, setNotifyIssues] = useState<string[]>([]);
+  const notifySaleDebt = useNotifySaleDebt();
 
   const params: DebtTrackingParams = useMemo(
     () => ({
@@ -80,6 +85,43 @@ export default function TheoDoiCongNoPage() {
 
   const hasFilter =
     !!search || !!debtForm || overLimitOnly || withoutOpenTicket || tab !== "ALL";
+
+  const handleNotifySaleDebt = () => {
+    if (selectedCustomerIds.length === 0) {
+      toast.error("Vui lòng chọn ít nhất một khách hàng");
+      return;
+    }
+    setNotifyIssues([]);
+    notifySaleDebt.mutate(selectedCustomerIds, {
+      onSuccess: (result) => {
+        const sentIds = result.results
+          .filter((item) => item.status === "SENT")
+          .map((item) => item.customerId);
+        setSelectedCustomerIds((current) =>
+          current.filter((id) => !sentIds.includes(id)),
+        );
+        setNotifyIssues(
+          result.results
+            .filter((item) => item.status !== "SENT")
+            .map(
+              (item) =>
+                `${item.customerName}: ${item.message || "Không gửi được"}`,
+            ),
+        );
+        const failures = result.results.filter((item) => item.status !== "SENT");
+        if (failures.length > 0) {
+          toast.error(
+            failures
+              .map(
+                (item) =>
+                  `${item.customerName}: ${item.message || "Không gửi được"}`,
+              )
+              .join("\n"),
+          );
+        }
+      },
+    });
+  };
 
   return (
     <PagePermissionGuard resource="debt_tracking" action="view">
@@ -209,6 +251,19 @@ export default function TheoDoiCongNoPage() {
 
             <div className="flex-1" />
 
+            <button
+              onClick={handleNotifySaleDebt}
+              disabled={notifySaleDebt.isPending}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {notifySaleDebt.isPending && (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              )}
+              Gửi nhắc Sale PIC
+              {selectedCustomerIds.length > 0 &&
+                ` (${selectedCustomerIds.length})`}
+            </button>
+
             {canExport && (
               <button
                 onClick={() => exportMut.mutate(params)}
@@ -231,6 +286,8 @@ export default function TheoDoiCongNoPage() {
         <div className="flex-1 bg-white border rounded-lg overflow-hidden flex flex-col">
           <DebtTrackingTable
             params={params}
+            selectedCustomerIds={selectedCustomerIds}
+            onSelectedCustomerIdsChange={setSelectedCustomerIds}
             onPageChange={setPage}
             pageSize={pageSize}
             onPageSizeChange={(nextPageSize) => {
@@ -239,6 +296,16 @@ export default function TheoDoiCongNoPage() {
             }}
           />
         </div>
+        {notifyIssues.length > 0 && (
+          <div className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            <div className="font-medium">Một số khách chưa gửi được:</div>
+            <ul className="mt-1 list-disc pl-5">
+              {notifyIssues.map((issue) => (
+                <li key={issue}>{issue}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
     </PagePermissionGuard>

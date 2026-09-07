@@ -120,7 +120,7 @@ export interface DebtPolicyView {
   debtForm: DebtForm | null;
   /** Có thể chưa có ở preview import (chỉ có ở dữ liệu danh sách). */
   paymentHistory?: AppliedPaymentHistoryInfo;
-  salePic: { id: number; name: string } | null;
+  salePic: { id: number; name: string; canNotify?: boolean } | null;
   salePicId?: number | null;
   requireFullPaymentForInvoice?: boolean;
   paymentScheduleType?: PaymentScheduleType | null;
@@ -193,6 +193,27 @@ export interface DebtTrackingListResponse {
     total: number;
     totalPages: number;
   };
+}
+
+export type SaleDebtNotificationStatus =
+  | "SENT"
+  | "MISSING_SALE_PIC"
+  | "MISSING_LARK_USER"
+  | "ERROR";
+
+export interface SaleDebtNotificationResult {
+  customerId: number;
+  customerName: string;
+  salePicName: string | null;
+  status: SaleDebtNotificationStatus;
+  message?: string;
+}
+
+export interface SaleDebtNotificationResponse {
+  total: number;
+  sent: number;
+  failed: number;
+  results: SaleDebtNotificationResult[];
 }
 
 export interface DebtTrackingSummary {
@@ -427,6 +448,9 @@ export const debtTrackingApi = {
 
   getSummary: (params?: DebtTrackingParams): Promise<DebtTrackingSummary> =>
     apiClient.get(`/debt-tracking/summary`, params),
+
+  notifySaleDebt: (customerIds: number[]): Promise<SaleDebtNotificationResponse> =>
+    apiClient.post(`/debt-tracking/notify-sale`, { customerIds }),
 
   getDetail: (customerId: number): Promise<DebtTrackingDetail> =>
     apiClient.get(`/debt-tracking/${customerId}/detail`),

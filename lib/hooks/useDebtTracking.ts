@@ -90,6 +90,27 @@ export function useDebtTrackingSummary(params?: DebtTrackingParams) {
   });
 }
 
+export function useNotifySaleDebt() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (customerIds: number[]) =>
+      debtTrackingApi.notifySaleDebt(customerIds),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: [KEY] });
+      if (result.failed === 0) {
+        toast.success(`Đã gửi nhắc công nợ cho ${result.sent} Sale PIC`);
+      } else {
+        toast.warning(
+          `Đã gửi ${result.sent} tin nhắn, ${result.failed} khách không gửi được`,
+        );
+      }
+    },
+    onError: (e: unknown) => {
+      toast.error(e instanceof Error ? e.message : "Gửi nhắc công nợ thất bại");
+    },
+  });
+}
+
 export function useDebtTrackingDetail(customerId?: number) {
   return useQuery({
     queryKey: [KEY, "detail", customerId],
