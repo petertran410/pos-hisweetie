@@ -15,7 +15,6 @@ import {
   formatNumberInput,
   parseNumberInput,
 } from "@/lib/utils";
-import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 /**
  * Giá trị thiết lập công nợ dưới dạng chuỗi để bind trực tiếp vào input.
@@ -118,9 +117,6 @@ export function toDebtPolicyPayload(
 interface Props {
   value: DebtPolicyFormValue;
   onChange: (patch: Partial<DebtPolicyFormValue>) => void;
-  users?: Array<{ id: number; name: string }>;
-  /** Ẩn phần chọn người phụ trách khi chỗ dùng không cần. */
-  showPic?: boolean;
 }
 
 /**
@@ -132,8 +128,6 @@ interface Props {
 export function DebtPolicyFields({
   value,
   onChange,
-  users = [],
-  showPic = true,
 }: Props) {
   const noPolicy = value.debtRuleType === "NONE";
 
@@ -313,27 +307,6 @@ export function DebtPolicyFields({
         )}
       </div>
 
-      {showPic && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Sale PIC</label>
-            <SearchableSelect
-              value={value.salePicId === "" ? "" : String(value.salePicId)}
-              onChange={(selected) =>
-                onChange({ salePicId: selected ? Number(selected) : "" })
-              }
-              options={users.map((u) => ({
-                value: String(u.id),
-                label: u.name,
-              }))}
-              placeholder="— Chưa gán —"
-              searchPlaceholder="Tìm tên Sale PIC..."
-              clearable
-            />
-          </div>
-
-        </div>
-      )}
     </div>
   );
 }

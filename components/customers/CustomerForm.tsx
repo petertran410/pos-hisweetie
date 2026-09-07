@@ -31,6 +31,7 @@ import {
   useUpsertDebtPolicy,
 } from "@/lib/hooks/useDebtTracking";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 interface CustomerFormProps {
   customer?: Customer;
@@ -585,6 +586,12 @@ export function CustomerForm({
       return;
     }
 
+    if (canManageDebtPolicy && !debtPolicyForm.salePicId) {
+      toast.error("Vui lòng chọn Sale PIC");
+      setActiveFormTab("basic");
+      return;
+    }
+
     const validationError = validateAddresses();
     if (validationError) {
       toast.error(validationError);
@@ -732,7 +739,26 @@ export function CustomerForm({
       );
     } else {
       createCustomer.mutate(formattedData as any, {
-        onSuccess: (createdCustomer) => {
+        onSuccess: async (createdCustomer) => {
+          if (canManageDebtPolicy) {
+            try {
+              await upsertDebtPolicy.mutateAsync({
+                customerId: createdCustomer.id,
+                payload: toDebtPolicyPayload({
+                  ...debtPolicyForm,
+                  // Đồng bộ với policy mặc định backend khi tạo khách mới.
+                  debtForm: debtPolicyForm.debtForm || "PREPAID",
+                }),
+              });
+            } catch {
+              // Khách đã được tạo nên không giữ modal mở để tránh người dùng
+              // bấm Tạo lần nữa. Sale PIC có thể được chọn lại khi mở khách.
+              toast.error("Khách đã tạo nhưng chưa lưu được Sale PIC. Hãy mở lại khách hàng để cập nhật.");
+              onSuccess?.(createdCustomer);
+              onClose();
+              return;
+            }
+          }
           onSuccess?.(createdCustomer);
           onClose();
         },
@@ -947,6 +973,33 @@ export function CustomerForm({
                   className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
                 />
               </div>
+
+              {canManageDebtPolicy && (
+                <div>
+                  <label className="block text-sm font-medium mb-1 sm:mb-2">
+                    Sale PIC <span className="text-red-500">*</span>
+                  </label>
+                  <SearchableSelect
+                    value={
+                      debtPolicyForm.salePicId === ""
+                        ? ""
+                        : String(debtPolicyForm.salePicId)
+                    }
+                    onChange={(selected) =>
+                      setDebtPolicyForm((prev) => ({
+                        ...prev,
+                        salePicId: selected ? Number(selected) : "",
+                      }))
+                    }
+                    options={(usersForPic ?? []).map((user) => ({
+                      value: String(user.id),
+                      label: user.name,
+                    }))}
+                    placeholder="Chọn Sale PIC"
+                    searchPlaceholder="Tìm tên Sale PIC..."
+                  />
+                </div>
+              )}
             </div>
 
             {/* Section 2: Địa chỉ giao hàng (GIỮ NGUYÊN nội dung, chỉ đảm bảo nằm trong wrapper basic) */}
@@ -1157,6 +1210,7 @@ export function CustomerForm({
                     ) : null}
                   </div>
                 )}
+
               </div>
             </div>
           </div>
@@ -1398,7 +1452,6 @@ export function CustomerForm({
                   onChange={(patch) =>
                     setDebtPolicyForm((prev) => ({ ...prev, ...patch }))
                   }
-                  users={usersForPic ?? []}
                 />
               ) : (
                 <div className="text-sm text-gray-500 bg-gray-50 border rounded px-3 py-3">

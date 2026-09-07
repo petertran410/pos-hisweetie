@@ -6,7 +6,6 @@ import {
   useDebtPolicy,
   useUpsertDebtPolicy,
 } from "@/lib/hooks/useDebtTracking";
-import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import {
   DebtPolicyFields,
   EMPTY_DEBT_POLICY_FORM,
@@ -32,7 +31,6 @@ export function DebtPolicyModal({
   onClose: () => void;
 }) {
   const { data, isLoading } = useDebtPolicy(customerId);
-  const { data: usersData } = useUsersForFilter();
   const upsert = useUpsertDebtPolicy();
 
   const [form, setForm] = useState<DebtPolicyFormValue>(EMPTY_DEBT_POLICY_FORM);
@@ -99,7 +97,6 @@ export function DebtPolicyModal({
             <DebtPolicyFields
               value={form}
               onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
-              users={usersData ?? []}
             />
 
             {error && (
