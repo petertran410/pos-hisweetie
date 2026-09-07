@@ -9,6 +9,7 @@ import { formatNumber } from "@/lib/utils/transfer-planning-calc";
 
 interface TransferPlanningToolbarProps {
   summary?: TransferPlanningSummary;
+  isError?: boolean;
   searchValue: string;
   onSearchChange: (val: string) => void;
   columns: { key: string; label: string; visible: boolean }[];
@@ -19,6 +20,7 @@ interface TransferPlanningToolbarProps {
 
 export function TransferPlanningToolbar({
   summary,
+  isError = false,
   searchValue,
   onSearchChange,
   columns,
@@ -27,6 +29,13 @@ export function TransferPlanningToolbar({
   isExporting = false,
 }: TransferPlanningToolbarProps) {
   const [localSearch, setLocalSearch] = useState(searchValue);
+
+  // Khi lỗi tải dữ liệu, hiện "—" thay vì 0 — số 0 trông như một kết quả thật.
+  const stat = (value: number | undefined, format?: (n: number) => string) => {
+    if (isError) return "—";
+    const n = value ?? 0;
+    return format ? format(n) : n;
+  };
 
   // Debounce search
   useEffect(() => {
@@ -54,7 +63,7 @@ export function TransferPlanningToolbar({
           <div>
             <div className="text-xs text-gray-500 font-medium">Tổng SKU kế hoạch</div>
             <div className="text-lg font-bold text-gray-900 font-mono">
-              {summary?.totalSku ?? 0}
+              {stat(summary?.totalSku)}
             </div>
           </div>
         </div>
@@ -67,7 +76,7 @@ export function TransferPlanningToolbar({
           <div>
             <div className="text-xs text-primary font-semibold">SKU cần chuyển</div>
             <div className="text-lg font-bold text-primary font-mono">
-              {summary?.needTransferSku ?? 0}
+              {stat(summary?.needTransferSku)}
             </div>
           </div>
         </div>
@@ -80,7 +89,7 @@ export function TransferPlanningToolbar({
           <div>
             <div className="text-xs text-rose-700 font-semibold">SKU cảnh báo (CHUYỂN GẤP / Cần chuyển)</div>
             <div className="text-lg font-bold text-rose-700 font-mono">
-              {summary?.warningSku ?? 0}
+              {stat(summary?.warningSku)}
             </div>
           </div>
         </div>
@@ -93,7 +102,7 @@ export function TransferPlanningToolbar({
           <div>
             <div className="text-xs text-emerald-800 font-semibold">Tổng SL đề xuất chuyển</div>
             <div className="text-lg font-bold text-emerald-800 font-mono">
-              {formatNumber(summary?.totalSuggestedQuantity ?? 0, 1)}
+              {stat(summary?.totalSuggestedQuantity, (n) => formatNumber(n, 1))}
             </div>
           </div>
         </div>

@@ -1,7 +1,9 @@
 /**
  * Client API & React Query Hooks — Module Dự kiến chuyển kho (Hà Nội → Sài Gòn)
  *
- * 100% DỮ LIỆU HÀNG HÓA THẬT TỪ HỆ THỐNG — CHỈ SẢN PHẨM ĐANG HOẠT ĐỘNG (isActive = true).
+ * Toàn bộ số liệu do backend `/transfers/planning-summary` tính. KHÔNG có
+ * fallback dữ liệu tĩnh: nếu backend lỗi thì lỗi được đẩy lên react-query để
+ * UI hiển thị trạng thái lỗi, thay vì âm thầm render số liệu sai.
  */
 
 import { useQuery } from "@tanstack/react-query";
@@ -9,214 +11,28 @@ import { apiClient } from "@/lib/config/api";
 import type {
   TransferPlanningFilters,
   TransferPlanningResponse,
-  TransferPlanningItem,
-  TransferPlanningSummary,
 } from "@/lib/types/transfer-planning";
-import { calculateTransferPlanning } from "@/lib/utils/transfer-planning-calc";
-import realProductsData from "./real-products-dataset.json";
-
-export interface RawRealProduct {
-  id: number;
-  sku: string;
-  name: string;
-  unit: string;
-  parentName?: string;
-  middleName?: string;
-  childName?: string;
-  cargoType?: "COLD" | "NORMAL";
-  trademarkId?: number;
-  trademarkName?: string;
-  packSize?: number;
-  stockHN: number;
-  stockSG: number;
-  inTransit: number;
-  pendingTransfer: number;
-  committed: number;
-  confirmedOrders: number;
-  sales5: number;
-  sales30: number;
-  sales90: number;
-}
-
-/**
- * Tính toán Transfer Planning trên toàn bộ 805 sản phẩm thật
- */
-export function buildRealTransferPlanningItems(): TransferPlanningItem[] {
-  const rawList = realProductsData as RawRealProduct[];
-
-  return rawList.map((raw) => {
-    const computed = calculateTransferPlanning({
-      stockHN: raw.stockHN,
-      stockSG: raw.stockSG,
-      sales5: raw.sales5,
-      sales30: raw.sales30,
-      sales90: raw.sales90,
-      inTransit: raw.inTransit,
-      committed: raw.committed,
-      confirmedOrders: raw.confirmedOrders,
-      cargoType: raw.cargoType,
-      packSize: raw.packSize ?? 1,
-    });
-
-    return {
-      ...raw,
-      pendingTransfer: raw.pendingTransfer || 0,
-      packSize: raw.packSize ?? 1,
-      computed,
-    };
-  });
-}
-
-export function filterAndPaginateRealPlanning(
-  items: TransferPlanningItem[],
-  filters: TransferPlanningFilters
-): TransferPlanningResponse {
-  let filtered = [...items];
-
-  // 1. Tìm kiếm (SKU / Tên sản phẩm)
-  if (filters.search && filters.search.trim()) {
-    const q = filters.search.trim().toLowerCase();
-    filtered = filtered.filter(
-      (item) =>
-        item.sku.toLowerCase().includes(q) || item.name.toLowerCase().includes(q)
-    );
-  }
-
-  // 2. Mức độ cảnh báo
-  if (filters.alertFilter && filters.alertFilter !== "ALL") {
-    filtered = filtered.filter(
-      (item) => item.computed.alert === filters.alertFilter
-    );
-  }
-
-  // 4. Các bộ lọc Hàng hóa (/san-pham/danh-sach):
-  // a) Loại Hàng (parent category)
-  if (filters.parentNames && filters.parentNames.length > 0) {
-    filtered = filtered.filter(
-      (item) => item.parentName && filters.parentNames?.includes(item.parentName)
-    );
-  }
-
-  // b) Nguồn Gốc (middle category)
-  if (filters.middleNames && filters.middleNames.length > 0) {
-    filtered = filtered.filter(
-      (item) => item.middleName && filters.middleNames?.includes(item.middleName)
-    );
-  }
-
-  // c) Danh Mục (child category)
-  if (filters.childNames && filters.childNames.length > 0) {
-    filtered = filtered.filter(
-      (item) => item.childName && filters.childNames?.includes(item.childName)
-    );
-  }
-
-  // d) Loại vận chuyển (cargoType)
-  if (filters.cargoType === "COLD" || filters.cargoType === "NORMAL") {
-    filtered = filtered.filter((item) => item.cargoType === filters.cargoType);
-  }
-
-  // e) Thương hiệu (tradeMarkIds)
-  if (filters.tradeMarkIds && filters.tradeMarkIds.length > 0) {
-    filtered = filtered.filter(
-      (item) =>
-        item.trademarkId && filters.tradeMarkIds?.includes(item.trademarkId)
-    );
-  }
-
-  // e2) Thương hiệu loại trừ (excludeTradeMarkIds)
-  if (filters.excludeTradeMarkIds && filters.excludeTradeMarkIds.length > 0) {
-    filtered = filtered.filter(
-      (item) =>
-        !item.trademarkId || !filters.excludeTradeMarkIds?.includes(item.trademarkId)
-    );
-  }
-
-  // 5. Sắp xếp (Sorting)
-  if (filters.sortBy) {
-    const dir = filters.sortDirection === "desc" ? -1 : 1;
-    filtered.sort((a, b) => {
-      let valA: any = (a as any)[filters.sortBy!];
-      let valB: any = (b as any)[filters.sortBy!];
-
-      if (valA === undefined) valA = (a.computed as any)[filters.sortBy!];
-      if (valB === undefined) valB = (b.computed as any)[filters.sortBy!];
-
-      if (typeof valA === "string") {
-        return dir * valA.localeCompare(valB ?? "", "vi");
-      }
-      return dir * ((Number(valA) || 0) - (Number(valB) || 0));
-    });
-  }
-
-  // Summary computed over entire real dataset
-  const totalSku = items.length;
-  const needTransferSku = items.filter(
-    (i) => i.computed.suggestedQuantity > 0
-  ).length;
-  const warningSku = items.filter(
-    (i) => i.computed.alert === "RED" || i.computed.alert === "DARK_RED"
-  ).length;
-  const totalSuggestedQuantity = items.reduce(
-    (sum, i) => sum + i.computed.suggestedQuantity,
-    0
-  );
-
-  const summary: TransferPlanningSummary = {
-    totalSku,
-    needTransferSku,
-    warningSku,
-    totalSuggestedQuantity,
-  };
-
-  const page = Math.max(1, filters.page || 1);
-  const limit = Math.max(1, filters.limit || 25);
-  const startIndex = (page - 1) * limit;
-  const paginatedData = filtered.slice(startIndex, startIndex + limit);
-
-  return {
-    data: paginatedData,
-    total: filtered.length,
-    page,
-    limit,
-    summary,
-  };
-}
 
 export const transferPlanningApi = {
-  getPlanning: async (
+  getPlanning: (
     filters: TransferPlanningFilters
-  ): Promise<TransferPlanningResponse> => {
-    // 1. Thử gọi backend aggregate endpoint trước nếu online
-    try {
-      const serverRes = await apiClient.get<TransferPlanningResponse>(
-        "/transfers/planning-summary",
-        {
-          search: filters.search || undefined,
-          parentNames: filters.parentNames?.length ? filters.parentNames : undefined,
-          middleNames: filters.middleNames?.length ? filters.middleNames : undefined,
-          childNames: filters.childNames?.length ? filters.childNames : undefined,
-          cargoType: filters.cargoType || undefined,
-          tradeMarkIds: filters.tradeMarkIds?.length ? filters.tradeMarkIds : undefined,
-          excludeTradeMarkIds: filters.excludeTradeMarkIds?.length ? filters.excludeTradeMarkIds : undefined,
-          alertFilter: filters.alertFilter !== "ALL" ? filters.alertFilter : undefined,
-          page: filters.page || 1,
-          limit: filters.limit || 25,
-          sortBy: filters.sortBy || "suggestedQuantity",
-          sortDirection: filters.sortDirection || "desc",
-        }
-      );
-      if (serverRes && Array.isArray(serverRes.data) && serverRes.data.length > 0) {
-        return serverRes;
-      }
-    } catch {
-      // Fallback sang real dataset tính toán
-    }
-
-    // 2. Tính toán trên 100% dữ liệu hàng hóa thật
-    const realItems = buildRealTransferPlanningItems();
-    return filterAndPaginateRealPlanning(realItems, filters);
-  },
+  ): Promise<TransferPlanningResponse> =>
+    apiClient.get<TransferPlanningResponse>("/transfers/planning-summary", {
+      search: filters.search || undefined,
+      parentNames: filters.parentNames?.length ? filters.parentNames : undefined,
+      middleNames: filters.middleNames?.length ? filters.middleNames : undefined,
+      childNames: filters.childNames?.length ? filters.childNames : undefined,
+      cargoType: filters.cargoType || undefined,
+      tradeMarkIds: filters.tradeMarkIds?.length ? filters.tradeMarkIds : undefined,
+      excludeTradeMarkIds: filters.excludeTradeMarkIds?.length
+        ? filters.excludeTradeMarkIds
+        : undefined,
+      alertFilter: filters.alertFilter !== "ALL" ? filters.alertFilter : undefined,
+      page: filters.page || 1,
+      limit: filters.limit || 25,
+      sortBy: filters.sortBy || "suggestedQuantity",
+      sortDirection: filters.sortDirection || "desc",
+    }),
 };
 
 export function useTransferPlanning(filters: TransferPlanningFilters) {
