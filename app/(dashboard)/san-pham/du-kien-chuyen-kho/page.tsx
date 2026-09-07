@@ -60,7 +60,7 @@ export default function TransferPlanningPage() {
   );
 
   // ── Data Query ──
-  const { data, isLoading } = useTransferPlanning(filters);
+  const { data, isLoading, isError, refetch } = useTransferPlanning(filters);
 
   const items = data?.data ?? [];
 
@@ -151,6 +151,7 @@ export default function TransferPlanningPage() {
           {/* Top Toolbar with Summary, Search, Columns & Export */}
           <TransferPlanningToolbar
             summary={summary}
+            isError={isError}
             searchValue={filters.search || ""}
             onSearchChange={(search) => handleFiltersChange({ search, page: 1 })}
             columns={columns}
@@ -166,6 +167,8 @@ export default function TransferPlanningPage() {
             selectedItemId={selectedItemId}
             onSelectItem={setSelectedItemId}
             isLoading={isLoading}
+            isError={isError}
+            onRetry={refetch}
             sortBy={filters.sortBy}
             sortDirection={filters.sortDirection}
             onSort={handleSort}
