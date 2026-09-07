@@ -391,6 +391,16 @@ export function ProductDetailRow({
                           Bán trực tiếp
                         </span>
                       )}
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          product.cargoType === "COLD"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}>
+                        {product.cargoType === "COLD"
+                          ? "Hàng lạnh"
+                          : "Hàng thường"}
+                      </span>
                       {/* <span
                         className={`px-2 py-0.5 rounded text-xs font-medium ${
                           product.isRewardPoint

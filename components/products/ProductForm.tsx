@@ -170,6 +170,7 @@ export function ProductForm({
       isActive: product?.isActive ?? true,
       allowsSale: product?.allowsSale ?? true,
       isRewardPoint: product?.isRewardPoint ?? false,
+      cargoType: product?.cargoType || "NORMAL",
     },
   });
 
@@ -322,6 +323,7 @@ export function ProductForm({
         isDirectSale: Boolean(data.isDirectSale),
         isPieceUnit: Boolean(data.isPieceUnit),
         isActive: Boolean(data.isActive),
+        cargoType: data.cargoType || "NORMAL",
         branchId: selectedBranch?.id,
         // Nhà máy — chỉ gửi khi có quyền assign_factory, tránh ghi đè lên dữ
         // liệu thật khi user không có quyền chỉnh sửa. Gửi full danh sách:
@@ -528,6 +530,23 @@ export function ProductForm({
                     value={watch("tradeMarkId")}
                     onChange={(value) => setValue("tradeMarkId", value)}
                   />
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Loại vận chuyển
+                    </label>
+                    <select
+                      value={watch("cargoType")}
+                      onChange={(e) =>
+                        setValue(
+                          "cargoType",
+                          e.target.value as "COLD" | "NORMAL"
+                        )
+                      }
+                      className="w-full border rounded px-3 py-2 bg-white">
+                      <option value="NORMAL">Hàng thường</option>
+                      <option value="COLD">Hàng lạnh</option>
+                    </select>
+                  </div>
                 </div>
 
                 {/* Khối ảnh bên phải */}

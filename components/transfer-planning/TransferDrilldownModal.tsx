@@ -134,11 +134,6 @@ export function TransferDrilldownModal({
                   <th className="px-4 py-2.5 text-left font-medium whitespace-nowrap">
                     {config.timeLabel}
                   </th>
-                  {isInTransit && (
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">
-                      SL chuyển
-                    </th>
-                  )}
                   <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">
                     {isInTransit ? "Đang chuyển" : "SL phiếu tạm"}
                   </th>
@@ -164,11 +159,6 @@ export function TransferDrilldownModal({
                         ? formatDateTime(r.transferredDate)
                         : formatDateTime(r.createdAt)}
                     </td>
-                    {isInTransit && (
-                      <td className="px-4 py-2.5 text-right text-gray-900 whitespace-nowrap">
-                        {formatWholeQuantity(r.sendQuantity)}
-                      </td>
-                    )}
                     <td className="px-4 py-2.5 text-right text-gray-900 font-medium whitespace-nowrap">
                       {formatWholeQuantity(r.quantity)}
                     </td>

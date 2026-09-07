@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown, PackageOpen, HelpCircle } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, PackageOpen, HelpCircle, AlertTriangle } from "lucide-react";
 import type { ColumnConfig } from "@/lib/hooks/useColumnVisibility";
 import type { TransferPlanningItem } from "@/lib/types/transfer-planning";
 import type { TransferPlanningColumnCtx } from "./columns";
@@ -13,6 +13,8 @@ interface TransferPlanningTableProps {
   selectedItemId: number | null;
   onSelectItem: (id: number) => void;
   isLoading?: boolean;
+  isError?: boolean;
+  onRetry?: () => void;
   sortBy?: string;
   sortDirection?: "asc" | "desc";
   onSort?: (key: string) => void;
@@ -41,6 +43,8 @@ export function TransferPlanningTable({
   selectedItemId,
   onSelectItem,
   isLoading = false,
+  isError = false,
+  onRetry,
   sortBy,
   sortDirection,
   onSort,
@@ -52,6 +56,33 @@ export function TransferPlanningTable({
       <div className="flex-1 p-8 flex flex-col items-center justify-center text-gray-400 space-y-3">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         <span className="text-sm">Đang tải dữ liệu kế hoạch chuyển kho...</span>
+      </div>
+    );
+  }
+
+  // Lỗi tải dữ liệu phải hiện trước nhánh rỗng — nếu không sẽ hiện "Không tìm
+  // thấy sản phẩm nào" và dẫn người dùng đi đặt lại bộ lọc một cách vô ích.
+  if (isError) {
+    return (
+      <div className="flex-1 p-12 flex flex-col items-center justify-center text-center">
+        <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-3">
+          <AlertTriangle className="w-6 h-6" />
+        </div>
+        <h3 className="text-sm font-semibold text-gray-800">
+          Không thể tải dữ liệu kế hoạch chuyển kho
+        </h3>
+        <p className="text-xs text-gray-500 mt-1 max-w-sm">
+          Số liệu tồn kho, hàng đang chuyển và SL đề xuất đều lấy trực tiếp từ
+          hệ thống. Vui lòng thử lại — không có dữ liệu dự phòng để hiển thị.
+        </p>
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-4 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            Thử lại
+          </button>
+        )}
       </div>
     );
   }
