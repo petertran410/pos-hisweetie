@@ -309,17 +309,37 @@ export function DebtTrackingTable({
                     <span className="text-gray-300">Chưa có</span>
                   )}
                   {r.paymentFrequency && (
-                    <div
-                      className={`inline-flex items-center gap-1 mt-0.5 ${
-                        r.paymentFrequency.met
-                          ? "text-green-600"
-                          : "text-amber-600"
-                      }`}
-                      title="Cam kết tần suất trả tiền trong tháng">
-                      <Repeat className="w-3 h-3" />
-                      {r.paymentFrequency.paymentsThisMonth}/
-                      {r.paymentFrequency.required} lần
-                    </div>
+                    <>
+                      <div
+                        className={`inline-flex items-center gap-1 mt-0.5 ${
+                          r.paymentFrequency.met
+                            ? "text-green-600"
+                            : r.paymentFrequency.overdueCount
+                              ? "text-red-600"
+                              : "text-amber-600"
+                        }`}
+                        title={
+                          r.paymentFrequency.periodType === "WEEK"
+                            ? "Cam kết tần suất trả tiền trong tuần hiện tại"
+                            : "Cam kết tần suất trả tiền trong tháng hiện tại"
+                        }>
+                        <Repeat className="w-3 h-3" />
+                        {(r.paymentFrequency.paymentsThisPeriod ??
+                          r.paymentFrequency.paymentsThisMonth)}/
+                        {r.paymentFrequency.required} lần/
+                        {r.paymentFrequency.periodType === "WEEK" ? "tuần" : "tháng"}
+                      </div>
+                      {!!r.paymentFrequency.overdueCount && (
+                        <div className="text-[11px] text-red-600">
+                          Quá hạn {r.paymentFrequency.overdueCount} kỳ
+                        </div>
+                      )}
+                      {r.paymentFrequency.nextScheduledDate && (
+                        <div className="text-[11px] text-gray-400">
+                          Kỳ tiếp: {fmtDate(r.paymentFrequency.nextScheduledDate)}
+                        </div>
+                      )}
+                    </>
                   )}
                 </td>
 

@@ -81,10 +81,16 @@ export interface DebtLastPayment {
 
 /** Đánh giá cam kết tần suất trả tiền ("1 tháng N lần"). */
 export interface PaymentFrequencyInfo {
+  /** Số lần đã thanh toán trong tháng/tuần hiện tại. */
+  paymentsThisPeriod?: number;
+  /** @deprecated Dùng paymentsThisPeriod. */
   paymentsThisMonth: number;
   required: number;
   met: boolean;
   remaining: number;
+  periodType?: "MONTH" | "WEEK";
+  overdueCount?: number;
+  nextScheduledDate?: string | null;
 }
 
 export interface DebtOpenTicket {
