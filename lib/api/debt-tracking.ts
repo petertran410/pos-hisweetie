@@ -121,9 +121,7 @@ export interface DebtPolicyView {
   /** Có thể chưa có ở preview import (chỉ có ở dữ liệu danh sách). */
   paymentHistory?: AppliedPaymentHistoryInfo;
   salePic: { id: number; name: string } | null;
-  accountantPic: { id: number; name: string } | null;
   salePicId?: number | null;
-  accountantPicId?: number | null;
   requireFullPaymentForInvoice?: boolean;
   paymentScheduleType?: PaymentScheduleType | null;
   paymentScheduleDays?: number[] | null;
@@ -134,6 +132,7 @@ export interface DebtTrackingRow {
   code: string | null;
   name: string;
   contactNumber: string | null;
+  misaEmployeeName: string | null;
   branch: { id: number; name: string } | null;
 
   totalDebt: number;
@@ -224,7 +223,6 @@ export interface DebtTrackingParams {
   overLimitOnly?: boolean;
   branchId?: number;
   salePicId?: number;
-  accountantPicId?: number;
   withoutOpenTicket?: boolean;
   page?: number;
   pageSize?: number;
@@ -243,7 +241,8 @@ export interface DebtPolicy {
   paymentFrequency: number | null;
   debtForm: DebtForm | null;
   salePicId: number | null;
-  accountantPicId: number | null;
+  /** Deprecated database field; no longer editable or displayed. */
+  accountantPicId?: number | null;
   isActive: boolean;
   requireFullPaymentForInvoice: boolean;
   paymentScheduleType: PaymentScheduleType | null;
@@ -261,7 +260,6 @@ export interface UpsertDebtPolicyPayload {
   paymentFrequency?: number | null;
   debtForm?: DebtForm | null;
   salePicId?: number | null;
-  accountantPicId?: number | null;
   isActive?: boolean;
   requireFullPaymentForInvoice?: boolean;
   paymentScheduleType?: PaymentScheduleType | null;
@@ -296,6 +294,7 @@ export interface DebtTrackingDetail {
     code: string | null;
     name: string;
     contactNumber: string | null;
+    misaEmployeeName: string | null;
     branch: { id: number; name: string } | null;
     totalDebt: number;
   };
@@ -353,6 +352,7 @@ export interface PolicyImportRow {
   debtType: string;
   creditLimit: string;
   paymentSchedule: string;
+  salePic: string;
   debtRuleType: DebtRuleType | null;
   paymentScheduleType: PaymentScheduleType | null;
   paymentScheduleDays: number[] | null;

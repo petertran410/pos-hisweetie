@@ -15,6 +15,7 @@ import {
   formatNumberInput,
   parseNumberInput,
 } from "@/lib/utils";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 /**
  * Giá trị thiết lập công nợ dưới dạng chuỗi để bind trực tiếp vào input.
@@ -29,7 +30,6 @@ export interface DebtPolicyFormValue {
   paymentFrequency: string;
   debtForm: DebtForm | "";
   salePicId: number | "";
-  accountantPicId: number | "";
   requireFullPaymentForInvoice: boolean;
   paymentScheduleType: "MONTHLY" | "WEEKLY" | "";
   paymentScheduleDays: number[];
@@ -44,7 +44,6 @@ export const EMPTY_DEBT_POLICY_FORM: DebtPolicyFormValue = {
   paymentFrequency: "",
   debtForm: "",
   salePicId: "",
-  accountantPicId: "",
   requireFullPaymentForInvoice: false,
   paymentScheduleType: "",
   paymentScheduleDays: [],
@@ -96,7 +95,6 @@ export function toDebtPolicyPayload(
           : null,
     debtForm: v.debtForm || null,
     salePicId: v.salePicId || null,
-    accountantPicId: v.accountantPicId || null,
     // Quy tắc mới là nguồn chân lý của chính sách thanh toán. Cờ này vẫn
     // được gửi để tương thích với policy cũ, nhưng không còn do người dùng
     // chỉnh trực tiếp trên giao diện.
@@ -319,47 +317,21 @@ export function DebtPolicyFields({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium mb-1.5">Sale PIC</label>
-            <select
-              value={value.salePicId}
-              onChange={(e) =>
-                onChange({
-                  salePicId: e.target.value ? Number(e.target.value) : "",
-                })
+            <SearchableSelect
+              value={value.salePicId === "" ? "" : String(value.salePicId)}
+              onChange={(selected) =>
+                onChange({ salePicId: selected ? Number(selected) : "" })
               }
-              className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
-            >
-              <option value="">— Chưa gán —</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
+              options={users.map((u) => ({
+                value: String(u.id),
+                label: u.name,
+              }))}
+              placeholder="— Chưa gán —"
+              searchPlaceholder="Tìm tên Sale PIC..."
+              clearable
+            />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              Kế Toán Công Nợ PIC
-            </label>
-            <select
-              value={value.accountantPicId}
-              onChange={(e) =>
-                onChange({
-                  accountantPicId: e.target.value
-                    ? Number(e.target.value)
-                    : "",
-                })
-              }
-              className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
-            >
-              <option value="">— Chưa gán —</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
       )}
     </div>

@@ -215,6 +215,9 @@ export function ImportDebtPolicyModal({ onClose }: { onClose: () => void }) {
                             <th className="text-right px-3 py-2 font-medium">
                               Hạn mức
                             </th>
+                            <th className="text-left px-3 py-2 font-medium">
+                              Sale PIC
+                            </th>
                             <th className="text-left px-3 py-2 font-medium w-24">
                               Thao tác
                             </th>
@@ -244,18 +247,23 @@ export function ImportDebtPolicyModal({ onClose }: { onClose: () => void }) {
                               </td>
                               <td className="px-3 py-2 text-xs">
                                 {describeDebtPolicy({
+                                  debtRuleType: r.debtRuleType ?? undefined,
                                   hasCreditLimit: r.hasCreditLimit,
                                   hasTermDays: r.hasTermDays,
                                   termDays: r.termDays,
                                   paymentFrequency: r.paymentFrequency,
                                   creditLimit: r.creditLimitValue,
                                   debtForm: r.debtFormValue,
+                                  paymentScheduleType: r.paymentScheduleType,
+                                  paymentScheduleDays: r.paymentScheduleDays,
                                   salePic: null,
-                                  accountantPic: null,
                                 })}
                               </td>
                               <td className="px-3 py-2 text-right tabular-nums text-xs">
                                 {fmt(r.creditLimitValue)}
+                              </td>
+                              <td className="px-3 py-2 text-xs">
+                                {r.salePic || "—"}
                               </td>
                               <td className="px-3 py-2">
                                 <span

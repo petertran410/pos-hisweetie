@@ -59,7 +59,6 @@ export function DebtPolicyModal({
         policy.paymentFrequency != null ? String(policy.paymentFrequency) : "",
       debtForm: policy.debtForm ?? "",
       salePicId: policy.salePicId ?? "",
-      accountantPicId: policy.accountantPicId ?? "",
       requireFullPaymentForInvoice:
         policy.requireFullPaymentForInvoice ?? false,
       paymentScheduleType: policy.paymentScheduleType ?? "",
