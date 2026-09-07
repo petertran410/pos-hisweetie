@@ -7,7 +7,7 @@ import { useCategories } from "@/lib/hooks/useCategories";
 import { Category } from "@/lib/api/categories";
 import { useTrademarks } from "@/lib/hooks/useTrademarks";
 import { TradeMark } from "@/lib/api/trademarks";
-import { Check, ChevronRight, Calendar } from "lucide-react";
+import { ChevronRight, Calendar } from "lucide-react";
 import { MultiSelectDropdown } from "@/components/shared/MultiSelectDropdown";
 import { SimpleDropdown } from "@/components/shared/SimpleDropdown";
 import { MiniCalendar } from "@/components/ui/MiniCalendar";
@@ -195,18 +195,8 @@ function PresetPanel({
 }
 
 const STATUS_OPTIONS = [
-  {
-    value: "active",
-    label: "Hoạt động",
-    color: "bg-green-100 text-green-700",
-    dot: "bg-green-500",
-  },
-  {
-    value: "inactive",
-    label: "Ngừng hoạt động",
-    color: "bg-red-100 text-red-700",
-    dot: "bg-red-400",
-  },
+  { value: "active", label: "Hoạt động" },
+  { value: "inactive", label: "Ngừng hoạt động" },
 ];
 
 const STOCK_OPTIONS = [
@@ -215,10 +205,10 @@ const STOCK_OPTIONS = [
 ];
 
 const PRODUCT_TYPE_OPTIONS = [
-  { value: 2, label: "Hàng hóa" },
-  { value: 3, label: "Dịch vụ" },
-  { value: 1, label: "Combo - đóng gói" },
-  { value: 4, label: "Hàng sản xuất" },
+  { value: "2", label: "Hàng hóa" },
+  { value: "3", label: "Dịch vụ" },
+  { value: "1", label: "Combo - đóng gói" },
+  { value: "4", label: "Hàng sản xuất" },
 ];
 
 const DIRECT_SALE_OPTIONS = [
@@ -245,7 +235,7 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
   const { data: trademarks } = useTrademarks({ silentForbidden: true });
 
   const [selectedStatus, setSelectedStatus] = useState("active");
-  const [selectedTypes, setSelectedTypes] = useState<number[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [parentNames, setParentNames] = useState<string[]>([]);
   const [middleNames, setMiddleNames] = useState<string[]>([]);
   const [childNames, setChildNames] = useState<string[]>([]);
@@ -317,7 +307,7 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
       const f: Record<string, unknown> = {};
       if (selectedStatus === "active") f.isActive = true;
       if (selectedStatus === "inactive") f.isActive = false;
-      if (selectedTypes.length > 0) f.types = selectedTypes;
+       if (selectedTypes.length > 0) f.types = selectedTypes.map(Number);
       if (parentNames.length > 0) f.parentNames = parentNames;
       if (middleNames.length > 0) f.middleNames = middleNames;
       if (childNames.length > 0) f.childNames = childNames;
@@ -553,63 +543,25 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Trạng thái
           </label>
-          <div className="flex flex-wrap gap-1.5">
-            {STATUS_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() =>
-                  setSelectedStatus(
-                    selectedStatus === opt.value ? "" : opt.value
-                  )
-                }
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                  selectedStatus === opt.value
-                    ? opt.color + " border-current"
-                    : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                }`}
-              >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    selectedStatus === opt.value ? opt.dot : "bg-gray-300"
-                  }`}
-                />
-                {opt.label}
-              </button>
-            ))}
-          </div>
+          <SimpleDropdown
+            options={STATUS_OPTIONS}
+            value={selectedStatus}
+            placeholder="Tất cả"
+            onChange={setSelectedStatus}
+          />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Loại sản phẩm
           </label>
-          <div className="flex flex-wrap gap-1.5">
-            {PRODUCT_TYPE_OPTIONS.map((opt) => {
-              const isActive = selectedTypes.includes(opt.value);
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() =>
-                    setSelectedTypes((prev) =>
-                      prev.includes(opt.value)
-                        ? prev.filter((t) => t !== opt.value)
-                        : [...prev, opt.value]
-                    )
-                  }
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                    isActive
-                      ? "bg-brand-soft text-brand-dark border-brand"
-                      : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                  }`}
-                >
-                  {isActive && <Check className="w-3 h-3" />}
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
+          <MultiSelectDropdown
+            options={PRODUCT_TYPE_OPTIONS}
+            values={selectedTypes}
+            placeholder="Tất cả"
+            searchPlaceholder="Tìm loại sản phẩm..."
+            onChange={setSelectedTypes}
+          />
         </div>
 
         <div>

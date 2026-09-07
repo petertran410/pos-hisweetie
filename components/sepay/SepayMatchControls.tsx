@@ -88,9 +88,14 @@ export function SepayCustomerCell({ tx }: { tx: SepayTransaction }) {
                     {formatCurrency(amount)}
                   </span>
                 )}
-                {showUnassignedHere && (
+                {showUnassignedHere && customers.length === 1 && !c.cashFlow && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[11px] font-semibold dt-mono tabular-nums">
+                    Tạm xác nhận · {formatCurrency(unassigned)} · chờ kế toán lập phiếu thu
+                  </span>
+                )}
+                {showUnassignedHere && customers.length !== 1 && (
                   <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[11px] font-semibold dt-mono tabular-nums">
-                    Chưa gán · {formatCurrency(unassigned)}
+                    Chưa phân bổ · {formatCurrency(unassigned)}
                   </span>
                 )}
               </div>
@@ -101,7 +106,7 @@ export function SepayCustomerCell({ tx }: { tx: SepayTransaction }) {
       {/* Chưa gán nhưng chưa có khách nào */}
       {customers.length === 0 && unassigned > 0 && (
         <span className="inline-flex w-fit items-center px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[11px] font-semibold dt-mono tabular-nums">
-          Chưa gán · {formatCurrency(unassigned)}
+          Chưa gắn khách · {formatCurrency(unassigned)}
         </span>
       )}
     </div>

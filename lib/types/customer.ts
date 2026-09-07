@@ -20,6 +20,7 @@ export interface Customer {
     hasCreditLimit: boolean;
     hasTermDays: boolean;
     isActive?: boolean;
+    requireFullPaymentForInvoice?: boolean;
   } | null;
   totalInvoiced: number;
   totalPoint: number;
@@ -140,6 +141,7 @@ export interface CustomerSearchResult {
     hasCreditLimit: boolean;
     hasTermDays: boolean;
     isActive?: boolean;
+    requireFullPaymentForInvoice?: boolean;
   } | null;
   parentId?: number;
   parent?: {

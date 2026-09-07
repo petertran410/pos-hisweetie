@@ -141,7 +141,8 @@ export function InvoicesMobileDetailSheet({
 
   const canCancelInvoice = !isFinalState;
 
-  const showProcessButton = hasPermUpdate && !isSaving && !isFinalState;
+  const showProcessButton =
+    hasPermUpdate && !isSaving && invoice?.status !== INVOICE_STATUS.CANCELLED;
 
   // ─── Handlers — giống OrdersMobileDetailSheet pattern ────────────────────
   const handleCancelClick = async () => {

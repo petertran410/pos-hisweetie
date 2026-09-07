@@ -48,10 +48,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
       })
   );
 
-  // Đồng bộ chi nhánh giữa các tab: khi 1 tab đổi chi nhánh, các tab còn lại
-  // cập nhật selectedBranch (qua sự kiện `storage`) rồi invalidate toàn bộ
-  // query để dữ liệu tự refetch theo chi nhánh mới (header X-Branch-Id).
-  // RouteGuard reactive theo selectedBranch?.id nên permissions cũng tự đồng bộ.
   useEffect(() => {
     const cleanup = initBranchCrossTabSync(() => {
       queryClient.invalidateQueries();
@@ -64,15 +60,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* closeButton: mọi toast đều có nút X để người dùng tắt nhanh. */}
       <Toaster
+        // Giữ các toast trong stack cùng chiều rộng, không thu nhỏ khi hover.
+        expand
+        offset={64}
         position="top-right"
         closeButton
         toastOptions={{
           classNames: {
-            // Sonner mặc định đặt nút X ở góc TRÁI và chỉ rõ khi hover.
-            // Đưa sang phải + luôn hiển thị cho dễ bấm (nhất là trên mobile).
-            // Nét chữ X (svg stroke) dày hơn + màu đậm hơn cho dễ thấy.
             closeButton:
               "!left-auto !right-0 !top-0 !translate-x-1/3 !-translate-y-1/3 !opacity-100 !text-gray-700 !border-gray-300 hover:!bg-gray-100 [&>svg]:!stroke-[2.5] [&>svg]:!w-3.5 [&>svg]:!h-3.5",
           },

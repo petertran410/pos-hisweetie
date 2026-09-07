@@ -44,6 +44,10 @@ export function useAssignSepayCustomer() {
       sepayApi.assignCustomers(vars.id, vars.customerIds),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sepay-transactions"] });
+      // Gắn khách một mình có thể làm dòng ticket chuyển sang
+      // "Có tiền về, chờ phân bổ"; phải refresh cả hai màn công nợ.
+      qc.invalidateQueries({ queryKey: ["debt-tickets"] });
+      qc.invalidateQueries({ queryKey: ["debt-tracking"] });
       toast.success("Đã gán khách hàng cho giao dịch");
     },
     onError: (error: unknown) => {
@@ -61,6 +65,8 @@ export function useUnassignSepayCustomer() {
     mutationFn: (id: number) => sepayApi.unassignCustomer(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sepay-transactions"] });
+      qc.invalidateQueries({ queryKey: ["debt-tickets"] });
+      qc.invalidateQueries({ queryKey: ["debt-tracking"] });
       toast.success("Đã bỏ gán khách hàng");
     },
     onError: (error: unknown) => {

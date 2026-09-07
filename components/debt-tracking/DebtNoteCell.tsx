@@ -5,20 +5,16 @@ import { Loader2, Pencil } from "lucide-react";
 import { useUpdateDebtNote } from "@/lib/hooks/useDebtTracking";
 
 /**
- * Ô ghi chú sửa tại chỗ. Ghi chú kế toán và ghi chú sale là HAI cột hoàn
- * toàn tách biệt: mỗi ô chỉ gửi đúng field của mình lên server, nên hai bộ
- * phận sửa đồng thời cũng không ghi đè lẫn nhau.
+ * Ô ghi chú dùng chung sửa tại chỗ; mọi bộ phận cùng đọc và ghi một nguồn.
  */
 export function DebtNoteCell({
   customerId,
   value,
-  field,
   canEdit,
   placeholder = "Thêm ghi chú…",
 }: {
   customerId: number;
   value: string | null;
-  field: "accountantNote" | "saleNote";
   canEdit: boolean;
   placeholder?: string;
 }) {
@@ -50,10 +46,7 @@ export function DebtNoteCell({
     update.mutate(
       {
         customerId,
-        // Chỉ gửi đúng cột của ô này — hai cột ghi chú có quyền riêng biệt.
-        ...(field === "accountantNote"
-          ? { accountantNote: next || null }
-          : { saleNote: next || null }),
+        note: next || null,
       },
       { onSuccess: () => setEditing(false) }
     );

@@ -1,19 +1,15 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Link from "next/link";
 import {
   Search,
   Download,
-  Ticket as TicketIcon,
   RefreshCw,
   X,
 } from "lucide-react";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { DebtTrackingTable } from "@/components/debt-tracking/DebtTrackingTable";
-import { CreateDebtTicketModal } from "@/components/debt-tracking/CreateDebtTicketModal";
 import {
-  useDebtTracking,
   useDebtTrackingSummary,
   useExportDebtTracking,
 } from "@/lib/hooks/useDebtTracking";
@@ -41,10 +37,7 @@ export default function TheoDoiCongNoPage() {
   const [overLimitOnly, setOverLimitOnly] = useState(false);
   const [withoutOpenTicket, setWithoutOpenTicket] = useState(false);
   const [page, setPage] = useState(1);
-  const [selected, setSelected] = useState<number[]>([]);
-  const [showCreateTicket, setShowCreateTicket] = useState(false);
-
-  const canCreateTicket = usePermission("debt_tickets", "create");
+  const [pageSize, setPageSize] = useState(30);
   const canExport = usePermission("debt_tracking", "export");
 
   const params: DebtTrackingParams = useMemo(
@@ -55,9 +48,9 @@ export default function TheoDoiCongNoPage() {
       overLimitOnly: overLimitOnly || undefined,
       withoutOpenTicket: withoutOpenTicket || undefined,
       page,
-      pageSize: 30,
+      pageSize,
     }),
-    [search, tab, debtForm, overLimitOnly, withoutOpenTicket, page]
+    [search, tab, debtForm, overLimitOnly, withoutOpenTicket, page, pageSize]
   );
 
   // Summary dùng chung filter nhưng bỏ debtStatus để luôn thấy bức tranh
@@ -68,13 +61,7 @@ export default function TheoDoiCongNoPage() {
   );
 
   const { data: summary } = useDebtTrackingSummary(summaryParams);
-  const { data: listData } = useDebtTracking(params);
   const exportMut = useExportDebtTracking();
-
-  const selectedRows = useMemo(
-    () => (listData?.data ?? []).filter((r) => selected.includes(r.customerId)),
-    [listData, selected]
-  );
 
   const applySearch = () => {
     setSearch(searchInput.trim());
@@ -123,7 +110,7 @@ export default function TheoDoiCongNoPage() {
             tone="text-red-600"
           />
           <SummaryCard
-            label="Đang có phiếu thu hồi"
+            label="Đang ngừng đi hàng"
             value={summary ? String(summary.customersWithOpenTicket) : "—"}
           />
         </div>
@@ -172,10 +159,10 @@ export default function TheoDoiCongNoPage() {
 
             <select
               value={debtForm}
-              onChange={(e) => {
-                setDebtForm(e.target.value as DebtForm | "");
-                setPage(1);
-              }}
+               onChange={(e) => {
+                 setDebtForm(e.target.value as DebtForm | "");
+                 setPage(1);
+               }}
               className="border rounded px-2.5 py-1.5 text-sm"
             >
               <option value="">Mọi hình thức công nợ</option>
@@ -190,10 +177,10 @@ export default function TheoDoiCongNoPage() {
               <input
                 type="checkbox"
                 checked={overLimitOnly}
-                onChange={(e) => {
-                  setOverLimitOnly(e.target.checked);
-                  setPage(1);
-                }}
+                 onChange={(e) => {
+                   setOverLimitOnly(e.target.checked);
+                   setPage(1);
+                 }}
               />
               Vượt hạn mức
             </label>
@@ -202,10 +189,10 @@ export default function TheoDoiCongNoPage() {
               <input
                 type="checkbox"
                 checked={withoutOpenTicket}
-                onChange={(e) => {
-                  setWithoutOpenTicket(e.target.checked);
-                  setPage(1);
-                }}
+                 onChange={(e) => {
+                   setWithoutOpenTicket(e.target.checked);
+                   setPage(1);
+                 }}
               />
               Chưa có phiếu
             </label>
@@ -222,14 +209,6 @@ export default function TheoDoiCongNoPage() {
 
             <div className="flex-1" />
 
-            <Link
-              href="/khach-hang/ticket-cong-no"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded hover:bg-gray-50"
-            >
-              <TicketIcon className="w-4 h-4" />
-              Phiếu thu hồi nợ
-            </Link>
-
             {canExport && (
               <button
                 onClick={() => exportMut.mutate(params)}
@@ -245,16 +224,6 @@ export default function TheoDoiCongNoPage() {
               </button>
             )}
 
-            {canCreateTicket && (
-              <button
-                onClick={() => setShowCreateTicket(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-brand text-white rounded hover:opacity-90"
-              >
-                <TicketIcon className="w-4 h-4" />
-                Tạo phiếu
-                {selectedRows.length > 0 && ` (${selectedRows.length})`}
-              </button>
-            )}
           </div>
         </div>
 
@@ -262,20 +231,16 @@ export default function TheoDoiCongNoPage() {
         <div className="flex-1 bg-white border rounded-lg overflow-hidden flex flex-col">
           <DebtTrackingTable
             params={params}
-            selected={selected}
-            onSelectedChange={setSelected}
             onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize);
+              setPage(1);
+            }}
           />
         </div>
       </div>
 
-      {showCreateTicket && (
-        <CreateDebtTicketModal
-          rows={selectedRows}
-          onClose={() => setShowCreateTicket(false)}
-          onCreated={() => setSelected([])}
-        />
-      )}
     </PagePermissionGuard>
   );
 }

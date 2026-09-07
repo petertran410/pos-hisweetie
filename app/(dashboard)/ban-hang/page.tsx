@@ -546,6 +546,7 @@ export default function BanHangPage() {
 
   const canCreateOrder = useCan("orders", "create");
   const canCreateInvoice = useCan("invoices", "create");
+  const canEditInvoice = useCan("invoices", "update");
   const canEditPrice = useCan("pos_price", "update");
   const canEditDiscount = useCan("pos_discount", "update");
   const canEditSeller = useCan("pos_seller", "update");
@@ -4065,7 +4066,7 @@ export default function BanHangPage() {
     }
   };
 
-  if (!canCreateOrder && !canCreateInvoice) {
+  if (!canCreateOrder && !canCreateInvoice && !(invoiceId && canEditInvoice)) {
     return (
       <div className="flex items-center justify-center h-full bg-gray-50">
         <div className="text-center">

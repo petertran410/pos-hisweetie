@@ -29,6 +29,8 @@ export function useDebtTicket(id?: number) {
     queryKey: [KEY, id],
     queryFn: () => debtTicketsApi.getOne(id as number),
     enabled: !!id,
+    refetchInterval: (query) =>
+      query.state.data?.isOpen ? 5000 : false,
   });
 }
 
@@ -44,6 +46,21 @@ export function useCreateDebtTicket() {
     },
     onError: (e: unknown) => {
       toast.error(e instanceof Error ? e.message : "Tạo phiếu thất bại");
+    },
+  });
+}
+
+export function useCreateStopDeliveryTicket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { customerId: number }) =>
+      debtTicketsApi.createStopDelivery(payload),
+    onSuccess: (ticket) => {
+      invalidateAll(qc);
+      toast.success(`Đã tạo phiếu ${ticket.code}`);
+    },
+    onError: (e: unknown) => {
+      toast.error(e instanceof Error ? e.message : "Tạo phiếu ngừng đi hàng thất bại");
     },
   });
 }

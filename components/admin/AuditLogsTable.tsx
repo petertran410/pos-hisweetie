@@ -28,6 +28,7 @@ const categoryNames: Record<string, string> = {
   payment: "Thanh toán",
   product: "Sản phẩm",
   customer: "Khách hàng",
+  customer_debt: "Công nợ khách hàng",
   supplier: "Nhà cung cấp",
   inventory: "Tồn kho",
   transfer: "Chuyển kho",
@@ -81,6 +82,21 @@ const fmtCurrency = (val: any): string => {
 function renderSnapshot(entityType: string, snapshot: any): string {
   if (!snapshot) return "";
   const lines: string[] = [];
+
+  if (entityType === "customer_debt_collection_attempts") {
+    lines.push(`Khách hàng: ${snapshot.customerName || snapshot.customerCode || "N/A"}`);
+    lines.push(
+      `Vai trò: ${snapshot.role === "ACCOUNTANT" ? "Kế toán" : "Sale"}`
+    );
+    if (snapshot.attemptDate) {
+      const [year, month, day] = String(snapshot.attemptDate).split("-");
+      lines.push(`Ngày đòi nợ: ${day}/${month}/${year}`);
+    }
+    if (snapshot.supersedesId) {
+      lines.push(`Chỉnh sửa lần đòi nợ ID: ${snapshot.supersedesId}`);
+    }
+    return lines.join("\n");
+  }
 
   if (entityType === "orders" || entityType === "invoices") {
     lines.push(`Mã: ${snapshot.code || "N/A"}`);
@@ -558,6 +574,8 @@ function renderChanges(changes: any[]): string {
       lines.push(
         `  ~ SP ${c.detail?.productName}: ${(c.detail?.changes || []).join(", ")}`
       );
+    } else if (c.field === "reason") {
+      lines.push(`  ~ ${c.label || "Lý do"}: ${fmt(c.to)}`);
     } else {
       lines.push(`  ~ ${c.label || c.field}: ${fmt(c.from)} → ${fmt(c.to)}`);
     }

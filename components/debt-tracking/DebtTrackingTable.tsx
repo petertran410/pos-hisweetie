@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Swal from "sweetalert2";
 import {
   Loader2,
   Settings2,
@@ -9,6 +10,7 @@ import {
   ChevronRight,
   Inbox,
   Repeat,
+  Ticket,
 } from "lucide-react";
 import {
   DebtTrackingRow,
@@ -21,7 +23,11 @@ import { useDebtTracking } from "@/lib/hooks/useDebtTracking";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { DebtStatusBadge, ROW_TINT } from "./DebtStatusBadge";
 import { DebtNoteCell } from "./DebtNoteCell";
+import { DebtCollectionAttemptCell } from "./DebtCollectionAttemptCell";
 import { DebtPolicyModal } from "./DebtPolicyModal";
+import { StopDeliveryDetailModal } from "./StopDeliveryDetailModal";
+import { useCreateStopDeliveryTicket } from "@/lib/hooks/useDebtTickets";
+import { useCloseDebtTicket } from "@/lib/hooks/useDebtTickets";
 import { formatCurrency } from "@/lib/utils";
 import CodeLink from "../shared/CodeLink";
 
@@ -30,19 +36,21 @@ const fmtDate = (s: string | null) =>
 
 export function DebtTrackingTable({
   params,
-  selected,
-  onSelectedChange,
   onPageChange,
+  pageSize,
+  onPageSizeChange,
 }: {
   params: DebtTrackingParams;
-  selected: number[];
-  onSelectedChange: (ids: number[]) => void;
   onPageChange: (page: number) => void;
+  pageSize: number;
+  onPageSizeChange: (pageSize: number) => void;
 }) {
   const { data, isLoading, isFetching } = useDebtTracking(params);
   const canEditPolicy = usePermission("debt_tracking", "update_policy");
-  const canNoteAccountant = usePermission("debt_tracking", "note_accountant");
-  const canNoteSale = usePermission("debt_tracking", "note_sale");
+  const canNote = true;
+  const canCreateTicket = usePermission("debt_tickets", "create");
+  const createStop = useCreateStopDeliveryTicket();
+  const closeStop = useCloseDebtTicket();
   const canOverridePaymentHistory = usePermission(
     "debt_tracking",
     "update_policy"
@@ -51,30 +59,32 @@ export function DebtTrackingTable({
   const [policyTarget, setPolicyTarget] = useState<DebtTrackingRow | null>(
     null
   );
+  const [ticketTarget, setTicketTarget] = useState<{ row: DebtTrackingRow; ticket: NonNullable<DebtTrackingRow["openTicket"]> } | null>(null);
+  const [creatingCustomerId, setCreatingCustomerId] = useState<number | null>(null);
+  const [closingCustomerId, setClosingCustomerId] = useState<number | null>(null);
 
   const rows = data?.data ?? [];
   const pg = data?.pagination;
 
-  const allSelected =
-    rows.length > 0 && rows.every((r) => selected.includes(r.customerId));
+  const handleCloseStop = async (row: DebtTrackingRow) => {
+    if (!row.openTicket) return;
+    const result = await Swal.fire({
+      title: "Kết thúc ngừng đi hàng?",
+      text: "Kết thúc thủ công sẽ mở lại quyền tạo hóa đơn và đi hàng, không phụ thuộc số tiền đã thanh toán.",
+      input: "textarea",
+      inputPlaceholder: "Lý do kết thúc…",
+      showCancelButton: true,
+      confirmButtonText: "Kết thúc",
+      cancelButtonText: "Hủy",
+      inputValidator: (value) =>
+        !value?.trim() ? "Vui lòng nhập lý do" : undefined,
+    });
+    if (!result.isConfirmed || !result.value) return;
 
-  const toggleAll = () => {
-    if (allSelected) {
-      onSelectedChange(
-        selected.filter((id) => !rows.some((r) => r.customerId === id))
-      );
-    } else {
-      onSelectedChange([
-        ...new Set([...selected, ...rows.map((r) => r.customerId)]),
-      ]);
-    }
-  };
-
-  const toggleOne = (id: number) => {
-    onSelectedChange(
-      selected.includes(id)
-        ? selected.filter((x) => x !== id)
-        : [...selected, id]
+    setClosingCustomerId(row.customerId);
+    closeStop.mutate(
+      { id: row.openTicket.ticketId, reason: result.value, finalStatus: "DONE" },
+      { onSettled: () => setClosingCustomerId(null) },
     );
   };
 
@@ -105,14 +115,6 @@ export function DebtTrackingTable({
         <table className="w-full text-sm border-collapse">
           <thead className="sticky top-0 z-10 bg-gray-50 text-xs text-gray-600">
             <tr className="border-b">
-              <th className="px-3 py-2.5 w-10">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={toggleAll}
-                  className="cursor-pointer"
-                />
-              </th>
               <th className="text-left px-3 py-2.5 font-medium">Khách hàng</th>
               <th className="text-left px-3 py-2.5 font-medium">
                 Hình thức / Loại công nợ
@@ -135,17 +137,17 @@ export function DebtTrackingTable({
                 Thanh toán gần nhất
               </th>
               <th className="text-left px-3 py-2.5 font-medium">
+                Kế toán đòi nợ
+              </th>
+              <th className="text-left px-3 py-2.5 font-medium">
+                Sale đòi nợ
+              </th>
+              <th className="text-left px-3 py-2.5 font-medium">
                 Trạng thái nợ
               </th>
-              <th className="text-left px-3 py-2.5 font-medium">
-                Phiếu thu hồi
-              </th>
-              <th className="text-left px-3 py-2.5 font-medium">
-                Ghi chú kế toán
-              </th>
-              <th className="text-left px-3 py-2.5 font-medium">
-                Ghi chú sale
-              </th>
+              <th className="text-left px-3 py-2.5 font-medium">Phiếu</th>
+              <th className="text-left px-3 py-2.5 font-medium">Ngừng đi hàng</th>
+              <th className="text-left px-3 py-2.5 font-medium">Ghi chú</th>
               <th className="px-3 py-2.5 w-12"></th>
             </tr>
           </thead>
@@ -154,15 +156,6 @@ export function DebtTrackingTable({
               <tr
                 key={r.customerId}
                 className={`transition-colors ${ROW_TINT[r.debtStatus]}`}>
-                <td className="px-3 py-2 align-top">
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(r.customerId)}
-                    onChange={() => toggleOne(r.customerId)}
-                    className="cursor-pointer mt-1"
-                  />
-                </td>
-
                 <td className="px-3 py-2 align-top">
                   <Link
                     href={`/khach-hang?Code=${encodeURIComponent(
@@ -181,6 +174,9 @@ export function DebtTrackingTable({
                       Sale: {r.policy.salePic.name}
                     </div>
                   )}
+                  <div className="text-xs text-gray-400">
+                    Kế toán (Misa): {r.misaEmployeeName || "Chưa gán"}
+                  </div>
                 </td>
 
                 <td className="px-3 py-2 align-top text-xs">
@@ -316,18 +312,54 @@ export function DebtTrackingTable({
                     <span className="text-gray-300">Chưa có</span>
                   )}
                   {r.paymentFrequency && (
-                    <div
-                      className={`inline-flex items-center gap-1 mt-0.5 ${
-                        r.paymentFrequency.met
-                          ? "text-green-600"
-                          : "text-amber-600"
-                      }`}
-                      title="Cam kết tần suất trả tiền trong tháng">
-                      <Repeat className="w-3 h-3" />
-                      {r.paymentFrequency.paymentsThisMonth}/
-                      {r.paymentFrequency.required} lần
-                    </div>
+                    <>
+                      <div
+                        className={`inline-flex items-center gap-1 mt-0.5 ${
+                          r.paymentFrequency.met
+                            ? "text-green-600"
+                            : r.paymentFrequency.overdueCount
+                              ? "text-red-600"
+                              : "text-amber-600"
+                        }`}
+                        title={
+                          r.paymentFrequency.periodType === "WEEK"
+                            ? "Cam kết tần suất trả tiền trong tuần hiện tại"
+                            : "Cam kết tần suất trả tiền trong tháng hiện tại"
+                        }>
+                        <Repeat className="w-3 h-3" />
+                        {(r.paymentFrequency.paymentsThisPeriod ??
+                          r.paymentFrequency.paymentsThisMonth)}/
+                        {r.paymentFrequency.required} lần/
+                        {r.paymentFrequency.periodType === "WEEK" ? "tuần" : "tháng"}
+                      </div>
+                      {!!r.paymentFrequency.overdueCount && (
+                        <div className="text-[11px] text-red-600">
+                          Quá hạn {r.paymentFrequency.overdueCount} kỳ
+                        </div>
+                      )}
+                      {r.paymentFrequency.nextScheduledDate && (
+                        <div className="text-[11px] text-gray-400">
+                          Kỳ tiếp: {fmtDate(r.paymentFrequency.nextScheduledDate)}
+                        </div>
+                      )}
+                    </>
                   )}
+                </td>
+
+                <td className="px-3 py-2 align-top">
+                  <DebtCollectionAttemptCell
+                    customerId={r.customerId}
+                    role="ACCOUNTANT"
+                    attempts={r.accountantCollectionAttempts}
+                  />
+                </td>
+
+                <td className="px-3 py-2 align-top">
+                  <DebtCollectionAttemptCell
+                    customerId={r.customerId}
+                    role="SALES"
+                    attempts={r.salesCollectionAttempts}
+                  />
                 </td>
 
                 <td className="px-3 py-2 align-top">
@@ -338,44 +370,13 @@ export function DebtTrackingTable({
                 </td>
 
                 <td className="px-3 py-2 align-top text-xs">
-                  {r.openTicket ? (
-                    <Link
-                      href={`/khach-hang/ticket-cong-no/${r.openTicket.ticketId}`}
-                      className="inline-flex flex-col hover:underline">
-                      <span className="text-brand font-medium">
-                        {r.openTicket.ticketCode}
-                      </span>
-                      <span className="text-gray-400">
-                        {r.openTicket.assignee?.name}
-                      </span>
-                      {r.openTicket.lineStatus === "PAID" && (
-                        <span className="text-green-600">Đã thu</span>
-                      )}
-                      {r.openTicket.lineStatus === "PARTIAL" && (
-                        <span className="text-amber-600">Chờ phân bổ</span>
-                      )}
-                    </Link>
-                  ) : (
-                    <span className="text-gray-300">—</span>
-                  )}
+                  {r.openTicket ? <button onClick={() => setTicketTarget({ row: r, ticket: r.openTicket! })} className="text-brand font-medium hover:underline">{r.openTicket.ticketCode}</button> : r.latestStopTicket ? <button onClick={() => setTicketTarget({ row: r, ticket: r.latestStopTicket! })} className="text-gray-500 font-medium hover:underline">{r.latestStopTicket.ticketCode}</button> : <span className="text-gray-300">—</span>}
                 </td>
-
-                <td className="px-3 py-2 align-top">
-                  <DebtNoteCell
-                    customerId={r.customerId}
-                    value={r.accountantNote}
-                    field="accountantNote"
-                    canEdit={canNoteAccountant}
-                  />
+                <td className="px-3 py-2 align-top text-xs">
+                   {r.openTicket?.ticketType === "STOP_DELIVERY" ? <button onClick={() => void handleCloseStop(r)} disabled={closingCustomerId === r.customerId} className="text-amber-700 font-medium hover:underline disabled:opacity-50">{closingCustomerId === r.customerId ? "Đang kết thúc…" : "Kết thúc"}</button> : canCreateTicket ? <button onClick={() => { setCreatingCustomerId(r.customerId); createStop.mutate({ customerId: r.customerId }, { onSettled: () => setCreatingCustomerId(null) }); }} disabled={creatingCustomerId === r.customerId} className="inline-flex items-center gap-1 text-brand font-medium hover:underline disabled:opacity-50"><Ticket className="w-3.5 h-3.5" />{creatingCustomerId === r.customerId ? "Đang tạo…" : "Tạo phiếu"}</button> : <span className="text-gray-300">—</span>}
                 </td>
-
                 <td className="px-3 py-2 align-top">
-                  <DebtNoteCell
-                    customerId={r.customerId}
-                    value={r.saleNote}
-                    field="saleNote"
-                    canEdit={canNoteSale}
-                  />
+                   <DebtNoteCell customerId={r.customerId} value={r.note} canEdit={canNote} />
                 </td>
 
                 <td className="px-3 py-2 align-top">
@@ -394,31 +395,51 @@ export function DebtTrackingTable({
         </table>
       </div>
 
-      {pg && pg.totalPages > 1 && (
+      {pg && (
         <div className="flex items-center justify-between px-4 py-2.5 border-t bg-white text-sm">
-          <span className="text-gray-500">
-            {(pg.page - 1) * pg.pageSize + 1}–
-            {Math.min(pg.page * pg.pageSize, pg.total)} / {pg.total}
-            {isFetching && (
-              <Loader2 className="w-3 h-3 animate-spin inline ml-2" />
-            )}
-          </span>
-          <div className="flex items-center gap-1">
-            <button
-              disabled={pg.page <= 1}
-              onClick={() => onPageChange(pg.page - 1)}
-              className="p-1.5 border rounded disabled:opacity-40 hover:bg-gray-50">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="px-2">
-              {pg.page} / {pg.totalPages}
+          <div className="flex items-center gap-3 text-gray-500">
+            <span>
+              {(pg.page - 1) * pg.pageSize + 1}–
+              {Math.min(pg.page * pg.pageSize, pg.total)} / {pg.total}
+              {isFetching && (
+                <Loader2 className="w-3 h-3 animate-spin inline ml-2" />
+              )}
             </span>
-            <button
-              disabled={pg.page >= pg.totalPages}
-              onClick={() => onPageChange(pg.page + 1)}
-              className="p-1.5 border rounded disabled:opacity-40 hover:bg-gray-50">
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            <label className="flex items-center gap-1.5 whitespace-nowrap">
+              Hiển thị
+              <select
+                value={pageSize}
+                onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                className="border rounded px-2 py-1 text-sm text-gray-700 bg-white"
+              >
+                {[20, 30, 50, 100, 200].map((size) => (
+                  <option key={size} value={size}>
+                    {size} dòng/trang
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="flex items-center gap-1">
+            {pg.totalPages > 1 && (
+              <>
+                <button
+                  disabled={pg.page <= 1}
+                  onClick={() => onPageChange(pg.page - 1)}
+                  className="p-1.5 border rounded disabled:opacity-40 hover:bg-gray-50">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="px-2">
+                  {pg.page} / {pg.totalPages}
+                </span>
+                <button
+                  disabled={pg.page >= pg.totalPages}
+                  onClick={() => onPageChange(pg.page + 1)}
+                  className="p-1.5 border rounded disabled:opacity-40 hover:bg-gray-50">
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -430,6 +451,7 @@ export function DebtTrackingTable({
           onClose={() => setPolicyTarget(null)}
         />
       )}
+      {ticketTarget && <StopDeliveryDetailModal row={ticketTarget.row} ticket={ticketTarget.ticket} onClose={() => setTicketTarget(null)} />}
     </div>
   );
 }

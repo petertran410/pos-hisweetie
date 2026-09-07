@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useLayoutEffect } from "react";
-import { getFixedRect, getFixedViewport } from "@/lib/utils/zoom";
 
 export interface DropdownPosition {
   left: number;

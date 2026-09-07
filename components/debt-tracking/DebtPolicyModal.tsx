@@ -6,7 +6,6 @@ import {
   useDebtPolicy,
   useUpsertDebtPolicy,
 } from "@/lib/hooks/useDebtTracking";
-import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import {
   DebtPolicyFields,
   EMPTY_DEBT_POLICY_FORM,
@@ -32,7 +31,6 @@ export function DebtPolicyModal({
   onClose: () => void;
 }) {
   const { data, isLoading } = useDebtPolicy(customerId);
-  const { data: usersData } = useUsersForFilter();
   const upsert = useUpsertDebtPolicy();
 
   const [form, setForm] = useState<DebtPolicyFormValue>(EMPTY_DEBT_POLICY_FORM);
@@ -43,6 +41,13 @@ export function DebtPolicyModal({
   if (policy && loadedId !== policy.id) {
     setLoadedId(policy.id);
     setForm({
+      debtRuleType:
+        policy.debtRuleType ??
+        (policy.hasCreditLimit
+          ? "CREDIT_LIMIT"
+          : policy.hasTermDays
+            ? "TERM_DAYS"
+            : "NONE"),
       hasCreditLimit: policy.hasCreditLimit,
       creditLimit:
         policy.creditLimit != null ? String(Number(policy.creditLimit)) : "",
@@ -52,7 +57,10 @@ export function DebtPolicyModal({
         policy.paymentFrequency != null ? String(policy.paymentFrequency) : "",
       debtForm: policy.debtForm ?? "",
       salePicId: policy.salePicId ?? "",
-      accountantPicId: policy.accountantPicId ?? "",
+      requireFullPaymentForInvoice:
+        policy.requireFullPaymentForInvoice ?? false,
+      paymentScheduleType: policy.paymentScheduleType ?? "",
+      paymentScheduleDays: policy.paymentScheduleDays ?? [],
     });
   }
 
@@ -89,7 +97,6 @@ export function DebtPolicyModal({
             <DebtPolicyFields
               value={form}
               onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
-              users={usersData ?? []}
             />
 
             {error && (

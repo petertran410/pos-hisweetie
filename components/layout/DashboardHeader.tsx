@@ -138,7 +138,6 @@ export function DashboardHeader() {
       { label: "Khuyến mãi", href: "/khach-hang/khuyen-mai" },
       { label: "Hợp đồng", href: "/khach-hang/hop-dong" },
       { label: "Theo dõi công nợ", href: "/khach-hang/theo-doi-cong-no" },
-      { label: "Ticket đòi nợ", href: "/khach-hang/ticket-cong-no" },
     ],
     []
   );
@@ -364,7 +363,7 @@ export function DashboardHeader() {
                     </span>
                   )}
                 </div>
-                <span className="text-sm">{user?.name}</span>
+                {/* <span className="text-sm">{user?.name}</span> */}
               </button>
 
               {showUserMenu && (
