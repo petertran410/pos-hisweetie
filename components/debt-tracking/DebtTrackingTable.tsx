@@ -206,6 +206,15 @@ export function DebtTrackingTable({
   };
 
   const handleCloseCycle = async (row: DebtTrackingRow) => {
+    if (row.openTicket?.ticketType === "STOP_DELIVERY") {
+      await Swal.fire({
+        icon: "warning",
+        title: "Chưa thể làm mới chu kỳ",
+        text: "Khách hàng đang có phiếu ngừng đi hàng chưa kết thúc. Hãy kết thúc phiếu ngừng đi hàng trước khi làm mới chu kỳ.",
+        confirmButtonText: "Đã hiểu",
+      });
+      return;
+    }
     const result = await Swal.fire({
       title: "Kết thúc chu kỳ theo dõi?",
       text: "Lần đòi nợ và ghi chú hiện tại sẽ được lưu vào lịch sử, sau đó dòng này được làm mới cho chu kỳ mới.",
@@ -963,6 +972,7 @@ function CycleActions({
   onCloseCycle: () => void;
   onViewHistory: () => void;
 }) {
+  const hasOpenStopDelivery = row.openTicket?.ticketType === "STOP_DELIVERY";
   const hasCurrentData =
     !!row.note ||
     row.accountantCollectionAttempts.length > 0 ||
@@ -979,7 +989,11 @@ function CycleActions({
           onClick={onCloseCycle}
           disabled={pending}
           className="p-1.5 rounded hover:bg-emerald-50 text-emerald-700 disabled:opacity-50"
-          title="Lưu chu kỳ hiện tại và làm mới">
+          title={
+            hasOpenStopDelivery
+              ? "Hãy kết thúc phiếu ngừng đi hàng trước khi làm mới chu kỳ"
+              : "Lưu chu kỳ hiện tại và làm mới"
+          }>
           {pending ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
