@@ -19,6 +19,19 @@ import {
   CATEGORY_ICONS,
 } from "@/lib/constants/permissions";
 
+// Các quyền legacy không còn được cấp qua giao diện phân quyền.
+// Bản ghi permission vẫn được giữ trong DB để tương thích dữ liệu cũ;
+// chỉ loại khỏi ma trận hiển thị/cấp quyền mới.
+const HIDDEN_LEGACY_ACTIONS = new Set(["note_accountant", "note_sale"]);
+
+const isHiddenLegacyPermission = (perm: {
+  resource?: string;
+  action?: string;
+}) =>
+  perm.resource === "debt_tickets" ||
+  (perm.resource === "debt_tracking" &&
+    HIDDEN_LEGACY_ACTIONS.has(perm.action ?? ""));
+
 interface PermissionMatrixProps {
   role: any;
 }
@@ -31,6 +44,10 @@ export function PermissionMatrix({ role }: PermissionMatrixProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   const { data: branches } = useBranches();
+  const activeBranches = useMemo(
+    () => (branches || []).filter((branch) => branch.isActive),
+    [branches]
+  );
   const { data: permissions, isLoading: isLoadingPerms } = useQuery({
     queryKey: ["permissions"],
     queryFn: () => permissionsApi.getAll(),
@@ -41,10 +58,18 @@ export function PermissionMatrix({ role }: PermissionMatrixProps) {
 
   // Auto-select first branch
   useEffect(() => {
-    if (branches && branches.length > 0 && selectedBranchId === 0) {
-      setSelectedBranchId(branches[0].id);
+    if (activeBranches.length === 0) {
+      setSelectedBranchId(0);
+      return;
     }
-  }, [branches, selectedBranchId]);
+
+    if (
+      selectedBranchId === 0 ||
+      !activeBranches.some((branch) => branch.id === selectedBranchId)
+    ) {
+      setSelectedBranchId(activeBranches[0].id);
+    }
+  }, [activeBranches, selectedBranchId]);
 
   // Reset role change
   useEffect(() => {
@@ -63,6 +88,9 @@ export function PermissionMatrix({ role }: PermissionMatrixProps) {
   const groupedPermissions = useMemo(() => {
     if (!permissions) return {};
     return permissions.reduce((acc: any, perm: any) => {
+      if (isHiddenLegacyPermission(perm)) {
+        return acc;
+      }
       if (
         perm.resource === "inventory_checks" ||
         perm.resource === "inventory_promo_checks"
@@ -173,8 +201,19 @@ export function PermissionMatrix({ role }: PermissionMatrixProps) {
     setHasChanges(false);
   };
 
-  const totalPermissions = permissions?.length || 0;
-  const selectedBranch = branches?.find((b) => b.id === selectedBranchId);
+  const totalPermissions = Object.values(groupedPermissions)
+    .flatMap((resources: any) => Object.values(resources || {}))
+    .reduce((total: number, perms: any) => total + perms.length, 0);
+  // Không tính các quyền legacy đang bị ẩn vào bộ đếm hiển thị. Các ID ẩn
+  // vẫn được giữ trong selectedPermissions để khi lưu không vô tình thu hồi
+  // quyền cũ trong DB.
+  const visiblePermissionIds = Object.values(groupedPermissions)
+    .flatMap((resources: any) => Object.values(resources || {}))
+    .flatMap((perms: any) => perms.map((perm: any) => perm.id));
+  const selectedVisibleCount = selectedPermissions.filter((id) =>
+    visiblePermissionIds.includes(id),
+  ).length;
+  const selectedBranch = activeBranches.find((b) => b.id === selectedBranchId);
   const isLoading = isLoadingPerms || isLoadingBranchPerms;
 
   return (
@@ -187,7 +226,7 @@ export function PermissionMatrix({ role }: PermissionMatrixProps) {
               <h2 className="text-xl font-bold text-gray-900">{role.name}</h2>
               <p className="text-sm text-gray-500 mt-0.5">
                 {selectedBranch
-                  ? `${selectedBranch.name} — ${selectedPermissions.length}/${totalPermissions} quyền`
+                  ? `${selectedBranch.name} — ${selectedVisibleCount}/${totalPermissions} quyền`
                   : "Chọn chi nhánh để cấu hình quyền"}
               </p>
             </div>
@@ -213,7 +252,7 @@ export function PermissionMatrix({ role }: PermissionMatrixProps) {
 
           {/* Branch tabs */}
           <div className="flex items-center gap-2 flex-wrap">
-            {(branches || []).map((branch) => (
+            {activeBranches.map((branch) => (
               <button
                 key={branch.id}
                 onClick={() => handleBranchChange(branch.id)}

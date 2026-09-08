@@ -88,6 +88,8 @@ export const ACTION_LABELS: Record<string, string> = {
   print: "In",
   report_delivered: "Báo đơn (Giao thành công)",
   update_policy: "Thiết lập kiểu công nợ",
+  stop_delivery: "Tạo phiếu ngừng đi hàng",
+  close_stop_delivery: "Kết thúc phiếu ngừng đi hàng",
   close: "Kết thúc",
   sales: "Báo cáo bán hàng",
   inventory: "Báo cáo tồn kho",

@@ -159,6 +159,24 @@ export function useCloseDebtTicket() {
   });
 }
 
+export function useCloseStopDeliveryTicket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: {
+      id: number;
+      reason: string;
+      finalStatus?: "DONE" | "ENDED";
+    }) => debtTicketsApi.closeStopDelivery(vars.id, vars.reason, vars.finalStatus),
+    onSuccess: () => {
+      invalidateAll(qc);
+      toast.success("Đã kết thúc phiếu ngừng đi hàng");
+    },
+    onError: (e: unknown) => {
+      toast.error(e instanceof Error ? e.message : "Kết thúc phiếu thất bại");
+    },
+  });
+}
+
 export function useCancelDebtTicket() {
   const qc = useQueryClient();
   return useMutation({

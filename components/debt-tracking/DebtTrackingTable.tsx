@@ -28,7 +28,7 @@ import { DebtCollectionAttemptCell } from "./DebtCollectionAttemptCell";
 import { DebtPolicyModal } from "./DebtPolicyModal";
 import { StopDeliveryDetailModal } from "./StopDeliveryDetailModal";
 import { useCreateStopDeliveryTicket } from "@/lib/hooks/useDebtTickets";
-import { useCloseDebtTicket } from "@/lib/hooks/useDebtTickets";
+import { useCloseStopDeliveryTicket } from "@/lib/hooks/useDebtTickets";
 import { useNotifySaleDebt } from "@/lib/hooks/useDebtTracking";
 import { formatCurrency } from "@/lib/utils";
 import CodeLink from "../shared/CodeLink";
@@ -78,9 +78,24 @@ export function DebtTrackingTable({
   const { data, isLoading, isFetching } = useDebtTracking(params);
   const canEditPolicy = usePermission("debt_tracking", "update_policy");
   const canNote = true;
-  const canCreateTicket = usePermission("debt_tickets", "create");
+  // Quyền mới thuộc nhóm theo dõi công nợ; fallback quyền cũ để không làm
+  // gián đoạn người dùng đã được cấp `debt_tickets:create`.
+  const canCreateStopDeliveryByTracking = usePermission(
+    "debt_tracking",
+    "stop_delivery",
+  );
+  const canCreateStopDeliveryLegacy = usePermission("debt_tickets", "create");
+  const canCreateStopDelivery =
+    canCreateStopDeliveryByTracking || canCreateStopDeliveryLegacy;
+  const canCloseStopDeliveryByTracking = usePermission(
+    "debt_tracking",
+    "close_stop_delivery",
+  );
+  const canCloseStopDeliveryLegacy = usePermission("debt_tickets", "cancel");
+  const canCloseStopDelivery =
+    canCloseStopDeliveryByTracking || canCloseStopDeliveryLegacy;
   const createStop = useCreateStopDeliveryTicket();
-  const closeStop = useCloseDebtTicket();
+  const closeStop = useCloseStopDeliveryTicket();
   const notifySaleDebt = useNotifySaleDebt();
   const [notifyingCustomerId, setNotifyingCustomerId] = useState<number | null>(
     null,
@@ -235,7 +250,7 @@ export function DebtTrackingTable({
       inputValidator: (value) =>
         !value?.trim() ? "Vui lòng nhập lý do" : undefined,
     });
-    if (!result.isConfirmed || !result.value) return;
+    if (!result.isConfirmed || !result.value || !canCloseStopDelivery) return;
 
     setClosingCustomerId(row.customerId);
     closeStop.mutate(
@@ -622,15 +637,19 @@ export function DebtTrackingTable({
                 </td>
                 <td className={`${columnClass("stopDelivery")} px-3 py-2 align-top text-xs`} style={columnStyle("stopDelivery")}>
                   {r.openTicket?.ticketType === "STOP_DELIVERY" ? (
-                    <button
-                      onClick={() => void handleCloseStop(r)}
-                      disabled={closingCustomerId === r.customerId}
-                      className="text-amber-700 font-medium hover:underline disabled:opacity-50">
-                      {closingCustomerId === r.customerId
-                        ? "Đang kết thúc…"
-                        : "Kết thúc"}
-                    </button>
-                  ) : canCreateTicket ? (
+                    canCloseStopDelivery ? (
+                      <button
+                        onClick={() => void handleCloseStop(r)}
+                        disabled={closingCustomerId === r.customerId}
+                        className="text-amber-700 font-medium hover:underline disabled:opacity-50">
+                        {closingCustomerId === r.customerId
+                          ? "Đang kết thúc…"
+                          : "Kết thúc"}
+                      </button>
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )
+                  ) : canCreateStopDelivery ? (
                     <button
                       onClick={() => {
                         setCreatingCustomerId(r.customerId);
