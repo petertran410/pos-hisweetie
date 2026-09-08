@@ -36,6 +36,7 @@ export interface TransferPlanningItem {
   trademarkId?: number;
   trademarkName?: string;
   stockHN: number;
+  promisedHN: number;
   stockSG: number;
   inTransit: number;
   pendingTransfer: number;
@@ -68,6 +69,9 @@ export interface TransferPlanningFilters {
   cargoType?: "COLD" | "NORMAL" | ""; // Loại vận chuyển (Lạnh / Thường)
   tradeMarkIds?: number[]; // Thương hiệu (include)
   excludeTradeMarkIds?: number[]; // Thương hiệu loại trừ (exclude)
+
+  /** Lọc theo khả năng đáp ứng: "under" = tồn HN < SL đề xuất, "met" = tồn HN >= SL đề xuất */
+  availabilityFilter?: "under" | "met";
 
   page?: number;
   limit?: number;

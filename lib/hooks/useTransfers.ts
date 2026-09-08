@@ -28,7 +28,7 @@ export function useTransfer(id: number) {
 
 export function useTransferDrilldownByProduct(
   productId: number | null,
-  status: 1 | 2
+  status: 1 | 2,
 ) {
   return useQuery({
     queryKey: ["transfers-drilldown", productId, status],
@@ -36,6 +36,14 @@ export function useTransferDrilldownByProduct(
       status === 1
         ? transfersApi.getPendingByProduct(productId!)
         : transfersApi.getInTransitByProduct(productId!),
+    enabled: !!productId,
+  });
+}
+
+export function usePromisedHNDrilldownByProduct(productId: number | null) {
+  return useQuery({
+    queryKey: ["transfers-promised-hn-drilldown", productId],
+    queryFn: () => transfersApi.getPromisedHNByProduct(productId!),
     enabled: !!productId,
   });
 }
@@ -139,7 +147,7 @@ async function downloadExcelFromUrl(url: URL, filename: string) {
 
 function buildTransferExportUrl(
   path: string,
-  filters: TransferQueryParams
+  filters: TransferQueryParams,
 ): URL {
   const { pageSize: _ps, currentItem: _ci, ...exportFilters } = filters;
   const url = new URL(`${API_URL}${path}`);
