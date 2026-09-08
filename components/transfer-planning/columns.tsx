@@ -12,6 +12,7 @@ import { TempTransferInput } from "./TempTransferInput";
 export interface TransferPlanningColumnCtx {
   onOpenInTransit?: (item: TransferPlanningItem) => void;
   onOpenPending?: (item: TransferPlanningItem) => void;
+  onOpenPromisedHN?: (item: TransferPlanningItem) => void;
   onOpenAddToTransfer?: (item: TransferPlanningItem) => void;
 }
 
@@ -59,6 +60,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<
       label: "SKU",
       visible: true,
       width: "110px",
+      group: "Thông tin SP",
       render: (item) => (
         <Link
           href={`/san-pham/danh-sach?Code=${encodeURIComponent(item.sku)}`}
@@ -78,6 +80,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<
       label: "Tên sản phẩm",
       visible: true,
       width: "320px",
+      group: "Thông tin SP",
       render: (item) => (
         <div
           className="max-w-[310px] truncate font-medium text-gray-900"
@@ -93,6 +96,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<
       label: "ĐVT",
       visible: true,
       width: "70px",
+      group: "Thông tin SP",
       render: (item) => (
         <span className="text-xs text-gray-500 block text-center">
           {item.unit}
@@ -105,6 +109,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<
       label: "Tồn HN",
       visible: true,
       width: "90px",
+      group: "Tồn kho HN & Đang chuyển",
       render: (item) => (
         <span className="font-mono text-sm text-gray-700 block text-right">
           {formatWholeQuantity(item.stockHN)}
@@ -113,22 +118,41 @@ export function buildTransferPlanningColumns(): ColumnConfig<
       exportValue: (item) => item.stockHN,
     },
     {
-      key: "stockSG",
-      label: "Tồn SG",
+      key: "promisedHN",
+      label: "Hứa bán HN",
       visible: true,
-      width: "90px",
-      render: (item) => (
-        <span className="font-mono text-sm text-gray-700 block text-right">
-          {formatWholeQuantity(item.stockSG)}
-        </span>
-      ),
-      exportValue: (item) => item.stockSG,
+      width: "110px",
+      group: "Tồn kho HN & Đang chuyển",
+      tooltip: "Tổng số lượng đơn Phiếu tạm và Đã xác nhận tại Kho Hà Nội",
+      render: (item, ctx) => {
+        if (item.promisedHN <= 0) {
+          return (
+            <span className="block text-right font-mono text-sm text-gray-400">
+              {formatWholeQuantity(item.promisedHN)}
+            </span>
+          );
+        }
+        return (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              ctx?.onOpenPromisedHN?.(item);
+            }}
+            className="text-brand block w-full cursor-pointer text-right font-mono text-sm font-medium hover:underline"
+          >
+            {formatWholeQuantity(item.promisedHN)}
+          </button>
+        );
+      },
+      exportValue: (item) => item.promisedHN,
     },
     {
       key: "inTransit",
       label: "Đang chuyển",
       visible: true,
       width: "105px",
+      group: "Tồn kho HN & Đang chuyển",
       tooltip: "Hàng transfer nội bộ đang đi từ Hà Nội → Sài Gòn",
       render: (item, ctx) => {
         if (item.inTransit <= 0) {
@@ -154,10 +178,24 @@ export function buildTransferPlanningColumns(): ColumnConfig<
       exportValue: (item) => item.inTransit,
     },
     {
+      key: "stockSG",
+      label: "Tồn SG",
+      visible: true,
+      width: "90px",
+      group: "Tồn kho SG",
+      render: (item) => (
+        <span className="font-mono text-sm text-gray-700 block text-right">
+          {formatWholeQuantity(item.stockSG)}
+        </span>
+      ),
+      exportValue: (item) => item.stockSG,
+    },
+    {
       key: "committed",
-      label: "Đơn tạm",
+      label: "Đơn tạm SG",
       visible: true,
       width: "100px",
+      group: "Tồn kho SG",
       tooltip: "Tổng số lượng đơn PENDING (tạm) tại Kho Sài Gòn",
       render: (item) => (
         <span
@@ -172,9 +210,10 @@ export function buildTransferPlanningColumns(): ColumnConfig<
     },
     {
       key: "confirmedOrders",
-      label: "Đơn xác nhận",
+      label: "Đơn xác nhận SG",
       visible: true,
       width: "115px",
+      group: "Tồn kho SG",
       tooltip: "Tổng số lượng đơn CONFIRMED (đã xác nhận) tại Kho Sài Gòn",
       render: (item) => (
         <div className="text-right">
@@ -196,6 +235,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<
       label: "Demand/ngày",
       visible: true,
       width: "115px",
+      group: "Tính toán - Đề xuất - Cảnh báo",
       tooltip: "Nhu cầu bán trung bình/ngày = 60%×BQ5 + 30%×BQ30 + 10%×BQ90",
       render: (item) => (
         <span className="font-mono text-sm text-gray-900 font-bold block text-right">
@@ -209,6 +249,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<
       label: "Tồn khả dụng SG",
       visible: true,
       width: "130px",
+      group: "Tính toán - Đề xuất - Cảnh báo",
       tooltip: "Tồn SG + Đang chuyển − Đơn tạm − Đơn xác nhận",
       render: (item) => (
         <span
@@ -228,6 +269,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<
       label: "Khả dụng (ngày)",
       visible: true,
       width: "130px",
+      group: "Tính toán - Đề xuất - Cảnh báo",
       tooltip: "Tồn khả dụng SG ÷ Demand/ngày",
       render: (item) => {
         const demand = item.computed.demandPerDay;
@@ -261,6 +303,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<
       label: "Tồn mục tiêu",
       visible: true,
       width: "115px",
+      group: "Tính toán - Đề xuất - Cảnh báo",
       tooltip:
         "Tồn an toàn (2 ngày) + Demand × Chu kỳ (5-7 ngày tùy loại vận chuyển)",
       render: (item) => (
@@ -275,6 +318,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<
       label: "SL đề xuất",
       visible: true,
       width: "120px",
+      group: "Tính toán - Đề xuất - Cảnh báo",
       tooltip: "MAX(0, Tồn mục tiêu - Tồn khả dụng SG)",
       render: (item, ctx) => {
         const qty = item.computed.suggestedQuantity;
@@ -310,6 +354,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<
       label: "Tạm chuyển",
       visible: true,
       width: "115px",
+      group: "Tính toán - Đề xuất - Cảnh báo",
       tooltip:
         "Số lượng bạn dự kiến thực tế chuyển; tự động lưu theo tài khoản",
       render: (item) => (
@@ -332,6 +377,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<
       label: "Phiếu tạm",
       visible: true,
       width: "105px",
+      group: "Tính toán - Đề xuất - Cảnh báo",
       tooltip: "Tổng số lượng trên phiếu tạm từ Kho Hà Nội → Kho Sài Gòn",
       render: (item, ctx) => {
         if (item.pendingTransfer <= 0) {
@@ -361,6 +407,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<
       label: "Cảnh báo",
       visible: true,
       width: "130px",
+      group: "Tính toán - Đề xuất - Cảnh báo",
       render: (item) => renderAlertBadge(item),
       exportValue: (item) => item.computed.alertLabel,
     },
@@ -369,6 +416,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<
       label: "Lý do",
       visible: true,
       width: "210px",
+      group: "Tính toán - Đề xuất - Cảnh báo",
       render: (item) => (
         <span
           className="text-xs text-gray-600 truncate max-w-[200px] block"

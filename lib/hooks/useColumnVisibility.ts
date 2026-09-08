@@ -7,6 +7,8 @@ export interface ColumnConfig<T, Ctx = unknown> {
   label: string;
   visible: boolean;
   width?: string;
+  /** Tên nhóm cột — dùng để gom header 2 cấp */
+  group?: string;
   render: (item: T, ctx?: Ctx) => React.ReactNode;
   /**
    * Giá trị thô để xuất Excel. Nếu bỏ trống, cột được coi là chỉ phục vụ thao

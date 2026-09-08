@@ -96,11 +96,29 @@ export interface TransferDrilldownResponse {
   sumQuantity: number;
 }
 
+export interface PromisedHNOrderRecord {
+  orderId: number;
+  code: string;
+  createdAt: string;
+  grandTotal: number;
+  status: number;
+  statusLabel: string;
+  customer: { id: number; code: string | null; name: string } | null;
+  creator: { id: number; name: string | null } | null;
+  quantity: number;
+}
+
+export interface PromisedHNDrilldownResponse {
+  data: PromisedHNOrderRecord[];
+  total: number;
+  sumQuantity: number;
+}
+
 export const transfersApi = {
   getAll: (params?: TransferQueryParams) =>
     apiClient.get<{ total: number; pageSize: number; data: Transfer[] }>(
       "/transfers",
-      params
+      params,
     ),
 
   getById: (id: number) => apiClient.get<Transfer>(`/transfers/${id}`),
@@ -118,16 +136,21 @@ export const transfersApi = {
 
   getDraftCandidates: () =>
     apiClient.get<{ data: DraftTransferCandidate[] }>(
-      "/transfers/draft-candidates"
+      "/transfers/draft-candidates",
     ),
 
   getInTransitByProduct: (productId: number) =>
     apiClient.get<TransferDrilldownResponse>(
-      `/transfers/in-transit-by-product?productId=${productId}`
+      `/transfers/in-transit-by-product?productId=${productId}`,
     ),
 
   getPendingByProduct: (productId: number) =>
     apiClient.get<TransferDrilldownResponse>(
-      `/transfers/pending-by-product?productId=${productId}`
+      `/transfers/pending-by-product?productId=${productId}`,
+    ),
+
+  getPromisedHNByProduct: (productId: number) =>
+    apiClient.get<PromisedHNDrilldownResponse>(
+      `/transfers/promised-hn-by-product?productId=${productId}`,
     ),
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import {
   ArrowUpDown,
   ArrowUp,
@@ -38,6 +38,7 @@ interface TransferPlanningTableProps {
 
 const RIGHT_ALIGNED_KEYS = [
   "stockHN",
+  "promisedHN",
   "stockSG",
   "inTransit",
   "committed",
@@ -68,6 +69,44 @@ export function TransferPlanningTable({
   tempDraftCount = 0,
   onResetTempQuantities,
 }: TransferPlanningTableProps) {
+  // Tính toán vị trí offset động cho các cột sticky để tránh đè chữ khi cuộn ngang
+  const skuCol = visibleColumns.find((c) => c.key === "sku");
+  const isSkuVisible = Boolean(skuCol);
+  const skuWidth = skuCol ? parseInt(skuCol.width || "110", 10) || 110 : 0;
+
+  // Gom nhóm cột liên tiếp cùng group để render header row 1
+  const columnGroups = useMemo(() => {
+    const groups: {
+      name: string | undefined;
+      colSpan: number;
+      startIndex: number;
+      hasPinned: boolean;
+      pinnedLeft?: string;
+    }[] = [];
+    for (let i = 0; i < visibleColumns.length; i++) {
+      const col = visibleColumns[i];
+      const prev = groups[groups.length - 1];
+      if (prev && prev.name === col.group) {
+        prev.colSpan += 1;
+        if (col.key === "sku" || col.key === "name") prev.hasPinned = true;
+      } else {
+        const hasPinned = col.key === "sku" || col.key === "name";
+        let pinnedLeft: string | undefined;
+        if (col.key === "sku") pinnedLeft = "0px";
+        if (col.key === "name")
+          pinnedLeft = isSkuVisible ? `${skuWidth}px` : "0px";
+        groups.push({
+          name: col.group,
+          colSpan: 1,
+          startIndex: i,
+          hasPinned,
+          pinnedLeft,
+        });
+      }
+    }
+    return groups;
+  }, [visibleColumns, isSkuVisible, skuWidth]);
+
   if (isLoading) {
     return (
       <div className="flex-1 p-8 flex flex-col items-center justify-center text-gray-400 space-y-3">
@@ -131,11 +170,6 @@ export function TransferPlanningTable({
     );
   }
 
-  // Tính toán vị trí offset động cho các cột sticky để tránh đè chữ khi cuộn ngang
-  const skuCol = visibleColumns.find((c) => c.key === "sku");
-  const isSkuVisible = Boolean(skuCol);
-  const skuWidth = skuCol ? parseInt(skuCol.width || "110", 10) || 110 : 0;
-
   return (
     <div className="flex-1 overflow-auto custom-sidebar-scroll relative">
       <table className="w-full text-left border-collapse text-sm">
@@ -144,6 +178,32 @@ export function TransferPlanningTable({
           className="sticky top-0 z-30 bg-gray-100 shadow-sm text-xs font-semibold text-gray-700 border-b"
           style={{ borderColor: "var(--dt-border)" }}
         >
+          {/* Row 1: Group headers */}
+          <tr>
+            {columnGroups.map((g, idx) => {
+              const firstCol = visibleColumns[g.startIndex];
+              const isLastGroup = idx === columnGroups.length - 1;
+              const isLastPinnedGroup =
+                g.hasPinned &&
+                !columnGroups.slice(idx + 1).some((sg) => sg.hasPinned);
+
+              return (
+                <th
+                  key={`group-${g.startIndex}`}
+                  colSpan={g.colSpan}
+                  style={{ left: g.pinnedLeft }}
+                  className={`py-2 px-3.5 text-center whitespace-nowrap bg-gray-100 border-b ${
+                    g.hasPinned ? "sticky z-30 bg-gray-100" : ""
+                  } ${isLastPinnedGroup ? "shadow-[2px_0_5px_-2px_rgba(0,0,0,0.15)]" : ""} ${
+                    !isLastGroup ? "border-r" : ""
+                  }`}
+                >
+                  {g.name ?? firstCol.label}
+                </th>
+              );
+            })}
+          </tr>
+          {/* Row 2: Column headers */}
           <tr>
             {visibleColumns.map((col) => {
               const isPinnedSKU = col.key === "sku";
@@ -157,6 +217,7 @@ export function TransferPlanningTable({
                 "sku",
                 "name",
                 "stockHN",
+                "promisedHN",
                 "stockSG",
                 "inTransit",
                 "committed",
@@ -173,7 +234,6 @@ export function TransferPlanningTable({
 
               const isCurrentSort = sortBy === col.key;
 
-              // Tính left offset chính xác
               let pinnedLeft: string | undefined = undefined;
               if (isPinnedSKU) pinnedLeft = "0px";
               if (isPinnedName)
@@ -231,7 +291,6 @@ export function TransferPlanningTable({
                       </PermissionGate>
                     )}
 
-                    {/* Custom Tooltip với delay 200ms */}
                     {col.tooltip && (
                       <span
                         onClick={(e) => e.stopPropagation()}

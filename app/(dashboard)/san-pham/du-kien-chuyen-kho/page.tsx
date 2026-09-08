@@ -26,6 +26,7 @@ import type {
 } from "@/lib/types/transfer-planning";
 import { QuickCreateTransferModal } from "@/components/transfer-planning/QuickCreateTransferModal";
 import { ResetTempQuantitiesDialog } from "@/components/transfer-planning/ResetTempQuantitiesDialog";
+import { PromisedHNDrilldownModal } from "@/components/transfer-planning/PromisedHNDrilldownModal";
 
 const DEFAULT_FILTERS: TransferPlanningFilters = {
   search: "",
@@ -53,6 +54,8 @@ export default function TransferPlanningPage() {
   } | null>(null);
   const [addToTransferItem, setAddToTransferItem] =
     useState<TransferPlanningItem | null>(null);
+  const [promisedHNItem, setPromisedHNItem] =
+    useState<TransferPlanningItem | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [isResetTempOpen, setIsResetTempOpen] = useState(false);
@@ -63,10 +66,28 @@ export default function TransferPlanningPage() {
     buildTransferPlanningColumns(),
   );
 
-  // ── Data Query ──
-  const { data, isLoading, isError, refetch } = useTransferPlanning(filters);
+  // Backend chưa hỗ trợ availabilityFilter nên chỉ dùng filter này phía client.
+  const backendFilters = useMemo(() => {
+    const next = { ...filters };
+    delete next.availabilityFilter;
+    return next;
+  }, [filters]);
 
-  const items = useMemo(() => data?.data ?? [], [data]);
+  // ── Data Query ──
+  const { data, isLoading, isError, refetch } =
+    useTransferPlanning(backendFilters);
+
+  // Backend chưa hỗ trợ availabilityFilter → client-side filter sau khi có data
+  const items = useMemo(() => {
+    const raw = data?.data ?? [];
+    if (!filters.availabilityFilter) return raw;
+    const key = filters.availabilityFilter;
+    return raw.filter((item) =>
+      key === "under"
+        ? item.stockHN < item.computed.suggestedQuantity
+        : item.stockHN >= item.computed.suggestedQuantity,
+    );
+  }, [data, filters.availabilityFilter]);
 
   // Side panel dùng CHÍNH object item từ dữ liệu bảng (cùng nguồn backend live)
   // để đảm bảo 100% đồng nhất với cột hiển thị, tránh lệch do dữ liệu tĩnh cũ.
@@ -74,7 +95,7 @@ export default function TransferPlanningPage() {
     () => items.find((i) => i.id === selectedItemId) ?? null,
     [items, selectedItemId],
   );
-  const total = data?.total ?? 0;
+  const total = items.length;
   const summary = data?.summary;
 
   const handleFiltersChange = useCallback(
@@ -196,6 +217,7 @@ export default function TransferPlanningPage() {
                   sku: item.sku,
                   variant: "pending",
                 }),
+              onOpenPromisedHN: setPromisedHNItem,
               onOpenAddToTransfer: (item) => setAddToTransferItem(item),
             }}
             tempDraftCount={summary?.tempDraftCount ?? 0}
@@ -226,6 +248,15 @@ export default function TransferPlanningPage() {
             productName={drilldownItem.name}
             productSku={drilldownItem.sku}
             onClose={() => setDrilldownItem(null)}
+          />
+        )}
+
+        {promisedHNItem && (
+          <PromisedHNDrilldownModal
+            productId={promisedHNItem.id}
+            productName={promisedHNItem.name}
+            productSku={promisedHNItem.sku}
+            onClose={() => setPromisedHNItem(null)}
           />
         )}
 

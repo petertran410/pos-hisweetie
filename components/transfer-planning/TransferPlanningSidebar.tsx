@@ -23,9 +23,22 @@ const CARGO_TYPE_OPTIONS = [
   { value: "NORMAL", label: "Hàng thường" },
 ];
 
+const AVAILABILITY_OPTIONS: {
+  value: "under" | "met";
+  label: string;
+}[] = [
+  { value: "under", label: "Tồn HN < SL đề xuất" },
+  { value: "met", label: "Tồn HN ≥ SL đề xuất" },
+];
+
 const toArray = <T,>(val: unknown): T[] => {
   if (Array.isArray(val)) return val;
-  if (val && typeof val === "object" && "data" in val && Array.isArray((val as any).data)) {
+  if (
+    val &&
+    typeof val === "object" &&
+    "data" in val &&
+    Array.isArray((val as any).data)
+  ) {
     return (val as any).data;
   }
   return [];
@@ -38,6 +51,7 @@ export function TransferPlanningSidebar({
   totalFiltered,
 }: TransferPlanningSidebarProps) {
   const activeAlert = filters.alertFilter || "ALL";
+  const activeAvailability = filters.availabilityFilter;
 
   // Data cho các bộ lọc Hàng hoá từ API thật
   const { data: parentCategories } = useCategories("parent", {
@@ -141,9 +155,21 @@ export function TransferPlanningSidebar({
     textClass: string;
   }> = [
     { key: "ALL", label: "Tất cả cảnh báo", textClass: "text-gray-700" },
-    { key: "DARK_RED", label: "CHUYỂN GẤP (Đơn > Tồn)", textClass: "text-rose-700 font-bold" },
-    { key: "RED", label: "Cần điều chuyển", textClass: "text-red-600 font-semibold" },
-    { key: "YELLOW", label: "Cần xem xét", textClass: "text-amber-600 font-medium" },
+    {
+      key: "DARK_RED",
+      label: "CHUYỂN GẤP (Đơn > Tồn)",
+      textClass: "text-rose-700 font-bold",
+    },
+    {
+      key: "RED",
+      label: "Cần điều chuyển",
+      textClass: "text-red-600 font-semibold",
+    },
+    {
+      key: "YELLOW",
+      label: "Cần xem xét",
+      textClass: "text-amber-600 font-medium",
+    },
     { key: "GREEN", label: "Đủ hàng", textClass: "text-emerald-600" },
   ];
 
@@ -154,16 +180,19 @@ export function TransferPlanningSidebar({
     (filters.middleNames && filters.middleNames.length > 0) ||
     (filters.childNames && filters.childNames.length > 0) ||
     Boolean(filters.cargoType) ||
-    (filters.tradeMarkIds && filters.tradeMarkIds.length > 0);
+    (filters.tradeMarkIds && filters.tradeMarkIds.length > 0) ||
+    Boolean(filters.availabilityFilter);
 
   return (
     <aside
       className="w-64 shrink-0 border-r bg-white flex flex-col h-full overflow-y-auto custom-sidebar-scroll"
-      style={{ borderColor: "var(--dt-border)" }}>
+      style={{ borderColor: "var(--dt-border)" }}
+    >
       {/* Header */}
       <div
         className="p-4 border-b flex items-center justify-between"
-        style={{ borderColor: "var(--dt-border)" }}>
+        style={{ borderColor: "var(--dt-border)" }}
+      >
         <div className="flex items-center gap-2 font-semibold text-gray-800 text-sm">
           <Filter className="w-4 h-4 text-primary" />
           <span>Bộ lọc kế hoạch</span>
@@ -173,7 +202,8 @@ export function TransferPlanningSidebar({
             type="button"
             onClick={onReset}
             className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-            title="Đặt lại bộ lọc">
+            title="Đặt lại bộ lọc"
+          >
             <RotateCcw className="w-3 h-3" />
             <span>Đặt lại</span>
           </button>
@@ -208,13 +238,18 @@ export function TransferPlanningSidebar({
                 <button
                   key={opt.key}
                   type="button"
-                  onClick={() => onFiltersChange({ alertFilter: opt.key, page: 1 })}
+                  onClick={() =>
+                    onFiltersChange({ alertFilter: opt.key, page: 1 })
+                  }
                   className={`w-full text-left px-3 py-1.5 rounded-md text-xs transition-colors flex items-center gap-2 ${
                     isSelected
                       ? "bg-gray-800 text-white font-medium"
                       : "hover:bg-gray-100"
-                  }`}>
-                  <span className={`truncate ${isSelected ? "text-white" : opt.textClass}`}>
+                  }`}
+                >
+                  <span
+                    className={`truncate ${isSelected ? "text-white" : opt.textClass}`}
+                  >
                     {opt.label}
                   </span>
                 </button>
@@ -223,7 +258,52 @@ export function TransferPlanningSidebar({
           </div>
         </div>
 
-        <div className="border-t my-2" style={{ borderColor: "var(--dt-border)" }} />
+        {/* Đề xuất khả dụng */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+            Đề xuất khả dụng
+          </label>
+          <div className="space-y-1">
+            {AVAILABILITY_OPTIONS.map((opt) => {
+              const isSelected = activeAvailability === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() =>
+                    onFiltersChange({
+                      availabilityFilter: isSelected ? undefined : opt.value,
+                      page: 1,
+                    })
+                  }
+                  className={`w-full text-left px-3 py-1.5 rounded-md text-xs transition-colors flex items-center gap-2 ${
+                    isSelected
+                      ? "bg-gray-800 text-white font-medium"
+                      : "hover:bg-gray-100"
+                  }`}
+                >
+                  <span
+                    className={`h-3 w-3 rounded-full border flex-shrink-0 ${
+                      isSelected
+                        ? "border-white bg-white"
+                        : "border-gray-400 bg-transparent"
+                    }`}
+                  />
+                  <span
+                    className={`truncate ${isSelected ? "text-white" : "text-gray-700"}`}
+                  >
+                    {opt.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div
+          className="border-t my-2"
+          style={{ borderColor: "var(--dt-border)" }}
+        />
 
         {/* 3. BỘ LỌC HÀNG HOÁ TƯƠNG TỰ /san-pham/danh-sach */}
         <div className="space-y-4">
@@ -233,25 +313,33 @@ export function TransferPlanningSidebar({
 
           {/* 3a. Loại Hàng */}
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Loại Hàng</label>
+            <label className="block text-xs text-gray-600 mb-1">
+              Loại Hàng
+            </label>
             <FilterMultiSelect
               options={parentOptions}
               values={filters.parentNames || []}
               placeholder="Tất cả loại hàng"
               searchPlaceholder="Tìm loại hàng..."
-              onChange={(values) => onFiltersChange({ parentNames: values, page: 1 })}
+              onChange={(values) =>
+                onFiltersChange({ parentNames: values, page: 1 })
+              }
             />
           </div>
 
           {/* 3b. Nguồn Gốc */}
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Nguồn Gốc</label>
+            <label className="block text-xs text-gray-600 mb-1">
+              Nguồn Gốc
+            </label>
             <FilterMultiSelect
               options={middleOptions}
               values={filters.middleNames || []}
               placeholder="Tất cả nguồn gốc"
               searchPlaceholder="Tìm nguồn gốc..."
-              onChange={(values) => onFiltersChange({ middleNames: values, page: 1 })}
+              onChange={(values) =>
+                onFiltersChange({ middleNames: values, page: 1 })
+              }
             />
           </div>
 
@@ -263,13 +351,17 @@ export function TransferPlanningSidebar({
               values={filters.childNames || []}
               placeholder="Tất cả danh mục"
               searchPlaceholder="Tìm danh mục..."
-              onChange={(values) => onFiltersChange({ childNames: values, page: 1 })}
+              onChange={(values) =>
+                onFiltersChange({ childNames: values, page: 1 })
+              }
             />
           </div>
 
           {/* 3d. Loại vận chuyển */}
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Loại vận chuyển</label>
+            <label className="block text-xs text-gray-600 mb-1">
+              Loại vận chuyển
+            </label>
             <select
               value={filters.cargoType || ""}
               onChange={(e) =>
@@ -278,7 +370,8 @@ export function TransferPlanningSidebar({
                   page: 1,
                 })
               }
-              className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-800 focus:outline-none focus:border-primary">
+              className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-800 focus:outline-none focus:border-primary"
+            >
               <option value="">Tất cả</option>
               {CARGO_TYPE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -290,7 +383,9 @@ export function TransferPlanningSidebar({
 
           {/* 3e. Thương hiệu */}
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Thương hiệu</label>
+            <label className="block text-xs text-gray-600 mb-1">
+              Thương hiệu
+            </label>
             <FilterMultiSelect
               options={trademarkOptions}
               values={(filters.tradeMarkIds || []).map(String)}
@@ -310,8 +405,11 @@ export function TransferPlanningSidebar({
       {/* Footer info */}
       <div
         className="p-3 border-t bg-gray-50 text-xs text-gray-500 text-center"
-        style={{ borderColor: "var(--dt-border)" }}>
-        Đang lọc: <strong className="text-gray-800 font-semibold">{totalFiltered}</strong> SKU
+        style={{ borderColor: "var(--dt-border)" }}
+      >
+        Đang lọc:{" "}
+        <strong className="text-gray-800 font-semibold">{totalFiltered}</strong>{" "}
+        SKU
       </div>
     </aside>
   );
