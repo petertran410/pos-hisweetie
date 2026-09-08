@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Package, TrendingDown, TrendingUp, X } from "lucide-react";
+import { AlertTriangle, BarChart3, Package, TrendingDown, TrendingUp, X } from "lucide-react";
 import { PriorityBadge, ReliabilityBadge, SeverityBadge } from "./PriorityBadge";
+import { DecisionTimelineModal } from "./DecisionTimelineModal";
 import { useRecommendationDetail } from "@/lib/hooks/usePurchasingPlanning";
 import {
   CONFIDENCE_LABEL,
@@ -49,11 +51,13 @@ const ORDER_URGENCY_BOX: Record<string, string> = {
 
 export function RecommendationDetailPanel({ itemId, onClose }: Props) {
   const { data, isLoading, isError } = useRecommendationDetail(itemId);
+  const [chartOpen, setChartOpen] = useState(false);
 
   if (itemId === null) return null;
 
   return (
-    <aside
+    <>
+      <aside
       className="flex w-[520px] shrink-0 flex-col overflow-hidden border-l bg-white"
       style={{ borderColor: "var(--dt-border)" }}>
       {/* ── Header ── */}
@@ -100,6 +104,16 @@ export function RecommendationDetailPanel({ itemId, onClose }: Props) {
                 }`}>
                 {data.summaryText}
               </p>
+
+              {data && (
+                <button
+                  type="button"
+                  onClick={() => setChartOpen(true)}
+                  className="mt-3 flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-medium text-teal-900 hover:bg-teal-100">
+                  <BarChart3 className="h-4 w-4" />
+                  Xem biểu đồ tổng quan
+                </button>
+              )}
 
               {data.suggestedQuantity > 0 && (
                 <div className="mt-3 rounded border border-gray-900 bg-gray-900 px-3 py-2 text-white">
@@ -409,7 +423,20 @@ export function RecommendationDetailPanel({ itemId, onClose }: Props) {
           </div>
         )}
       </div>
-    </aside>
+      </aside>
+      <DecisionTimelineModal
+        open={chartOpen}
+        onClose={() => setChartOpen(false)}
+        productName={data?.productName ?? ""}
+        unit={data?.unit ?? null}
+        timeline={data?.decisionTimeline}
+        availableStock={data?.availableStock ?? 0}
+        forecastDailyDemand={data?.forecastDailyDemand ?? 0}
+        leadTimeDays={data?.leadTimeDays ?? 0}
+        confidence={data?.confidence ?? "NO_DATA"}
+        reliability={data?.reliability ?? "BLOCKED"}
+      />
+    </>
   );
 }
 

@@ -455,6 +455,62 @@ export interface PromotionWindowInfo {
   endDate: string;
 }
 
+export type DecisionTimelineAnomaly = "NORMAL" | "SPIKE" | "DROP";
+export type DecisionTimelineEventType =
+  | "PROMOTION"
+  | "TREND"
+  | "INCOMING"
+  | "VEHICLE_SHIPMENT";
+
+export interface DecisionTimelineHistoryPoint {
+  month: string;
+  quantity: number;
+  dailyRate: number;
+  baseline: number;
+  anomaly: DecisionTimelineAnomaly;
+  hasPromotion: boolean;
+  hasTrend: boolean;
+  promotionNames: string[];
+  trendNames: string[];
+}
+
+export interface DecisionTimelineProjectionPoint {
+  date: string;
+  stockWithFirmSupply: number;
+  stockWithVehicleScenario: number;
+  demand: number;
+  confirmedIncoming: number;
+  vehicleIncoming: number;
+}
+
+export interface DecisionTimelineEvent {
+  type: DecisionTimelineEventType;
+  name: string | null;
+  startDate: string;
+  endDate: string | null;
+  quantity: number | null;
+  etaType: string | null;
+}
+
+export interface DecisionTimeline {
+  history: DecisionTimelineHistoryPoint[];
+  projection: DecisionTimelineProjectionPoint[];
+  markers: {
+    today: string;
+    latestOrderDate: string | null;
+    projectedStockoutDate: string | null;
+    scenarioStockoutDate: string | null;
+    orderArrivalDate: string | null;
+    reorderPoint: number;
+    safetyStock: number;
+  };
+  events: DecisionTimelineEvent[];
+  quantities: {
+    firmSuggestedQuantity: number;
+    vehicleScenarioQuantity: number;
+  };
+}
+
 /** Một bước trong quá trình tính — PRD §13.3 */
 export interface CalculationStep {
   step: number;
@@ -479,6 +535,7 @@ export interface CalculationTrace {
   version: string;
   /** ISO datetime */
   computedAt: string;
+  decisionTimeline?: DecisionTimeline | null;
   inputs: {
     /** Snapshot cũ chưa có field này. */
     branchScope?: PurchasingBranchScope;
@@ -522,6 +579,7 @@ export interface RecommendationDetail extends RecommendationListItem {
   branchBreakdown: BranchStock[];
   shipments: IncomingShipmentInfo[];
   forecastComparison: ForecastComparison;
+  decisionTimeline?: DecisionTimeline | null;
   calculationTrace: CalculationTrace;
 
   /** ISO date của snapshot */
