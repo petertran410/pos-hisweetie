@@ -140,14 +140,13 @@ export function RecommendationDetailPanel({ itemId, onClose }: Props) {
                     {data.latestOrderDate && (
                       <div>Hạn đặt: {dateVn(data.latestOrderDate)}</div>
                     )}
-                    <div>
-                      Chờ hàng:{" "}
-                      {data.leadTimeMinDays != null &&
-                      data.leadTimeMinDays !== data.leadTimeDays
-                        ? `${data.leadTimeMinDays}–${data.leadTimeDays}`
-                        : data.leadTimeDays}{" "}
-                      ngày
-                    </div>
+                    <div>Chờ hàng: {data.leadTimeDays} ngày</div>
+                    {data.suggestedQuantityScenario != null &&
+                      data.suggestedQuantityScenario !== data.suggestedQuantity && (
+                      <div>
+                        Nếu ghép xe về đúng hạn: {num(data.suggestedQuantityScenario)}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -167,11 +166,11 @@ export function RecommendationDetailPanel({ itemId, onClose }: Props) {
                       ] as [string, string, string]
                   ),
                   [
-                    "Hàng đã hứa cho khách",
-                    `−${num(data.reservedStock)}`,
-                    "đơn chưa giao",
+                    "Khách đặt",
+                    num(data.reservedStock),
+                    "cộng vào nhu cầu",
                   ],
-                  ["= Tồn kho khả dụng", num(data.availableStock), ""],
+                  ["Tồn kho khả dụng", num(data.availableStock), ""],
                 ]}
                 highlightLast
               />
@@ -270,6 +269,51 @@ export function RecommendationDetailPanel({ itemId, onClose }: Props) {
                   </div>
                 )}
               </div>
+
+              {data.forecastComparison.demandBreakdown && (
+                <div className="mt-3">
+                  <Table
+                    rows={[
+                      ["Khách đặt", num(data.forecastComparison.demandBreakdown.customerOrders), ""],
+                      ["Công ty cần (tồn tối thiểu)", num(data.forecastComparison.demandBreakdown.companyNeed), ""],
+                      ["Bán trong kỳ bao phủ", num(data.forecastComparison.demandBreakdown.salesDemand, 0), ""],
+                      ["Khuyến mãi", num(data.forecastComparison.demandBreakdown.promotionExtra), ""],
+                      ["Trend", num(data.forecastComparison.demandBreakdown.trendExtra), ""],
+                    ]}
+                  />
+                </div>
+              )}
+              {(data.forecastComparison.monthBreakdown?.length ?? 0) > 0 && (
+                <div className="mt-3 space-y-1 text-[11px] text-gray-600">
+                  {data.forecastComparison.monthBreakdown!.map((month) => (
+                    <div key={month.month}>
+                      {month.month}: {num(month.dailyRate, 2)}/ngày
+                      {month.anomaly !== "NORMAL" ? ` · ${month.anomaly}` : ""}
+                      {month.hasPromotion ? " · có KM" : ""}
+                      {month.hasTrend ? " · có trend" : ""}
+                      {month.suspectedTrend ? " · bất thường chưa rõ" : ""}
+                    </div>
+                  ))}
+                  {data.forecastComparison.lookbackMonths?.length ? (
+                    <div>
+                      Tháng 4-5: {data.forecastComparison.lookbackMonths.map((m) => m.month).join(", ")}
+                      {data.forecastComparison.lookbackRepeatsAnomaly ? " · lặp lại bất thường" : ""}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+              {data.forecastComparison.supplyBreakdown && (
+                <div className="mt-3">
+                  <Table
+                    rows={[
+                      ["Tồn khả dụng", num(data.forecastComparison.supplyBreakdown.available), ""],
+                      ["Hàng về chắc chắn", num(data.forecastComparison.supplyBreakdown.confirmedIncoming), ""],
+                      ["Ghép xe có ETA", num(data.forecastComparison.supplyBreakdown.vehicleConfirmed), ""],
+                      ["Ghép xe chưa chắc", num(data.forecastComparison.supplyBreakdown.vehicleRisk), "không trừ hết"],
+                    ]}
+                  />
+                </div>
+              )}
 
               {/* Khuyến mãi sắp tới đã được cộng vào số lượng đề xuất */}
               {(data.forecastComparison.upcomingPromotions?.length ?? 0) > 0 && (
@@ -384,7 +428,10 @@ const CONFIG_LABEL: Record<string, string> = {
 
 const CALCULATION_STEP_LABEL: Record<string, string> = {
   TARGET_STOCK: "Tồn kho mục tiêu",
-  SOQ_RAW: "Số lượng đặt hàng thô",
+  SALES_DEMAND: "Nhu cầu bán trong kỳ",
+  TOTAL_DEMAND: "Tổng nhu cầu",
+  SOQ_RAW: "Số lượng đặt hàng chắc chắn",
+  SOQ_SCENARIO: "Số lượng theo kịch bản ghép xe",
   ROUND_TO_PURCHASE_MULTIPLE: "Làm tròn theo bội số đặt hàng",
   MOQ_POLICY: "Áp dụng chính sách MOQ",
 };

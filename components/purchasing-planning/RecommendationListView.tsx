@@ -124,7 +124,7 @@ function RecommendationRow({
           {item.reservedStock > 0 && (
             <span className="text-gray-400">
               {" "}
-              (đã hứa {num(item.reservedStock)})
+              (KH đặt {num(item.reservedStock)})
             </span>
           )}
         </span>

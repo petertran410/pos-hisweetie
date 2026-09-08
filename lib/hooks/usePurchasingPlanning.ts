@@ -111,3 +111,40 @@ export function useDeletePurchasingConfig() {
     onSuccess: invalidate,
   });
 }
+
+export function usePlanningTrends(enabled = true) {
+  return useQuery({
+    queryKey: [KEY, "trends"],
+    queryFn: () => purchasingPlanningApi.listTrends(),
+    enabled,
+  });
+}
+
+export function useSavePlanningTrend() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id?: number;
+      data: Parameters<typeof purchasingPlanningApi.createTrend>[0];
+    }) =>
+      id
+        ? purchasingPlanningApi.updateTrend(id, data)
+        : purchasingPlanningApi.createTrend(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [KEY, "trends"] });
+    },
+  });
+}
+
+export function useDeletePlanningTrend() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => purchasingPlanningApi.deleteTrend(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [KEY, "trends"] });
+    },
+  });
+}

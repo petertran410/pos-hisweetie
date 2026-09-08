@@ -230,21 +230,13 @@ export function buildColumns(): ColumnConfig<RecommendationListItem>[] {
       visible: true,
       width: "100px",
       tooltip:
-        "Khoảng thời gian từ lúc đặt nhà máy tới khi hàng về công ty: Sản xuất → Thông quan → Về công ty.",
-      render: (i) =>
-        i.leadTimeMinDays != null && i.leadTimeMinDays !== i.leadTimeDays ? (
-          <span className="whitespace-nowrap tabular-nums">
-            {i.leadTimeMinDays}–{i.leadTimeDays} ngày
-          </span>
-        ) : (
+        "Thời gian từ lúc đặt nhà máy tới khi hàng về kho gốc: sản xuất + 10 ngày thông quan + 10 ngày về kho.",
+      render: (i) => (
           <span className="whitespace-nowrap tabular-nums">
             {i.leadTimeDays} ngày
           </span>
         ),
-      exportValue: (i) =>
-        i.leadTimeMinDays != null && i.leadTimeMinDays !== i.leadTimeDays
-          ? `${i.leadTimeMinDays}-${i.leadTimeDays}`
-          : String(i.leadTimeDays),
+      exportValue: (i) => String(i.leadTimeDays),
     },
     {
       key: "orderUrgency",

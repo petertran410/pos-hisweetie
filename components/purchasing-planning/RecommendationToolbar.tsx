@@ -37,6 +37,7 @@ interface Props {
   isExporting?: boolean;
   onRunCalculation?: () => void;
   isCalculating?: boolean;
+  onManageTrends?: () => void;
 }
 
 export function RecommendationToolbar({
@@ -54,6 +55,7 @@ export function RecommendationToolbar({
   isExporting,
   onRunCalculation,
   isCalculating,
+  onManageTrends,
 }: Props) {
   return (
     <>
@@ -101,6 +103,16 @@ export function RecommendationToolbar({
                 <Download className="h-4 w-4" />
               )}
               Xuất file
+            </button>
+          )}
+
+          {onManageTrends && (
+            <button
+              type="button"
+              onClick={onManageTrends}
+              className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              style={{ borderColor: "var(--dt-border)" }}>
+              Trend
             </button>
           )}
 

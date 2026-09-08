@@ -268,10 +268,11 @@ export interface RecommendationListItem {
   // ── Nhà cung cấp ──
   supplierId: number | null;
   supplierName: string | null;
-  /** Tổng leadtime cận trên — dùng làm hạn chót đặt hàng. */
+  /** Tổng leadtime: sản xuất + 10 ngày thông quan + 10 ngày về kho gốc. */
   leadTimeDays: number;
-  /** Tổng leadtime cận dưới — đầu nhanh của khoảng. */
+  /** @deprecated Luôn bằng leadTimeDays sau khi bỏ khoảng min-max. */
   leadTimeMinDays?: number | null;
+  suggestedQuantityScenario?: number | null;
   leadTimeSource: ConfigSource;
 
   // ── Thời điểm cần đặt (trả lời "tháng sau có phải đặt không") ──
@@ -406,6 +407,43 @@ export interface ForecastComparison {
   promotionDays?: number;
   /** Hệ số bán vượt mức nền, suy từ lịch sử chính SKU này. */
   promotionUpliftFactor?: number;
+  upcomingTrends?: PromotionWindowInfo[];
+  trendExtraDemand?: number;
+  trendDays?: number;
+  lookbackMonths?: Array<{
+    month: string;
+    dailyRate: number;
+    anomaly: string;
+    hasPromotion: boolean;
+    hasTrend?: boolean;
+    suspectedTrend: boolean;
+  }>;
+  lookbackRepeatsAnomaly?: boolean;
+  unexplainedAnomaly?: boolean;
+  monthBreakdown?: Array<{
+    month: string;
+    dailyRate: number;
+    anomaly: string;
+    hasPromotion: boolean;
+    hasTrend?: boolean;
+    suspectedTrend: boolean;
+    promotionNames?: string[];
+    trendNames?: string[];
+  }>;
+  demandBreakdown?: {
+    customerOrders: number;
+    companyNeed: number;
+    salesDemand: number;
+    promotionExtra: number;
+    trendExtra: number;
+  };
+  supplyBreakdown?: {
+    available: number;
+    confirmedIncoming: number;
+    vehicleConfirmed: number;
+    vehicleRisk: number;
+  };
+  suggestedQuantityScenario?: number;
 }
 
 /** Một đợt khuyến mãi đang hoặc sắp chạy. */
@@ -535,6 +573,10 @@ export const FLAG_CODE_LABEL: Record<string, string> = {
   OUT_OF_STOCK: "Đang hết hàng",
   OVERSTOCK: "Tồn kho dư thừa",
   PENDING_CUSTOMER_ORDERS: "Có đơn khách đang chờ",
+  UNEXPLAINED_ANOMALY: "Tháng bán bất thường chưa giải thích được",
+  VEHICLE_SHIPMENT_RISK: "Ghép xe chưa chắc ETA",
+  VEHICLE_OVERSTOCK_RISK: "Có thể dư nếu ghép xe về đúng hạn",
+  MISSING_FACTORY: "Chưa gắn nhà máy",
 };
 
 export interface RecommendationFilters {
@@ -695,3 +737,29 @@ export const PRIORITY_ORDER: PriorityLevel[] = [
   "OVERSTOCK",
   "NO_DATA",
 ];
+
+export interface PlanningTrend {
+  id: number;
+  productId: number | null;
+  product: { id: number; code: string; name: string } | null;
+  categoryName: string | null;
+  startDate: string;
+  endDate: string;
+  kind: "UPLIFT" | "QUANTITY" | string;
+  upliftFactor: number | null;
+  extraQuantity: number | null;
+  note: string | null;
+  isActive: boolean;
+  updatedAt?: string;
+}
+
+export interface PlanningTrendPayload {
+  productId?: number | null;
+  categoryName?: string | null;
+  startDate: string;
+  endDate: string;
+  kind?: "UPLIFT" | "QUANTITY";
+  upliftFactor?: number | null;
+  extraQuantity?: number | null;
+  note?: string | null;
+}
