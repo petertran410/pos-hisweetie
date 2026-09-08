@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2, X } from "lucide-react";
+import DatePickerInput from "@/components/ui/DatePickerInput";
 import { useProducts } from "@/lib/hooks/useProducts";
 import {
   useDeletePlanningTrend,
@@ -45,6 +46,10 @@ export function PlanningTrendModal({ open, onClose }: Props) {
   const submit = async () => {
     if (!form.startDate || !form.endDate) {
       toast.error("Nhập ngày bắt đầu và kết thúc");
+      return;
+    }
+    if (form.endDate < form.startDate) {
+      toast.error("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu");
       return;
     }
     if (!form.productId && !form.categoryName.trim()) {
@@ -141,17 +146,29 @@ export function PlanningTrendModal({ open, onClose }: Props) {
               onChange={(e) => setForm({ ...form, categoryName: e.target.value })}
             />
             <div className="grid grid-cols-2 gap-2">
-              <input
-                type="date"
-                className="rounded-lg border px-3 py-2 text-sm"
+              <DatePickerInput
                 value={form.startDate}
-                onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                onChange={(value) =>
+                  setForm((current) => ({
+                    ...current,
+                    startDate: value,
+                    endDate:
+                      current.endDate && value && current.endDate < value
+                        ? ""
+                        : current.endDate,
+                  }))
+                }
+                placeholder="Ngày bắt đầu"
+                className="flex w-full items-center justify-between rounded-lg border px-3 py-2 text-sm text-left"
               />
-              <input
-                type="date"
-                className="rounded-lg border px-3 py-2 text-sm"
+              <DatePickerInput
                 value={form.endDate}
-                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                onChange={(value) =>
+                  setForm((current) => ({ ...current, endDate: value }))
+                }
+                minDate={form.startDate || undefined}
+                placeholder="Ngày kết thúc"
+                className="flex w-full items-center justify-between rounded-lg border px-3 py-2 text-sm text-left"
               />
             </div>
             <select
