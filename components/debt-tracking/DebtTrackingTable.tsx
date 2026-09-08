@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Swal from "sweetalert2";
 import {
@@ -12,6 +12,11 @@ import {
   Repeat,
   Ticket,
   MessageCircle,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  Check,
+  History,
 } from "lucide-react";
 import {
   DebtTrackingRow,
@@ -25,11 +30,12 @@ import { usePermission } from "@/lib/hooks/usePermissions";
 import { DebtStatusBadge, ROW_TINT } from "./DebtStatusBadge";
 import { DebtNoteCell } from "./DebtNoteCell";
 import { DebtCollectionAttemptCell } from "./DebtCollectionAttemptCell";
+import { DebtCycleHistoryModal } from "./DebtCycleHistoryModal";
 import { DebtPolicyModal } from "./DebtPolicyModal";
 import { StopDeliveryDetailModal } from "./StopDeliveryDetailModal";
 import { useCreateStopDeliveryTicket } from "@/lib/hooks/useDebtTickets";
 import { useCloseStopDeliveryTicket } from "@/lib/hooks/useDebtTickets";
-import { useNotifySaleDebt } from "@/lib/hooks/useDebtTracking";
+import { useNotifySaleDebt, useCloseDebtCycle } from "@/lib/hooks/useDebtTracking";
 import { formatCurrency } from "@/lib/utils";
 import CodeLink from "../shared/CodeLink";
 import { ColumnToggle } from "../shared/ColumnToggle";
@@ -40,6 +46,15 @@ import {
 
 const fmtDate = (s: string | null) =>
   s ? new Date(s).toLocaleDateString("vi-VN") : "—";
+
+const COLUMN_ORDER_BY: Record<string, string> = {
+  totalDebt: "totalDebt",
+  creditLimit: "overLimit",
+  requiredPayment: "requiredPaymentAmount",
+  overdueAmount: "overdueAmount",
+};
+
+const SORTABLE_COLUMNS = new Set(Object.keys(COLUMN_ORDER_BY));
 
 const DEFAULT_COLUMNS: ColumnConfig<DebtTrackingRow>[] = [
   { key: "customer", label: "Khách hàng", visible: true, width: "240px", render: () => null },
@@ -58,6 +73,7 @@ const DEFAULT_COLUMNS: ColumnConfig<DebtTrackingRow>[] = [
   { key: "ticket", label: "Phiếu", visible: true, width: "115px", render: () => null },
   { key: "stopDelivery", label: "Ngừng đi hàng", visible: true, width: "135px", render: () => null },
   { key: "note", label: "Ghi chú", visible: true, width: "170px", render: () => null },
+  { key: "cycle", label: "Chu kỳ", visible: true, width: "120px", render: () => null },
 ];
 
 export function DebtTrackingTable({
@@ -75,7 +91,34 @@ export function DebtTrackingTable({
   pageSize: number;
   onPageSizeChange: (pageSize: number) => void;
 }) {
-  const { data, isLoading, isFetching } = useDebtTracking(params);
+  const [sortBy, setSortBy] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc" | null>(null);
+
+  const handleSort = (colKey: string) => {
+    if (!SORTABLE_COLUMNS.has(colKey)) return;
+    if (sortBy !== colKey) {
+      setSortBy(colKey);
+      setSortDir("desc");
+    } else if (sortDir === "desc") {
+      setSortDir("asc");
+    } else {
+      setSortBy(null);
+      setSortDir(null);
+    }
+    onPageChange(1);
+  };
+
+  const queryParams = useMemo(
+    () => ({
+      ...params,
+      ...(sortBy && sortDir
+        ? { orderBy: COLUMN_ORDER_BY[sortBy], orderDirection: sortDir }
+        : {}),
+    }),
+    [params, sortBy, sortDir],
+  );
+
+  const { data, isLoading, isFetching } = useDebtTracking(queryParams);
   const canEditPolicy = usePermission("debt_tracking", "update_policy");
   const canNote = true;
   // Quyền mới thuộc nhóm theo dõi công nợ; fallback quyền cũ để không làm
@@ -97,9 +140,17 @@ export function DebtTrackingTable({
   const createStop = useCreateStopDeliveryTicket();
   const closeStop = useCloseStopDeliveryTicket();
   const notifySaleDebt = useNotifySaleDebt();
+  const closeCycle = useCloseDebtCycle();
   const [notifyingCustomerId, setNotifyingCustomerId] = useState<number | null>(
     null,
   );
+  const [closingCycleCustomerId, setClosingCycleCustomerId] = useState<number | null>(
+    null,
+  );
+  const [cycleHistoryTarget, setCycleHistoryTarget] = useState<{
+    customerId: number;
+    customerName: string;
+  } | null>(null);
   const canOverridePaymentHistory = usePermission(
     "debt_tracking",
     "update_policy"
@@ -152,6 +203,21 @@ export function DebtTrackingTable({
         ? [...new Set([...selectedCustomerIds, customerId])]
         : selectedCustomerIds.filter((id) => id !== customerId)
     );
+  };
+
+  const handleCloseCycle = async (row: DebtTrackingRow) => {
+    const result = await Swal.fire({
+      title: "Kết thúc chu kỳ theo dõi?",
+      text: "Lần đòi nợ và ghi chú hiện tại sẽ được lưu vào lịch sử, sau đó dòng này được làm mới cho chu kỳ mới.",
+      showCancelButton: true,
+      confirmButtonText: "Lưu và làm mới",
+      cancelButtonText: "Hủy",
+    });
+    if (!result.isConfirmed) return;
+    setClosingCycleCustomerId(row.customerId);
+    closeCycle.mutate(row.customerId, {
+      onSettled: () => setClosingCycleCustomerId(null),
+    });
   };
 
   useEffect(() => {
@@ -332,14 +398,46 @@ export function DebtTrackingTable({
               <th className={`${columnClass("paymentHistory")} text-left px-3 py-2.5 font-medium`} style={columnStyle("paymentHistory")}>
                 Lịch sử thanh toán
               </th>
-              <th className={`${columnClass("totalDebt")} text-right px-3 py-2.5 font-medium`} style={columnStyle("totalDebt")}>
-                Nợ hiện tại
-              </th>
-              <th className={`${columnClass("creditLimit")} text-right px-3 py-2.5 font-medium`} style={columnStyle("creditLimit")}>
-                Hạn mức / Vượt
-              </th>
-              <th className={`${columnClass("requiredPayment")} text-right px-3 py-2.5 font-medium`} style={columnStyle("requiredPayment")}>Cần thu</th>
-              <th className={`${columnClass("overdueAmount")} text-right px-3 py-2.5 font-medium`} style={columnStyle("overdueAmount")}>Quá hạn HĐ</th>
+              <SortableTh
+                colKey="totalDebt"
+                label="Nợ hiện tại"
+                align="right"
+                className={columnClass("totalDebt")}
+                style={columnStyle("totalDebt")}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={handleSort}
+              />
+              <SortableTh
+                colKey="creditLimit"
+                label="Hạn mức / Vượt"
+                align="right"
+                className={columnClass("creditLimit")}
+                style={columnStyle("creditLimit")}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={handleSort}
+              />
+              <SortableTh
+                colKey="requiredPayment"
+                label="Cần thu"
+                align="right"
+                className={columnClass("requiredPayment")}
+                style={columnStyle("requiredPayment")}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={handleSort}
+              />
+              <SortableTh
+                colKey="overdueAmount"
+                label="Quá hạn HĐ"
+                align="right"
+                className={columnClass("overdueAmount")}
+                style={columnStyle("overdueAmount")}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={handleSort}
+              />
               <th className={`${columnClass("nearestDueDate")} text-left px-3 py-2.5 font-medium`} style={columnStyle("nearestDueDate")}>
                 Hạn gần nhất
               </th>
@@ -361,6 +459,7 @@ export function DebtTrackingTable({
                 Ngừng đi hàng
               </th>
               <th className={`${columnClass("note")} text-left px-3 py-2.5 font-medium`} style={columnStyle("note")}>Ghi chú</th>
+              <th className={`${columnClass("cycle")} text-left px-3 py-2.5 font-medium`} style={columnStyle("cycle")}>Chu kỳ</th>
               <th className="px-3 py-2.5 w-12"></th>
             </tr>
           </thead>
@@ -676,6 +775,21 @@ export function DebtTrackingTable({
                     canEdit={canNote}
                   />
                 </td>
+                <td className={`${columnClass("cycle")} px-3 py-2 align-top`} style={columnStyle("cycle")}>
+                  <CycleActions
+                    row={r}
+                    pending={closingCycleCustomerId === r.customerId || closeCycle.isPending}
+                    onCloseCycle={() => {
+                      void handleCloseCycle(r);
+                    }}
+                    onViewHistory={() =>
+                      setCycleHistoryTarget({
+                        customerId: r.customerId,
+                        customerName: r.name,
+                      })
+                    }
+                  />
+                </td>
 
                 <td className="px-3 py-2 align-top">
                   {canEditPolicy && (
@@ -778,6 +892,110 @@ export function DebtTrackingTable({
           ticket={ticketTarget.ticket}
           onClose={() => setTicketTarget(null)}
         />
+      )}
+      {cycleHistoryTarget && (
+        <DebtCycleHistoryModal
+          customerId={cycleHistoryTarget.customerId}
+          customerName={cycleHistoryTarget.customerName}
+          onClose={() => setCycleHistoryTarget(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function SortableTh({
+  colKey,
+  label,
+  align = "left",
+  className,
+  style,
+  sortBy,
+  sortDir,
+  onSort,
+}: {
+  colKey: string;
+  label: string;
+  align?: "left" | "right";
+  className?: string;
+  style?: React.CSSProperties;
+  sortBy: string | null;
+  sortDir: "asc" | "desc" | null;
+  onSort: (colKey: string) => void;
+}) {
+  return (
+    <th
+      className={`${className ?? ""} ${
+        align === "right" ? "text-right" : "text-left"
+      } px-3 py-2.5 font-medium whitespace-nowrap cursor-pointer select-none hover:bg-gray-100`}
+      style={style}
+      onClick={() => onSort(colKey)}
+      title="Nhấn để sắp xếp"
+    >
+      <span
+        className={`inline-flex items-center gap-1 ${
+          align === "right" ? "justify-end w-full" : ""
+        }`}
+      >
+        {label}
+        <span className="inline-flex text-gray-400">
+          {sortBy === colKey && sortDir === "desc" ? (
+            <ArrowDown className="w-3 h-3 text-brand" />
+          ) : sortBy === colKey && sortDir === "asc" ? (
+            <ArrowUp className="w-3 h-3 text-brand" />
+          ) : (
+            <ArrowUpDown className="w-3 h-3 opacity-40" />
+          )}
+        </span>
+      </span>
+    </th>
+  );
+}
+
+function CycleActions({
+  row,
+  pending,
+  onCloseCycle,
+  onViewHistory,
+}: {
+  row: DebtTrackingRow;
+  pending: boolean;
+  onCloseCycle: () => void;
+  onViewHistory: () => void;
+}) {
+  const hasCurrentData =
+    !!row.note ||
+    row.accountantCollectionAttempts.length > 0 ||
+    row.salesCollectionAttempts.length > 0;
+  const hasHistory = (row.closedCycleCount ?? 0) > 0;
+  if (!hasCurrentData && !hasHistory) {
+    return <span className="text-gray-300">—</span>;
+  }
+  return (
+    <div className="flex items-center gap-1">
+      {hasCurrentData && (
+        <button
+          type="button"
+          onClick={onCloseCycle}
+          disabled={pending}
+          className="p-1.5 rounded hover:bg-emerald-50 text-emerald-700 disabled:opacity-50"
+          title="Lưu chu kỳ hiện tại và làm mới">
+          {pending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Check className="w-4 h-4" />
+          )}
+        </button>
+      )}
+      {hasHistory && (
+        <button
+          type="button"
+          onClick={onViewHistory}
+          className="inline-flex items-center gap-1 p-1.5 rounded hover:bg-gray-100 text-gray-600"
+          title="Xem lịch sử chu kỳ đã lưu">
+          <History className="w-4 h-4" />
+          <span className="text-[11px] tabular-nums">{row.closedCycleCount}</span>
+        </button>
       )}
     </div>
   );

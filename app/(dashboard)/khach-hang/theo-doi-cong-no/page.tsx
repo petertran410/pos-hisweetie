@@ -21,6 +21,9 @@ import {
   DebtTrackingParams,
   DEBT_FORM_LABELS,
 } from "@/lib/api/debt-tracking";
+import { useUsersForFilter } from "@/lib/hooks/useUsers";
+import { useCustomerGroups } from "@/lib/hooks/useCustomerGroups";
+import { FilterMultiSelect } from "@/components/ui/filters";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -36,6 +39,8 @@ export default function TheoDoiCongNoPage() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [debtForm, setDebtForm] = useState<DebtForm | "">("");
+  const [salePicIds, setSalePicIds] = useState<number[]>([]);
+  const [customerGroupIds, setCustomerGroupIds] = useState<number[]>([]);
   const [overLimitOnly, setOverLimitOnly] = useState(false);
   const [withoutOpenTicket, setWithoutOpenTicket] = useState(false);
   const [page, setPage] = useState(1);
@@ -44,18 +49,23 @@ export default function TheoDoiCongNoPage() {
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<number[]>([]);
   const [notifyIssues, setNotifyIssues] = useState<string[]>([]);
   const notifySaleDebt = useNotifySaleDebt();
+  const { data: usersForPic } = useUsersForFilter();
+  const { data: customerGroupsRes } = useCustomerGroups();
+  const customerGroups = customerGroupsRes?.data ?? [];
 
   const params: DebtTrackingParams = useMemo(
     () => ({
       search: search || undefined,
       debtStatus: tab === "ALL" ? undefined : tab,
       debtForm: debtForm || undefined,
+      salePicIds: salePicIds.length ? salePicIds : undefined,
+      customerGroupIds: customerGroupIds.length ? customerGroupIds : undefined,
       overLimitOnly: overLimitOnly || undefined,
       withoutOpenTicket: withoutOpenTicket || undefined,
       page,
       pageSize,
     }),
-    [search, tab, debtForm, overLimitOnly, withoutOpenTicket, page, pageSize]
+    [search, tab, debtForm, salePicIds, customerGroupIds, overLimitOnly, withoutOpenTicket, page, pageSize]
   );
 
   // Summary dùng chung filter nhưng bỏ debtStatus để luôn thấy bức tranh
@@ -77,6 +87,8 @@ export default function TheoDoiCongNoPage() {
     setSearchInput("");
     setSearch("");
     setDebtForm("");
+    setSalePicIds([]);
+    setCustomerGroupIds([]);
     setOverLimitOnly(false);
     setWithoutOpenTicket(false);
     setTab("ALL");
@@ -84,7 +96,13 @@ export default function TheoDoiCongNoPage() {
   };
 
   const hasFilter =
-    !!search || !!debtForm || overLimitOnly || withoutOpenTicket || tab !== "ALL";
+    !!search ||
+    !!debtForm ||
+    salePicIds.length > 0 ||
+    customerGroupIds.length > 0 ||
+    overLimitOnly ||
+    withoutOpenTicket ||
+    tab !== "ALL";
 
   const handleNotifySaleDebt = () => {
     if (selectedCustomerIds.length === 0) {
@@ -214,6 +232,40 @@ export default function TheoDoiCongNoPage() {
                 </option>
               ))}
             </select>
+
+            <div className="w-[220px] shrink-0">
+              <FilterMultiSelect
+                options={(usersForPic ?? []).map((user) => ({
+                  value: String(user.id),
+                  label: user.name,
+                }))}
+                values={salePicIds.map(String)}
+                onChange={(vals) => {
+                  setSalePicIds(vals.map(Number));
+                  setPage(1);
+                }}
+                placeholder="Tất cả Sale PIC"
+                searchPlaceholder="Tìm Sale PIC..."
+                multiLabel={(n) => `${n} Sale PIC`}
+              />
+            </div>
+
+            <div className="w-[240px] shrink-0">
+              <FilterMultiSelect
+                options={customerGroups.map((group) => ({
+                  value: String(group.id),
+                  label: group.name,
+                }))}
+                values={customerGroupIds.map(String)}
+                onChange={(vals) => {
+                  setCustomerGroupIds(vals.map(Number));
+                  setPage(1);
+                }}
+                placeholder="Tất cả nhóm KH"
+                searchPlaceholder="Tìm nhóm khách hàng..."
+                multiLabel={(n) => `${n} nhóm KH`}
+              />
+            </div>
 
             <label className="flex items-center gap-1.5 text-sm cursor-pointer select-none">
               <input

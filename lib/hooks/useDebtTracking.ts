@@ -155,6 +155,30 @@ export function useUpsertDebtPolicy() {
   });
 }
 
+export function useDebtCycles(customerId?: number) {
+  return useQuery({
+    queryKey: [KEY, "cycles", customerId],
+    queryFn: () => debtTrackingApi.listDebtCycles(customerId as number),
+    enabled: !!customerId,
+  });
+}
+
+export function useCloseDebtCycle() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (customerId: number) => debtTrackingApi.closeDebtCycle(customerId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [KEY] });
+      toast.success("Đã lưu chu kỳ và làm mới dòng theo dõi");
+    },
+    onError: (e: unknown) => {
+      toast.error(
+        e instanceof Error ? e.message : "Không thể kết thúc chu kỳ theo dõi",
+      );
+    },
+  });
+}
+
 /**
  * Cập nhật ghi chú. Chỉ truyền đúng cột muốn sửa — hai cột kế toán và sale
  * có quyền riêng, gửi kèm cột không có quyền sẽ bị backend từ chối.
