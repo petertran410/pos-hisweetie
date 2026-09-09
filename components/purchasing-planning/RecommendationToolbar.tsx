@@ -66,9 +66,6 @@ export function RecommendationToolbar({
             Dự kiến đặt hàng
           </h1>
           <SearchBox
-            // Remount khi bộ lọc bị xoá từ nơi khác (nút "Xóa tất cả" ở
-            // sidebar) để ô nhập tự trả về rỗng, thay vì đồng bộ bằng effect.
-            key={filters.search ?? ""}
             value={filters.search ?? ""}
             onCommit={(value) =>
               onFiltersChange({ search: value || undefined, page: 1 })
@@ -209,19 +206,32 @@ function SearchBox({
   value: string;
   onCommit: (value: string) => void;
 }) {
+  // Giữ draft trong chính ô nhập giống trang Danh sách sản phẩm. Không dùng
+  // `key` để remount input sau mỗi lần debounce, vì remount sẽ làm mất focus
+  // và khiến người dùng phải bấm lại vào ô search.
   const [draft, setDraft] = useState(value);
 
+  // Đồng bộ các thay đổi từ bên ngoài, ví dụ nút "Xóa tất cả" ở sidebar.
   useEffect(() => {
-    if (draft === value) return;
-    const timer = setTimeout(() => onCommit(draft), 350);
+    setDraft(value);
+  }, [value]);
+
+  useEffect(() => {
+    const normalized = draft.trim();
+    if (normalized === value.trim()) return;
+    const timer = setTimeout(() => onCommit(normalized), 300);
     return () => clearTimeout(timer);
   }, [draft, value, onCommit]);
 
   return (
     <div className="relative">
-      <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
+      <Search
+        aria-hidden="true"
+        className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400"
+      />
       <input
         type="text"
+        aria-label="Tìm theo mã hoặc tên sản phẩm"
         placeholder="Theo mã, tên sản phẩm"
         value={draft}
         onChange={(e) => setDraft(e.target.value)}

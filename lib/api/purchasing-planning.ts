@@ -18,6 +18,8 @@ import type {
   CreatePurchasingConfigRequest,
   PurchasingConfigPatch,
   PurchasingConfigScope,
+  PlanningTrend,
+  PlanningTrendPayload,
   RunPurchasingCalculationResult,
 } from "@/lib/types/purchasing-planning";
 import { PURCHASING_CONFIG_FIELDS } from "@/lib/types/purchasing-planning";
@@ -449,4 +451,16 @@ export const purchasingPlanningApi = {
     if (USE_MOCK) return mockDeleteConfig(configId);
     return apiClient.delete(`${BASE}/configs/${configId}`);
   },
+
+  // Legacy endpoints retained for backward compatibility; no longer exposed in UI.
+  listTrends: async (): Promise<{ items: PlanningTrend[] }> => {
+    if (USE_MOCK) return { items: [] };
+    return apiClient.get(`${BASE}/trends`);
+  },
+  createTrend: async (data: PlanningTrendPayload): Promise<PlanningTrend> =>
+    apiClient.post(`${BASE}/trends`, data),
+  updateTrend: async (id: number, data: Partial<PlanningTrendPayload>): Promise<PlanningTrend> =>
+    apiClient.patch(`${BASE}/trends/${id}`, data),
+  deleteTrend: async (id: number): Promise<void> =>
+    apiClient.delete(`${BASE}/trends/${id}`),
 };

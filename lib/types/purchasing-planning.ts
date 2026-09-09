@@ -129,9 +129,9 @@ export const CONFIG_SOURCE_LABEL: Record<ConfigSource, string> = {
  *  - `leadTimeDays`: từ chuỗi Sản xuất → Thông quan → Về kho gốc → Điều chuyển
  *  - `moq`: từ khai báo ở nhà máy / mapping SKU × nhà máy
  *  - `safetyDays`: suy từ độ dao động doanh số theo tháng
- *  - `growthFactor`: thay bằng đối chiếu khuyến mãi và phát hiện trend
+ *  - `growthFactor`: hệ thống tự suy từ lịch sử, người dùng có thể override theo scope
  */
-export const PURCHASING_CONFIG_FIELDS = ["coverageDays"] as const;
+export const PURCHASING_CONFIG_FIELDS = ["coverageDays", "growthFactor"] as const;
 
 export type PurchasingConfigField = (typeof PURCHASING_CONFIG_FIELDS)[number];
 export type PurchasingConfigScope = "GLOBAL" | "CATEGORY" | "SUPPLIER" | "SKU";
@@ -148,7 +148,9 @@ export type PurchasingConfigOverrides = Partial<
 
 export type PurchasingConfigPatch = Partial<
   Record<PurchasingConfigField, number | null>
->;
+> & {
+  note?: string | null;
+};
 
 export interface ResolvedPurchasingConfigField {
   value: number;
@@ -190,6 +192,7 @@ export type ResolvedPurchasingConfigQuery = {
 export interface CreatePurchasingConfigRequest extends PurchasingConfigOverrides {
   scopeType: PurchasingConfigScope;
   scopeId?: number;
+  note?: string | null;
 }
 
 /** Trạng thái của một dòng đề xuất — TD §2.6 */
@@ -268,10 +271,11 @@ export interface RecommendationListItem {
   // ── Nhà cung cấp ──
   supplierId: number | null;
   supplierName: string | null;
-  /** Tổng leadtime cận trên — dùng làm hạn chót đặt hàng. */
+  /** Tổng leadtime: sản xuất + 10 ngày thông quan + 10 ngày về kho gốc. */
   leadTimeDays: number;
-  /** Tổng leadtime cận dưới — đầu nhanh của khoảng. */
+  /** @deprecated Luôn bằng leadTimeDays sau khi bỏ khoảng min-max. */
   leadTimeMinDays?: number | null;
+  suggestedQuantityScenario?: number | null;
   leadTimeSource: ConfigSource;
 
   // ── Thời điểm cần đặt (trả lời "tháng sau có phải đặt không") ──
@@ -392,7 +396,15 @@ export interface ForecastComparison {
   windowDays: number;
   /** Số ngày bị loại vì hết hàng — PRD §5.5 */
   stockoutDaysExcluded: number;
-  /** Hệ số điều chỉnh thủ công — PRD §5.6 */
+  /** Hệ số tăng trưởng hệ thống đề xuất — suy từ lịch sử */
+  systemGrowthFactor?: number;
+  /** Hệ số thực sự áp dụng vào forecast */
+  appliedGrowthFactor?: number;
+  /** Có override ở một scope cấu hình hay không */
+  growthFactorOverridden?: boolean;
+  growthFactorSource?: PurchasingConfigScope | "DERIVED";
+  growthFactorNote?: string | null;
+  /** Giữ tương thích snapshot cũ */
   growthFactor: number;
   /** Nguồn dữ liệu thực tế đã dùng cho SKU này */
   demandSource: DemandSource;
@@ -406,6 +418,43 @@ export interface ForecastComparison {
   promotionDays?: number;
   /** Hệ số bán vượt mức nền, suy từ lịch sử chính SKU này. */
   promotionUpliftFactor?: number;
+  upcomingTrends?: PromotionWindowInfo[];
+  trendExtraDemand?: number;
+  trendDays?: number;
+  lookbackMonths?: Array<{
+    month: string;
+    dailyRate: number;
+    anomaly: string;
+    hasPromotion: boolean;
+    hasTrend?: boolean;
+    suspectedTrend: boolean;
+  }>;
+  lookbackRepeatsAnomaly?: boolean;
+  unexplainedAnomaly?: boolean;
+  monthBreakdown?: Array<{
+    month: string;
+    dailyRate: number;
+    anomaly: string;
+    hasPromotion: boolean;
+    hasTrend?: boolean;
+    suspectedTrend: boolean;
+    promotionNames?: string[];
+    trendNames?: string[];
+  }>;
+  demandBreakdown?: {
+    customerOrders: number;
+    companyNeed: number;
+    salesDemand: number;
+    promotionExtra: number;
+    trendExtra: number;
+  };
+  supplyBreakdown?: {
+    available: number;
+    confirmedIncoming: number;
+    vehicleConfirmed: number;
+    vehicleRisk: number;
+  };
+  suggestedQuantityScenario?: number;
 }
 
 /** Một đợt khuyến mãi đang hoặc sắp chạy. */
@@ -415,6 +464,62 @@ export interface PromotionWindowInfo {
   startDate: string;
   /** ISO date */
   endDate: string;
+}
+
+export type DecisionTimelineAnomaly = "NORMAL" | "SPIKE" | "DROP";
+export type DecisionTimelineEventType =
+  | "PROMOTION"
+  | "TREND"
+  | "INCOMING"
+  | "VEHICLE_SHIPMENT";
+
+export interface DecisionTimelineHistoryPoint {
+  month: string;
+  quantity: number;
+  dailyRate: number;
+  baseline: number;
+  anomaly: DecisionTimelineAnomaly;
+  hasPromotion: boolean;
+  hasTrend: boolean;
+  promotionNames: string[];
+  trendNames: string[];
+}
+
+export interface DecisionTimelineProjectionPoint {
+  date: string;
+  stockWithFirmSupply: number;
+  stockWithVehicleScenario: number;
+  demand: number;
+  confirmedIncoming: number;
+  vehicleIncoming: number;
+}
+
+export interface DecisionTimelineEvent {
+  type: DecisionTimelineEventType;
+  name: string | null;
+  startDate: string;
+  endDate: string | null;
+  quantity: number | null;
+  etaType: string | null;
+}
+
+export interface DecisionTimeline {
+  history: DecisionTimelineHistoryPoint[];
+  projection: DecisionTimelineProjectionPoint[];
+  markers: {
+    today: string;
+    latestOrderDate: string | null;
+    projectedStockoutDate: string | null;
+    scenarioStockoutDate: string | null;
+    orderArrivalDate: string | null;
+    reorderPoint: number;
+    safetyStock: number;
+  };
+  events: DecisionTimelineEvent[];
+  quantities: {
+    firmSuggestedQuantity: number;
+    vehicleScenarioQuantity: number;
+  };
 }
 
 /** Một bước trong quá trình tính — PRD §13.3 */
@@ -434,6 +539,9 @@ export interface ConfigValueWithSource {
   value: number;
   source: ConfigSource;
   label: string;
+  systemValue?: number;
+  overridden?: boolean;
+  note?: string | null;
 }
 
 /** Bản ghi đầy đủ quá trình tính — PRD §13.3, TD §12.5 */
@@ -441,6 +549,7 @@ export interface CalculationTrace {
   version: string;
   /** ISO datetime */
   computedAt: string;
+  decisionTimeline?: DecisionTimeline | null;
   inputs: {
     /** Snapshot cũ chưa có field này. */
     branchScope?: PurchasingBranchScope;
@@ -484,6 +593,7 @@ export interface RecommendationDetail extends RecommendationListItem {
   branchBreakdown: BranchStock[];
   shipments: IncomingShipmentInfo[];
   forecastComparison: ForecastComparison;
+  decisionTimeline?: DecisionTimeline | null;
   calculationTrace: CalculationTrace;
 
   /** ISO date của snapshot */
@@ -535,6 +645,10 @@ export const FLAG_CODE_LABEL: Record<string, string> = {
   OUT_OF_STOCK: "Đang hết hàng",
   OVERSTOCK: "Tồn kho dư thừa",
   PENDING_CUSTOMER_ORDERS: "Có đơn khách đang chờ",
+  UNEXPLAINED_ANOMALY: "Tháng bán bất thường chưa giải thích được",
+  VEHICLE_SHIPMENT_RISK: "Ghép xe chưa chắc ETA",
+  VEHICLE_OVERSTOCK_RISK: "Có thể dư nếu ghép xe về đúng hạn",
+  MISSING_FACTORY: "Chưa gắn nhà máy",
 };
 
 export interface RecommendationFilters {
@@ -695,3 +809,29 @@ export const PRIORITY_ORDER: PriorityLevel[] = [
   "OVERSTOCK",
   "NO_DATA",
 ];
+
+export interface PlanningTrend {
+  id: number;
+  productId: number | null;
+  product: { id: number; code: string; name: string } | null;
+  categoryName: string | null;
+  startDate: string;
+  endDate: string;
+  kind: "UPLIFT" | "QUANTITY" | string;
+  upliftFactor: number | null;
+  extraQuantity: number | null;
+  note: string | null;
+  isActive: boolean;
+  updatedAt?: string;
+}
+
+export interface PlanningTrendPayload {
+  productId?: number | null;
+  categoryName?: string | null;
+  startDate: string;
+  endDate: string;
+  kind?: "UPLIFT" | "QUANTITY";
+  upliftFactor?: number | null;
+  extraQuantity?: number | null;
+  note?: string | null;
+}

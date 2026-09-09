@@ -167,6 +167,12 @@ export interface DebtTrackingRow {
   noteAt: string | null;
   accountantCollectionAttempts: CollectionAttempt[];
   salesCollectionAttempts: CollectionAttempt[];
+  currentCycle?: {
+    id: number;
+    startedAt: string;
+    requiredPaymentAtStart: number;
+  } | null;
+  closedCycleCount?: number;
 
   openTicket: DebtOpenTicket | null;
   latestStopTicket?: DebtOpenTicket | null;
@@ -244,6 +250,9 @@ export interface DebtTrackingParams {
   overLimitOnly?: boolean;
   branchId?: number;
   salePicId?: number;
+  salePicIds?: number[];
+  customerGroupId?: number;
+  customerGroupIds?: number[];
   withoutOpenTicket?: boolean;
   page?: number;
   pageSize?: number;
@@ -438,6 +447,61 @@ export function describeDebtPolicy(p?: DebtPolicyView | null): string {
   return parts.length ? parts.join(", ") : "Không Công Nợ";
 }
 
+
+export type DebtCycleCloseMode = "MANUAL" | "AUTO_PAYMENT";
+
+export interface DebtCycleSnapshotAttempt {
+  id: number;
+  role: CollectionAttemptRole;
+  attemptDate: string;
+  recordedAt: string;
+  recordedBy: { id: number; name: string };
+}
+
+export interface DebtCycleSnapshotTicket {
+  ticketId: number;
+  ticketCode: string;
+  ticketType: string;
+  ticketStatus: string;
+  createdAt: string;
+}
+
+export interface DebtCycleSnapshot {
+  note: string | null;
+  noteAt: string | null;
+  noteBy: number | null;
+  accountantAttempts: DebtCycleSnapshotAttempt[];
+  salesAttempts: DebtCycleSnapshotAttempt[];
+  tickets?: DebtCycleSnapshotTicket[];
+  requiredPaymentAmount: number;
+  requiredPaymentSource: string;
+  totalDebt: number;
+  overdueAmount: number;
+  debtStatus: string;
+}
+
+export interface DebtTrackingCycle {
+  id: number;
+  customerId: number;
+  status: "OPEN" | "CLOSED";
+  startedAt: string;
+  closedAt: string | null;
+  closeMode: DebtCycleCloseMode | null;
+  requiredPaymentAtStart: number;
+  requiredPaymentAtClose: number | null;
+  totalDebtAtStart: number;
+  totalDebtAtClose: number | null;
+  note: string | null;
+  noteAt: string | null;
+  snapshot: DebtCycleSnapshot | null;
+  closedBy: { id: number; name: string } | null;
+}
+
+export interface DebtCycleListResponse {
+  customer: { id: number; name: string; code: string | null };
+  data: DebtTrackingCycle[];
+}
+
 // ==================================================================
 // API
 // ==================================================================
@@ -490,6 +554,12 @@ export const debtTrackingApi = {
     sales: CollectionAttempt[];
   }> => apiClient.get(`/debt-tracking/${customerId}/collection-attempts`),
 
+  listDebtCycles: (customerId: number): Promise<DebtCycleListResponse> =>
+    apiClient.get(`/debt-tracking/${customerId}/cycles`),
+
+  closeDebtCycle: (customerId: number): Promise<DebtTrackingCycle> =>
+    apiClient.post(`/debt-tracking/${customerId}/cycles/close`),
+
   createCollectionAttempt: (
     customerId: number,
     payload: { role: CollectionAttemptRole; attemptDate: string },
@@ -517,7 +587,12 @@ export const debtTrackingApi = {
   exportExcel: async (params?: DebtTrackingParams): Promise<Blob> => {
     const qs = new URLSearchParams();
     Object.entries(params ?? {}).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== "") qs.append(k, String(v));
+      if (v === undefined || v === null || v === "") return;
+      if (Array.isArray(v)) {
+        v.forEach((item) => qs.append(k, String(item)));
+      } else {
+        qs.append(k, String(v));
+      }
     });
 
     const res = await fetch(`${API_URL}/debt-tracking/export?${qs.toString()}`, {

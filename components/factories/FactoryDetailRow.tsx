@@ -54,10 +54,12 @@ const numberOrNull = (value: string) =>
  * Tóm tắt thời gian sản xuất của nhà máy dưới dạng khoảng nhanh nhất–chậm nhất.
  */
 function formatProductionLeadtime(factory: Factory): string | null {
-  const { productionLeadtimeMin: min, productionLeadtimeMax: max } = factory;
-  if (min == null && max == null) return null;
-  if (min != null && max != null && min !== max) return `SX ${min}–${max} ngày`;
-  return `SX ${min ?? max} ngày`;
+  const days =
+    factory.productionLeadtimeDays ??
+    factory.productionLeadtimeMax ??
+    factory.productionLeadtimeMin;
+  if (days == null) return null;
+  return `SX ${days} ngày + 20 ngày về kho`;
 }
 
 /**

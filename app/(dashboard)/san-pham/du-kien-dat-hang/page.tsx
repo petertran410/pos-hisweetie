@@ -51,6 +51,7 @@ export default function PurchasingPlanningPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const canRun = useCan("purchasing_planning", "run");
+  const canConfig = useCan("purchasing_planning", "config");
   const runCalculation = useRunPurchasingCalculation();
 
   const handleRunCalculation = useCallback(async () => {
@@ -224,6 +225,8 @@ export default function PurchasingPlanningPage() {
         <RecommendationDetailPanel
           itemId={selectedItemId}
           onClose={() => setSelectedItemId(null)}
+          canConfigure={canConfig}
+          onRunCalculation={canRun ? handleRunCalculation : undefined}
         />
 
         {exportOpen && (

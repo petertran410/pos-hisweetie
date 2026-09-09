@@ -333,6 +333,7 @@ export function InvoiceDetailRow({
   // Chỉ ẩn nút chỉnh sửa khi hóa đơn đã bị hủy.
   const canCancel = !isFinalState || isAdmin;
   const canProcess = invoice.status !== INVOICE_STATUS.CANCELLED;
+  const customerDebt = Math.max(0, Number(invoice.debtAmount || 0));
 
   // Nút "Đã Báo Đơn":
   // - User: chỉ thấy khi hóa đơn CHƯA giao thành công.
@@ -773,12 +774,15 @@ export function InvoiceDetailRow({
                           </span>
                           <span className="text-lg font-bold text-red-600">
                             {formatCurrency(
-                              Number((invoice as any).returnOrderAmount || 0) >
-                                0
-                                ? Number(invoice.grandTotal) -
-                                    Number((invoice as any).returnOrderAmount) -
-                                    Number(invoice.paidAmount)
-                                : Number(invoice.debtAmount)
+                              Math.max(
+                                0,
+                                Number((invoice as any).returnOrderAmount || 0) >
+                                  0
+                                  ? Number(invoice.grandTotal) -
+                                      Number((invoice as any).returnOrderAmount) -
+                                      Number(invoice.paidAmount)
+                                  : customerDebt
+                              )
                             )}
                           </span>
                         </div>
