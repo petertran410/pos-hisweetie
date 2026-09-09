@@ -98,7 +98,7 @@ export default function TransferPlanningPage() {
     () => items.find((i) => i.id === selectedItemId) ?? null,
     [items, selectedItemId],
   );
-  const total = items.length;
+  const total = filters.availabilityFilter ? items.length : (data?.total ?? 0);
   const summary = data?.summary;
 
   const handleFiltersChange = useCallback(
