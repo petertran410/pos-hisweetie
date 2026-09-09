@@ -27,6 +27,7 @@ import type {
 import { QuickCreateTransferModal } from "@/components/transfer-planning/QuickCreateTransferModal";
 import { ResetTempQuantitiesDialog } from "@/components/transfer-planning/ResetTempQuantitiesDialog";
 import { PromisedHNDrilldownModal } from "@/components/transfer-planning/PromisedHNDrilldownModal";
+import { PromisedSGDrilldownModal } from "@/components/transfer-planning/PromisedSGDrilldownModal";
 
 const DEFAULT_FILTERS: TransferPlanningFilters = {
   search: "",
@@ -55,6 +56,8 @@ export default function TransferPlanningPage() {
   const [addToTransferItem, setAddToTransferItem] =
     useState<TransferPlanningItem | null>(null);
   const [promisedHNItem, setPromisedHNItem] =
+    useState<TransferPlanningItem | null>(null);
+  const [promisedSGItem, setPromisedSGItem] =
     useState<TransferPlanningItem | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
@@ -218,6 +221,7 @@ export default function TransferPlanningPage() {
                   variant: "pending",
                 }),
               onOpenPromisedHN: setPromisedHNItem,
+              onOpenPromisedSG: setPromisedSGItem,
               onOpenAddToTransfer: (item) => setAddToTransferItem(item),
             }}
             tempDraftCount={summary?.tempDraftCount ?? 0}
@@ -257,6 +261,15 @@ export default function TransferPlanningPage() {
             productName={promisedHNItem.name}
             productSku={promisedHNItem.sku}
             onClose={() => setPromisedHNItem(null)}
+          />
+        )}
+
+        {promisedSGItem && (
+          <PromisedSGDrilldownModal
+            productId={promisedSGItem.id}
+            productName={promisedSGItem.name}
+            productSku={promisedSGItem.sku}
+            onClose={() => setPromisedSGItem(null)}
           />
         )}
 

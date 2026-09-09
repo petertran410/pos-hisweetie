@@ -13,6 +13,7 @@ export interface TransferPlanningColumnCtx {
   onOpenInTransit?: (item: TransferPlanningItem) => void;
   onOpenPending?: (item: TransferPlanningItem) => void;
   onOpenPromisedHN?: (item: TransferPlanningItem) => void;
+  onOpenPromisedSG?: (item: TransferPlanningItem) => void;
   onOpenAddToTransfer?: (item: TransferPlanningItem) => void;
 }
 
@@ -119,7 +120,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<
     },
     {
       key: "promisedHN",
-      label: "Hứa bán HN",
+      label: "Khách đặt HN",
       visible: true,
       width: "110px",
       group: "Tồn kho HN & Đang chuyển",
@@ -191,65 +192,43 @@ export function buildTransferPlanningColumns(): ColumnConfig<
       exportValue: (item) => item.stockSG,
     },
     {
-      key: "committed",
-      label: "Đơn tạm SG",
+      key: "promisedSG",
+      label: "Khách đặt SG",
       visible: true,
-      width: "100px",
+      width: "110px",
       group: "Tồn kho SG",
-      tooltip: "Tổng số lượng đơn PENDING (tạm) tại Kho Sài Gòn",
-      render: (item) => (
-        <span
-          className={`font-mono text-sm block text-right ${
-            item.committed > 0 ? "text-gray-900 font-medium" : "text-gray-400"
-          }`}
-        >
-          {formatWholeQuantity(item.committed)}
-        </span>
-      ),
-      exportValue: (item) => item.committed,
-    },
-    {
-      key: "confirmedOrders",
-      label: "Đơn xác nhận SG",
-      visible: true,
-      width: "115px",
-      group: "Tồn kho SG",
-      tooltip: "Tổng số lượng đơn CONFIRMED (đã xác nhận) tại Kho Sài Gòn",
-      render: (item) => (
-        <div className="text-right">
-          <span
-            className={`font-mono text-sm ${
-              item.confirmedOrders > 0
-                ? "text-gray-900 font-bold"
-                : "text-gray-400"
-            }`}
+      tooltip:
+        "Tổng số lượng đơn Phiếu tạm và Đã xác nhận tại Kho Sài Gòn",
+      render: (item, ctx) => {
+        const total = item.committed + item.confirmedOrders;
+        if (total <= 0) {
+          return (
+            <span className="block text-right font-mono text-sm text-gray-400">
+              {formatWholeQuantity(total)}
+            </span>
+          );
+        }
+        return (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              ctx?.onOpenPromisedSG?.(item);
+            }}
+            className="text-brand block w-full cursor-pointer text-right font-mono text-sm font-medium hover:underline"
           >
-            {formatWholeQuantity(item.confirmedOrders)}
-          </span>
-        </div>
-      ),
-      exportValue: (item) => item.confirmedOrders,
-    },
-    {
-      key: "demandPerDay",
-      label: "Demand/ngày",
-      visible: true,
-      width: "115px",
-      group: "Tính toán - Đề xuất - Cảnh báo",
-      tooltip: "Nhu cầu bán trung bình/ngày = 60%×BQ5 + 30%×BQ30 + 10%×BQ90",
-      render: (item) => (
-        <span className="font-mono text-sm text-gray-900 font-bold block text-right">
-          {formatNumber(item.computed.demandPerDay, 1)}
-        </span>
-      ),
-      exportValue: (item) => item.computed.demandPerDay,
+            {formatWholeQuantity(total)}
+          </button>
+        );
+      },
+      exportValue: (item) => item.committed + item.confirmedOrders,
     },
     {
       key: "availableStockSG",
       label: "Tồn khả dụng SG",
       visible: true,
       width: "130px",
-      group: "Tính toán - Đề xuất - Cảnh báo",
+      group: "Tồn kho SG",
       tooltip: "Tồn SG + Đang chuyển − Đơn tạm − Đơn xác nhận",
       render: (item) => (
         <span
@@ -269,7 +248,7 @@ export function buildTransferPlanningColumns(): ColumnConfig<
       label: "Khả dụng (ngày)",
       visible: true,
       width: "130px",
-      group: "Tính toán - Đề xuất - Cảnh báo",
+      group: "Tồn kho SG",
       tooltip: "Tồn khả dụng SG ÷ Demand/ngày",
       render: (item) => {
         const demand = item.computed.demandPerDay;
@@ -297,6 +276,20 @@ export function buildTransferPlanningColumns(): ColumnConfig<
               item.computed.availableStockSG / item.computed.demandPerDay,
             )
           : null,
+    },
+    {
+      key: "demandPerDay",
+      label: "Demand/ngày",
+      visible: true,
+      width: "115px",
+      group: "Tính toán - Đề xuất - Cảnh báo",
+      tooltip: "Nhu cầu bán trung bình/ngày = 60%×BQ5 + 30%×BQ30 + 10%×BQ90",
+      render: (item) => (
+        <span className="font-mono text-sm text-gray-900 font-bold block text-right">
+          {formatNumber(item.computed.demandPerDay, 1)}
+        </span>
+      ),
+      exportValue: (item) => item.computed.demandPerDay,
     },
     {
       key: "targetStockSG",

@@ -48,6 +48,14 @@ export function usePromisedHNDrilldownByProduct(productId: number | null) {
   });
 }
 
+export function usePromisedSGDrilldownByProduct(productId: number | null) {
+  return useQuery({
+    queryKey: ["transfers-promised-sg-drilldown", productId],
+    queryFn: () => transfersApi.getPromisedSGByProduct(productId!),
+    enabled: !!productId,
+  });
+}
+
 export function useCreateTransfer() {
   const queryClient = useQueryClient();
 

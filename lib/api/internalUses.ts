@@ -9,6 +9,8 @@ export interface InternalUseDetail {
   quantity: number;
   cost: number;
   value: number;
+  conditionType?: "normal" | "damaged" | "near_expiry";
+  soldExpiryDate?: string | null;
 }
 
 export interface InternalUsePurpose {
@@ -66,6 +68,8 @@ export interface CreateInternalUseData {
     unit?: string;
     quantity: number;
     cost?: number;
+    conditionType?: "normal" | "damaged" | "near_expiry";
+    soldExpiryDate?: string | null;
   }[];
 }
 

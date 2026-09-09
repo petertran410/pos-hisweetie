@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Search, Trash2, Plus } from "lucide-react";
-import { useProducts } from "@/lib/hooks/useProducts";
+import { Copy, X, Search, Trash2, Plus } from "lucide-react";
+import { useConditionSummaryBatch, useProducts } from "@/lib/hooks/useProducts";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import {
   useCreateInternalUse,
@@ -19,13 +19,20 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { PurposeForm } from "./PurposeForm";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import {
+  ItemConditionSelector,
+  type ConditionSelectableItem,
+  type ConditionSelectableUpdates,
+} from "@/components/pos/ItemConditionSelector";
+import { formatMonthYear } from "@/components/ui/DatePickerInput";
 
 interface InternalUseFormProps {
   internalUse?: InternalUse | null;
   onClose?: () => void;
 }
 
-interface ProductItem {
+interface ProductItem extends ConditionSelectableItem {
+  rowId: string;
   productId: number;
   productCode: string;
   productName: string;
@@ -35,9 +42,34 @@ interface ProductItem {
   value: number;
   /** Tồn kho hiện tại tại chi nhánh của phiếu. */
   onHand?: number;
+  conditionType: "normal" | "damaged" | "near_expiry";
+  soldExpiryDate?: string | null;
 }
 
-export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) {
+const getConditionBadge = (item: ProductItem) => {
+  if (item.conditionType === "damaged") {
+    return {
+      label: "Bục rách",
+      className: "bg-red-50 text-red-600 border-red-200",
+    };
+  }
+  if (item.conditionType === "near_expiry") {
+    const lot =
+      item.soldExpiryDate === null
+        ? "Chưa xác định NSX"
+        : formatMonthYear(item.soldExpiryDate) || "Chưa chọn lô";
+    return {
+      label: `Cận date - ${lot}`,
+      className: "bg-amber-50 text-amber-700 border-amber-200",
+    };
+  }
+  return null;
+};
+
+export function InternalUseForm({
+  internalUse,
+  onClose,
+}: InternalUseFormProps) {
   const router = useRouter();
   const { selectedBranch } = useBranchStore();
   const currentUser = useAuthStore((s) => s.user);
@@ -51,22 +83,25 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
   const isFormDisabled = isCompleted || isCancelled;
 
   const [branchId, setBranchId] = useState<number>(
-    internalUse?.branchId || selectedBranch?.id || 0
+    internalUse?.branchId || selectedBranch?.id || 0,
   );
 
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [code, setCode] = useState(internalUse?.code || "");
   const [purposeId, setPurposeId] = useState<number>(
-    internalUse?.purposeId || 0
+    internalUse?.purposeId || 0,
   );
   const [userId, setUserId] = useState<number>(internalUse?.userId || 0);
   const [description, setDescription] = useState(
-    internalUse?.description || ""
+    internalUse?.description || "",
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [showPurposeForm, setShowPurposeForm] = useState(false);
   const productIdsKey = products.map((product) => product.productId).join(",");
+  const uniqueProductIds = Array.from(
+    new Set(products.map((product) => product.productId)),
+  );
 
   const canManagePurpose = usePermission("internal-use-purpose", "manage");
   const canViewCost = usePermission("internal-use", "view_cost_price");
@@ -80,20 +115,33 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
     branchId: branchId || undefined,
     isActive: true,
   });
+  const { data: conditionSummary } = useConditionSummaryBatch(
+    uniqueProductIds,
+    branchId || undefined,
+    true,
+  );
 
   // Load lại details khi edit
   useEffect(() => {
     if (internalUse?.details && branchId) {
-      const loaded: ProductItem[] = internalUse.details.map((detail) => ({
-        productId: detail.productId,
-        productCode: detail.productCode,
-        productName: detail.productName,
-        unit: detail.unit || "",
-        quantity: Number(detail.quantity),
-        cost: Number(detail.cost),
-        value: Number(detail.value),
-        onHand: undefined,
-      }));
+      const loaded: ProductItem[] = internalUse.details.map(
+        (detail, index) => ({
+          rowId: `internal-use-${detail.id ?? index}`,
+          productId: detail.productId,
+          productCode: detail.productCode,
+          productName: detail.productName,
+          unit: detail.unit || "",
+          quantity: Number(detail.quantity),
+          cost: Number(detail.cost),
+          value: Number(detail.value),
+          onHand: undefined,
+          conditionType: detail.conditionType || "normal",
+          soldExpiryDate:
+            detail.conditionType === "near_expiry"
+              ? (detail.soldExpiryDate ?? null)
+              : undefined,
+        }),
+      );
       setProducts(loaded);
     }
   }, [internalUse, branchId]);
@@ -107,9 +155,11 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
     Promise.all(
       products.map(async (product) => {
         try {
-          const currentProduct = await productsApi.getProduct(product.productId);
+          const currentProduct = await productsApi.getProduct(
+            product.productId,
+          );
           const inventory = currentProduct.inventories?.find(
-            (inv) => inv.branchId === branchId
+            (inv) => inv.branchId === branchId,
           );
           return {
             productId: product.productId,
@@ -118,17 +168,17 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
         } catch {
           return { productId: product.productId, onHand: undefined };
         }
-      })
+      }),
     ).then((stockLevels) => {
       if (cancelled) return;
       const stockByProductId = new Map(
-        stockLevels.map(({ productId, onHand }) => [productId, onHand])
+        stockLevels.map(({ productId, onHand }) => [productId, onHand]),
       );
       setProducts((current) =>
         current.map((product) => ({
           ...product,
           onHand: stockByProductId.get(product.productId),
-        }))
+        })),
       );
     });
 
@@ -167,15 +217,26 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
         try {
           const prod = await productsApi.getProduct(p.productId);
           const inv = prod.inventories?.find(
-            (i: any) => i.branchId === newBranchId
+            (i: any) => i.branchId === newBranchId,
           );
           const cost = inv ? Number(inv.cost) : p.cost;
           const onHand = inv ? Number(inv.onHand) : p.onHand;
-          return { ...p, cost, onHand, value: p.quantity * cost };
+          return {
+            ...p,
+            cost,
+            onHand,
+            soldExpiryDate:
+              p.conditionType === "near_expiry" ? undefined : p.soldExpiryDate,
+            value: p.quantity * cost,
+          };
         } catch {
-          return p;
+          return {
+            ...p,
+            soldExpiryDate:
+              p.conditionType === "near_expiry" ? undefined : p.soldExpiryDate,
+          };
         }
-      })
+      }),
     ).then((refreshed) => {
       if (!cancelled) setProducts(refreshed);
     });
@@ -188,11 +249,11 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
 
   const handleAddProduct = (product: Product) => {
     const inventory = product.inventories?.find(
-      (inv: any) => inv.branchId === branchId
+      (inv: any) => inv.branchId === branchId,
     );
 
     const existingIndex = products.findIndex(
-      (p) => p.productId === product.id
+      (p) => p.productId === product.id && p.conditionType === "normal",
     );
     if (existingIndex >= 0) {
       // Trùng sản phẩm: +1 số lượng thay vì thêm dòng mới
@@ -211,6 +272,7 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
 
     const cost = Number(inventory?.cost || 0);
     const newProduct: ProductItem = {
+      rowId: `internal-use-${product.id}-${Date.now()}-${Math.random()}`,
       productId: product.id,
       productCode: product.code,
       productName: product.name,
@@ -219,6 +281,7 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
       cost,
       value: cost,
       onHand: Number(inventory?.onHand || 0),
+      conditionType: "normal",
     };
 
     setProducts((prev) => [newProduct, ...prev]);
@@ -228,6 +291,32 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
 
   const handleRemoveProduct = (index: number) => {
     setProducts((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDuplicateProduct = (index: number) => {
+    setProducts((prev) => {
+      const source = prev[index];
+      const duplicate: ProductItem = {
+        ...source,
+        rowId: `internal-use-${source.productId}-${Date.now()}-${Math.random()}`,
+        quantity: 1,
+        value: source.cost,
+      };
+      const updated = [...prev];
+      updated.splice(index + 1, 0, duplicate);
+      return updated;
+    });
+  };
+
+  const handleConditionChange = (
+    rowId: string,
+    updates: ConditionSelectableUpdates,
+  ) => {
+    setProducts((prev) =>
+      prev.map((item) =>
+        item.rowId === rowId ? { ...item, ...updates } : item,
+      ),
+    );
   };
 
   const handleQuantityChange = (index: number, value: string) => {
@@ -274,6 +363,17 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
       toast.error("Vui lòng thêm ít nhất một sản phẩm");
       return;
     }
+    const missingNearExpiryLot = products.some(
+      (product) =>
+        product.conditionType === "near_expiry" &&
+        product.soldExpiryDate === undefined,
+    );
+    if (missingNearExpiryLot) {
+      toast.error(
+        "Vui lòng chọn lô NSX cho hàng cận date (có thể chọn Chưa xác định NSX)",
+      );
+      return;
+    }
     if (!isDraft) {
       const hasInvalidQuantity = products.some((p) => p.quantity <= 0);
       if (hasInvalidQuantity) {
@@ -294,6 +394,9 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
         productName: p.productName,
         unit: p.unit,
         quantity: p.quantity,
+        conditionType: p.conditionType,
+        soldExpiryDate:
+          p.conditionType === "near_expiry" ? p.soldExpiryDate : null,
         // Chỉ gửi giá vốn khi user có quyền xem giá vốn; nếu không, backend tự
         // lấy giá vốn từ tồn kho.
         ...(canViewCost ? { cost: p.cost } : {}),
@@ -319,8 +422,7 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
     }
   };
 
-  const isPending =
-    createInternalUse.isPending || updateInternalUse.isPending;
+  const isPending = createInternalUse.isPending || updateInternalUse.isPending;
 
   return (
     <div className="flex flex-col lg:flex-row h-full border-t bg-gray-50 overflow-y-auto lg:overflow-hidden relative">
@@ -341,7 +443,8 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
           </div>
           <button
             onClick={() => (onClose ? onClose() : router.back())}
-            className="text-gray-400 hover:text-gray-600 transition">
+            className="text-gray-400 hover:text-gray-600 transition"
+          >
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -384,14 +487,15 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
                 ) : (
                   searchResults.data.map((product) => {
                     const inventory = product.inventories?.find(
-                      (inv: any) => inv.branchId === branchId
+                      (inv: any) => inv.branchId === branchId,
                     );
 
                     return (
                       <div
                         key={product.id}
                         onClick={() => handleAddProduct(product)}
-                        className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0">
+                        className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                      >
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 bg-gray-200 rounded flex-shrink-0">
                             {product.images?.[0] && (
@@ -442,17 +546,17 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
                         Mã hàng
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap min-w-[360px]">
                         Tên hàng
                       </th>
-                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                         ĐVT
-                       </th>
-                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                         Tồn hiện tại
-                       </th>
-                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                         SL xuất
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                        ĐVT
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                        Tồn hiện tại
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                        SL xuất
                       </th>
                       {canViewCost && (
                         <>
@@ -469,30 +573,78 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {products.map((item, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
+                      <tr key={item.rowId} className="hover:bg-gray-50">
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           {index + 1}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-brand font-medium">
                           {item.productCode}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-900 min-w-[200px]">
-                          {item.productName}
+                        <td className="px-4 py-3 text-sm text-gray-900 min-w-[360px]">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span>{item.productName}</span>
+                            {(() => {
+                              const badge = getConditionBadge(item);
+                              return badge ? (
+                                <span
+                                  className={`px-1.5 py-0.5 text-xs rounded-full border ${badge.className}`}
+                                >
+                                  {badge.label}
+                                </span>
+                              ) : null;
+                            })()}
+                          </div>
+                          {!isFormDisabled && (
+                            <div className="flex flex-wrap items-center gap-1 mt-2">
+                              <ItemConditionSelector
+                                item={item}
+                                damagedAvailable={Number(
+                                  conditionSummary?.[item.productId]?.damaged ||
+                                    0,
+                                )}
+                                nearExpiryAvailable={Number(
+                                  conditionSummary?.[item.productId]
+                                    ?.nearExpiry || 0,
+                                )}
+                                branchId={branchId || undefined}
+                                posOnly
+                                actionLabel="Xuất dùng nội bộ"
+                                lotPriorityVerb="xuất"
+                                usePortalForLotDropdown
+                                onUpdateItem={handleConditionChange}
+                              />
+                            </div>
+                          )}
                         </td>
-                         <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-900">
-                           {item.unit || "-"}
-                         </td>
-                         <td
-                           className={`px-4 py-3 whitespace-nowrap text-sm text-right font-medium ${
-                             item.onHand !== undefined && item.quantity > item.onHand
-                               ? "text-red-600"
-                               : "text-gray-900"
-                           }`}>
-                           {item.onHand === undefined
-                             ? "Đang tải..."
-                             : item.onHand.toLocaleString("vi-VN")}
-                         </td>
-                         <td className="px-4 py-3 whitespace-nowrap text-center">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-gray-900">
+                          {item.unit || "-"}
+                        </td>
+                        <td
+                          className={`px-4 py-3 whitespace-nowrap text-sm text-right font-medium ${
+                            item.onHand !== undefined &&
+                            item.quantity > item.onHand
+                              ? "text-red-600"
+                              : "text-gray-900"
+                          }`}
+                        >
+                          <div>
+                            {item.onHand === undefined
+                              ? "Đang tải..."
+                              : item.onHand.toLocaleString("vi-VN")}
+                          </div>
+                          <div className="text-[11px] font-normal text-gray-500 mt-0.5">
+                            BR:{" "}
+                            {Number(
+                              conditionSummary?.[item.productId]?.damaged || 0,
+                            ).toLocaleString("vi-VN")}{" "}
+                            · CD:{" "}
+                            {Number(
+                              conditionSummary?.[item.productId]?.nearExpiry ||
+                                0,
+                            ).toLocaleString("vi-VN")}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-center">
                           <input
                             type="number"
                             value={item.quantity}
@@ -527,12 +679,22 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
                         )}
                         <td className="px-4 py-3 whitespace-nowrap text-center">
                           {!isFormDisabled && (
-                            <button
-                              onClick={() => handleRemoveProduct(index)}
-                              className="p-1 hover:bg-gray-200 rounded"
-                              title="Xóa">
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                            </button>
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => handleDuplicateProduct(index)}
+                                className="p-1 hover:bg-green-50 rounded"
+                                title="Thêm dòng mới cho sản phẩm này"
+                              >
+                                <Copy className="w-4 h-4 text-green-600" />
+                              </button>
+                              <button
+                                onClick={() => handleRemoveProduct(index)}
+                                className="p-1 hover:bg-gray-200 rounded"
+                                title="Xóa"
+                              >
+                                <Trash2 className="w-4 h-4 text-red-600" />
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -548,8 +710,9 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
             <div className="lg:hidden space-y-2">
               {products.map((item, index) => (
                 <div
-                  key={index}
-                  className="border rounded-lg p-3 bg-white">
+                  key={item.rowId}
+                  className="border rounded-lg p-3 bg-white"
+                >
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="min-w-0">
                       <div className="text-sm text-brand font-medium">
@@ -558,29 +721,82 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
                       <div className="text-sm text-gray-900 leading-tight">
                         {item.productName}
                       </div>
-                       <div className="text-xs text-gray-500 mt-0.5">
-                         ĐVT: {item.unit || "-"}
-                       </div>
-                       <div
-                         className={`text-xs mt-0.5 ${
-                           item.onHand !== undefined && item.quantity > item.onHand
-                             ? "text-red-600"
-                             : "text-gray-500"
-                         }`}>
-                         Tồn hiện tại: {item.onHand === undefined
-                           ? "Đang tải..."
-                           : item.onHand.toLocaleString("vi-VN")}
-                       </div>
+                      {(() => {
+                        const badge = getConditionBadge(item);
+                        return badge ? (
+                          <span
+                            className={`inline-flex mt-1 px-1.5 py-0.5 text-xs rounded-full border ${badge.className}`}
+                          >
+                            {badge.label}
+                          </span>
+                        ) : null;
+                      })()}
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        ĐVT: {item.unit || "-"}
+                      </div>
+                      <div
+                        className={`text-xs mt-0.5 ${
+                          item.onHand !== undefined &&
+                          item.quantity > item.onHand
+                            ? "text-red-600"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        Tồn tổng:{" "}
+                        {item.onHand === undefined
+                          ? "Đang tải..."
+                          : item.onHand.toLocaleString("vi-VN")}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        Bục rách:{" "}
+                        {Number(
+                          conditionSummary?.[item.productId]?.damaged || 0,
+                        ).toLocaleString("vi-VN")}{" "}
+                        · Cận date:{" "}
+                        {Number(
+                          conditionSummary?.[item.productId]?.nearExpiry || 0,
+                        ).toLocaleString("vi-VN")}
+                      </div>
                     </div>
                     {!isFormDisabled && (
-                      <button
-                        onClick={() => handleRemoveProduct(index)}
-                        className="p-1.5 hover:bg-gray-100 rounded flex-shrink-0"
-                        title="Xóa">
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </button>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => handleDuplicateProduct(index)}
+                          className="p-1.5 hover:bg-green-50 rounded"
+                          title="Thêm dòng mới cho sản phẩm này"
+                        >
+                          <Copy className="w-4 h-4 text-green-600" />
+                        </button>
+                        <button
+                          onClick={() => handleRemoveProduct(index)}
+                          className="p-1.5 hover:bg-gray-100 rounded"
+                          title="Xóa"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </button>
+                      </div>
                     )}
                   </div>
+
+                  {!isFormDisabled && (
+                    <div className="flex flex-wrap items-center gap-1 mb-2">
+                      <ItemConditionSelector
+                        item={item}
+                        damagedAvailable={Number(
+                          conditionSummary?.[item.productId]?.damaged || 0,
+                        )}
+                        nearExpiryAvailable={Number(
+                          conditionSummary?.[item.productId]?.nearExpiry || 0,
+                        )}
+                        branchId={branchId || undefined}
+                        posOnly
+                        actionLabel="Xuất dùng nội bộ"
+                        lotPriorityVerb="xuất"
+                        usePortalForLotDropdown
+                        onUpdateItem={handleConditionChange}
+                      />
+                    </div>
+                  )}
 
                   <div className="flex items-end gap-2 border-t border-dashed border-gray-200 pt-2.5">
                     <div className="flex-1">
@@ -639,7 +855,9 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
       <div className="order-2 lg:order-none w-full lg:w-96 border m-3 lg:m-4 rounded-xl overflow-y-auto custom-sidebar-scroll bg-white shadow-xl">
         <div className="p-6 space-y-5">
           <div>
-            <label className="block text-sm text-gray-600 mb-1">Người tạo</label>
+            <label className="block text-sm text-gray-600 mb-1">
+              Người tạo
+            </label>
             <input
               type="text"
               value={internalUse?.createdByName || currentUser?.name || ""}
@@ -649,7 +867,9 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
           </div>
 
           <div>
-            <label className="block text-sm text-gray-600 mb-1">Thời gian</label>
+            <label className="block text-sm text-gray-600 mb-1">
+              Thời gian
+            </label>
             <input
               type="text"
               value={
@@ -677,7 +897,9 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
           </div>
 
           <div>
-            <label className="block text-sm text-gray-600 mb-1">Trạng thái</label>
+            <label className="block text-sm text-gray-600 mb-1">
+              Trạng thái
+            </label>
             <div className="px-3 py-2 border rounded bg-gray-50">
               <span className="text-sm text-gray-600">
                 {internalUse
@@ -701,7 +923,8 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
                   type="button"
                   onClick={() => setShowPurposeForm(true)}
                   className="text-gray-400 hover:text-brand p-0.5 rounded"
-                  title="Thêm mục đích sử dụng">
+                  title="Thêm mục đích sử dụng"
+                >
                   <Plus className="w-4 h-4" />
                 </button>
               )}
@@ -769,7 +992,8 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
               <button
                 onClick={() => handleSubmit(true)}
                 disabled={isPending}
-                className="w-full px-4 py-2.5 bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                className="w-full px-4 py-2.5 bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
                 <span>💾</span>
                 <span>Lưu tạm</span>
               </button>
@@ -778,7 +1002,8 @@ export function InternalUseForm({ internalUse, onClose }: InternalUseFormProps) 
                 <button
                   onClick={() => handleSubmit(false)}
                   disabled={isPending}
-                  className="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  className="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
                   <span>✓</span>
                   <span>Hoàn thành</span>
                 </button>

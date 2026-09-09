@@ -62,7 +62,7 @@ export interface CartItem {
   discount: number;
   note?: string;
   conditionType?: string; // "normal" | "damaged" | "near_expiry"
-  soldExpiryDate?: string; // lô cận date (YYYY-MM-DD) khi conditionType = near_expiry
+  soldExpiryDate?: string | null; // null = lô chưa xác định NSX
   // ── Khuyến mãi tự động (inline, KiotViet-style) ──
   // Dòng quà/mua kèm do KM sinh ra
   isPromoGift?: boolean;

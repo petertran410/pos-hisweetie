@@ -35,6 +35,7 @@ const TX_LABELS: Record<string, string> = {
   SUPPLIER_RETURN_OUT: "Trả hàng nhập",
   CONSIGNMENT_RETURN_IN: "Hoàn ký gửi",
   CONSIGNMENT_RETURN_CANCEL: "Hủy hoàn ký gửi",
+  INTERNAL_USE: "Xuất dùng nội bộ",
 };
 
 const formatMoney = (v: number | null | undefined) =>
@@ -167,6 +168,8 @@ export function ProductConditionTab({ productId, branchId }: Props) {
                       />
                     ) : log.refType === "invoice" ? (
                       <CodeLink entity="invoice" code={log.refCode} />
+                    ) : log.refType === "internal_use" ? (
+                      <CodeLink entity="internal-use" code={log.refCode} />
                     ) : (
                       <span className="font-medium text-gray-500">
                         {log.refCode || "-"}
