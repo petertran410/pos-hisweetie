@@ -452,23 +452,15 @@ export const purchasingPlanningApi = {
     return apiClient.delete(`${BASE}/configs/${configId}`);
   },
 
+  // Legacy endpoints retained for backward compatibility; no longer exposed in UI.
   listTrends: async (): Promise<{ items: PlanningTrend[] }> => {
     if (USE_MOCK) return { items: [] };
     return apiClient.get(`${BASE}/trends`);
   },
-
-  createTrend: async (data: PlanningTrendPayload): Promise<PlanningTrend> => {
-    return apiClient.post(`${BASE}/trends`, data);
-  },
-
-  updateTrend: async (
-    id: number,
-    data: Partial<PlanningTrendPayload>
-  ): Promise<PlanningTrend> => {
-    return apiClient.patch(`${BASE}/trends/${id}`, data);
-  },
-
-  deleteTrend: async (id: number): Promise<void> => {
-    return apiClient.delete(`${BASE}/trends/${id}`);
-  },
+  createTrend: async (data: PlanningTrendPayload): Promise<PlanningTrend> =>
+    apiClient.post(`${BASE}/trends`, data),
+  updateTrend: async (id: number, data: Partial<PlanningTrendPayload>): Promise<PlanningTrend> =>
+    apiClient.patch(`${BASE}/trends/${id}`, data),
+  deleteTrend: async (id: number): Promise<void> =>
+    apiClient.delete(`${BASE}/trends/${id}`),
 };

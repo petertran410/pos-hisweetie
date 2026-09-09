@@ -59,9 +59,8 @@ const shortDate = (value: string) => {
   return day && month ? `${day}/${month}` : value;
 };
 
-const eventColor: Record<DecisionTimelineEvent["type"], string> = {
+const eventColor: Partial<Record<DecisionTimelineEvent["type"], string>> = {
   PROMOTION: "#f59e0b",
-  TREND: "#f97316",
   INCOMING: "#2563eb",
   VEHICLE_SHIPMENT: "#7c3aed",
 };
@@ -86,13 +85,13 @@ export function DecisionTimelineModal({
 }: Props) {
   const projection = timeline?.projection ?? [];
   const history = timeline?.history ?? [];
-  const events = timeline?.events ?? [];
+  const events = (timeline?.events ?? []).filter((event) => event.type !== "TREND");
   const projectionFrom = projection[0]?.date ?? "";
   const projectionTo = projection[projection.length - 1]?.date ?? "";
 
   const visibleBands = events.filter(
     (event) =>
-      (event.type === "PROMOTION" || event.type === "TREND") &&
+      event.type === "PROMOTION" &&
       event.endDate &&
       event.endDate >= projectionFrom &&
       event.startDate <= projectionTo,
@@ -221,7 +220,7 @@ export function DecisionTimelineModal({
                             fill={eventColor[event.type]}
                             fillOpacity={0.08}
                             ifOverflow="extendDomain"
-                            label={{ value: event.type === "PROMOTION" ? "KM" : "Trend", fill: eventColor[event.type], fontSize: 10 }}
+                            label={{ value: "KM", fill: eventColor[event.type], fontSize: 10 }}
                           />
                         ))}
                         <ReferenceLine yAxisId="stock" y={0} stroke="#dc2626" strokeDasharray="4 4" label={{ value: "Hết hàng", fill: "#dc2626", fontSize: 10, position: "insideTopLeft" }} />
@@ -257,7 +256,7 @@ export function DecisionTimelineModal({
                   <LegendDot color="#0f766e" label="Tồn chắc chắn" />
                   <LegendDot color="#60a5fa" label="Nếu ghép xe về" dashed />
                   <LegendDot color="#7c3aed" label="Ghép xe" />
-                  <LegendDot color="#f59e0b" label="Khuyến mãi / trend" />
+                  <LegendDot color="#f59e0b" label="Khuyến mãi" />
                 </div>
               </section>
             </div>
@@ -283,7 +282,7 @@ export function DecisionTimelineModal({
                   Sự kiện ảnh hưởng quyết định
                 </h3>
                 {events.length === 0 ? (
-                  <p className="text-sm text-gray-500">Không có khuyến mãi, trend hoặc lô hàng cần chú ý.</p>
+                  <p className="text-sm text-gray-500">Không có khuyến mãi hoặc lô hàng cần chú ý.</p>
                 ) : (
                   <div className="max-h-36 space-y-1.5 overflow-y-auto text-xs">
                     {events.map((event, index) => (
@@ -350,7 +349,6 @@ function EmptyChart({ text }: { text: string }) {
 
 function eventLabel(type: DecisionTimelineEvent["type"]) {
   if (type === "PROMOTION") return "Khuyến mãi";
-  if (type === "TREND") return "Trend";
   if (type === "VEHICLE_SHIPMENT") return "Ghép xe";
   return "Hàng về";
 }
@@ -380,8 +378,7 @@ function HistoryTooltip({
       <div>Mức nền: <b>{num(point.baseline)}</b></div>
       <div>Trạng thái: <b>{point.anomaly === "NORMAL" ? "Bình thường" : point.anomaly === "SPIKE" ? "Tăng bất thường" : "Giảm bất thường"}</b></div>
       {point.hasPromotion && <div className="text-orange-600">Có khuyến mãi</div>}
-      {point.hasTrend && <div className="text-orange-600">Có trend</div>}
-    </div>
+          </div>
   );
 }
 

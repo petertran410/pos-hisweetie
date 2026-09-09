@@ -9,7 +9,6 @@ import { RecommendationSummaryTable } from "@/components/purchasing-planning/Rec
 import { RecommendationToolbar } from "@/components/purchasing-planning/RecommendationToolbar";
 import { RecommendationPagination } from "@/components/purchasing-planning/RecommendationPagination";
 import { RecommendationDetailPanel } from "@/components/purchasing-planning/RecommendationDetailPanel";
-import { PlanningTrendModal } from "@/components/purchasing-planning/PlanningTrendModal";
 import {
   ExportExcelModal,
   type ExportExcelOptions,
@@ -50,7 +49,6 @@ export default function PurchasingPlanningPage() {
 
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
-  const [trendOpen, setTrendOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const canRun = useCan("purchasing_planning", "run");
   const canConfig = useCan("purchasing_planning", "config");
@@ -195,7 +193,6 @@ export default function PurchasingPlanningPage() {
             onExportExcel={() => setExportOpen(true)}
             isExporting={isExporting}
             onRunCalculation={canRun ? handleRunCalculation : undefined}
-            onManageTrends={canConfig ? () => setTrendOpen(true) : undefined}
             isCalculating={runCalculation.isPending}
           />
 
@@ -228,9 +225,9 @@ export default function PurchasingPlanningPage() {
         <RecommendationDetailPanel
           itemId={selectedItemId}
           onClose={() => setSelectedItemId(null)}
+          canConfigure={canConfig}
+          onRunCalculation={canRun ? handleRunCalculation : undefined}
         />
-
-        <PlanningTrendModal open={trendOpen} onClose={() => setTrendOpen(false)} />
 
         {exportOpen && (
           <ExportExcelModal

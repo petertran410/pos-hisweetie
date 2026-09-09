@@ -63,7 +63,8 @@ export function usePurchasingConfigs() {
 
 export function useResolvedPurchasingConfig(
   scope: PurchasingConfigScope,
-  entityId?: number
+  entityId?: number,
+  options?: { enabled?: boolean }
 ) {
   return useQuery({
     queryKey: [KEY, "resolved", scope, entityId ?? null],
@@ -76,7 +77,9 @@ export function useResolvedPurchasingConfig(
             ? { categoryId: entityId }
             : {}
     ),
-    enabled: scope === "GLOBAL" || entityId !== undefined,
+    enabled:
+      options?.enabled !== false &&
+      (scope === "GLOBAL" || entityId !== undefined),
   });
 }
 
@@ -111,7 +114,7 @@ export function useDeletePurchasingConfig() {
     onSuccess: invalidate,
   });
 }
-
+/** Legacy trend hooks kept only so old code remains source-compatible; trend UI is disabled. */
 export function usePlanningTrends(enabled = true) {
   return useQuery({
     queryKey: [KEY, "trends"],
@@ -123,19 +126,9 @@ export function usePlanningTrends(enabled = true) {
 export function useSavePlanningTrend() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      id,
-      data,
-    }: {
-      id?: number;
-      data: Parameters<typeof purchasingPlanningApi.createTrend>[0];
-    }) =>
-      id
-        ? purchasingPlanningApi.updateTrend(id, data)
-        : purchasingPlanningApi.createTrend(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [KEY, "trends"] });
-    },
+    mutationFn: ({ id, data }: { id?: number; data: Parameters<typeof purchasingPlanningApi.createTrend>[0] }) =>
+      id ? purchasingPlanningApi.updateTrend(id, data) : purchasingPlanningApi.createTrend(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [KEY, "trends"] }),
   });
 }
 
@@ -143,8 +136,6 @@ export function useDeletePlanningTrend() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => purchasingPlanningApi.deleteTrend(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [KEY, "trends"] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [KEY, "trends"] }),
   });
 }

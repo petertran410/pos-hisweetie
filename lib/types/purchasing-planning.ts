@@ -129,9 +129,9 @@ export const CONFIG_SOURCE_LABEL: Record<ConfigSource, string> = {
  *  - `leadTimeDays`: từ chuỗi Sản xuất → Thông quan → Về kho gốc → Điều chuyển
  *  - `moq`: từ khai báo ở nhà máy / mapping SKU × nhà máy
  *  - `safetyDays`: suy từ độ dao động doanh số theo tháng
- *  - `growthFactor`: thay bằng đối chiếu khuyến mãi và phát hiện trend
+ *  - `growthFactor`: hệ thống tự suy từ lịch sử, người dùng có thể override theo scope
  */
-export const PURCHASING_CONFIG_FIELDS = ["coverageDays"] as const;
+export const PURCHASING_CONFIG_FIELDS = ["coverageDays", "growthFactor"] as const;
 
 export type PurchasingConfigField = (typeof PURCHASING_CONFIG_FIELDS)[number];
 export type PurchasingConfigScope = "GLOBAL" | "CATEGORY" | "SUPPLIER" | "SKU";
@@ -148,7 +148,9 @@ export type PurchasingConfigOverrides = Partial<
 
 export type PurchasingConfigPatch = Partial<
   Record<PurchasingConfigField, number | null>
->;
+> & {
+  note?: string | null;
+};
 
 export interface ResolvedPurchasingConfigField {
   value: number;
@@ -190,6 +192,7 @@ export type ResolvedPurchasingConfigQuery = {
 export interface CreatePurchasingConfigRequest extends PurchasingConfigOverrides {
   scopeType: PurchasingConfigScope;
   scopeId?: number;
+  note?: string | null;
 }
 
 /** Trạng thái của một dòng đề xuất — TD §2.6 */
@@ -393,7 +396,15 @@ export interface ForecastComparison {
   windowDays: number;
   /** Số ngày bị loại vì hết hàng — PRD §5.5 */
   stockoutDaysExcluded: number;
-  /** Hệ số điều chỉnh thủ công — PRD §5.6 */
+  /** Hệ số tăng trưởng hệ thống đề xuất — suy từ lịch sử */
+  systemGrowthFactor?: number;
+  /** Hệ số thực sự áp dụng vào forecast */
+  appliedGrowthFactor?: number;
+  /** Có override ở một scope cấu hình hay không */
+  growthFactorOverridden?: boolean;
+  growthFactorSource?: PurchasingConfigScope | "DERIVED";
+  growthFactorNote?: string | null;
+  /** Giữ tương thích snapshot cũ */
   growthFactor: number;
   /** Nguồn dữ liệu thực tế đã dùng cho SKU này */
   demandSource: DemandSource;
@@ -528,6 +539,9 @@ export interface ConfigValueWithSource {
   value: number;
   source: ConfigSource;
   label: string;
+  systemValue?: number;
+  overridden?: boolean;
+  note?: string | null;
 }
 
 /** Bản ghi đầy đủ quá trình tính — PRD §13.3, TD §12.5 */
