@@ -153,4 +153,9 @@ export const transfersApi = {
     apiClient.get<PromisedHNDrilldownResponse>(
       `/transfers/promised-hn-by-product?productId=${productId}`,
     ),
+
+  getPromisedSGByProduct: (productId: number) =>
+    apiClient.get<PromisedHNDrilldownResponse>(
+      `/transfers/promised-sg-by-product?productId=${productId}`,
+    ),
 };

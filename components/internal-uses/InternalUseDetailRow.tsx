@@ -14,6 +14,7 @@ import { printEntity } from "@/lib/utils/print";
 import { toast } from "sonner";
 import Link from "next/link";
 import { CodeLink } from "@/components/shared/CodeLink";
+import { formatMonthYear } from "@/components/ui/DatePickerInput";
 
 interface InternalUseDetailRowProps {
   internalUseId: number;
@@ -45,6 +46,12 @@ const getStatusColor = (status: number) => {
     default:
       return "bg-gray-100 text-gray-700";
   }
+};
+
+const getConditionLabel = (detail: { conditionType?: string }) => {
+  if (detail.conditionType === "damaged") return "Bục rách";
+  if (detail.conditionType === "near_expiry") return "Cận date";
+  return "Bình thường";
 };
 
 export function InternalUseDetailRow({
@@ -121,7 +128,7 @@ export function InternalUseDetailRow({
   const handleComplete = async () => {
     if (
       !confirm(
-        "Bạn có chắc chắn muốn duyệt/hoàn thành phiếu này? Hàng hóa sẽ được xuất kho."
+        "Bạn có chắc chắn muốn duyệt/hoàn thành phiếu này? Hàng hóa sẽ được xuất kho.",
       )
     ) {
       return;
@@ -171,8 +178,7 @@ export function InternalUseDetailRow({
     );
   }
 
-  const showCancelButton =
-    internalUse.status === 1 || internalUse.status === 2;
+  const showCancelButton = internalUse.status === 1 || internalUse.status === 2;
   const showOpenButton = internalUse.status === 1;
   // Chỉ phiếu tạm (status=1) mới có thể duyệt/hoàn thành, và chỉ người có
   // quyền internal-use:complete mới thấy nút này.
@@ -182,11 +188,13 @@ export function InternalUseDetailRow({
     <tr>
       <td
         colSpan={colSpan}
-        className="border-b-2 border-l-2 border-r-2 border-brand bg-gray-50">
+        className="border-b-2 border-l-2 border-r-2 border-brand bg-gray-50"
+      >
         <div
           ref={wrapperRef}
           className="sticky left-0 bg-gray-50"
-          style={{ width: 0 }}>
+          style={{ width: 0 }}
+        >
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="p-4">
               {/* Header */}
@@ -201,8 +209,9 @@ export function InternalUseDetailRow({
                   </span>
                   <span
                     className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(
-                      internalUse.status
-                    )}`}>
+                      internalUse.status,
+                    )}`}
+                  >
                     {getStatusText(internalUse.status)}
                   </span>
                 </div>
@@ -295,6 +304,12 @@ export function InternalUseDetailRow({
                           Tên hàng
                         </th>
                         <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider">
+                          Loại tồn
+                        </th>
+                        <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider">
+                          NSX
+                        </th>
+                        <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider">
                           ĐVT
                         </th>
                         <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider">
@@ -316,8 +331,9 @@ export function InternalUseDetailRow({
                       {filteredDetails.length === 0 ? (
                         <tr>
                           <td
-                            colSpan={canViewCost ? 6 : 4}
-                            className="px-4 py-8 text-center text-sm text-gray-400">
+                            colSpan={canViewCost ? 8 : 6}
+                            className="px-4 py-8 text-center text-sm text-gray-400"
+                          >
                             Không tìm thấy sản phẩm
                           </td>
                         </tr>
@@ -325,7 +341,8 @@ export function InternalUseDetailRow({
                         filteredDetails.map((detail, index) => (
                           <tr
                             key={index}
-                            className="hover:bg-gray-50 transition-colors">
+                            className="hover:bg-gray-50 transition-colors"
+                          >
                             <td className="px-[10px] py-2">
                               {detail.productCode ? (
                                 <Link
@@ -333,7 +350,8 @@ export function InternalUseDetailRow({
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-sm font-medium text-brand hover:underline inline-flex items-center gap-1"
-                                  onClick={(e) => e.stopPropagation()}>
+                                  onClick={(e) => e.stopPropagation()}
+                                >
                                   {detail.productCode}
                                   <ExternalLink className="w-3 h-3" />
                                 </Link>
@@ -343,6 +361,17 @@ export function InternalUseDetailRow({
                             </td>
                             <td className="px-[10px] py-2 text-sm text-gray-900">
                               {detail.productName}
+                            </td>
+                            <td className="px-[10px] py-2 text-center text-sm text-gray-700">
+                              {getConditionLabel(detail)}
+                            </td>
+                            <td className="px-[10px] py-2 text-center text-sm text-gray-700">
+                              {detail.conditionType === "near_expiry"
+                                ? detail.soldExpiryDate === null
+                                  ? "Chưa xác định"
+                                  : formatMonthYear(detail.soldExpiryDate) ||
+                                    "-"
+                                : "-"}
                             </td>
                             <td className="px-[10px] py-2 text-center text-sm text-gray-900">
                               {detail.unit || "-"}
@@ -385,7 +414,8 @@ export function InternalUseDetailRow({
                 <button
                   onClick={handlePrint}
                   title="In phiếu xuất dùng nội bộ"
-                  className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5">
+                  className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5"
+                >
                   <Printer className="w-3.5 h-3.5" />
                   In
                 </button>
@@ -393,7 +423,8 @@ export function InternalUseDetailRow({
                   <button
                     onClick={handleCancel}
                     disabled={cancelInternalUse.isPending}
-                    className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-full hover:bg-red-700 transition-colors disabled:opacity-50">
+                    className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-full hover:bg-red-700 transition-colors disabled:opacity-50"
+                  >
                     Hủy
                   </button>
                 )}
@@ -401,14 +432,16 @@ export function InternalUseDetailRow({
                   <button
                     onClick={handleComplete}
                     disabled={completeInternalUse.isPending}
-                    className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-full hover:bg-green-700 transition-colors disabled:opacity-50">
+                    className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-full hover:bg-green-700 transition-colors disabled:opacity-50"
+                  >
                     {completeInternalUse.isPending ? "Đang duyệt..." : "Duyệt"}
                   </button>
                 )}
                 {showOpenButton && (
                   <button
                     onClick={handleOpenEdit}
-                    className="px-3 py-1.5 text-sm font-medium text-white bg-brand rounded-full hover:bg-brand-dark transition-colors">
+                    className="px-3 py-1.5 text-sm font-medium text-white bg-brand rounded-full hover:bg-brand-dark transition-colors"
+                  >
                     Mở phiếu
                   </button>
                 )}

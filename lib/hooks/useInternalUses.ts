@@ -1,4 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
 import {
   internalUsesApi,
   type InternalUseQueryParams,
@@ -8,6 +13,20 @@ import { useState } from "react";
 import { API_URL } from "@/lib/config/api";
 import { useAuthStore } from "../store/auth";
 import { useBranchStore } from "../store/branch";
+
+const invalidateInternalUseStock = (queryClient: QueryClient) => {
+  [
+    "condition-summary-batch",
+    "product-condition-summary",
+    "product-condition-logs",
+    "near-expiry-lots",
+    "inventory-by-branch",
+    "products",
+    "product",
+  ].forEach((key) => {
+    queryClient.invalidateQueries({ queryKey: [key] });
+  });
+};
 
 export function useInternalUses(params?: InternalUseQueryParams) {
   return useQuery({
@@ -87,6 +106,7 @@ export function useCreateInternalUse() {
     mutationFn: internalUsesApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["internal-uses"] });
+      invalidateInternalUseStock(queryClient);
       toast.success("Tạo phiếu xuất dùng nội bộ thành công");
     },
     onError: (error: any) => {
@@ -106,6 +126,7 @@ export function useUpdateInternalUse() {
       queryClient.invalidateQueries({
         queryKey: ["internal-uses", variables.id],
       });
+      invalidateInternalUseStock(queryClient);
       toast.success("Cập nhật phiếu xuất dùng nội bộ thành công");
     },
     onError: (error: any) => {
@@ -122,6 +143,7 @@ export function useCompleteInternalUse() {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ["internal-uses"] });
       queryClient.invalidateQueries({ queryKey: ["internal-uses", id] });
+      invalidateInternalUseStock(queryClient);
       toast.success("Hoàn thành phiếu xuất dùng nội bộ thành công");
     },
     onError: (error: any) => {
@@ -141,6 +163,7 @@ export function useCancelInternalUse() {
       queryClient.invalidateQueries({
         queryKey: ["internal-uses", variables.id],
       });
+      invalidateInternalUseStock(queryClient);
       toast.success("Hủy phiếu xuất dùng nội bộ thành công");
     },
     onError: (error: any) => {
