@@ -126,7 +126,7 @@ export function TransferPlanningPagination({
                 </span>
               );
             }
-            const isCurrent = p === page;
+            const isCurrent = Number(p) === Number(page);
             return (
               <button
                 key={`page-${p}`}
@@ -134,9 +134,14 @@ export function TransferPlanningPagination({
                 onClick={() => onPageChange(Number(p))}
                 className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-medium transition-colors ${
                   isCurrent
-                    ? "bg-primary text-white shadow-sm font-semibold"
+                    ? "shadow-sm font-semibold"
                     : "border hover:bg-gray-50 text-gray-700"
-                }`}>
+                }`}
+                style={
+                  isCurrent
+                    ? { background: "var(--dt-color-primary)", color: "#fff", borderColor: "var(--dt-color-primary)" }
+                    : undefined
+                }>
                 {p}
               </button>
             );
