@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Search,
   Download,
@@ -53,6 +53,16 @@ export default function TheoDoiCongNoPage() {
   const { data: customerGroupsRes } = useCustomerGroups();
   const customerGroups = customerGroupsRes?.data ?? [];
 
+  // Tìm kiếm giống trang danh sách khách hàng: cập nhật sau 300ms kể từ
+  // lần gõ cuối, không cần chọn một gợi ý hoặc nhấn Enter.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
+
   const params: DebtTrackingParams = useMemo(
     () => ({
       search: search || undefined,
@@ -77,11 +87,6 @@ export default function TheoDoiCongNoPage() {
 
   const { data: summary } = useDebtTrackingSummary(summaryParams);
   const exportMut = useExportDebtTracking();
-
-  const applySearch = () => {
-    setSearch(searchInput.trim());
-    setPage(1);
-  };
 
   const resetFilters = () => {
     setSearchInput("");
@@ -211,8 +216,7 @@ export default function TheoDoiCongNoPage() {
               <input
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && applySearch()}
-                placeholder="Tìm theo mã, tên, số điện thoại…"
+                placeholder="Theo mã, tên, SĐT khách hàng"
                 className="w-full border rounded pl-8 pr-3 py-1.5 text-sm"
               />
             </div>
@@ -338,6 +342,7 @@ export default function TheoDoiCongNoPage() {
         <div className="flex-1 bg-white border rounded-lg overflow-hidden flex flex-col">
           <DebtTrackingTable
             params={params}
+            summary={summary}
             selectedCustomerIds={selectedCustomerIds}
             onSelectedCustomerIdsChange={setSelectedCustomerIds}
             onPageChange={setPage}

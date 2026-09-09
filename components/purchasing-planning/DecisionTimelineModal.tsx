@@ -54,6 +54,11 @@ const dateVn = (value: string | null | undefined) => {
   return day && month && year ? `${day}/${month}/${year}` : value;
 };
 
+const shortDate = (value: string) => {
+  const [, month, day] = value.slice(0, 10).split("-");
+  return day && month ? `${day}/${month}` : value;
+};
+
 const eventColor: Record<DecisionTimelineEvent["type"], string> = {
   PROMOTION: "#f59e0b",
   TREND: "#f97316",
@@ -195,7 +200,14 @@ export function DecisionTimelineModal({
                     <ResponsiveContainer width="100%" height="100%">
                       <ComposedChart data={projection} margin={{ top: 12, right: 10, bottom: 4, left: 0 }}>
                         <CartesianGrid stroke="#e5e7eb" strokeDasharray="3 3" />
-                        <XAxis dataKey="date" interval={6} tick={{ fontSize: 10, fill: "#6b7280" }} />
+                        <XAxis
+                          dataKey="date"
+                          interval={projection.length > 60 ? 13 : 6}
+                          minTickGap={18}
+                          height={28}
+                          tick={{ fontSize: 10, fill: "#6b7280" }}
+                          tickFormatter={(value) => shortDate(String(value))}
+                        />
                         <YAxis yAxisId="stock" tick={{ fontSize: 11, fill: "#6b7280" }} tickFormatter={(value) => num(Number(value))} />
                         <YAxis yAxisId="incoming" orientation="right" hide domain={[0, "auto"]} />
                         <Tooltip content={<ProjectionTooltip unit={unit} />} />

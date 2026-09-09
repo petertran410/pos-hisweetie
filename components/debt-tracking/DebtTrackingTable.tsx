@@ -21,6 +21,7 @@ import {
 import {
   DebtTrackingRow,
   DebtTrackingParams,
+  DebtTrackingSummary,
   DEBT_FORM_LABELS,
   describeDebtPolicy,
 } from "@/lib/api/debt-tracking";
@@ -83,6 +84,7 @@ export function DebtTrackingTable({
   onPageChange,
   pageSize,
   onPageSizeChange,
+  summary,
 }: {
   params: DebtTrackingParams;
   selectedCustomerIds: number[];
@@ -90,6 +92,7 @@ export function DebtTrackingTable({
   onPageChange: (page: number) => void;
   pageSize: number;
   onPageSizeChange: (pageSize: number) => void;
+  summary?: DebtTrackingSummary;
 }) {
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc" | null>(null);
@@ -473,6 +476,33 @@ export function DebtTrackingTable({
             </tr>
           </thead>
           <tbody className="divide-y">
+            <tr className="border-b bg-gray-50/60 font-semibold text-gray-700">
+              <td className="px-3 py-2" />
+              <td className={`${columnClass("customer")} px-3 py-2`} style={columnStyle("customer")}>
+                Tổng
+              </td>
+              <td className={`${columnClass("rule")} px-3 py-2`} style={columnStyle("rule")} />
+              <td className={`${columnClass("paymentHistory")} px-3 py-2`} style={columnStyle("paymentHistory")} />
+              <td className={`${columnClass("totalDebt")} px-3 py-2 text-right tabular-nums`} style={columnStyle("totalDebt")}>
+                {summary ? formatCurrency(summary.totalDebt) : "—"}
+              </td>
+              <td className={`${columnClass("creditLimit")} px-3 py-2`} style={columnStyle("creditLimit")} />
+              <td className={`${columnClass("requiredPayment")} px-3 py-2 text-right tabular-nums text-red-700`} style={columnStyle("requiredPayment")}>
+                {summary ? formatCurrency(summary.requiredPaymentAmount) : "—"}
+              </td>
+              <td className={`${columnClass("overdueAmount")} px-3 py-2`} style={columnStyle("overdueAmount")} />
+              <td className={`${columnClass("nearestDueDate")} px-3 py-2`} style={columnStyle("nearestDueDate")} />
+              <td className={`${columnClass("lastPayment")} px-3 py-2`} style={columnStyle("lastPayment")} />
+              <td className={`${columnClass("accountantAttempts")} px-3 py-2`} style={columnStyle("accountantAttempts")} />
+              <td className={`${columnClass("notify")} px-3 py-2`} style={columnStyle("notify")} />
+              <td className={`${columnClass("salesAttempts")} px-3 py-2`} style={columnStyle("salesAttempts")} />
+              <td className={`${columnClass("status")} px-3 py-2`} style={columnStyle("status")} />
+              <td className={`${columnClass("ticket")} px-3 py-2`} style={columnStyle("ticket")} />
+              <td className={`${columnClass("stopDelivery")} px-3 py-2`} style={columnStyle("stopDelivery")} />
+              <td className={`${columnClass("note")} px-3 py-2`} style={columnStyle("note")} />
+              <td className={`${columnClass("cycle")} px-3 py-2`} style={columnStyle("cycle")} />
+              <td className="px-3 py-2" />
+            </tr>
             {rows.map((r) => (
               <tr
                 key={r.customerId}
