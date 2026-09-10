@@ -103,6 +103,7 @@ export interface CustomerDemandImportPreviewRow {
   unit: CustomerDemandUnit;
   note?: string;
   errors: string[];
+  voucherIndex?: number;
   customer: { id: number; code?: string | null; name: string } | null;
   product: {
     id: number;

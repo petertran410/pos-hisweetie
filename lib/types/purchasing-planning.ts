@@ -454,6 +454,18 @@ export interface ForecastComparison {
       customerName: string | null;
       demandMonth: string;
       quantityBase: number;
+      skipped?: boolean;
+      skipReason?: "INBOUND_BETWEEN" | null;
+    }>;
+    pastCustomerDemand?: number;
+    pastCustomerDemandDetails?: Array<{
+      monthId: number | null;
+      customerId: number | null;
+      customerName: string | null;
+      demandMonth: string;
+      quantityBase: number;
+      skipped?: boolean;
+      skipReason?: "INBOUND_BETWEEN" | null;
     }>;
     companyNeed: number;
     salesDemand: number;

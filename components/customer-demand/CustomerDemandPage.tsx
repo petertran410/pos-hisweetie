@@ -1,7 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Eye, FileText, Loader2, Plus, Search, SquareX, Upload, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  Check,
+  ChevronLeft,
+  ClipboardList,
+  Eye,
+  FileText,
+  Inbox,
+  Plus,
+  Search,
+  SquareX,
+  Upload,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { useCan } from "@/lib/hooks/useCan";
@@ -14,11 +26,18 @@ import {
 } from "@/lib/hooks/useCustomerDemand";
 import { CustomerDemandFormModal } from "./CustomerDemandFormModal";
 import { CustomerDemandImportModal } from "./CustomerDemandImportModal";
+import {
+  DemandButton,
+  DemandEmptyState,
+  DemandMonthChip,
+  DemandStatusChip,
+  formatDemandMonth,
+  formatDemandQty,
+} from "./DemandUi";
 import type {
   CustomerDemand,
   CustomerDemandStatus,
 } from "@/lib/types/customer-demand";
-import { CUSTOMER_DEMAND_STATUS_LABEL } from "@/lib/types/customer-demand";
 
 const STATUS_TABS: Array<{ value: CustomerDemandStatus | ""; label: string }> = [
   { value: "", label: "Tất cả" },
@@ -26,21 +45,6 @@ const STATUS_TABS: Array<{ value: CustomerDemandStatus | ""; label: string }> = 
   { value: "CONFIRMED", label: "Đã duyệt" },
   { value: "CANCELLED", label: "Đã hủy" },
 ];
-
-const statusClass: Record<CustomerDemandStatus, string> = {
-  DRAFT: "bg-gray-100 text-gray-700",
-  CONFIRMED: "bg-green-100 text-green-700",
-  CANCELLED: "bg-red-100 text-red-700",
-};
-
-const formatQty = (value: number) =>
-  Number(value || 0).toLocaleString("vi-VN", { maximumFractionDigits: 2 });
-
-function formatMonthLabel(value: string) {
-  const [year, month] = (value || "").split("-");
-  if (!year || !month) return value || "—";
-  return `${month}/${year}`;
-}
 
 export function CustomerDemandPage() {
   const canCreate = useCan("customer_demand", "create");
@@ -69,6 +73,15 @@ export function CustomerDemandPage() {
     return () => clearTimeout(timer);
   }, [customerFilterQuery]);
 
+  useEffect(() => {
+    if (formOpen || importOpen || selectedId === null) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedId(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [formOpen, importOpen, selectedId]);
+
   const { data, isLoading, isError } = useCustomerDemands(filters);
   const { data: detail, isLoading: detailLoading } =
     useCustomerDemand(selectedId);
@@ -82,6 +95,13 @@ export function CustomerDemandPage() {
   const customerResults = customerSearch ?? [];
   const totalPages = data?.totalPages ?? 1;
   const editDemand = formOpen && selectedId !== null ? detail : null;
+  const hasActiveFilters = Boolean(
+    filters.customerId || filters.month || filters.status
+  );
+  const canEditSelected =
+    canUpdate &&
+    !!detail &&
+    detail.months.some((month) => month.status !== "CANCELLED");
 
   const selectFilterCustomer = (customer: {
     id: number;
@@ -130,195 +150,220 @@ export function CustomerDemandPage() {
     }
   };
 
+  const openCreate = () => {
+    setSelectedId(null);
+    setFormOpen(true);
+  };
+
   return (
     <PagePermissionGuard resource="customer_demand" action="view">
-      <div
-        className="flex h-full min-h-0 flex-col border-t bg-gray-50"
-        style={{ borderColor: "var(--dt-border)" }}>
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b bg-white px-5 py-3">
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900">
-              Demand khách hàng (OEM/đặt hộ)
-            </h1>
-            <p className="mt-0.5 text-xs text-gray-500">
-              Quản lý nhu cầu theo khách hàng, sản phẩm và tháng cần hàng. Không
-              tạo Order, hóa đơn, công nợ hoặc giữ tồn.
-            </p>
-          </div>
-          {canCreate && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setImportOpen(true)}
-                className="flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                <Upload className="h-4 w-4" />
-                Import Excel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedId(null);
-                  setFormOpen(true);
-                }}
-                className="bg-brand hover:bg-brand-dark flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-white">
-                <Plus className="h-4 w-4" />
-                Tạo Demand
-              </button>
+      <div className="cd-demand cd-page flex h-full min-h-0 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 p-3 md:gap-4 md:p-4">
+          <div className="flex shrink-0 flex-wrap items-end justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-3">
+                <span className="cd-mark" aria-hidden />
+                <h1 className="cd-title">Demand khách hàng</h1>
+              </div>
+              <p className="cd-subtitle mt-1 max-w-2xl pl-[22px]">
+                Nhu cầu OEM/đặt hộ theo khách, sản phẩm và tháng. Không tạo
+                Order, hóa đơn, công nợ hoặc giữ tồn.
+              </p>
             </div>
-          )}
-        </div>
+            {canCreate && (
+              <div className="flex items-center gap-2">
+                <DemandButton
+                  type="button"
+                  variant="ghost"
+                  icon={<Upload className="h-3.5 w-3.5" strokeWidth={1.5} />}
+                  onClick={() => setImportOpen(true)}>
+                  Import Excel
+                </DemandButton>
+                <DemandButton
+                  type="button"
+                  icon={<Plus className="h-3.5 w-3.5" strokeWidth={1.5} />}
+                  onClick={openCreate}>
+                  Tạo Demand
+                </DemandButton>
+              </div>
+            )}
+          </div>
 
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b bg-white px-5 py-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Quick status tabs */}
-            <div className="flex items-center rounded-lg bg-gray-100 p-0.5">
-              {STATUS_TABS.map((tab) => {
-                const active = (filters.status ?? "") === tab.value;
-                return (
-                  <button
-                    key={tab.value}
-                    type="button"
-                    onClick={() =>
+          <div className="cd-shell cd-filter-shell shrink-0">
+            <div className="cd-core cd-toolbar gap-3 px-3 py-3 md:px-4">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <div className="cd-tabs" role="tablist" aria-label="Lọc trạng thái">
+                  {STATUS_TABS.map((tab) => {
+                    const active = (filters.status ?? "") === tab.value;
+                    return (
+                      <button
+                        key={tab.value || "all"}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            status: tab.value || undefined,
+                            page: 1,
+                          }))
+                        }
+                        className={`cd-tab ${active ? "is-active" : ""}`}>
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="relative w-64 max-w-full">
+                  <Search
+                    className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--cd-muted)]"
+                    strokeWidth={1.5}
+                  />
+                  <input
+                    value={customerFilterLabel || customerFilterQuery}
+                    onChange={(event) => {
+                      setCustomerFilterLabel("");
                       setFilters((prev) => ({
                         ...prev,
-                        status: tab.value || undefined,
+                        customerId: undefined,
+                        page: 1,
+                      }));
+                      setCustomerFilterQuery(event.target.value);
+                    }}
+                    placeholder="Tìm khách hàng..."
+                    className="cd-input has-icon pr-8"
+                  />
+                  {!customerFilterLabel &&
+                    customerFilterDebounced.length >= 2 && (
+                      <div className="cd-menu">
+                        {customerResults.length === 0 ? (
+                          <div className="px-3 py-2 text-sm text-[var(--cd-muted)]">
+                            Không tìm thấy khách hàng
+                          </div>
+                        ) : (
+                          customerResults.map((customer) => (
+                            <button
+                              key={customer.id}
+                              type="button"
+                              onClick={() => selectFilterCustomer(customer)}>
+                              {customer.code ? `${customer.code} · ` : ""}
+                              {customer.name}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  {customerFilterLabel && (
+                    <button
+                      type="button"
+                      onClick={clearCustomerFilter}
+                      className="cd-icon-btn absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
+                      aria-label="Bỏ lọc khách hàng">
+                      <X className="h-3.5 w-3.5" strokeWidth={1.5} />
+                    </button>
+                  )}
+                </div>
+
+                <div className="relative flex items-center gap-1">
+                  <input
+                    type="month"
+                    value={filters.month ?? ""}
+                    onChange={(event) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        month: event.target.value || undefined,
                         page: 1,
                       }))
                     }
-                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                      active
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-600 hover:text-gray-900"
-                    }`}>
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
+                    title="Lọc theo tháng cần hàng"
+                    className="cd-input w-[10.5rem]"
+                  />
+                  {filters.month && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          month: undefined,
+                          page: 1,
+                        }))
+                      }
+                      title="Bỏ lọc tháng"
+                      className="cd-icon-btn"
+                      aria-label="Bỏ lọc tháng">
+                      <X className="h-3.5 w-3.5" strokeWidth={1.5} />
+                    </button>
+                  )}
+                </div>
+              </div>
 
-            {/* Filter by customer */}
-            <div className="relative w-64">
-              <Search className="pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                value={customerFilterLabel || customerFilterQuery}
-                onChange={(event) => {
-                  setCustomerFilterLabel("");
-                  setFilters((prev) => ({
-                    ...prev,
-                    customerId: undefined,
-                    page: 1,
-                  }));
-                  setCustomerFilterQuery(event.target.value);
-                }}
-                placeholder="Tìm khách hàng..."
-                className="w-full rounded-lg border py-1.5 pr-8 pl-8 text-xs"
-              />
-              {!customerFilterLabel &&
-                customerFilterDebounced.length >= 2 &&
-                customerResults.length > 0 && (
-                  <div className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded border bg-white shadow-lg">
-                    {customerResults.map((customer) => (
-                      <button
-                        key={customer.id}
-                        type="button"
-                        onClick={() => selectFilterCustomer(customer)}
-                        className="block w-full px-3 py-2 text-left text-xs hover:bg-gray-50">
-                        {customer.code ? `${customer.code} · ` : ""}
-                        {customer.name}
-                      </button>
-                    ))}
-                  </div>
+              <div className="cd-subtitle">
+                {data ? (
+                  <span>
+                    Tổng{" "}
+                    <strong className="cd-mono text-[var(--cd-text)]">
+                      {data.total.toLocaleString("vi-VN")}
+                    </strong>{" "}
+                    phiếu
+                  </span>
+                ) : (
+                  "Đang tải..."
                 )}
-              {customerFilterLabel && (
-                <button
-                  type="button"
-                  onClick={clearCustomerFilter}
-                  className="absolute top-1/2 right-2 -translate-y-1/2 text-gray-400 hover:text-gray-700">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-
-            {/* Filter by month */}
-            <div className="relative flex items-center">
-              <input
-                type="month"
-                value={filters.month ?? ""}
-                onChange={(event) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    month: event.target.value || undefined,
-                    page: 1,
-                  }))
-                }
-                title="Lọc theo tháng cần hàng"
-                className="rounded-lg border px-2.5 py-1.5 text-xs"
-              />
-              {filters.month && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setFilters((prev) => ({ ...prev, month: undefined, page: 1 }))
-                  }
-                  title="Bỏ lọc tháng"
-                  className="ml-1 text-gray-400 hover:text-gray-600">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
+              </div>
             </div>
           </div>
 
-          <div className="text-xs text-gray-500">
-            {data ? (
-              <span>
-                Tổng: <strong className="font-semibold text-gray-900">{data.total.toLocaleString("vi-VN")}</strong> phiếu
-              </span>
-            ) : (
-              "Đang tải..."
-            )}
-          </div>
-        </div>
-
-        <div className="flex min-h-0 flex-1 gap-4 p-4">
-          <div
-            className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-white"
-            style={{ borderColor: "var(--dt-border)" }}>
-            {isLoading ? (
-              <div className="flex h-full items-center justify-center text-sm text-gray-500">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Đang tải Demand...
-              </div>
-            ) : isError ? (
-              <div className="p-8 text-center text-sm text-red-600">
-                Không tải được danh sách Demand.
-              </div>
-            ) : rows.length === 0 ? (
-              <div className="p-8 text-center text-sm text-gray-500">
-                Chưa có phiếu Demand phù hợp.
-              </div>
-            ) : (
-              <div className="flex-1 overflow-auto">
-                <table className="min-w-full text-sm border-separate border-spacing-0">
-                  <thead className="sticky top-0 z-10 bg-gray-50 text-left text-xs font-semibold text-gray-600">
-                    <tr>
-                      <th className="border-b border-gray-200 px-3.5 py-2.5">Phiếu & Khách hàng</th>
-                      <th className="border-b border-gray-200 px-3.5 py-2.5">Tháng & Trạng thái</th>
-                      <th className="border-b border-gray-200 px-3.5 py-2.5 text-right">Sản phẩm</th>
-                      <th className="border-b border-gray-200 px-3.5 py-2.5 text-right">Tổng số lượng</th>
-                      <th className="border-b border-gray-200 px-3.5 py-2.5">Cập nhật</th>
-                      <th className="border-b border-gray-200 px-3.5 py-2.5 text-right">Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+          <div className="flex min-h-0 flex-1 gap-3 md:gap-4">
+            <div className="cd-shell min-h-0 min-w-0 flex-1">
+              <div className="cd-core">
+                {isLoading ? (
+                  <DemandListSkeleton />
+                ) : isError ? (
+                  <DemandEmptyState
+                    icon={<Inbox className="h-6 w-6" strokeWidth={1.4} />}
+                    title="Không tải được danh sách"
+                    description="Thử tải lại trang hoặc kiểm tra kết nối trước khi tiếp tục lập Demand."
+                  />
+                ) : rows.length === 0 ? (
+                  <DemandEmptyState
+                    icon={
+                      <ClipboardList className="h-6 w-6" strokeWidth={1.4} />
+                    }
+                    title="Chưa có phiếu Demand"
+                    description={
+                      hasActiveFilters
+                        ? "Không có phiếu khớp bộ lọc hiện tại. Đổi trạng thái, khách hàng hoặc tháng rồi thử lại."
+                        : "Tạo phiếu OEM/đặt hộ theo khách hàng và tháng cần hàng, rồi duyệt trước khi cộng vào dự kiến đặt hàng."
+                    }
+                    action={
+                      canCreate && !hasActiveFilters ? (
+                        <DemandButton
+                          type="button"
+                          icon={
+                            <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
+                          }
+                          onClick={openCreate}>
+                          Tạo Demand
+                        </DemandButton>
+                      ) : null
+                    }
+                  />
+                ) : (
+                  <div className="cd-voucher-list">
                     {rows.map((row) => (
                       <DemandListRow
                         key={row.id}
                         row={row}
                         selected={selectedId === row.id}
-                        onView={() => setSelectedId(selectedId === row.id ? null : row.id)}
+                        onView={() =>
+                          setSelectedId(selectedId === row.id ? null : row.id)
+                        }
                         onEdit={
                           canUpdate &&
-                          row.months.some((month) => month.status !== "CANCELLED")
+                          row.months.some(
+                            (month) => month.status !== "CANCELLED"
+                          )
                             ? () => {
                                 setSelectedId(row.id);
                                 setFormOpen(true);
@@ -327,100 +372,151 @@ export function CustomerDemandPage() {
                         }
                       />
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2.5 text-xs text-gray-600 bg-gray-50/50">
-              <div className="flex items-center gap-2">
-                <span>Hiển thị</span>
-                <select
-                  value={filters.limit}
-                  onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      limit: Number(e.target.value),
-                      page: 1,
-                    }))
-                  }
-                  className="rounded border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700">
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-                <span>dòng/trang</span>
-                {data && (
-                  <span className="text-gray-400">
-                    · (Hiển thị {Math.min((filters.page - 1) * filters.limit + 1, data.total)} - {Math.min(filters.page * filters.limit, data.total)} / {data.total})
-                  </span>
+                  </div>
                 )}
+                <div className="cd-pager">
+                  <div className="flex items-center gap-2">
+                    <span>Hiển thị</span>
+                    <select
+                      value={filters.limit}
+                      onChange={(e) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          limit: Number(e.target.value),
+                          page: 1,
+                        }))
+                      }
+                      className="cd-select w-[4.5rem]">
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                    </select>
+                    <span>dòng/trang</span>
+                    {data && (
+                      <span>
+                        ·{" "}
+                        {Math.min(
+                          (filters.page - 1) * filters.limit + 1,
+                          data.total
+                        )}
+                        -{Math.min(filters.page * filters.limit, data.total)} /{" "}
+                        {data.total}
+                      </span>
+                    )}
+                  </div>
+                  {totalPages > 1 && (
+                    <div className="cd-pager-btns">
+                      <DemandButton
+                        type="button"
+                        variant="ghost"
+                        size="tiny"
+                        disabled={filters.page <= 1}
+                        icon={
+                          <ChevronLeft
+                            className="h-3.5 w-3.5"
+                            strokeWidth={1.5}
+                          />
+                        }
+                        onClick={() =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            page: Math.max(1, prev.page - 1),
+                          }))
+                        }>
+                        Trước
+                      </DemandButton>
+                      <span className="cd-mono px-1">
+                        {filters.page}/{totalPages}
+                      </span>
+                      <DemandButton
+                        type="button"
+                        variant="ghost"
+                        size="tiny"
+                        disabled={filters.page >= totalPages}
+                        onClick={() =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            page: Math.min(totalPages, prev.page + 1),
+                          }))
+                        }>
+                        Sau
+                      </DemandButton>
+                    </div>
+                  )}
+                </div>
               </div>
-              {totalPages > 1 && (
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    disabled={filters.page <= 1}
-                    onClick={() =>
-                      setFilters((prev) => ({ ...prev, page: prev.page - 1 }))
-                    }
-                    className="inline-flex items-center gap-1 rounded border px-2.5 py-1 text-xs font-medium hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed">
-                    <ChevronLeft className="h-3.5 w-3.5" />
-                    Trước
-                  </button>
-                  <span className="px-2 font-medium">
-                    {filters.page} / {totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={filters.page >= totalPages}
-                    onClick={() =>
-                      setFilters((prev) => ({ ...prev, page: prev.page + 1 }))
-                    }
-                    className="inline-flex items-center gap-1 rounded border px-2.5 py-1 text-xs font-medium hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed">
-                    Sau
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </button>
+            </div>
+
+            <div
+              className={`cd-detail-wrap ${selectedId !== null ? "is-open" : ""}`}
+              onClick={() => {
+                if (window.matchMedia("(max-width: 767px)").matches) {
+                  setSelectedId(null);
+                }
+              }}>
+              {selectedId !== null && (
+                <div
+                  className="cd-shell flex min-h-0 w-full flex-1 flex-col"
+                  onClick={(event) => event.stopPropagation()}>
+                  <aside className="cd-core">
+                    <div className="flex items-start justify-between gap-3 px-4 py-3 shadow-[inset_0_-1px_0_var(--cd-hairline)]">
+                      <div className="min-w-0">
+                        <h2 className="truncate text-[16px] font-semibold tracking-tight">
+                          {detail?.customer.name ?? "Đang tải..."}
+                        </h2>
+                        {detail && (
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            <span className="cd-id cd-mono">#{detail.id}</span>
+                            <span className="cd-subtitle">
+                              {detail.customer.code
+                                ? `Mã KH: ${detail.customer.code}`
+                                : `ID KH: ${detail.customer.id}`}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        {canEditSelected && (
+                          <DemandButton
+                            type="button"
+                            variant="ghost"
+                            size="tiny"
+                            onClick={() => setFormOpen(true)}>
+                            Sửa
+                          </DemandButton>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedId(null)}
+                          className="cd-icon-btn"
+                          aria-label="Đóng chi tiết">
+                          <X className="h-4 w-4" strokeWidth={1.5} />
+                        </button>
+                      </div>
+                    </div>
+                    {detailLoading || !detail ? (
+                      <div className="space-y-3 px-4 py-6">
+                        <div className="cd-skel w-2/3" />
+                        <div className="cd-skel w-full" />
+                        <div className="cd-skel w-5/6" />
+                        <div className="cd-skel w-3/4" />
+                      </div>
+                    ) : (
+                      <DemandDetailMonths
+                        demand={detail}
+                        canApprove={canApprove}
+                        canCancel={canCancel}
+                        approving={approve.isPending}
+                        cancelling={cancel.isPending}
+                        onApprove={handleApprove}
+                        onCancel={handleCancel}
+                      />
+                    )}
+                  </aside>
                 </div>
               )}
             </div>
           </div>
-
-          {selectedId !== null && (
-            <aside
-              className="flex w-[560px] min-w-[420px] shrink-0 flex-col overflow-hidden rounded-xl border bg-white"
-              style={{ borderColor: "var(--dt-border)" }}>
-              <div className="flex items-start justify-between border-b px-4 py-3">
-                <div>
-                  <h2 className="font-semibold">Chi tiết Demand</h2>
-                  <p className="text-xs text-gray-500">
-                    {detail?.customer.name ?? "..."}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(null)}
-                  className="rounded p-1 text-gray-400 hover:bg-gray-100">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              {detailLoading || !detail ? (
-                <div className="flex flex-1 items-center justify-center text-sm text-gray-500">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Đang tải...
-                </div>
-              ) : (
-                <DemandDetailMatrix
-                  demand={detail}
-                  canApprove={canApprove}
-                  canCancel={canCancel}
-                  approving={approve.isPending}
-                  cancelling={cancel.isPending}
-                  onApprove={handleApprove}
-                  onCancel={handleCancel}
-                />
-              )}
-            </aside>
-          )}
         </div>
       </div>
       <CustomerDemandFormModal
@@ -432,6 +528,26 @@ export function CustomerDemandPage() {
         <CustomerDemandImportModal onClose={() => setImportOpen(false)} />
       )}
     </PagePermissionGuard>
+  );
+}
+
+function DemandListSkeleton() {
+  return (
+    <div className="cd-voucher-list">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div key={index} className="cd-voucher pointer-events-none">
+          <div className="space-y-2">
+            <div className="cd-skel w-48" />
+            <div className="cd-skel w-28" />
+            <div className="cd-skel w-40" />
+          </div>
+          <div className="space-y-2">
+            <div className="cd-skel ml-auto w-16" />
+            <div className="cd-skel ml-auto w-20" />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -452,122 +568,100 @@ function DemandListRow({
   const cancelledCount = months.filter((m) => m.status === "CANCELLED").length;
 
   return (
-    <tr
+    <article
       onClick={onView}
-      className={`group border-b cursor-pointer transition-colors ${
-        selected
-          ? "bg-brand-soft/70 border-l-4 border-l-brand"
-          : "hover:bg-gray-50/80 border-l-4 border-l-transparent"
-      }`}
-      style={{ borderColor: "var(--dt-border)" }}>
-      {/* 1. Mã phiếu & Khách hàng */}
-      <td className="px-3.5 py-3">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-xs font-bold text-brand bg-brand/10 px-1.5 py-0.5 rounded">
-            #{row.id}
-          </span>
-          <span className="font-medium text-gray-900 group-hover:text-brand transition-colors">
-            {row.customer.name}
-          </span>
+      className={`cd-voucher ${selected ? "is-selected" : ""}`}>
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="cd-id cd-mono">#{row.id}</span>
+          <h3 className="cd-voucher-name">{row.customer.name}</h3>
         </div>
-        <div className="mt-0.5 text-xs text-gray-500">
-          {row.customer.code ? `Mã KH: ${row.customer.code}` : `ID KH: ${row.customer.id}`}
+        <div className="cd-subtitle mt-1">
+          {row.customer.code
+            ? `Mã KH: ${row.customer.code}`
+            : `ID KH: ${row.customer.id}`}
+        </div>
+        <div className="mt-2">
+          {draftCount > 0 ? (
+            <DemandStatusChip
+              status="DRAFT"
+              pulse
+              label={`Chờ duyệt (${draftCount}/${months.length} tháng)`}
+            />
+          ) : confirmedCount === months.length && months.length > 0 ? (
+            <DemandStatusChip
+              status="CONFIRMED"
+              label={`Đã duyệt (${confirmedCount} tháng)`}
+            />
+          ) : cancelledCount === months.length ? (
+            <DemandStatusChip status="CANCELLED" />
+          ) : (
+            <DemandStatusChip
+              status="mixed"
+              label={`${confirmedCount} đã duyệt · ${cancelledCount} hủy`}
+            />
+          )}
+        </div>
+        <div className="mt-2 flex max-w-xl flex-wrap gap-1">
+          {months.map((month) => (
+            <DemandMonthChip
+              key={month.id}
+              month={month.month}
+              status={month.status}
+            />
+          ))}
         </div>
         {row.note && (
-          <div
-            className="mt-1 flex items-center gap-1 text-[11px] text-amber-800 bg-amber-50/80 rounded px-1.5 py-0.5 max-w-xs truncate"
-            title={row.note}>
-            <FileText className="h-3 w-3 shrink-0 text-amber-600" />
+          <div className="cd-note mt-2" title={row.note}>
+            <FileText className="h-3 w-3 shrink-0" strokeWidth={1.5} />
             <span className="truncate">{row.note}</span>
           </div>
         )}
-      </td>
-
-      {/* 2. Tháng & Trạng thái */}
-      <td className="px-3.5 py-3">
-        <div className="mb-1.5">
-          {draftCount > 0 ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 border border-amber-200">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-              Chờ duyệt ({draftCount}/{months.length} tháng)
-            </span>
-          ) : confirmedCount === months.length && months.length > 0 ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700 border border-green-200">
-              <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-              Đã duyệt ({confirmedCount} tháng)
-            </span>
-          ) : cancelledCount === months.length ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600">
-              Đã hủy
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
-              {confirmedCount} đã duyệt · {cancelledCount} hủy
-            </span>
-          )}
+      </div>
+      <div className="cd-voucher-side">
+        <div className="flex items-end gap-5">
+          <div className="cd-stat">
+            <b className="cd-mono">{row.totalProducts}</b>
+            <span className="cd-subtitle">mặt hàng</span>
+          </div>
+          <div className="cd-stat">
+            <b className="cd-mono">{formatDemandQty(row.totalQuantityBase)}</b>
+            <span className="cd-subtitle">đv cơ bản</span>
+          </div>
         </div>
-        <div className="flex max-w-80 flex-wrap gap-1">
-          {months.map((month) => (
-            <span
-              key={month.id}
-              title={`${month.month} · ${CUSTOMER_DEMAND_STATUS_LABEL[month.status]}`}
-              className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${statusClass[month.status]}`}>
-              {formatMonthLabel(month.month)}
-            </span>
-          ))}
+        <div className="cd-subtitle">
+          {new Date(row.updatedAt).toLocaleDateString("vi-VN")}{" "}
+          {new Date(row.updatedAt).toLocaleTimeString("vi-VN", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
         </div>
-      </td>
-
-      {/* 3. Sản phẩm */}
-      <td className="px-3.5 py-3 text-right whitespace-nowrap">
-        <div className="font-semibold text-gray-900">{row.totalProducts}</div>
-        <div className="text-[11px] text-gray-500">mặt hàng</div>
-      </td>
-
-      {/* 4. Tổng số lượng */}
-      <td className="px-3.5 py-3 text-right whitespace-nowrap">
-        <div className="font-semibold text-gray-900">{formatQty(row.totalQuantityBase)}</div>
-        <div className="text-[11px] text-gray-500">đv cơ bản</div>
-      </td>
-
-      {/* 5. Cập nhật */}
-      <td className="px-3.5 py-3 text-xs text-gray-500 whitespace-nowrap">
-        <div>{new Date(row.updatedAt).toLocaleDateString("vi-VN")}</div>
-        <div className="text-[11px] text-gray-400">
-          {new Date(row.updatedAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
-        </div>
-      </td>
-
-      {/* 6. Thao tác */}
-      <td className="px-3.5 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-end items-center gap-1.5">
+        <div
+          className="flex items-center justify-end gap-1.5"
+          onClick={(event) => event.stopPropagation()}>
           <button
             type="button"
             onClick={onView}
             title={selected ? "Đóng chi tiết" : "Xem chi tiết"}
-            className={`rounded p-1.5 transition-colors ${
-              selected
-                ? "bg-brand text-white"
-                : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-            }`}>
-            <Eye className="h-4 w-4" />
+            className={`cd-icon-btn ${selected ? "is-active" : ""}`}>
+            <Eye className="h-4 w-4" strokeWidth={1.5} />
           </button>
           {onEdit && (
-            <button
+            <DemandButton
               type="button"
-              onClick={onEdit}
-              title="Chỉnh sửa phiếu"
-              className="rounded px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 border border-gray-200">
+              variant="ghost"
+              size="tiny"
+              onClick={onEdit}>
               Sửa
-            </button>
+            </DemandButton>
           )}
         </div>
-      </td>
-    </tr>
+      </div>
+    </article>
   );
 }
 
-function DemandDetailMatrix({
+function DemandDetailMonths({
   demand,
   canApprove,
   canCancel,
@@ -585,144 +679,117 @@ function DemandDetailMatrix({
   onCancel: (monthId: number) => void;
 }) {
   const months = demand.months ?? [];
-  const products = useMemo(() => {
-    const map = new Map<
-      number,
-      { id: number; code: string; name: string; unit?: string | null }
-    >();
-    for (const month of months) {
-      for (const line of month.lines ?? []) {
-        if (!map.has(line.productId)) {
-          map.set(line.productId, {
-            id: line.productId,
-            code: line.product.code,
-            name: line.product.name,
-            unit: line.product.unit,
-          });
-        }
-      }
-    }
-    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }, [months]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="shrink-0 border-b bg-gray-50 px-4 py-2 text-xs text-gray-600">
-        {demand.note || "Không có ghi chú chung"} · {demand.totalProducts} sản
-        phẩm · {formatQty(demand.totalQuantityBase)} đơn vị cơ bản
+      <div className="cd-detail-summary">
+        <div className="cd-summary-pill min-w-0 flex-1">
+          <span>Ghi chú</span>
+          <b className="line-clamp-2">{demand.note || "Không có ghi chú chung"}</b>
+        </div>
+        <div className="cd-summary-pill">
+          <span>Sản phẩm</span>
+          <b className="cd-mono">{demand.totalProducts}</b>
+        </div>
+        <div className="cd-summary-pill">
+          <span>Tổng đv cơ bản</span>
+          <b className="cd-mono">{formatDemandQty(demand.totalQuantityBase)}</b>
+        </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto">
-        <table className="min-w-full border-separate border-spacing-0 text-xs">
-          <thead>
-            <tr>
-              <th className="sticky top-0 left-0 z-20 min-w-40 border-b border-r bg-gray-50 px-3 py-2 text-left font-semibold text-gray-600">
-                Sản phẩm
-              </th>
-              {months.map((month) => (
-                <th
-                  key={month.id}
-                  className="sticky top-0 z-10 min-w-28 border-b bg-gray-50 px-2 py-2 text-left align-top">
-                  <div className="font-semibold text-gray-900">
-                    {formatMonthLabel(month.month)}
+      <div className="cd-month-stack">
+        {months.length === 0 ? (
+          <DemandEmptyState
+            icon={<ClipboardList className="h-6 w-6" strokeWidth={1.4} />}
+            title="Phiếu chưa có tháng"
+            description="Sửa phiếu để thêm tháng cần hàng."
+          />
+        ) : (
+          months.map((month) => {
+            const lines = month.lines ?? [];
+            const logs = (month.changeLogs ?? []).slice(0, 3);
+            return (
+              <section
+                key={month.id}
+                className={`cd-month-card is-${month.status.toLowerCase()}`}>
+                <div className="cd-month-head">
+                  <div>
+                    <h3>{formatDemandMonth(month.month)}</h3>
+                    <div className="mt-1">
+                      <DemandStatusChip status={month.status} />
+                    </div>
                   </div>
-                  <span
-                    className={`mt-1 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-medium ${statusClass[month.status]}`}>
-                    {CUSTOMER_DEMAND_STATUS_LABEL[month.status]}
-                  </span>
-                  <div className="mt-1.5 flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-1">
                     {month.status === "DRAFT" && canApprove && (
-                      <button
+                      <DemandButton
                         type="button"
-                        onClick={() => onApprove(month.id)}
+                        variant="success"
+                        size="tiny"
                         disabled={approving}
-                        className="inline-flex items-center gap-0.5 rounded bg-green-600 px-1.5 py-0.5 text-[10px] font-medium text-white disabled:opacity-60">
-                        <Check className="h-3 w-3" />
+                        icon={<Check className="h-3 w-3" strokeWidth={1.5} />}
+                        onClick={() => onApprove(month.id)}>
                         Duyệt
-                      </button>
+                      </DemandButton>
                     )}
                     {month.status !== "CANCELLED" && canCancel && (
-                      <button
+                      <DemandButton
                         type="button"
-                        onClick={() => onCancel(month.id)}
+                        variant="danger"
+                        size="tiny"
                         disabled={cancelling}
-                        className="inline-flex items-center gap-0.5 rounded border border-red-200 px-1.5 py-0.5 text-[10px] font-medium text-red-700 hover:bg-red-50 disabled:opacity-60">
-                        <SquareX className="h-3 w-3" />
+                        icon={
+                          <SquareX className="h-3 w-3" strokeWidth={1.5} />
+                        }
+                        onClick={() => onCancel(month.id)}>
                         Hủy
-                      </button>
+                      </DemandButton>
                     )}
                   </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {products.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={months.length + 1}
-                  className="px-3 py-8 text-center text-gray-400">
-                  Phiếu chưa có sản phẩm.
-                </td>
-              </tr>
-            ) : (
-              products.map((product) => (
-                <tr key={product.id}>
-                  <td className="sticky left-0 z-10 border-b border-r bg-white px-3 py-2">
-                    <div className="font-medium text-gray-900">
-                      {product.code}
-                    </div>
-                    <div className="truncate text-[11px] text-gray-500">
-                      {product.name}
-                    </div>
-                  </td>
-                  {months.map((month) => {
-                    const line = (month.lines ?? []).find(
-                      (item) => item.productId === product.id
-                    );
-                    return (
-                      <td
-                        key={`${product.id}-${month.id}`}
-                        className="border-b px-2 py-2 text-right">
-                        {line ? (
-                          <div>
-                            <div className="font-medium">
-                              {formatQty(line.inputQuantity)}{" "}
-                              {line.inputUnit === "CARTON"
-                                ? "thùng"
-                                : (line.product.unit ?? "đv")}
-                            </div>
-                            {line.inputUnit === "CARTON" && (
-                              <div className="text-[10px] text-gray-400">
-                                {formatQty(line.quantityBase)}{" "}
-                                {product.unit ?? "đv"}
-                              </div>
-                            )}
+                </div>
+                {lines.length === 0 ? (
+                  <div className="px-3 pb-3 text-xs text-[var(--cd-muted)]">
+                    Tháng chưa có sản phẩm.
+                  </div>
+                ) : (
+                  lines.map((line) => (
+                    <div key={line.id} className="cd-line">
+                      <div className="min-w-0">
+                        <div className="cd-mono text-[11px] text-[var(--cd-cyan-deep)]">
+                          {line.product.code}
+                        </div>
+                        <div className="cd-line-name">{line.product.name}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="cd-mono text-sm font-semibold">
+                          {formatDemandQty(line.inputQuantity)}{" "}
+                          {line.inputUnit === "CARTON"
+                            ? "thùng"
+                            : (line.product.unit ?? "đv")}
+                        </div>
+                        {line.inputUnit === "CARTON" && (
+                          <div className="cd-subtitle">
+                            {formatDemandQty(line.quantityBase)}{" "}
+                            {line.product.unit ?? "đv"}
                           </div>
-                        ) : (
-                          <span className="text-gray-300">—</span>
                         )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                      </div>
+                    </div>
+                  ))
+                )}
+                {logs.length > 0 && (
+                  <div className="cd-history">
+                    {logs.map((log) => (
+                      <div key={log.id}>
+                        {new Date(log.createdAt).toLocaleString("vi-VN")} ·{" "}
+                        {log.reason}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })
+        )}
       </div>
-      {months.some((month) => (month.changeLogs ?? []).length > 0) && (
-        <div className="max-h-28 shrink-0 overflow-y-auto border-t px-4 py-2 text-[11px] text-gray-500">
-          <div className="mb-1 font-medium text-gray-600">Lịch sử</div>
-          {months.flatMap((month) =>
-            (month.changeLogs ?? []).slice(0, 3).map((log) => (
-              <div key={log.id}>
-                {formatMonthLabel(month.month)} ·{" "}
-                {new Date(log.createdAt).toLocaleString("vi-VN")} · {log.reason}
-              </div>
-            ))
-          )}
-        </div>
-      )}
     </div>
   );
 }
