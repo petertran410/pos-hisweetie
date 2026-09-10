@@ -396,6 +396,7 @@ export function RecommendationDetailPanel({
                     rows={[
                       ["Khách đặt", num(data.forecastComparison.demandBreakdown.customerOrders), "Order đang chờ"],
                       ["Demand khách hàng/OEM", num(data.forecastComparison.demandBreakdown.customerDemand ?? 0), "Đã xác nhận trong kỳ kế hoạch"],
+                      ["Demand OEM 3 tháng trước", num(-(data.forecastComparison.demandBreakdown.pastCustomerDemand ?? 0)), "Đã xác nhận, trừ khỏi tổng nhu cầu"],
                       ["Công ty cần (tồn tối thiểu)", num(data.forecastComparison.demandBreakdown.companyNeed), ""],
                       ["Bán trong kỳ bao phủ", num(data.forecastComparison.demandBreakdown.salesDemand, 0), ""],
                       ["Khuyến mãi", num(data.forecastComparison.demandBreakdown.promotionExtra), ""],
@@ -408,8 +409,36 @@ export function RecommendationDetailPanel({
                   <div className="text-xs font-medium text-violet-900">Demand khách hàng theo tháng</div>
                   <div className="mt-1 space-y-0.5 text-[11px] text-violet-800">
                     {data.forecastComparison.demandBreakdown?.customerDemandDetails?.map((detail, index) => (
-                      <div key={`${detail.monthId ?? "demand"}-${detail.demandMonth}-${index}`}>
+                      <div
+                        key={`${detail.monthId ?? "demand"}-${detail.demandMonth}-${index}`}
+                        className={detail.skipped ? "text-violet-400" : undefined}
+                      >
                         • {detail.demandMonth} · {detail.customerName ?? "Khách hàng"} · {num(detail.quantityBase)} {data.unit ?? "đv"}
+                        {detail.skipped ? (
+                          <div className="pl-3 text-[10px]">
+                            Không cộng vì đã có đơn đặt hàng nhập xen giữa
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(data.forecastComparison.demandBreakdown?.pastCustomerDemandDetails?.length ?? 0) > 0 && (
+                <div className="mt-3 rounded border border-amber-200 bg-amber-50 px-3 py-2">
+                  <div className="text-xs font-medium text-amber-900">Demand OEM 3 tháng trước (đã trừ)</div>
+                  <div className="mt-1 space-y-0.5 text-[11px] text-amber-800">
+                    {data.forecastComparison.demandBreakdown?.pastCustomerDemandDetails?.map((detail, index) => (
+                      <div
+                        key={`${detail.monthId ?? "past-demand"}-${detail.demandMonth}-${index}`}
+                        className={detail.skipped ? "text-amber-400" : undefined}
+                      >
+                        • {detail.demandMonth} · {detail.customerName ?? "Khách hàng"} · {detail.skipped ? "" : "−"}{num(detail.quantityBase)} {data.unit ?? "đv"}
+                        {detail.skipped ? (
+                          <div className="pl-3 text-[10px]">
+                            Không cộng vì đã có đơn đặt hàng nhập xen giữa
+                          </div>
+                        ) : null}
                       </div>
                     ))}
                   </div>
@@ -575,6 +604,7 @@ const CALCULATION_STEP_LABEL: Record<string, string> = {
   TARGET_STOCK: "Tồn kho mục tiêu",
   SALES_DEMAND: "Nhu cầu bán trong kỳ",
   CUSTOMER_DEMAND: "Demand khách hàng/OEM",
+  PAST_CUSTOMER_DEMAND: "Demand OEM 3 tháng trước",
   TOTAL_DEMAND: "Tổng nhu cầu",
   SOQ_RAW: "Số lượng đặt hàng chắc chắn",
   SOQ_SCENARIO: "Số lượng theo kịch bản ghép xe",
