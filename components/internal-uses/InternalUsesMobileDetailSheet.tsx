@@ -6,7 +6,7 @@ import {
   useCancelInternalUse,
   useInternalUse,
 } from "@/lib/hooks/useInternalUses";
-import { usePermission } from "@/lib/hooks/usePermissions";
+import { useCanViewInternalUseCost } from "./useCanViewInternalUseCost";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -60,7 +60,7 @@ export function InternalUsesMobileDetailSheet({
   const router = useRouter();
   const { data: internalUse, isLoading } = useInternalUse(internalUseId);
   const cancelInternalUse = useCancelInternalUse();
-  const canViewCost = usePermission("internal-use", "view_cost_price");
+  const canViewCost = useCanViewInternalUseCost();
 
   const [productSearch, setProductSearch] = useState("");
 

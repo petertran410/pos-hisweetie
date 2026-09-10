@@ -136,6 +136,7 @@ export function DashboardHeader() {
     () => [
       { label: "Danh sách khách hàng", href: "/khach-hang" },
       { label: "Khuyến mãi", href: "/khach-hang/khuyen-mai" },
+      { label: "Demand khách hàng (OEM/đặt hộ)", href: "/khach-hang/demand-oem" },
       { label: "Hợp đồng", href: "/khach-hang/hop-dong" },
       { label: "Theo dõi công nợ", href: "/khach-hang/theo-doi-cong-no" },
     ],

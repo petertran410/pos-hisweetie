@@ -128,6 +128,14 @@ function RecommendationRow({
             </span>
           )}
         </span>
+        {(item.customerDemand ?? 0) > 0 && (
+          <span>
+            Demand OEM{" "}
+            <span className="font-medium text-violet-700">
+              {num(item.customerDemand)}
+            </span>
+          </span>
+        )}
         {item.incomingTotal > 0 && (
           <span>
             Đang về{" "}

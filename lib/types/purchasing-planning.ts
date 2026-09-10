@@ -308,6 +308,8 @@ export interface RecommendationListItem {
   ma90: number | null;
   /** ma30 / ma90 — > 1 là xu hướng tăng */
   trendRatio: number | null;
+  /** Tổng Demand khách hàng/OEM trong planning horizon. */
+  customerDemand?: number;
 
   // ── Chỉ số thời gian ──
   /** null khi forecast = 0 (không xác định được) — PRD §15 Case 10 */
@@ -388,6 +390,8 @@ export interface ForecastComparison {
   ma90: number | null;
   /** ma30 / ma90 — > 1 là xu hướng tăng */
   trendRatio: number | null;
+  /** Tổng Demand khách hàng/OEM trong planning horizon. */
+  customerDemand?: number;
   /** Tổng nhu cầu trong cửa sổ */
   totalDemand: number;
   /** Mẫu số thực tế = số ngày có hàng */
@@ -443,10 +447,18 @@ export interface ForecastComparison {
   }>;
   demandBreakdown?: {
     customerOrders: number;
+    customerDemand?: number;
+    customerDemandDetails?: Array<{
+      monthId: number | null;
+      customerId: number | null;
+      customerName: string | null;
+      demandMonth: string;
+      quantityBase: number;
+    }>;
     companyNeed: number;
     salesDemand: number;
     promotionExtra: number;
-    trendExtra: number;
+    trendExtra?: number;
   };
   supplyBreakdown?: {
     available: number;

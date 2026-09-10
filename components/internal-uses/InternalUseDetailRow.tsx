@@ -10,6 +10,7 @@ import {
   useInternalUse,
 } from "@/lib/hooks/useInternalUses";
 import { usePermission } from "@/lib/hooks/usePermissions";
+import { useCanViewInternalUseCost } from "./useCanViewInternalUseCost";
 import { printEntity } from "@/lib/utils/print";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -62,7 +63,7 @@ export function InternalUseDetailRow({
   const router = useRouter();
   const cancelInternalUse = useCancelInternalUse();
   const completeInternalUse = useCompleteInternalUse();
-  const canViewCost = usePermission("internal-use", "view_cost_price");
+  const canViewCost = useCanViewInternalUseCost();
   // Chỉ người duyệt (có internal-use:complete) mới được duyệt/hoàn thành phiếu.
   const canComplete = usePermission("internal-use", "complete");
   const { data: internalUse, isLoading } = useInternalUse(internalUseId);

@@ -394,7 +394,8 @@ export function RecommendationDetailPanel({
                 <div className="mt-3">
                   <Table
                     rows={[
-                      ["Khách đặt", num(data.forecastComparison.demandBreakdown.customerOrders), ""],
+                      ["Khách đặt", num(data.forecastComparison.demandBreakdown.customerOrders), "Order đang chờ"],
+                      ["Demand khách hàng/OEM", num(data.forecastComparison.demandBreakdown.customerDemand ?? 0), "Đã xác nhận trong kỳ kế hoạch"],
                       ["Công ty cần (tồn tối thiểu)", num(data.forecastComparison.demandBreakdown.companyNeed), ""],
                       ["Bán trong kỳ bao phủ", num(data.forecastComparison.demandBreakdown.salesDemand, 0), ""],
                       ["Khuyến mãi", num(data.forecastComparison.demandBreakdown.promotionExtra), ""],
@@ -402,6 +403,19 @@ export function RecommendationDetailPanel({
                   />
                 </div>
               )}
+              {(data.forecastComparison.demandBreakdown?.customerDemandDetails?.length ?? 0) > 0 && (
+                <div className="mt-3 rounded border border-violet-200 bg-violet-50 px-3 py-2">
+                  <div className="text-xs font-medium text-violet-900">Demand khách hàng theo tháng</div>
+                  <div className="mt-1 space-y-0.5 text-[11px] text-violet-800">
+                    {data.forecastComparison.demandBreakdown?.customerDemandDetails?.map((detail, index) => (
+                      <div key={`${detail.monthId ?? "demand"}-${detail.demandMonth}-${index}`}>
+                        • {detail.demandMonth} · {detail.customerName ?? "Khách hàng"} · {num(detail.quantityBase)} {data.unit ?? "đv"}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {(data.forecastComparison.monthBreakdown?.length ?? 0) > 0 && (
                 <div className="mt-3 space-y-1 text-[11px] text-gray-600">
                   {data.forecastComparison.monthBreakdown!.map((month) => (
@@ -560,6 +574,7 @@ const CONFIG_LABEL: Record<string, string> = {
 const CALCULATION_STEP_LABEL: Record<string, string> = {
   TARGET_STOCK: "Tồn kho mục tiêu",
   SALES_DEMAND: "Nhu cầu bán trong kỳ",
+  CUSTOMER_DEMAND: "Demand khách hàng/OEM",
   TOTAL_DEMAND: "Tổng nhu cầu",
   SOQ_RAW: "Số lượng đặt hàng chắc chắn",
   SOQ_SCENARIO: "Số lượng theo kịch bản ghép xe",

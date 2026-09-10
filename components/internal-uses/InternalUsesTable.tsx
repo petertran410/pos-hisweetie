@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment } from "react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import type { InternalUse, InternalUseQueryParams } from "@/lib/api/internalUses";
 import { formatCurrency } from "../../lib/utils";
 import {
@@ -23,8 +23,7 @@ import {
   useColumnVisibility,
   type ColumnConfig,
 } from "@/lib/hooks/useColumnVisibility";
-import { usePermission } from "@/lib/hooks/usePermissions";
-import { useMemo } from "react";
+import { useCanViewInternalUseCost } from "./useCanViewInternalUseCost";
 
 interface InternalUsesTableProps {
   internalUses: InternalUse[];
@@ -159,18 +158,22 @@ export function InternalUsesTable({
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  const canViewCost = usePermission("internal-use", "view_cost_price");
-  const columnDefs = useMemo(
-    () =>
-      canViewCost
-        ? DEFAULT_COLUMNS
-        : DEFAULT_COLUMNS.filter((c) => c.key !== "totalValue"),
-    [canViewCost]
-  );
-
-  const { columns, visibleColumns, toggleColumn } = useColumnVisibility(
+  const canViewCost = useCanViewInternalUseCost();
+  const { columns, toggleColumn } = useColumnVisibility(
     "internalUseTableColumns",
-    columnDefs
+    DEFAULT_COLUMNS
+  );
+  // Lọc theo quyền ở bước render (giống ProductTable). Không đưa
+  // columnDefs phụ thuộc quyền vào useColumnVisibility vì hook chỉ merge
+  // defaults lúc mount — tắt quyền sau đó cột "Tổng giá trị" vẫn còn.
+  const permissionAwareColumns = useMemo(
+    () =>
+      canViewCost ? columns : columns.filter((c) => c.key !== "totalValue"),
+    [columns, canViewCost]
+  );
+  const visibleColumns = useMemo(
+    () => permissionAwareColumns.filter((c) => c.visible),
+    [permissionAwareColumns]
   );
 
   const { exportToFile, exportDetailToFile, isExporting } =
@@ -278,7 +281,7 @@ export function InternalUsesTable({
             </div>
           </PermissionGate>
 
-          <ColumnToggle columns={columns} onToggle={toggleColumn} />
+          <ColumnToggle columns={permissionAwareColumns} onToggle={toggleColumn} />
         </div>
       </div>
 
