@@ -67,6 +67,31 @@ export function useCustomer(id: number) {
   });
 }
 
+export interface ShippingFeeHistoryItem {
+  code: string;
+  date: string;
+  amount: number;
+  source: "field" | "item";
+}
+
+export function useCustomerShippingFeeHistory(
+  customerId: number | undefined,
+) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const hasHydrated = useAuthStore((state) => state._hasHydrated);
+
+  return useQuery({
+    queryKey: ["customer-shipping-fee-history", customerId],
+    queryFn: async () => {
+      return apiClient.get<ShippingFeeHistoryItem[]>(
+        `/customers/${customerId}/shipping-fee-history`,
+      );
+    },
+    enabled: !!customerId && hasHydrated && isAuthenticated,
+    staleTime: 60_000,
+  });
+}
+
 export function useCustomerGroups() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const hasHydrated = useAuthStore((state) => state._hasHydrated);

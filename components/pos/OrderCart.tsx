@@ -22,6 +22,7 @@ import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { UnitPicker } from "./UnitPicker";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { formatNumberInput, parseNumberInput } from "@/lib/utils";
+import { ShippingFeeHistoryTooltip } from "./ShippingFeeHistoryTooltip";
 
 interface OrderCartProps {
   cartItems: CartItem[];
@@ -692,7 +693,10 @@ export function OrderCart({
         </div>
 
         <div className="flex items-center justify-between text-sm lg:text-md gap-2">
-          <span className="text-gray-600">Phí ship</span>
+          <span className="text-gray-600 flex items-center gap-1">
+            Phí ship
+            <ShippingFeeHistoryTooltip customerId={selectedCustomer?.id} />
+          </span>
           <div className="flex items-center gap-1">
             <input
               type="text"
