@@ -19,6 +19,7 @@ import { DeliveryAddressDropdown } from "@/components/pos/DeliveryAddressDropdow
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { UnitPicker } from "@/components/pos/UnitPicker";
 import { formatNumberInput, parseNumberInput } from "@/lib/utils";
+import { ShippingFeeHistoryTooltip } from "@/components/pos/ShippingFeeHistoryTooltip";
 
 interface ConsignmentCartProps {
   cartItems: CartItem[];
@@ -573,7 +574,10 @@ export function ConsignmentCart({
         </div>
 
         <div className="flex items-center justify-between text-sm lg:text-sm gap-2">
-          <span>Phí ship</span>
+          <span className="flex items-center gap-1">
+            Phí ship
+            <ShippingFeeHistoryTooltip customerId={selectedCustomer?.id} />
+          </span>
           <input
             type="text"
             inputMode="numeric"
