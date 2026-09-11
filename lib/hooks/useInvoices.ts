@@ -159,34 +159,8 @@ export function useDeleteInvoice() {
 export function useCreateInvoiceFromOrder() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      orderId,
-      additionalPayment,
-      items,
-      payments,
-      soldById,
-      forceComplete,
-      appliedPromotions,
-      appliedPromotionIds,
-      skipPromotions,
-      discountAmount,
-      discountRatio,
-      shippingFee,
-    }: CreateInvoiceFromOrderRequest) =>
-      invoicesApi.createInvoiceFromOrder({
-        orderId,
-        additionalPayment,
-        items,
-        payments,
-        soldById,
-        forceComplete,
-        appliedPromotions,
-        appliedPromotionIds,
-        skipPromotions,
-        discountAmount,
-        discountRatio,
-        shippingFee,
-      }),
+    mutationFn: (params: CreateInvoiceFromOrderRequest) =>
+      invoicesApi.createInvoiceFromOrder(params),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
@@ -202,34 +176,8 @@ export function useCreateInvoiceFromOrder() {
 export function useCreatePosInvoiceFromOrder() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      orderId,
-      additionalPayment,
-      items,
-      payments,
-      soldById,
-      forceComplete,
-      appliedPromotions,
-      appliedPromotionIds,
-      skipPromotions,
-      discountAmount,
-      discountRatio,
-      shippingFee,
-    }: CreateInvoiceFromOrderRequest) =>
-      invoicesApi.createPosInvoiceFromOrder({
-        orderId,
-        additionalPayment,
-        items,
-        payments,
-        soldById,
-        forceComplete,
-        appliedPromotions,
-        appliedPromotionIds,
-        skipPromotions,
-        discountAmount,
-        discountRatio,
-        shippingFee,
-      }),
+    mutationFn: (params: CreateInvoiceFromOrderRequest) =>
+      invoicesApi.createPosInvoiceFromOrder(params),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });

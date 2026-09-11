@@ -9,6 +9,7 @@ import {
   dashboardApi,
   type RangeKey,
   type PeriodKey,
+  type TopMetric,
   type TaskRow,
 } from "@/lib/api/dashboard";
 import { money, vi, deltaPct, BRANCH_PALETTE } from "@/lib/dashboard/format";
@@ -227,6 +228,7 @@ export function DashboardMobileView() {
   const [range, setRange] = useState<RangeKey>("today");
   const [branchId, setBranchId] = useState<number | undefined>(undefined);
   const [branchMetric, setBranchMetric] = useState<"rev" | "profit">("rev");
+  const [topProductMetric, setTopProductMetric] = useState<TopMetric>("rev");
   const [taskTab, setTaskTab] = useState<TaskType>("orders");
   const [branchSheet, setBranchSheet] = useState(false);
   const [detail, setDetail] = useState<{ row: TaskRow; type: TaskType } | null>(
@@ -259,6 +261,30 @@ export function DashboardMobileView() {
     queryKey: ["dash-taskcounts-m", branchId],
     queryFn: () => dashboardApi.getTaskCounts(branchId),
   });
+  const topProducts = useQuery({
+    queryKey: ["dash-top-products-m", range, branchId, topProductMetric],
+    queryFn: () =>
+      dashboardApi.getTopProducts({
+        limit: 10,
+        range,
+        branchId,
+        metric: topProductMetric,
+      }),
+  });
+  const topCustomers = useQuery({
+    queryKey: ["dash-top-customers-m"],
+    queryFn: () => dashboardApi.getTopCustomers(10),
+  });
+  const topProductMax = Math.max(
+    ...(topProducts.data ?? []).map((p) =>
+      topProductMetric === "qty"
+        ? p.totalQuantity
+        : topProductMetric === "profit"
+          ? p.totalProfit
+          : p.totalRevenue
+    ),
+    1
+  );
   const activities = useQuery({
     queryKey: ["dash-acts"],
     queryFn: () => dashboardApi.getRecentActivities(8),
@@ -501,6 +527,178 @@ export function DashboardMobileView() {
               {q.label}
             </Link>
           ))}
+        </div>
+
+        {/* Top 10 sản phẩm bán chạy */}
+        <div className="dt-m-sec">
+          <h2>Top 10 sản phẩm</h2>
+        </div>
+        <div className="dt-m-card">
+          <div className="ch">
+            <div>
+              <h3>Sản phẩm bán chạy</h3>
+              <div className="sub">
+                Theo{" "}
+                {topProductMetric === "qty"
+                  ? "sản lượng"
+                  : topProductMetric === "profit"
+                    ? "lợi nhuận"
+                    : "doanh thu"}{" "}
+                · {RANGES.find((r) => r.key === range)?.word}
+              </div>
+            </div>
+            <div className="dt-m-miniseg ml-auto">
+              <button
+                data-on={topProductMetric === "rev"}
+                onClick={() => setTopProductMetric("rev")}>
+                DT
+              </button>
+              <button
+                data-on={topProductMetric === "qty"}
+                onClick={() => setTopProductMetric("qty")}>
+                SL
+              </button>
+              {canSeeProfit && (
+                <button
+                  data-on={topProductMetric === "profit"}
+                  onClick={() => setTopProductMetric("profit")}>
+                  LN
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="cb">
+            {topProducts.isLoading ? (
+              <div
+                className="text-center py-6 text-[13px]"
+                style={{ color: "var(--dt-text-muted)" }}>
+                Đang tải…
+              </div>
+            ) : (topProducts.data ?? []).length === 0 ? (
+              <div
+                className="text-center py-6 text-[13px]"
+                style={{ color: "var(--dt-text-muted)" }}>
+                Chưa có dữ liệu trong kỳ đã chọn
+              </div>
+            ) : (
+              (topProducts.data ?? []).map((p, idx) => {
+                const val =
+                  topProductMetric === "qty"
+                    ? p.totalQuantity
+                    : topProductMetric === "profit"
+                      ? p.totalProfit
+                      : p.totalRevenue;
+                const barPct = Math.min(
+                  100,
+                  Math.max(0, (val / topProductMax) * 100)
+                );
+                const rankColor =
+                  idx === 0
+                    ? "#C9A84C"
+                    : idx === 1
+                      ? "#2E8B8F"
+                      : idx === 2
+                        ? "#00B7CC"
+                        : "var(--dt-text-muted)";
+                return (
+                  <div key={p.productId} className="dt-m-brow">
+                    <div className="t">
+                      <span
+                        className="dt-mono font-bold text-[12px] w-[20px] shrink-0"
+                        style={{ color: rankColor }}>
+                        #{idx + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[13px] font-semibold text-gray-800">
+                          {p.name}
+                        </div>
+                        <div
+                          className="text-[11px] font-normal"
+                          style={{ color: "var(--dt-text-muted)" }}>
+                          {p.code}
+                        </div>
+                      </div>
+                      <span className="bv shrink-0">
+                        {topProductMetric === "qty" ? vi(val) : money(val)}
+                      </span>
+                    </div>
+                    <div className="bar">
+                      <i
+                        style={{
+                          width: `${barPct}%`,
+                          background:
+                            topProductMetric === "profit"
+                              ? "linear-gradient(90deg,#E8C96A,#C9A84C)"
+                              : topProductMetric === "qty"
+                                ? "linear-gradient(90deg,#1A5F6A,#00B7CC)"
+                                : "linear-gradient(90deg,#00B7CC,#2E8B8F)",
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Top 10 khách hàng mua nhiều nhất */}
+        <div className="dt-m-sec">
+          <h2>Top 10 khách hàng</h2>
+          <Link href="/khach-hang" className="more">
+            Tất cả →
+          </Link>
+        </div>
+        <div className="dt-m-card">
+          <div className="cb">
+            {topCustomers.isLoading ? (
+              <div
+                className="text-center py-6 text-[13px]"
+                style={{ color: "var(--dt-text-muted)" }}>
+                Đang tải…
+              </div>
+            ) : (topCustomers.data ?? []).length === 0 ? (
+              <div
+                className="text-center py-6 text-[13px]"
+                style={{ color: "var(--dt-text-muted)" }}>
+                Chưa có dữ liệu
+              </div>
+            ) : (
+              (topCustomers.data ?? []).map((c, idx) => (
+                <div key={c.id} className="dt-m-brow">
+                  <div className="t">
+                    <span
+                      className="dt-mono font-bold text-[12px] w-[20px] shrink-0"
+                      style={{
+                        color: idx < 3 ? "var(--dt-primary)" : "var(--dt-text-muted)",
+                      }}>
+                      #{idx + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13px] font-semibold text-gray-800">
+                        {c.name}
+                      </div>
+                      <div
+                        className="text-[11px] font-normal"
+                        style={{ color: "var(--dt-text-muted)" }}>
+                        {c.orderCount} đơn {c.customerType ? `· ${c.customerType}` : ""}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="bv">{money(Number(c.totalPurchased))}</div>
+                      {Number(c.totalDebt) > 0 && (
+                        <div
+                          className="text-[11px] font-medium"
+                          style={{ color: "var(--dt-error)" }}>
+                          Nợ: {money(Number(c.totalDebt))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
         {/* Tasks */}

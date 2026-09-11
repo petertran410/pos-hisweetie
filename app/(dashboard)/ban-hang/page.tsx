@@ -2829,6 +2829,8 @@ export default function BanHangPage() {
           orderId: activeTab.sourceOrderId,
           additionalPayment: actualPayment,
           payments: payments,
+          paymentNoteType: activeTab.paymentNoteType ?? undefined,
+          paymentType: activeTab.paymentNoteType ?? undefined,
           forceComplete,
           soldById: activeTab.soldById ?? undefined,
           // Giảm giá cấp HĐ user đang thấy trên màn tạo hóa đơn. Bắt buộc gửi
@@ -3964,6 +3966,10 @@ export default function BanHangPage() {
       documentData.purchaseDate = new Date().toISOString();
       documentData.description = activeTab.orderNote;
       documentData.paidAmount = Number(actualPayment) || 0;
+      if (activeTab.paymentNoteType) {
+        documentData.paymentNoteType = activeTab.paymentNoteType;
+        documentData.paymentType = activeTab.paymentNoteType;
+      }
       if (actualPayment > 0) {
         documentData.payments =
           activeTab.paymentMethods && activeTab.paymentMethods.length > 0

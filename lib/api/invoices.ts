@@ -96,6 +96,8 @@ export interface CreateInvoiceRequest {
   customerId: number;
   shippingFee?: number;
   items: Array<Record<string, unknown>>;
+  paymentNoteType?: "cash" | "transfer";
+  paymentType?: "cash" | "transfer";
   [key: string]: unknown;
 }
 
@@ -114,6 +116,8 @@ export interface CreateInvoiceFromOrderRequest {
   discountAmount?: number;
   discountRatio?: number;
   shippingFee?: number;
+  paymentNoteType?: "cash" | "transfer";
+  paymentType?: "cash" | "transfer";
 }
 
 export const invoicesApi = {
@@ -165,6 +169,8 @@ export const invoicesApi = {
       discountAmount,
       discountRatio,
       shippingFee,
+      paymentNoteType,
+      paymentType,
     } = params;
     return apiClient.post(`/invoices/from-order/${orderId}`, {
       additionalPayment: additionalPayment || 0,
@@ -178,6 +184,8 @@ export const invoicesApi = {
       ...(discountAmount != null ? { discountAmount } : {}),
       ...(discountRatio != null ? { discountRatio } : {}),
       ...(shippingFee != null ? { shippingFee } : {}),
+      ...(paymentNoteType ? { paymentNoteType } : {}),
+      ...(paymentType ? { paymentType } : {}),
     });
   },
   /** Route POS có rule khách PREPAID + Không công nợ phải trả đủ trên đơn. */
@@ -197,6 +205,8 @@ export const invoicesApi = {
       discountAmount,
       discountRatio,
       shippingFee,
+      paymentNoteType,
+      paymentType,
     } = params;
     return apiClient.post(`/invoices/pos/from-order/${orderId}`, {
       additionalPayment: additionalPayment || 0,
@@ -210,6 +220,8 @@ export const invoicesApi = {
       ...(discountAmount != null ? { discountAmount } : {}),
       ...(discountRatio != null ? { discountRatio } : {}),
       ...(shippingFee != null ? { shippingFee } : {}),
+      ...(paymentNoteType ? { paymentNoteType } : {}),
+      ...(paymentType ? { paymentType } : {}),
     });
   },
   getInvoicesForReturnOrder: (params: {
