@@ -65,6 +65,7 @@ export function DashboardHeader() {
         items: [
           { label: "Kiểm kho", href: "/san-pham/kiem-kho" },
           { label: "Chuyển loại tồn", href: "/san-pham/chuyen-loai-ton" },
+          { label: "Chất lượng hàng hóa", href: "/san-pham/chat-luong-hang-hoa" },
         ],
       },
       {

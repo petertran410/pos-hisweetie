@@ -47,6 +47,10 @@ export const ROUTE_PERMISSIONS: Record<
     resource: "stock_condition_transfers",
     action: "view",
   },
+  "/san-pham/chat-luong-hang-hoa": {
+    resource: "product_quality",
+    action: "view",
+  },
   "/san-pham/san-xuat": { resource: "productions", action: "view" },
   "/san-pham/pha-che": { resource: "recipes", action: "view" },
   "/san-pham/xuat-huy": { resource: "destructions", action: "view" },
@@ -134,6 +138,12 @@ key: "transfer-planning",
             { resource: "transfer_planning", action: "view" },
             { resource: "transfers", action: "view" },
           ],
+      },
+      {
+        key: "product-quality",
+        label: "Chất lượng hàng hóa",
+        href: "/san-pham/chat-luong-hang-hoa",
+        permission: { resource: "product_quality", action: "view" },
       },
       {
         key: "productions",

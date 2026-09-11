@@ -69,6 +69,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   assign_factory: "Gắn nhà máy",
   link_misa: "Liên kết Misa",
   purchasing_planning: "Dự kiến đặt hàng",
+  product_quality: "Chất lượng hàng hóa",
 };
 
 export const ACTION_LABELS: Record<string, string> = {
