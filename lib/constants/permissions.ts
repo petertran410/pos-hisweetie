@@ -22,6 +22,8 @@ export const RESOURCE_LABELS: Record<string, string> = {
   vehicle_shipments: "Ghép xe",
   customers: "Khách hàng",
   customer_groups: "Nhóm khách hàng",
+  customer_demand: "Demand khách hàng",
+  customer_demands: "Demand khách hàng",
   suppliers: "Nhà cung cấp",
   order_suppliers: "Đơn đặt NCC",
   purchase_orders: "Nhập hàng",
@@ -359,8 +361,8 @@ export function getPermLeafLabel(resource: string, action: string): string {
  * - report subgroup theo REPORT_SUBGROUP_ORDER.
  */
 export function orderReportEntries(
-  entries: [string, any][],
-): [string, any][] {
+  entries: [string, unknown][],
+): [string, unknown][] {
   return [...entries].sort((a, b) => {
     const ao = REPORT_SUBGROUP_ORDER[a[0]];
     const bo = REPORT_SUBGROUP_ORDER[b[0]];
