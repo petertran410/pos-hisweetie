@@ -73,6 +73,7 @@ export const ACTION_LABELS: Record<string, string> = {
   view: "Xem",
   create: "Tạo mới",
   update: "Chỉnh sửa",
+  merge: "Gộp",
   delete: "Xóa",
   push: "Đẩy Misa",
   import: "Import dữ liệu",

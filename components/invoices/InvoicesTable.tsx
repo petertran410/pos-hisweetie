@@ -6,6 +6,8 @@ import {
   useInvoices,
   useInvoicesTotals,
 } from "@/lib/hooks/useInvoices";
+import { invoicesApi } from "@/lib/api/invoices";
+import { toast } from "sonner";
 import { useSearchCustomers } from "@/lib/hooks/useCustomers";
 import type { CustomerSearchResult } from "@/lib/types/customer";
 import { useBranchStore } from "@/lib/store/branch";
@@ -36,6 +38,7 @@ import { CodeLink } from "../shared/CodeLink";
 import { useInvoicePriceBookWarnings } from "@/lib/hooks/useInvoicePriceBookWarnings";
 import { ColumnToggle } from "../shared/ColumnToggle";
 import { InvoicePickupSummaryModal } from "./InvoicePickupSummaryModal";
+import { MergeInvoicesModal } from "./MergeInvoicesModal";
 import {
   useColumnVisibility,
   type ColumnConfig,
@@ -483,6 +486,8 @@ export function InvoicesTable({
   });
   const [showImportModal, setShowImportModal] = useState(false);
   const [showPickupSummary, setShowPickupSummary] = useState(false);
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [isMergeValidating, setIsMergeValidating] = useState(false);
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc" | null>(null);
 
@@ -811,6 +816,22 @@ export function InvoicesTable({
     else if (type === "dong-hang") onCreateDongHang(selectedIds, branchId);
     else onCreateLoading(selectedIds, branchId);
     setShowBaoDonDropdown(false);
+  };
+
+  const handleMergeClick = async () => {
+    setIsMergeValidating(true);
+    try {
+      const result = await invoicesApi.validateMerge(selectedIds);
+      if (!result.valid) {
+        toast.error(result.errors.join("\n"));
+        return;
+      }
+      setShowMergeModal(true);
+    } catch (err: any) {
+      toast.error(err.message || "Không thể kiểm tra điều kiện gộp hóa đơn");
+    } finally {
+      setIsMergeValidating(false);
+    }
   };
 
   const handleExportOverview = async () => {
@@ -1206,6 +1227,13 @@ export function InvoicesTable({
               className="px-3 py-1.5 border border-brand text-brand rounded-lg hover:bg-brand-soft text-sm font-medium flex items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-50">
               <PackageCheck className="w-4 h-4" />
               Pick-up ({selectedInvoices.length})
+            </button>
+            <button
+              onClick={handleMergeClick}
+              disabled={selectedInvoices.length < 2 || isMergeValidating}
+              title={selectedInvoices.length < 2 ? "Chọn ít nhất hai hóa đơn" : "Gộp các hóa đơn đã chọn"}
+              className="px-3 py-1.5 border border-brand text-brand rounded-lg hover:bg-brand-soft text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50">
+              {isMergeValidating ? "Đang kiểm tra..." : `Gộp hóa đơn (${selectedInvoices.length})`}
             </button>
             {selectedInvoices.length > 0 && (
               <button
@@ -1611,6 +1639,17 @@ export function InvoicesTable({
         <InvoicePickupSummaryModal
           invoices={selectedInvoices}
           onClose={() => setShowPickupSummary(false)}
+        />
+      )}
+      {showMergeModal && (
+        <MergeInvoicesModal
+          invoices={selectedInvoices}
+          onClose={() => setShowMergeModal(false)}
+          onSuccess={() => {
+            setShowMergeModal(false);
+            setSelectedInvoicesMap(new Map());
+            setExpandedInvoiceId(null);
+          }}
         />
       )}
     </PermissionGate>
