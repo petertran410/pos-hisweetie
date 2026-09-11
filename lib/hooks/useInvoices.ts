@@ -3,6 +3,7 @@ import {
   invoicesApi,
   type CreateInvoiceFromOrderRequest,
   type UpdateInvoiceRequest,
+  type MergeInvoicesRequest,
 } from "../api/invoices";
 import { toast } from "sonner";
 import { API_URL, apiClient } from "../config/api";
@@ -152,6 +153,24 @@ export function useDeleteInvoice() {
     },
     onError: (error: any) => {
       toast.error(error.message || "Xóa hóa đơn thất bại");
+    },
+  });
+}
+
+export function useMergeInvoices() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: MergeInvoicesRequest) => invoicesApi.mergeInvoices(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices-totals"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["debt-tracking"] });
+      invalidateConditionQueries(queryClient);
+      toast.success("Gộp hóa đơn thành công");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Gộp hóa đơn thất bại");
     },
   });
 }
