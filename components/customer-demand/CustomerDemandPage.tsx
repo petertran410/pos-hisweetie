@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import {
   Check,
+  ChevronDown,
   ChevronLeft,
+  ChevronUp,
   ClipboardList,
   Eye,
   FileText,
@@ -375,25 +377,28 @@ export function CustomerDemandPage() {
                   </div>
                 )}
                 <div className="cd-pager">
-                  <div className="flex items-center gap-2">
-                    <span>Hiển thị</span>
-                    <select
-                      value={filters.limit}
-                      onChange={(e) =>
-                        setFilters((prev) => ({
-                          ...prev,
-                          limit: Number(e.target.value),
-                          page: 1,
-                        }))
-                      }
-                      className="cd-select w-[4.5rem]">
-                      <option value={10}>10</option>
-                      <option value={20}>20</option>
-                      <option value={50}>50</option>
-                    </select>
-                    <span>dòng/trang</span>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                    <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                      <span>Hiển thị</span>
+                      <select
+                        value={filters.limit}
+                        onChange={(e) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            limit: Number(e.target.value),
+                            page: 1,
+                          }))
+                        }
+                        className="cd-select !h-7 !w-16 shrink-0 pl-2 pr-6 text-xs font-semibold cd-mono cursor-pointer"
+                        style={{ minWidth: "4rem" }}>
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                      </select>
+                      <span>dòng/trang</span>
+                    </div>
                     {data && (
-                      <span>
+                      <span className="shrink-0 whitespace-nowrap cd-mono font-medium text-[var(--cd-secondary)]">
                         ·{" "}
                         {Math.min(
                           (filters.page - 1) * filters.limit + 1,
@@ -405,7 +410,7 @@ export function CustomerDemandPage() {
                     )}
                   </div>
                   {totalPages > 1 && (
-                    <div className="cd-pager-btns">
+                    <div className="cd-pager-btns shrink-0 ml-auto">
                       <DemandButton
                         type="button"
                         variant="ghost"
@@ -679,6 +684,14 @@ function DemandDetailMonths({
   onCancel: (monthId: number) => void;
 }) {
   const months = demand.months ?? [];
+  const [collapsedMonths, setCollapsedMonths] = useState<Record<number, boolean>>({});
+
+  const toggleMonth = (id: number) => {
+    setCollapsedMonths((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -707,18 +720,38 @@ function DemandDetailMonths({
           months.map((month) => {
             const lines = month.lines ?? [];
             const logs = (month.changeLogs ?? []).slice(0, 3);
+            const totalQtyBase = lines.reduce(
+              (sum, line) => sum + (line.quantityBase || 0),
+              0
+            );
+            const isCollapsed = !!collapsedMonths[month.id];
+
             return (
               <section
                 key={month.id}
                 className={`cd-month-card is-${month.status.toLowerCase()}`}>
-                <div className="cd-month-head">
-                  <div>
-                    <h3>{formatDemandMonth(month.month)}</h3>
-                    <div className="mt-1">
+                <div
+                  className="cd-month-head cursor-pointer select-none"
+                  onClick={() => toggleMonth(month.id)}>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3>{formatDemandMonth(month.month)}</h3>
+                      <span className="cd-month-badge cd-mono">
+                        {lines.length} sản phẩm
+                      </span>
+                      {totalQtyBase > 0 && (
+                        <span className="cd-month-subtext">
+                          · {formatDemandQty(totalQtyBase)} đv cơ bản
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1 flex items-center gap-2">
                       <DemandStatusChip status={month.status} />
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-1">
+                  <div
+                    className="flex shrink-0 items-center gap-1"
+                    onClick={(e) => e.stopPropagation()}>
                     {month.status === "DRAFT" && canApprove && (
                       <DemandButton
                         type="button"
@@ -743,47 +776,65 @@ function DemandDetailMonths({
                         Hủy
                       </DemandButton>
                     )}
+                    <button
+                      type="button"
+                      className="cd-icon-btn !h-7 !w-7"
+                      onClick={() => toggleMonth(month.id)}
+                      aria-label={isCollapsed ? "Mở rộng tháng" : "Thu gọn tháng"}
+                      title={isCollapsed ? "Mở rộng chi tiết sản phẩm" : "Thu gọn chi tiết sản phẩm"}>
+                      {isCollapsed ? (
+                        <ChevronDown className="h-4 w-4" strokeWidth={1.5} />
+                      ) : (
+                        <ChevronUp className="h-4 w-4" strokeWidth={1.5} />
+                      )}
+                    </button>
                   </div>
                 </div>
-                {lines.length === 0 ? (
-                  <div className="px-3 pb-3 text-xs text-[var(--cd-muted)]">
-                    Tháng chưa có sản phẩm.
-                  </div>
-                ) : (
-                  lines.map((line) => (
-                    <div key={line.id} className="cd-line">
-                      <div className="min-w-0">
-                        <div className="cd-mono text-[11px] text-[var(--cd-cyan-deep)]">
-                          {line.product.code}
-                        </div>
-                        <div className="cd-line-name">{line.product.name}</div>
+                {!isCollapsed && (
+                  <>
+                    {lines.length === 0 ? (
+                      <div className="px-3 pb-3 text-xs text-[var(--cd-muted)]">
+                        Tháng chưa có sản phẩm.
                       </div>
-                      <div className="text-right">
-                        <div className="cd-mono text-sm font-semibold">
-                          {formatDemandQty(line.inputQuantity)}{" "}
-                          {line.inputUnit === "CARTON"
-                            ? "thùng"
-                            : (line.product.unit ?? "đv")}
-                        </div>
-                        {line.inputUnit === "CARTON" && (
-                          <div className="cd-subtitle">
-                            {formatDemandQty(line.quantityBase)}{" "}
-                            {line.product.unit ?? "đv"}
+                    ) : (
+                      lines.map((line) => (
+                        <div key={line.id} className="cd-line">
+                          <div className="min-w-0">
+                            <div className="cd-mono text-[11px] text-[var(--cd-cyan-deep)]">
+                              {line.product?.code ?? "—"}
+                            </div>
+                            <div className="cd-line-name" title={line.product?.name}>
+                              {line.product?.name ?? "Sản phẩm không xác định"}
+                            </div>
                           </div>
-                        )}
+                          <div className="text-right">
+                            <div className="cd-mono text-sm font-semibold">
+                              {formatDemandQty(line.inputQuantity)}{" "}
+                              {line.inputUnit === "CARTON"
+                                ? "thùng"
+                                : (line.product?.unit ?? "đv")}
+                            </div>
+                            {line.inputUnit === "CARTON" && (
+                              <div className="cd-subtitle">
+                                {formatDemandQty(line.quantityBase)}{" "}
+                                {line.product?.unit ?? "đv"}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    {logs.length > 0 && (
+                      <div className="cd-history">
+                        {logs.map((log) => (
+                          <div key={log.id}>
+                            {new Date(log.createdAt).toLocaleString("vi-VN")} ·{" "}
+                            {log.reason}
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                  ))
-                )}
-                {logs.length > 0 && (
-                  <div className="cd-history">
-                    {logs.map((log) => (
-                      <div key={log.id}>
-                        {new Date(log.createdAt).toLocaleString("vi-VN")} ·{" "}
-                        {log.reason}
-                      </div>
-                    ))}
-                  </div>
+                    )}
+                  </>
                 )}
               </section>
             );

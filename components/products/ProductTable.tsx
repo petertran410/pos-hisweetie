@@ -38,6 +38,7 @@ interface ProductsTableProps {
   filters: any;
   codeFilter?: string;
   onImportClick?: () => void;
+  onFactoryMappingImportClick?: () => void;
 }
 
 const STATUS_TABS = [
@@ -359,6 +360,7 @@ export function ProductsTable({
   filters,
   codeFilter,
   onImportClick,
+  onFactoryMappingImportClick,
 }: ProductsTableProps) {
   const { selectedBranch } = useBranchStore();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -411,6 +413,7 @@ export function ProductsTable({
   const canViewSalePrice = usePermission("products", "view_sale_price");
   const canExport = usePermission("products", "export");
   const canUpdate = usePermission("products", "update");
+  const canCreateFactory = usePermission("factories", "create");
 
   // Debounce search
   useEffect(() => {
@@ -641,6 +644,16 @@ export function ProductsTable({
             <Upload className="w-4 h-4" />
             Import
           </button>
+          {canCreateFactory && (
+            <button
+              type="button"
+              onClick={onFactoryMappingImportClick}
+              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600"
+              title="Import liên kết sản phẩm - nhà máy từ Excel">
+              <Upload className="w-4 h-4" />
+              Import liên kết
+            </button>
+          )}
           {canUpdate && selectedIds.length > 0 && (
             <button
               type="button"

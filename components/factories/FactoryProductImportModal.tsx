@@ -66,6 +66,7 @@ export function FactoryProductImportModal({
       setResult(data);
       queryClient.invalidateQueries({ queryKey: ["factory-products"] });
       queryClient.invalidateQueries({ queryKey: ["factories"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
       toast.success(
         `Đã import: ${data.created} tạo mới, ${data.updated} cập nhật`
       );
