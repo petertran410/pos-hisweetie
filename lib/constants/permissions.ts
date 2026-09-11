@@ -74,8 +74,10 @@ export const RESOURCE_LABELS: Record<string, string> = {
 
 export const ACTION_LABELS: Record<string, string> = {
   view: "Xem",
+  view_all_branches: "Xem tất cả chi nhánh",
   create: "Tạo mới",
   update: "Chỉnh sửa",
+  assign: "Giao hướng xử lý",
   merge: "Gộp",
   delete: "Xóa",
   push: "Đẩy Misa",
