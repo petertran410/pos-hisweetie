@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useQueries } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 import { useOrders } from "@/lib/hooks/useOrders";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useSearchCustomers } from "@/lib/hooks/useCustomers";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 import { useBranchStore } from "@/lib/store/branch";
-import { ordersApi } from "@/lib/api/orders";
 import { formatCurrency, formatDate, getDateRangeFromPreset } from "@/lib/utils";
 import type { Order } from "@/lib/types/order";
 import {
@@ -23,7 +22,6 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
-import { OrdersMobileDetailSheet } from "./OrdersMobileDetailSheet";
 import { CodeLink } from "../shared/CodeLink";
 import {
   MobileFilterSheet,
@@ -40,6 +38,14 @@ import {
 } from "../shared/MobileFilters";
 
 const STORAGE_KEY = "orders-mobile-filters";
+
+const OrdersMobileDetailSheet = dynamic(
+  () =>
+    import("./OrdersMobileDetailSheet").then(
+      (m) => m.OrdersMobileDetailSheet
+    ),
+  { ssr: false }
+);
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STATUS_TEXT: Record<number, string> = {
@@ -529,12 +535,20 @@ interface OrdersMobileViewProps {
   filters: any;
   onFiltersChange: (f: any) => void;
   onCreateClick: () => void;
+  onClearCode?: () => void;
 }
+
+const withoutSearch = (filters: any) => {
+  const next = { ...(filters || {}) };
+  delete next.search;
+  return next;
+};
 
 export function OrdersMobileView({
   filters,
   onFiltersChange,
   onCreateClick,
+  onClearCode,
 }: OrdersMobileViewProps) {
   const { selectedBranch } = useBranchStore();
 
@@ -542,11 +556,9 @@ export function OrdersMobileView({
   // Nguồn sự thật cho query, không bám `filters` prop (sidebar desktop vẫn mount
   // ẩn có thể ghi đè prop sau ~300ms).
   const [localFilters, setLocalFilters] = useState<any>(
-    () => readMobileFilters(STORAGE_KEY) ?? filters ?? {}
+    () => withoutSearch(readMobileFilters(STORAGE_KEY) ?? filters ?? {})
   );
-  const [search, setSearch] = useState(
-    () => filters?.search ?? localFilters?.search ?? ""
-  );
+  const [search, setSearch] = useState(() => filters?.search ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [activeTab, setActiveTab] = useState("all");
   const [page, setPage] = useState(1);
@@ -562,6 +574,18 @@ export function OrdersMobileView({
   const applyFilters = (f: any) => {
     setLocalFilters(f);
     onFiltersChange?.(f);
+  };
+
+  const updateSearch = (value: string) => {
+    setSearch(value);
+    if (!value) setDebouncedSearch("");
+    onClearCode?.();
+    setLocalFilters((previous: any) => {
+      if (!previous?.search) return previous;
+      const next = { ...previous };
+      delete next.search;
+      return next;
+    });
   };
 
   // Debounce search 300ms
@@ -584,45 +608,18 @@ export function OrdersMobileView({
     (!apiFilters.statuses || apiFilters.statuses.length === 0)
       ? { statuses: [activeTab] }
       : {}),
+    search: debouncedSearch || undefined,
   };
 
   const { data, isLoading } = useOrders({
     page,
     limit,
-    search: debouncedSearch,
     branchId: selectedBranch?.id,
     ...effectiveFilters,
+    includeStatusCounts: true,
   });
 
-  // Count per status tab — parallel, staleTime 30s để tránh spam API
-  const statusCountResults = useQueries({
-    queries: MOBILE_STATUS_TABS.map((tab) => ({
-      queryKey: [
-        "orders",
-        "count-mobile",
-        tab.apiStatus,
-        selectedBranch?.id,
-        apiFilters,
-      ],
-      queryFn: () =>
-        ordersApi.getOrders({
-          limit: 1,
-          page: 1,
-          branchId: selectedBranch?.id,
-          ...apiFilters,
-          ...(tab.apiStatus ? { statuses: [tab.apiStatus] } : {}),
-        }),
-      staleTime: 30_000,
-    })),
-  });
-
-  const counts = MOBILE_STATUS_TABS.reduce(
-    (acc, tab, i) => {
-      acc[tab.value] = statusCountResults[i].data?.total ?? 0;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
+  const counts = data?.statusCounts ?? {};
 
   const orders = data?.data ?? [];
   const total = data?.total ?? 0;
@@ -641,13 +638,13 @@ export function OrdersMobileView({
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => updateSearch(e.target.value)}
               placeholder="Tìm mã đơn, khách hàng..."
               className="w-full pl-9 pr-8 py-2.5 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white transition-all"
             />
             {search && (
               <button
-                onClick={() => setSearch("")}
+                onClick={() => updateSearch("")}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-gray-200 text-gray-400">
                 <X className="w-3.5 h-3.5" />
               </button>

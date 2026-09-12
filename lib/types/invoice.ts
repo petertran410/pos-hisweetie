@@ -33,6 +33,8 @@ export interface Invoice {
   payments?: any[];
   delivery?: any;
   paymentNotes?: PaymentNote[];
+  /** Backend tính theo batch ID của trang hiện tại (bảng giá 2/3). */
+  hasPriceBookWarning?: boolean;
 }
 
 export interface PaymentNote {

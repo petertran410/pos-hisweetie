@@ -1,4 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import {
   invoicesApi,
   type CreateInvoiceFromOrderRequest,
@@ -15,6 +20,7 @@ export function useInvoices(params?: any) {
   return useQuery({
     queryKey: ["invoices", params],
     queryFn: () => invoicesApi.getInvoices(params),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -26,6 +32,7 @@ export function useInvoicesTotals(params?: any) {
   return useQuery({
     queryKey: ["invoices-totals", params],
     queryFn: () => invoicesApi.getTotals(params),
+    placeholderData: keepPreviousData,
   });
 }
 

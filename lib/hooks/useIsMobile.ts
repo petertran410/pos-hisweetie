@@ -1,18 +1,35 @@
-import { useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
+
+const subscribeNoop = () => () => {};
+
+/**
+ * Trả về false trong SSR/first hydration và true sau khi client mount.
+ * Dùng để tránh mount nhầm nhánh responsive trong lúc hydrate.
+ */
+export function useIsClient() {
+  return useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false
+  );
+}
 
 /**
  * Tailwind lg breakpoint = 1024px
  * Returns true khi màn hình < breakpoint (mobile/tablet)
  */
 export function useIsMobile(breakpoint = 1024) {
-  const [isMobile, setIsMobile] = useState(false);
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => {
+      window.addEventListener("resize", onStoreChange);
+      return () => window.removeEventListener("resize", onStoreChange);
+    },
+    []
+  );
+  const getSnapshot = useCallback(
+    () => window.innerWidth < breakpoint,
+    [breakpoint]
+  );
 
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < breakpoint);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, [breakpoint]);
-
-  return isMobile;
+  return useSyncExternalStore(subscribe, getSnapshot, () => false);
 }

@@ -1,14 +1,12 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useQueries } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 import { useInvoices } from "@/lib/hooks/useInvoices";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useSearchCustomers } from "@/lib/hooks/useCustomers";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
-import { useBranchStore } from "@/lib/store/branch";
-import { invoicesApi } from "@/lib/api/invoices";
 import { formatCurrency, formatDate, getDateRangeFromPreset } from "@/lib/utils";
 import type { Invoice } from "@/lib/types/invoice";
 import {
@@ -24,9 +22,7 @@ import {
   ChevronsRight,
   AlertTriangle,
 } from "lucide-react";
-import { InvoicesMobileDetailSheet } from "./InvoicesMobileDetailSheet";
 import { CodeLink } from "../shared/CodeLink";
-import { useInvoicePriceBookWarnings } from "@/lib/hooks/useInvoicePriceBookWarnings";
 import {
   MobileFilterSheet,
   FilterSection,
@@ -42,6 +38,14 @@ import {
 } from "../shared/MobileFilters";
 
 const STORAGE_KEY = "invoices-mobile-filters";
+
+const InvoicesMobileDetailSheet = dynamic(
+  () =>
+    import("./InvoicesMobileDetailSheet").then(
+      (m) => m.InvoicesMobileDetailSheet
+    ),
+  { ssr: false }
+);
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STATUS_TEXT: Record<number, string> = {
@@ -645,26 +649,30 @@ interface InvoicesMobileViewProps {
   filters: any;
   onFiltersChange: (f: any) => void;
   onCreateClick: () => void;
+  onClearCode?: () => void;
 }
+
+const withoutSearch = (filters: any) => {
+  const next = { ...(filters || {}) };
+  delete next.search;
+  return next;
+};
 
 export function InvoicesMobileView({
   filters,
   onFiltersChange,
   onCreateClick,
+  onClearCode,
 }: InvoicesMobileViewProps) {
-  const { selectedBranch } = useBranchStore();
-
   // ── Filter của riêng mobile (khôi phục từ localStorage) ──
   // Dùng làm nguồn sự thật cho query, KHÔNG bám `filters` prop vì sidebar desktop
   // (vẫn mount ẩn) có thể ghi đè prop này sau ~300ms.
   const [localFilters, setLocalFilters] = useState<any>(
-    () => readMobileFilters(STORAGE_KEY) ?? filters ?? {}
+    () => withoutSearch(readMobileFilters(STORAGE_KEY) ?? filters ?? {})
   );
 
   // Nếu page truyền search từ deep-link (?Code=...) thì ưu tiên áp vào.
-  const [search, setSearch] = useState(
-    () => filters?.search ?? localFilters?.search ?? ""
-  );
+  const [search, setSearch] = useState(() => filters?.search ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [activeTab, setActiveTab] = useState("all");
   const [page, setPage] = useState(1);
@@ -685,6 +693,18 @@ export function InvoicesMobileView({
     onFiltersChange?.(f);
   };
 
+  const updateSearch = (value: string) => {
+    setSearch(value);
+    if (!value) setDebouncedSearch("");
+    onClearCode?.();
+    setLocalFilters((previous: any) => {
+      if (!previous?.search) return previous;
+      const next = { ...previous };
+      delete next.search;
+      return next;
+    });
+  };
+
   // Debounce search 300ms
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
@@ -701,6 +721,7 @@ export function InvoicesMobileView({
   const effectiveFilters = {
     ...apiFilters,
     ...(activeTab !== "all" ? { statusIds: [Number(activeTab)] } : {}),
+    search: debouncedSearch || undefined,
   };
 
   const { data, isLoading } = useInvoices({
@@ -708,43 +729,14 @@ export function InvoicesMobileView({
     limit,
     search: debouncedSearch,
     ...effectiveFilters,
+    includeStatusCounts: true,
   });
 
-  // Count per status tab — staleTime 30s
-  const statusCountResults = useQueries({
-    queries: MOBILE_STATUS_TABS.map((tab) => ({
-      queryKey: [
-        "invoices",
-        "count-mobile",
-        tab.apiStatus,
-        selectedBranch?.id,
-        apiFilters,
-      ],
-      queryFn: () =>
-        invoicesApi.getInvoices({
-          limit: 1,
-          page: 1,
-          ...apiFilters,
-          ...(tab.apiStatus ? { statusIds: [Number(tab.apiStatus)] } : {}),
-        }),
-      staleTime: 30_000,
-    })),
-  });
-
-  const counts = MOBILE_STATUS_TABS.reduce(
-    (acc, tab, i) => {
-      acc[tab.value] = statusCountResults[i].data?.total ?? 0;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
+  const counts = data?.statusCounts ?? {};
 
   const invoices = data?.data ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / limit);
-
-  // Hóa đơn (bảng giá 2/3) có giá thực bán thấp hơn giá niêm yết → cảnh báo.
-  const priceWarningIds = useInvoicePriceBookWarnings(invoices);
 
   const activeFilterCount = countActiveFilters(localFilters);
 
@@ -759,13 +751,13 @@ export function InvoicesMobileView({
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => updateSearch(e.target.value)}
               placeholder="Tìm mã hóa đơn, khách hàng..."
               className="w-full pl-9 pr-8 py-2.5 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white transition-all"
             />
             {search && (
               <button
-                onClick={() => setSearch("")}
+                onClick={() => updateSearch("")}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-gray-200 text-gray-400">
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -837,7 +829,7 @@ export function InvoicesMobileView({
               <InvoiceMobileCard
                 key={invoice.id}
                 invoice={invoice}
-                hasWarning={priceWarningIds.has(invoice.id)}
+                hasWarning={!!invoice.hasPriceBookWarning}
                 onClick={() => setSelectedInvoiceId(invoice.id)}
               />
             ))}

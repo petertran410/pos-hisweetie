@@ -43,6 +43,8 @@ export interface Invoice {
     createdAt: string;
     updatedAt: string;
   }>;
+  /** Backend tính theo batch ID của trang hiện tại (bảng giá 2/3). */
+  hasPriceBookWarning?: boolean;
 }
 
 export interface InvoicesResponse {
@@ -50,6 +52,7 @@ export interface InvoicesResponse {
   total: number;
   page: number;
   limit: number;
+  statusCounts?: Record<string, number>;
 }
 
 export interface InvoicesTotalsResponse {
@@ -140,6 +143,12 @@ export const invoicesApi = {
   },
   getInvoice: (id: number): Promise<Invoice> => {
     return apiClient.get(`/invoices/${id}`);
+  },
+  getPickupDetails: (ids: number[]): Promise<Invoice[]> => {
+    if (ids.length === 0) return Promise.resolve([]);
+    return apiClient.get("/invoices/pickup-details", {
+      ids: ids.join(","),
+    });
   },
   getInvoicePayments: async (invoiceId: number) => {
     const response = await apiClient.get(
