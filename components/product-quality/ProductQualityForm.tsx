@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -11,10 +11,11 @@ import {
   Video,
   Loader2,
   Search,
-  Check,
-  AlertCircle,
   Building2,
   User,
+  ChevronDown,
+  CheckCircle2,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateProductQualityTicket } from "@/lib/hooks/useProductQuality";
@@ -24,6 +25,7 @@ import { useSearchCustomers } from "@/lib/hooks/useCustomers";
 import { useProducts } from "@/lib/hooks/useProducts";
 import { invoicesApi } from "@/lib/api/invoices";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
+import { DatePickerInput } from "@/components/ui/DatePickerInput";
 import {
   CLASSIFICATION_OPTIONS,
   FEEDBACK_TYPE_OPTIONS,
@@ -34,11 +36,17 @@ export function ProductQualityForm() {
   const router = useRouter();
   const { selectedBranch } = useBranchStore();
   const { data: users = [] } = useUsersForFilter();
+  const userOptions = useMemo(() => (Array.isArray(users) ? users : []), [users]);
   const createTicket = useCreateProductQualityTicket();
 
   // Form fields
   const [branchId, setBranchId] = useState<number | undefined>(selectedBranch?.id);
   const [decisionMakerId, setDecisionMakerId] = useState<number | undefined>();
+  const [decisionMakerSearch, setDecisionMakerSearch] = useState("");
+  const [showDecisionMakerDropdown, setShowDecisionMakerDropdown] = useState(false);
+  const decisionMakerInputRef = useRef<HTMLInputElement>(null);
+  const decisionMakerDropdownRef = useRef<HTMLDivElement>(null);
+
   const [customerSearch, setCustomerSearch] = useState("");
   const [debouncedCustomerSearch, setDebouncedCustomerSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<{
@@ -47,6 +55,7 @@ export function ProductQualityForm() {
     name: string;
   } | null>(null);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const customerDropdownRef = useRef<HTMLDivElement>(null);
 
   const [productSearch, setProductSearch] = useState("");
   const [debouncedProductSearch, setDebouncedProductSearch] = useState("");
@@ -58,6 +67,7 @@ export function ProductQualityForm() {
     cargoType?: string;
   } | null>(null);
   const [showProductDropdown, setShowProductDropdown] = useState(false);
+  const productDropdownRef = useRef<HTMLDivElement>(null);
 
   const [quantity, setQuantity] = useState<number>(1);
   const [expiryDate, setExpiryDate] = useState<string>("");
@@ -81,12 +91,13 @@ export function ProductQualityForm() {
   // Hóa đơn
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [debouncedInvoiceSearch, setDebouncedInvoiceSearch] = useState("");
-  const [selectedInvoice, setSelectedInvoice] = useState<{
-    id: number;
-    code: string;
-  } | null>(null);
+  const [selectedInvoices, setSelectedInvoices] = useState<
+    Array<{ id: number; code: string; customerName?: string }>
+  >([]);
   const [invoiceList, setInvoiceList] = useState<any[]>([]);
   const [showInvoiceDropdown, setShowInvoiceDropdown] = useState(false);
+  const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
+  const invoiceDropdownRef = useRef<HTMLDivElement>(null);
 
   // Attachments
   const [images, setImages] = useState<
@@ -103,6 +114,55 @@ export function ProductQualityForm() {
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+
+  // Đóng dropdown khi click bên ngoài
+  useEffect(() => {
+    const handleMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        customerDropdownRef.current &&
+        !customerDropdownRef.current.contains(target)
+      ) {
+        setShowCustomerDropdown(false);
+      }
+      if (
+        productDropdownRef.current &&
+        !productDropdownRef.current.contains(target)
+      ) {
+        setShowProductDropdown(false);
+      }
+      if (
+        decisionMakerDropdownRef.current &&
+        !decisionMakerDropdownRef.current.contains(target)
+      ) {
+        setShowDecisionMakerDropdown(false);
+      }
+      if (
+        invoiceDropdownRef.current &&
+        !invoiceDropdownRef.current.contains(target)
+      ) {
+        setShowInvoiceDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => document.removeEventListener("mousedown", handleMouseDown);
+  }, []);
+
+  // Lọc danh sách nhân viên phụ trách chính
+  const filteredUsers = useMemo(() => {
+    if (!decisionMakerSearch.trim()) return userOptions;
+    const q = decisionMakerSearch.toLowerCase().trim();
+    return userOptions.filter((u: any) => {
+      const name = (u.name || "").toLowerCase();
+      const email = (u.email || "").toLowerCase();
+      const username = (u.username || "").toLowerCase();
+      return name.includes(q) || email.includes(q) || username.includes(q);
+    });
+  }, [userOptions, decisionMakerSearch]);
+
+  const selectedDecisionMaker = useMemo(() => {
+    return userOptions.find((u: any) => u.id === decisionMakerId);
+  }, [userOptions, decisionMakerId]);
 
   // Debounce customer search
   useEffect(() => {
@@ -133,15 +193,39 @@ export function ProductQualityForm() {
   });
 
   useEffect(() => {
-    if (debouncedInvoiceSearch.length >= 2) {
+    const q = debouncedInvoiceSearch.trim();
+    if (q.length >= 1 || (showInvoiceDropdown && selectedCustomer?.id)) {
+      setIsLoadingInvoices(true);
+      const params: any = {
+        search: q || undefined,
+        limit: 15,
+      };
+      if (selectedCustomer?.id) {
+        params.customerId = selectedCustomer.id;
+      }
       invoicesApi
-        .getInvoices({ search: debouncedInvoiceSearch, limit: 10 })
+        .getInvoices(params)
         .then((res: any) => setInvoiceList(res.data || []))
-        .catch(() => setInvoiceList([]));
+        .catch(() => setInvoiceList([]))
+        .finally(() => setIsLoadingInvoices(false));
     } else {
       setInvoiceList([]);
     }
-  }, [debouncedInvoiceSearch]);
+  }, [debouncedInvoiceSearch, showInvoiceDropdown, selectedCustomer?.id]);
+
+  const handleSelectInvoice = (inv: { id: number; code: string; customer?: { name?: string } }) => {
+    if (!selectedInvoices.some((item) => item.id === inv.id || item.code === inv.code)) {
+      setSelectedInvoices((prev) => [
+        ...prev,
+        { id: inv.id, code: inv.code, customerName: inv.customer?.name },
+      ]);
+    }
+    setInvoiceSearch("");
+  };
+
+  const handleRemoveInvoice = (id: number) => {
+    setSelectedInvoices((prev) => prev.filter((item) => item.id !== id));
+  };
 
   // Upload images
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -246,7 +330,7 @@ export function ProductQualityForm() {
         : []),
     ];
 
-    const selectedUser = users.find((u: any) => u.id === decisionMakerId);
+    const selectedUser = userOptions.find((u: any) => u.id === decisionMakerId);
 
     createTicket.mutate(
       {
@@ -267,8 +351,9 @@ export function ProductQualityForm() {
         feedbackType,
         severity,
         note: note || undefined,
-        invoiceId: selectedInvoice?.id,
-        invoiceCode: selectedInvoice?.code,
+        invoiceId: selectedInvoices[0]?.id,
+        invoiceIds: selectedInvoices.map((i) => i.id),
+        invoiceCode: selectedInvoices.map((i) => i.code).join(", ") || undefined,
         attachments,
       },
       {
@@ -280,7 +365,7 @@ export function ProductQualityForm() {
   };
 
   return (
-    <div className="flex-1 overflow-auto bg-gray-50 p-6 min-w-0">
+    <div className="h-full overflow-y-auto bg-gray-50 p-6 min-w-0">
       <div className="max-w-4xl mx-auto bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {/* Form Header */}
         <div className="border-b px-6 py-4 flex items-center justify-between">
@@ -319,31 +404,114 @@ export function ProductQualityForm() {
               </div>
             </div>
 
-            <div>
+            <div className="relative" ref={decisionMakerDropdownRef}>
               <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Người phụ trách chính <span className="text-red-500">*</span>
               </label>
-              <select
-                value={decisionMakerId || ""}
-                onChange={(e) =>
-                  setDecisionMakerId(e.target.value ? Number(e.target.value) : undefined)
-                }
-                className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-brand"
-                required>
-                <option value="">-- Chọn nhân viên phụ trách chính --</option>
-                {users.map((u: any) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name} {u.email ? `(${u.email})` : ""}
-                  </option>
-                ))}
-              </select>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDecisionMakerDropdown((prev) => !prev);
+                  setTimeout(() => decisionMakerInputRef.current?.focus(), 50);
+                }}
+                className={`w-full px-3 py-2 border rounded-lg text-sm bg-white flex items-center justify-between text-left transition-colors focus:outline-none focus:ring-1 focus:ring-brand ${
+                  showDecisionMakerDropdown
+                    ? "border-brand ring-1 ring-brand"
+                    : "hover:border-gray-400"
+                }`}>
+                {selectedDecisionMaker ? (
+                  <span className="font-medium text-gray-900 truncate flex items-center gap-2">
+                    <User className="w-4 h-4 text-brand shrink-0" />
+                    <span>{selectedDecisionMaker.name}</span>
+                    {(selectedDecisionMaker as any)?.email && (
+                      <span className="text-xs text-gray-400 font-normal">
+                        ({(selectedDecisionMaker as any).email})
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="text-gray-400">
+                    -- Chọn nhân viên phụ trách chính --
+                  </span>
+                )}
+                <ChevronDown
+                  className={`w-4 h-4 text-gray-400 shrink-0 ml-2 transition-transform duration-200 ${
+                    showDecisionMakerDropdown ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {showDecisionMakerDropdown && (
+                <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-30 overflow-hidden">
+                  <div className="p-2 border-b bg-gray-50/70">
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        ref={decisionMakerInputRef}
+                        type="text"
+                        value={decisionMakerSearch}
+                        onChange={(e) => setDecisionMakerSearch(e.target.value)}
+                        placeholder="Tìm theo tên, email..."
+                        className="w-full pl-8 pr-7 py-1.5 text-xs bg-white border rounded-md focus:outline-none focus:ring-1 focus:ring-brand"
+                      />
+                      {decisionMakerSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setDecisionMakerSearch("")}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="max-h-56 overflow-y-auto divide-y divide-gray-100">
+                    {filteredUsers.length === 0 ? (
+                      <div className="p-3 text-xs text-center text-gray-400">
+                        Không tìm thấy nhân viên phù hợp
+                      </div>
+                    ) : (
+                      filteredUsers.map((u: any) => {
+                        const isSelected = u.id === decisionMakerId;
+                        return (
+                          <button
+                            key={u.id}
+                            type="button"
+                            onClick={() => {
+                              setDecisionMakerId(u.id);
+                              setShowDecisionMakerDropdown(false);
+                              setDecisionMakerSearch("");
+                            }}
+                            className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-brand-soft/70 transition-colors ${
+                              isSelected
+                                ? "bg-brand-soft text-brand-dark font-medium"
+                                : "text-gray-700"
+                            }`}>
+                            <div className="truncate">
+                              <span className="font-medium text-gray-900">{u.name}</span>
+                              {u.email && (
+                                <span className="text-gray-400 ml-1.5 text-[11px]">
+                                  · {u.email}
+                                </span>
+                              )}
+                            </div>
+                            {isSelected && (
+                              <CheckCircle2 className="w-4 h-4 text-brand shrink-0 ml-2" />
+                            )}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           {/* 2. Khách hàng & Sản phẩm */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Khách hàng autocomplete */}
-            <div className="relative">
+            <div className="relative" ref={customerDropdownRef}>
               <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Khách hàng <span className="text-red-500">*</span>
               </label>
@@ -411,7 +579,7 @@ export function ProductQualityForm() {
           {/* 2. Sản phẩm & Số lượng */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Sản phẩm autocomplete */}
-            <div className="sm:col-span-2 relative">
+            <div className="sm:col-span-2 relative" ref={productDropdownRef}>
               <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Sản phẩm sự cố <span className="text-red-500">*</span>
               </label>
@@ -567,69 +735,123 @@ export function ProductQualityForm() {
               <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Hạn sử dụng in trên bao bì
               </label>
-              <input
-                type="date"
+              <DatePickerInput
                 value={expiryDate}
-                onChange={(e) => setExpiryDate(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-brand"
+                onChange={setExpiryDate}
+                placeholder="dd/mm/yyyy"
+                className="w-full px-3 py-2 border rounded-lg text-sm bg-white flex items-center justify-between text-left focus:outline-none focus:ring-1 focus:ring-brand hover:border-gray-400"
               />
             </div>
 
             {/* Hóa đơn liên kết */}
-            <div className="relative">
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Hóa đơn bán hàng liên quan (nếu có)
-              </label>
-              {selectedInvoice ? (
-                <div className="flex items-center justify-between p-2 border border-blue-200 bg-blue-50 rounded-lg text-sm">
-                  <span className="font-semibold text-blue-800">
-                    {selectedInvoice.code}
+            <div className="relative" ref={invoiceDropdownRef}>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-gray-700">
+                  Hóa đơn bán hàng liên quan <span className="text-gray-400 font-normal">(tùy chọn)</span>
+                </label>
+                {selectedInvoices.length > 0 && (
+                  <span className="text-[11px] text-brand font-medium">
+                    Đã chọn {selectedInvoices.length} hóa đơn
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedInvoice(null);
-                      setInvoiceSearch("");
-                    }}
-                    className="text-gray-400 hover:text-red-600 p-1">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <div className="relative">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    value={invoiceSearch}
-                    onChange={(e) => {
-                      setInvoiceSearch(e.target.value);
-                      setShowInvoiceDropdown(true);
-                    }}
-                    onFocus={() => setShowInvoiceDropdown(true)}
-                    placeholder="Gõ mã hóa đơn (HD...)"
-                    className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-brand bg-white"
-                  />
-                  {showInvoiceDropdown && invoiceList.length > 0 && (
-                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-40 overflow-auto divide-y divide-gray-100">
-                      {invoiceList.map((inv) => (
-                        <button
-                          type="button"
-                          key={inv.id}
-                          onClick={() => {
-                            setSelectedInvoice({ id: inv.id, code: inv.code });
-                            setShowInvoiceDropdown(false);
-                          }}
-                          className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 flex items-center justify-between">
-                          <span className="font-medium text-gray-800">{inv.code}</span>
-                          <span className="text-gray-400">
-                            {inv.customer?.name || "Khách"}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                )}
+              </div>
+
+              {/* Danh sách chip hóa đơn đã chọn */}
+              {selectedInvoices.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {selectedInvoices.map((inv) => (
+                    <span
+                      key={inv.id}
+                      className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-xs font-medium">
+                      <FileText className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>{inv.code}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveInvoice(inv.id)}
+                        className="p-0.5 hover:bg-blue-200 rounded-md text-blue-600 hover:text-red-600 transition-colors">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </span>
+                  ))}
                 </div>
               )}
+
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={invoiceSearch}
+                  onChange={(e) => {
+                    setInvoiceSearch(e.target.value);
+                    setShowInvoiceDropdown(true);
+                  }}
+                  onFocus={() => setShowInvoiceDropdown(true)}
+                  placeholder={
+                    selectedInvoices.length > 0
+                      ? "Gõ thêm mã hóa đơn (HD...)"
+                      : "Gõ mã hóa đơn (HD...)"
+                  }
+                  className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-brand bg-white"
+                />
+
+                {showInvoiceDropdown && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-30 max-h-56 overflow-y-auto divide-y divide-gray-100">
+                    {isLoadingInvoices ? (
+                      <div className="p-3 text-xs text-center text-gray-400 flex items-center justify-center gap-2">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-brand" />
+                        <span>Đang tìm hóa đơn...</span>
+                      </div>
+                    ) : invoiceList.length === 0 ? (
+                      <div className="p-3 text-xs text-center text-gray-400">
+                        {debouncedInvoiceSearch.trim().length > 0
+                          ? "Không tìm thấy hóa đơn phù hợp"
+                          : "Nhập mã hóa đơn để tìm kiếm"}
+                      </div>
+                    ) : (
+                      invoiceList.map((inv: any) => {
+                        const isAlreadySelected = selectedInvoices.some(
+                          (item) => item.id === inv.id || item.code === inv.code
+                        );
+                        return (
+                          <button
+                            type="button"
+                            key={inv.id}
+                            disabled={isAlreadySelected}
+                            onClick={() => handleSelectInvoice(inv)}
+                            className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
+                              isAlreadySelected
+                                ? "bg-gray-50 opacity-50 cursor-not-allowed"
+                                : "hover:bg-blue-50 cursor-pointer"
+                            }`}>
+                            <div>
+                              <span className="font-medium text-gray-900 font-mono">
+                                {inv.code}
+                              </span>
+                              {inv.customer?.name && (
+                                <span className="text-gray-500 ml-2">
+                                  · {inv.customer.name}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-right shrink-0 ml-2">
+                              {inv.totalAmount && (
+                                <span className="text-gray-600 font-medium block">
+                                  {Number(inv.totalAmount).toLocaleString("vi-VN")} đ
+                                </span>
+                              )}
+                              {isAlreadySelected && (
+                                <span className="text-[11px] text-blue-600 font-medium">
+                                  Đã chọn
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

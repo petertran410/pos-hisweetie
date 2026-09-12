@@ -31,6 +31,19 @@ export interface ProductQualityAttachment {
   creator?: { id: number; name: string } | null;
 }
 
+export interface ProductQualityRelatedInvoice {
+  id: number;
+  ticketId: number;
+  invoiceId: number;
+  createdAt: string;
+  invoice?: {
+    id: number;
+    code: string;
+    purchaseDate?: string | null;
+    grandTotal?: number | null;
+  } | null;
+}
+
 export interface ProductQualityTicket {
   id: number;
   code: string;
@@ -58,6 +71,8 @@ export interface ProductQualityTicket {
   note?: string | null;
   invoiceId?: number | null;
   invoiceCode?: string | null;
+  relatedInvoices?: ProductQualityRelatedInvoice[];
+  invoiceIds?: number[];
   outboundInvoiceId?: number | null;
   outboundInvoiceCode?: string | null;
   decisionMakerId?: number | null;
@@ -220,7 +235,7 @@ export const QUALITY_STATUS_CONFIG: Record<
     dotCls: "bg-green-500",
   },
   ENDED: {
-    label: "Đã kết thúc",
+    label: "Đã hủy",
     badgeCls: "bg-gray-100 text-gray-700 border-gray-200",
     borderCls: "border-gray-400",
     dotCls: "bg-gray-400",

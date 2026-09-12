@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -12,9 +12,7 @@ import {
   ChevronDown,
   AlertTriangle,
   CheckCircle2,
-  Clock,
   SlidersHorizontal,
-  Settings,
   RefreshCw,
   ChevronLeft,
   ChevronRight,
@@ -41,8 +39,8 @@ import {
 
 export function ProductQualityTable() {
   const router = useRouter();
-  const { selectedBranch } = useBranchStore();
   const { data: branches } = useBranches();
+  const branchOptions = Array.isArray(branches) ? branches : [];
 
   const canCreate = usePermission("product_quality", "create");
   const canExport = usePermission("product_quality", "export");
@@ -52,7 +50,7 @@ export function ProductQualityTable() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeTab, setActiveTab] = useState<string>("all");
-  const [branchId, setBranchId] = useState<number | undefined>(selectedBranch?.id);
+  const [branchId, setBranchId] = useState<number | undefined>(undefined);
   const [classification, setClassification] = useState<string>("");
   const [feedbackType, setFeedbackType] = useState<string>("");
   const [severity, setSeverity] = useState<string>("");
@@ -108,6 +106,7 @@ export function ProductQualityTable() {
   const tickets = data?.data || [];
   const total = data?.total || 0;
   const totalPages = data?.totalPages || 1;
+  const nowTime = useMemo(() => Date.now(), []);
 
   const tabs = [
     { key: "all", label: "Tất cả", count: summary?.total ?? 0 },
@@ -287,11 +286,12 @@ export function ProductQualityTable() {
           </div>
 
           <select
-            value={branchId || ""}
+            value={branchId !== undefined ? String(branchId) : ""}
             onChange={(e) => setBranchId(e.target.value ? Number(e.target.value) : undefined)}
             className="px-2.5 py-1.5 border rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-brand">
             <option value="">Tất cả kho/chi nhánh</option>
-            {branches?.map((b: any) => (
+            <option value="-1">Chưa phân chi nhánh (Lịch sử import)</option>
+            {branchOptions.map((b: any) => (
               <option key={b.id} value={b.id}>
                 {b.name}
               </option>
@@ -405,7 +405,7 @@ export function ProductQualityTable() {
                   t.status !== "COMPLETED" &&
                   t.status !== "ENDED" &&
                   t.dueAt &&
-                  new Date(t.dueAt).getTime() < Date.now();
+                  new Date(t.dueAt).getTime() < nowTime;
 
                 const st = QUALITY_STATUS_CONFIG[t.status] || QUALITY_STATUS_CONFIG.NEW;
 
@@ -455,10 +455,16 @@ export function ProductQualityTable() {
                           t.customerName
                         )}
                       </div>
-                      {t.invoiceCode && (
-                        <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                     {t.invoiceCode && (
+                        <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-1 flex-wrap">
                           <span>HĐ:</span>
-                          <CodeLink entity="invoice" code={t.invoiceCode} />
+                          {t.invoiceCode
+                            .split(",")
+                            .map((c) => c.trim())
+                            .filter(Boolean)
+                            .map((code) => (
+                              <CodeLink key={code} entity="invoice" code={code} />
+                            ))}
                         </div>
                       )}
                     </td>

@@ -23,6 +23,7 @@ import {
 } from "@/lib/api/debt-tracking";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useCustomerGroups } from "@/lib/hooks/useCustomerGroups";
+import { useMisaEmployees } from "@/lib/hooks/useMisa";
 import { FilterMultiSelect } from "@/components/ui/filters";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
@@ -40,6 +41,7 @@ export default function TheoDoiCongNoPage() {
   const [search, setSearch] = useState("");
   const [debtForm, setDebtForm] = useState<DebtForm | "">("");
   const [salePicIds, setSalePicIds] = useState<number[]>([]);
+  const [accountantPics, setAccountantPics] = useState<string[]>([]);
   const [customerGroupIds, setCustomerGroupIds] = useState<number[]>([]);
   const [overLimitOnly, setOverLimitOnly] = useState(false);
   const [withoutOpenTicket, setWithoutOpenTicket] = useState(false);
@@ -50,6 +52,7 @@ export default function TheoDoiCongNoPage() {
   const [notifyIssues, setNotifyIssues] = useState<string[]>([]);
   const notifySaleDebt = useNotifySaleDebt();
   const { data: usersForPic } = useUsersForFilter();
+  const { data: misaEmployees } = useMisaEmployees();
   const { data: customerGroupsRes } = useCustomerGroups();
   const customerGroups = customerGroupsRes?.data ?? [];
 
@@ -69,13 +72,14 @@ export default function TheoDoiCongNoPage() {
       debtStatus: tab === "ALL" ? undefined : tab,
       debtForm: debtForm || undefined,
       salePicIds: salePicIds.length ? salePicIds : undefined,
+      accountantPics: accountantPics.length ? accountantPics : undefined,
       customerGroupIds: customerGroupIds.length ? customerGroupIds : undefined,
       overLimitOnly: overLimitOnly || undefined,
       withoutOpenTicket: withoutOpenTicket || undefined,
       page,
       pageSize,
     }),
-    [search, tab, debtForm, salePicIds, customerGroupIds, overLimitOnly, withoutOpenTicket, page, pageSize]
+    [search, tab, debtForm, salePicIds, accountantPics, customerGroupIds, overLimitOnly, withoutOpenTicket, page, pageSize]
   );
 
   // Summary dùng chung filter nhưng bỏ debtStatus để luôn thấy bức tranh
@@ -93,6 +97,7 @@ export default function TheoDoiCongNoPage() {
     setSearch("");
     setDebtForm("");
     setSalePicIds([]);
+    setAccountantPics([]);
     setCustomerGroupIds([]);
     setOverLimitOnly(false);
     setWithoutOpenTicket(false);
@@ -104,6 +109,7 @@ export default function TheoDoiCongNoPage() {
     !!search ||
     !!debtForm ||
     salePicIds.length > 0 ||
+    accountantPics.length > 0 ||
     customerGroupIds.length > 0 ||
     overLimitOnly ||
     withoutOpenTicket ||
@@ -251,6 +257,23 @@ export default function TheoDoiCongNoPage() {
                 placeholder="Tất cả Sale PIC"
                 searchPlaceholder="Tìm Sale PIC..."
                 multiLabel={(n) => `${n} Sale PIC`}
+              />
+            </div>
+
+            <div className="w-[220px] shrink-0">
+              <FilterMultiSelect
+                options={(misaEmployees ?? []).map((e) => ({
+                  value: e.code,
+                  label: `${e.code} - ${e.name}`,
+                }))}
+                values={accountantPics}
+                onChange={(vals) => {
+                  setAccountantPics(vals);
+                  setPage(1);
+                }}
+                placeholder="Tất cả Kế toán PIC"
+                searchPlaceholder="Tìm Kế toán PIC..."
+                multiLabel={(n) => `${n} Kế toán PIC`}
               />
             </div>
 

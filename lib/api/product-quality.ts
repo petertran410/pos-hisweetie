@@ -31,6 +31,7 @@ export interface CreateProductQualityPayload {
   factoryId?: number;
   note?: string;
   invoiceId?: number;
+  invoiceIds?: number[];
   invoiceCode?: string;
   decisionMakerId?: number;
   decisionMakerName?: string;
@@ -57,6 +58,18 @@ export interface AssignProductQualityPayload {
   factoryId?: number;
   outboundInvoiceId?: number;
   outboundInvoiceCode?: string;
+  reason?: string;
+  note?: string;
+  attachments?: Array<{
+    filename: string;
+    url: string;
+    originalName?: string;
+    mimetype?: string;
+    size?: number;
+    kind?: string;
+    department?: string;
+  }>;
+  removeAttachmentIds?: number[];
 }
 
 export interface UpdateProductQualityTaskPayload {
@@ -156,6 +169,44 @@ export const productQualityApi = {
       data
     ),
 
+  moveToRemediating: (id: number) =>
+    apiClient.post<ProductQualityTicket>(
+      `/product-quality-tickets/${id}/remediating`
+    ),
+
+  /** Tra cứu nhà máy đang hoạt động cho bước nhập hướng xử lý. */
+  searchFactories: (params?: { search?: string; limit?: number }) =>
+    apiClient.get<{
+      data: Array<{
+        id: number;
+        code?: string | null;
+        name: string;
+        fullName?: string | null;
+      }>;
+      total: number;
+      page: number;
+      limit: number;
+    }>("/product-quality-tickets/reference/factories", params),
+
+  /** Tra cứu hóa đơn cho bước tạo mới / nhập hướng xử lý. */
+  searchRelatedInvoices: (params?: {
+    search?: string;
+    customerId?: number;
+    limit?: number;
+  }) =>
+    apiClient.get<{
+      data: Array<{
+        id: number;
+        code: string;
+        purchaseDate?: string | null;
+        grandTotal?: number | null;
+        customer?: { id: number; code?: string | null; name: string } | null;
+      }>;
+      total: number;
+      page: number;
+      limit: number;
+    }>("/product-quality-tickets/reference/invoices", params),
+
   updateTask: (
     id: number,
     department: string,
@@ -172,6 +223,10 @@ export const productQualityApi = {
       { reason }
     ),
 
+  /**
+   * @deprecated Không hỗ trợ xóa phiếu chất lượng. Backend luôn trả lỗi và yêu
+   * cầu dùng chức năng "Hủy phiếu" (close). Giữ hàm để tương thích mã cũ.
+   */
   delete: (id: number) =>
     apiClient.delete<{ success: boolean; message: string }>(
       `/product-quality-tickets/${id}`
@@ -277,6 +332,7 @@ export const productQualityApi = {
     tableId?: string;
     dryRun?: boolean;
     limit?: number;
+    downloadMedia?: boolean;
   }) =>
     apiClient.post<{
       totalFetched: number;
@@ -284,8 +340,15 @@ export const productQualityApi = {
       matchedProducts: number;
       matchedInvoices: number;
       importedCount: number;
+      updatedCount: number;
       skippedCount: number;
       dryRun: boolean;
+      mediaStats: {
+        totalDiscovered: number;
+        downloaded: number;
+        skippedExisting: number;
+        failed: number;
+      };
       sample: any[];
     }>("/product-quality-tickets/import/lark", data),
 
@@ -319,8 +382,15 @@ export const productQualityApi = {
     );
     if (!res.ok) throw new Error("Upload file thất bại");
     const result = await res.json();
+    // Endpoint upload dùng tên `originalname` của Multer, còn DTO chất lượng
+    // hàng hóa dùng `originalName`. Chuẩn hóa ngay tại biên API để payload gửi
+    // lên không chứa field lạ (backend bật forbidNonWhitelisted).
     const items = (result.items || []).map((it: any) => ({
-      ...it,
+      filename: it.filename,
+      url: it.url,
+      originalName: it.originalName ?? it.originalname,
+      mimetype: it.mimetype,
+      size: it.size,
       kind,
       department,
     }));

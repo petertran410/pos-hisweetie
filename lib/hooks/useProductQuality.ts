@@ -101,6 +101,22 @@ export function useAssignProductQualityTicket() {
   });
 }
 
+export function useMoveToRemediatingProductQualityTicket() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => productQualityApi.moveToRemediating(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ["product-quality-tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["product-quality-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["product-quality-ticket", id] });
+      toast.success("Đã chuyển phiếu sang Đang khắc phục");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Chuyển sang Đang khắc phục thất bại");
+    },
+  });
+}
+
 export function useUpdateProductQualityTask() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -138,25 +154,10 @@ export function useCloseProductQualityTicket() {
       queryClient.invalidateQueries({
         queryKey: ["product-quality-ticket", variables.id],
       });
-      toast.success("Kết thúc phiếu thành công");
+      toast.success("Đã hủy phiếu thành công");
     },
     onError: (error: any) => {
-      toast.error(error.message || "Đóng phiếu thất bại");
-    },
-  });
-}
-
-export function useDeleteProductQualityTicket() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: number) => productQualityApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["product-quality-tickets"] });
-      queryClient.invalidateQueries({ queryKey: ["product-quality-summary"] });
-      toast.success("Đã xóa phiếu sự cố");
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Xóa phiếu thất bại");
+      toast.error(error.message || "Hủy phiếu thất bại");
     },
   });
 }
@@ -355,4 +356,48 @@ export function useExportProductQualityTickets() {
   };
 
   return { exportToFile, exportDetailToFile, isExporting };
+}
+
+/**
+ * Tra cứu nhà máy đang hoạt động cho bước nhập hướng xử lý.
+ * Chỉ fetch khi từ khóa đủ dài hoặc khi bắt buộc (prefetch).
+ */
+export function useProductQualityFactorySearch(
+  search?: string,
+  options?: { enabled?: boolean }
+) {
+  const keyword = (search || "").trim();
+  return useQuery({
+    queryKey: ["product-quality-factories", keyword],
+    queryFn: () =>
+      productQualityApi.searchFactories({ search: keyword || undefined, limit: 20 }),
+    staleTime: 60_000,
+    enabled: options?.enabled ?? true,
+  });
+}
+
+/**
+ * Tra cứu hóa đơn cho bước tạo mới / nhập hướng xử lý.
+ */
+export function useProductQualityInvoiceSearch(params: {
+  search?: string;
+  customerId?: number;
+  enabled?: boolean;
+}) {
+  const keyword = (params.search || "").trim();
+  return useQuery({
+    queryKey: [
+      "product-quality-invoices",
+      keyword,
+      params.customerId ?? null,
+    ],
+    queryFn: () =>
+      productQualityApi.searchRelatedInvoices({
+        search: keyword || undefined,
+        customerId: params.customerId,
+        limit: 15,
+      }),
+    staleTime: 30_000,
+    enabled: params.enabled ?? true,
+  });
 }

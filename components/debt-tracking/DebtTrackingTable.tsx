@@ -537,6 +537,11 @@ export function DebtTrackingTable({
                     <CodeLink entity="customer" code={r.code} />
                     {r.contactNumber ? ` · ${r.contactNumber}` : ""}
                   </div>
+                  {r.misaEmployeeName && (
+                    <div className="text-[11px] text-gray-500" title="Kế toán PIC (Misa)">
+                      KT: {r.misaEmployeeName}
+                    </div>
+                  )}
                 </td>
 
                 <td className={`${columnClass("rule")} px-3 py-2 align-top text-xs`} style={columnStyle("rule")}>

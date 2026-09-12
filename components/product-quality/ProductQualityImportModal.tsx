@@ -16,6 +16,7 @@ import { productQualityApi } from "@/lib/api/product-quality";
 import {
   useProductQualityImportPreview,
   useProductQualityImportCommit,
+  useImportLarkQualityTickets,
 } from "@/lib/hooks/useProductQuality";
 import type {
   QualityImportPreviewResult,
@@ -28,13 +29,16 @@ interface ProductQualityImportModalProps {
 
 export function ProductQualityImportModal({ onClose }: ProductQualityImportModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeTab, setActiveTab] = useState<"excel" | "lark">("excel");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<QualityImportPreviewResult | null>(null);
   const [result, setResult] = useState<QualityImportCommitResult | null>(null);
+  const [larkResult, setLarkResult] = useState<any>(null);
   const [downloading, setDownloading] = useState(false);
 
   const previewMutation = useProductQualityImportPreview();
   const commitMutation = useProductQualityImportCommit();
+  const larkMutation = useImportLarkQualityTickets();
 
   const handleSelectFile = (selected?: File | null) => {
     if (!selected) return;
@@ -106,10 +110,10 @@ export function ProductQualityImportModal({ onClose }: ProductQualityImportModal
         <div className="border-b px-6 py-4 flex items-center justify-between">
           <div>
             <h2 className="text-base font-bold text-gray-900">
-              Import sự cố chất lượng từ Excel
+              Nhập dữ liệu sự cố chất lượng
             </h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              Hỗ trợ file .xlsx, .xls xuất từ LarkBase hoặc theo file mẫu của hệ thống
+              Đồng bộ trực tiếp từ LarkBase hoặc import qua file Excel
             </p>
           </div>
           <button
@@ -120,9 +124,121 @@ export function ProductQualityImportModal({ onClose }: ProductQualityImportModal
           </button>
         </div>
 
+        {/* Tab switcher */}
+        <div className="flex border-b px-6 pt-2 bg-gray-50/70 gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab("excel")}
+            className={`px-4 py-2 text-xs font-semibold border-b-2 transition-colors ${
+              activeTab === "excel"
+                ? "border-brand text-brand bg-white rounded-t-lg"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}>
+            Import từ File Excel
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("lark")}
+            className={`px-4 py-2 text-xs font-semibold border-b-2 transition-colors ${
+              activeTab === "lark"
+                ? "border-brand text-brand bg-white rounded-t-lg"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}>
+            Đồng bộ trực tiếp từ LarkBase
+          </button>
+        </div>
+
         {/* Content Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {!result ? (
+          {activeTab === "lark" && (
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs text-blue-800 space-y-1">
+                <p className="font-semibold text-blue-900">
+                  Kết nối trực tiếp bảng LarkBase (tblF032Qb8D2dcyd):
+                </p>
+                <p>• Hệ thống sẽ đọc toàn bộ 1.057+ bản ghi từ Base và tự động ánh xạ với khách hàng, sản phẩm, hóa đơn trên POS.</p>
+                <p>• Hình ảnh và video minh chứng sẽ được tự động tải về thư mục máy chủ <code className="bg-blue-100 px-1 rounded">uploads/product-quality/</code>.</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  disabled={larkMutation.isPending}
+                  onClick={() => {
+                    larkMutation.mutate(
+                      { downloadMedia: false },
+                      { onSuccess: (data) => setLarkResult(data) }
+                    );
+                  }}
+                  className="p-4 border border-gray-200 rounded-xl text-left hover:border-brand hover:bg-brand-soft/20 transition-all">
+                  <div className="font-bold text-sm text-gray-800 flex items-center gap-2">
+                    {larkMutation.isPending && <Loader2 className="w-4 h-4 animate-spin text-brand" />}
+                    1. Đồng bộ nhanh (Chỉ dữ liệu text)
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Chạy trong ~5-10 giây. Đồng bộ toàn bộ phiếu sự cố, người xử lý, khách hàng, sản phẩm và bỏ qua tải hình ảnh.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={larkMutation.isPending}
+                  onClick={() => {
+                    larkMutation.mutate(
+                      { downloadMedia: true },
+                      { onSuccess: (data) => setLarkResult(data) }
+                    );
+                  }}
+                  className="p-4 border border-brand bg-brand-soft/30 rounded-xl text-left hover:bg-brand-soft/50 transition-all">
+                  <div className="font-bold text-sm text-brand-dark flex items-center gap-2">
+                    {larkMutation.isPending && <Loader2 className="w-4 h-4 animate-spin text-brand" />}
+                    2. Đồng bộ toàn diện (Kèm tải hình ảnh & video)
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Đồng bộ dữ liệu và tải toàn bộ hình ảnh về thư mục <code className="bg-white/60 px-1 rounded">uploads/product-quality/</code>. Tự động bỏ qua các ảnh đã có.
+                  </p>
+                </button>
+              </div>
+
+              {larkResult && (
+                <div className="border rounded-xl p-4 bg-gray-50 space-y-3 mt-4">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    <span className="font-bold text-sm text-gray-900">
+                      Kết quả đồng bộ từ LarkBase
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                    <div className="bg-white p-3 rounded-lg border">
+                      <span className="text-gray-400 block">Tổng bản ghi Lark</span>
+                      <span className="text-base font-bold text-gray-800">{larkResult.totalFetched}</span>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border">
+                      <span className="text-gray-400 block">Tạo mới / Cập nhật</span>
+                      <span className="text-base font-bold text-emerald-600">
+                        {larkResult.importedCount} mới / {larkResult.updatedCount || 0} sửa
+                      </span>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border">
+                      <span className="text-gray-400 block">Ảnh đã tải về POS</span>
+                      <span className="text-base font-bold text-blue-600">
+                        {larkResult.mediaStats?.downloaded || 0} file
+                      </span>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border">
+                      <span className="text-gray-400 block">Ảnh đã có sẵn</span>
+                      <span className="text-base font-bold text-gray-600">
+                        {larkResult.mediaStats?.skippedExisting || 0} file
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "excel" && (!result ? (
             <>
               {/* Template download & guide */}
               <div className="flex flex-wrap items-center justify-between gap-3 bg-gray-50 border rounded-xl p-4 text-xs text-gray-600">
@@ -345,12 +461,19 @@ export function ProductQualityImportModal({ onClose }: ProductQualityImportModal
                 </p>
               </div>
             </div>
-          )}
+          ))}
         </div>
 
         {/* Footer actions */}
         <div className="border-t px-6 py-4 flex items-center justify-end gap-3 bg-gray-50">
-          {result ? (
+          {activeTab === "lark" ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2 bg-brand text-white rounded-lg text-sm font-semibold hover:bg-brand-dark transition-colors shadow-sm">
+              Đóng
+            </button>
+          ) : result ? (
             <>
               <button
                 type="button"

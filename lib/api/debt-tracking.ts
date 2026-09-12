@@ -133,6 +133,7 @@ export interface DebtTrackingRow {
   name: string;
   contactNumber: string | null;
   misaEmployeeName: string | null;
+  misaEmployeeCode?: string | null;
   branch: { id: number; name: string } | null;
 
   totalDebt: number;
@@ -251,6 +252,9 @@ export interface DebtTrackingParams {
   branchId?: number;
   salePicId?: number;
   salePicIds?: number[];
+  accountantPic?: string;
+  accountantPics?: string[];
+  misaEmployeeCodes?: string[];
   customerGroupId?: number;
   customerGroupIds?: number[];
   withoutOpenTicket?: boolean;

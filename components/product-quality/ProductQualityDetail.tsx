@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -18,13 +17,14 @@ import {
   Send,
   CheckSquare,
   XCircle,
-  Trash2,
   Upload,
   Loader2,
   ExternalLink,
   Plus,
   X,
   RotateCcw,
+  Factory,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -32,7 +32,9 @@ import {
   useAssignProductQualityTicket,
   useUpdateProductQualityTask,
   useCloseProductQualityTicket,
-  useDeleteProductQualityTicket,
+  useMoveToRemediatingProductQualityTicket,
+  useProductQualityFactorySearch,
+  useProductQualityInvoiceSearch,
 } from "@/lib/hooks/useProductQuality";
 import { productQualityApi } from "@/lib/api/product-quality";
 import { usePermission } from "@/lib/hooks/usePermissions";
@@ -41,6 +43,7 @@ import {
   type ProductQualityTicket,
   type ProductQualityTask,
   DEPARTMENT_OPTIONS,
+  RESPONSIBILITY_OPTIONS,
   QUALITY_STATUS_CONFIG,
 } from "@/lib/types/product-quality";
 
@@ -48,32 +51,202 @@ interface ProductQualityDetailProps {
   ticketId: number;
 }
 
+const QUALITY_STAGES = [
+  { key: "NEW", label: "Tạo mới" },
+  { key: "IN_PROGRESS", label: "Đang xử lý" },
+  { key: "REMEDIATING", label: "Đang khắc phục" },
+  { key: "COMPLETED", label: "Hoàn thành" },
+] as const;
+
+/** Ảnh minh chứng: mimetype là ảnh, hoặc thiếu mimetype và không phải video. */
+function isImageAttachment(a: {
+  kind?: string | null;
+  mimetype?: string | null;
+}): boolean {
+  const mime = (a.mimetype || "").toLowerCase();
+  if (mime.startsWith("image/")) return true;
+  if (mime.startsWith("video/")) return false;
+  return a.kind !== "PROOF_VIDEO";
+}
+
+/**
+ * Thumbnail video: dùng chính thẻ <video> với media fragment #t=0.1 để trình
+ * duyệt hiển thị khung hình đầu, kèm nút play overlay.
+ */
+function VideoThumbnail({
+  url,
+  className,
+  badgeClassName,
+}: {
+  url: string;
+  className?: string;
+  badgeClassName?: string;
+}) {
+  return (
+    <div className={`relative overflow-hidden bg-gray-900 ${className ?? ""}`}>
+      <video
+        src={`${url}#t=0.1`}
+        muted
+        playsInline
+        preload="metadata"
+        className="w-full h-full object-cover"
+      />
+      <span className="absolute inset-0 flex items-center justify-center bg-black/25">
+        <span
+          className={`rounded-full bg-white/90 flex items-center justify-center ${
+            badgeClassName ?? "w-7 h-7"
+          }`}>
+          <Video className="w-3.5 h-3.5 text-gray-800" />
+        </span>
+      </span>
+    </div>
+  );
+}
+
 export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
-  const router = useRouter();
   const { data: ticket, isLoading } = useProductQualityTicket(ticketId);
 
   const canAssign = usePermission("product_quality", "assign");
   const canComplete = usePermission("product_quality", "complete");
   const canClose = usePermission("product_quality", "close");
-  const canDelete = usePermission("product_quality", "delete");
 
   const assignMutation = useAssignProductQualityTicket();
+  const moveToRemediatingMutation = useMoveToRemediatingProductQualityTicket();
   const updateTaskMutation = useUpdateProductQualityTask();
   const closeMutation = useCloseProductQualityTicket();
-  const deleteMutation = useDeleteProductQualityTicket();
 
   // Modals state
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState<string | null>(null);
   const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null);
+  const [selectedVideoPreview, setSelectedVideoPreview] = useState<string | null>(null);
 
   // Assign form state
   const [handlingDirection, setHandlingDirection] = useState("");
   const [assignedDepts, setAssignedDepts] = useState<string[]>([]);
+  const [responsibilities, setResponsibilities] = useState<string[]>([]);
   const [severity, setSeverity] = useState("");
-  const [factoryName, setFactoryName] = useState("");
-  const [outboundInvoiceCode, setOutboundInvoiceCode] = useState("");
+  const [factoryId, setFactoryId] = useState<number | undefined>(undefined);
+  const [factorySearch, setFactorySearch] = useState("");
+  const [showFactoryDropdown, setShowFactoryDropdown] = useState(false);
+  const factoryDropdownRef = useRef<HTMLDivElement>(null);
+  const [outboundInvoiceId, setOutboundInvoiceId] = useState<number | undefined>(
+    undefined
+  );
+  const [outboundInvoiceSearch, setOutboundInvoiceSearch] = useState("");
+  const [showOutboundInvoiceDropdown, setShowOutboundInvoiceDropdown] =
+    useState(false);
+  const outboundInvoiceDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Menu nhanh "Cập nhật kết quả" ở thanh tiêu đề (khi có nhiều bộ phận).
+  const [showQuickTaskMenu, setShowQuickTaskMenu] = useState(false);
+  const quickTaskMenuRef = useRef<HTMLDivElement>(null);
+
+  // Chỉnh sửa hiện tượng / ghi chú / minh chứng ngay trong bước xử lý
+  const [reason, setReason] = useState("");
+  const [note, setNote] = useState("");
+  const [newAttachments, setNewAttachments] = useState<
+    Array<{
+      filename: string;
+      url: string;
+      originalName?: string;
+      mimetype?: string;
+      size?: number;
+      kind: string;
+      localId: number;
+    }>
+  >([]);
+  const [removedAttachmentIds, setRemovedAttachmentIds] = useState<number[]>([]);
+  const [isUploadingProcessingFiles, setIsUploadingProcessingFiles] =
+    useState(false);
+  const newAttachmentSeq = useRef(0);
+  const processingImageInputRef = useRef<HTMLInputElement>(null);
+  const processingVideoInputRef = useRef<HTMLInputElement>(null);
+
+  const factorySearchResult = useProductQualityFactorySearch(factorySearch, {
+    enabled: showFactoryDropdown,
+  });
+  const outboundInvoiceSearchResult = useProductQualityInvoiceSearch({
+    search: outboundInvoiceSearch,
+    enabled: showOutboundInvoiceDropdown,
+  });
+  const factoryOptions = factorySearchResult.data?.data ?? [];
+  const outboundInvoiceOptions = outboundInvoiceSearchResult.data?.data ?? [];
+
+  // Chỉ hiển thị nhiệm vụ của các bộ phận thực sự được giao.
+  const assignedDepartmentList = useMemo(
+    () =>
+      (ticket?.assignedDepartments ?? []).filter((d) =>
+        (DEPARTMENT_OPTIONS as readonly string[]).includes(d)
+      ),
+    [ticket?.assignedDepartments]
+  );
+
+  // Danh sách mã hóa đơn bán hàng liên quan (ưu tiên quan hệ nhiều-nhiều).
+  const relatedInvoiceCodes = useMemo(() => {
+    const fromRelation = (ticket?.relatedInvoices ?? [])
+      .map((r) => r.invoice?.code)
+      .filter((c): c is string => !!c);
+    if (fromRelation.length > 0) return fromRelation;
+    return (ticket?.invoiceCode || "")
+      .split(",")
+      .map((c) => c.trim())
+      .filter(Boolean);
+  }, [ticket?.relatedInvoices, ticket?.invoiceCode]);
+
+  const existingImages = useMemo(
+    () =>
+      (ticket?.attachments ?? []).filter(
+        (a) => a.kind !== "COMPLETION_PROOF" && isImageAttachment(a)
+      ),
+    [ticket?.attachments]
+  );
+  const existingVideos = useMemo(
+    () =>
+      (ticket?.attachments ?? []).filter(
+        (a) => a.kind !== "COMPLETION_PROOF" && !isImageAttachment(a)
+      ),
+    [ticket?.attachments]
+  );
+  const newProcessingImages = newAttachments.filter(
+    (a) => a.kind === "PROOF_IMAGE"
+  );
+  const newProcessingVideos = newAttachments.filter(
+    (a) => a.kind === "PROOF_VIDEO"
+  );
+
+  // Chứng từ hoàn thành đã lưu của bộ phận đang mở trong modal nhiệm vụ.
+  const existingCompletionAttachments = (ticket?.attachments ?? []).filter(
+    (a) => a.kind === "COMPLETION_PROOF" && a.department === showTaskModal
+  );
+
+  // Đóng dropdown nhà máy / hóa đơn xuất bù khi click ra ngoài.
+  useEffect(() => {
+    const handleMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        factoryDropdownRef.current &&
+        !factoryDropdownRef.current.contains(target)
+      ) {
+        setShowFactoryDropdown(false);
+      }
+      if (
+        outboundInvoiceDropdownRef.current &&
+        !outboundInvoiceDropdownRef.current.contains(target)
+      ) {
+        setShowOutboundInvoiceDropdown(false);
+      }
+      if (
+        quickTaskMenuRef.current &&
+        !quickTaskMenuRef.current.contains(target)
+      ) {
+        setShowQuickTaskMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => document.removeEventListener("mousedown", handleMouseDown);
+  }, []);
 
   // Task form state
   const [taskFeedback, setTaskFeedback] = useState("");
@@ -87,7 +260,7 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-12 text-gray-400">
+      <div className="h-full flex flex-col items-center justify-center p-12 text-gray-400">
         <Loader2 className="w-8 h-8 animate-spin text-brand mb-2" />
         <span>Đang tải thông tin phiếu sự cố...</span>
       </div>
@@ -96,7 +269,7 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
 
   if (!ticket) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-12 text-gray-400">
+      <div className="h-full flex flex-col items-center justify-center p-12 text-gray-400">
         <AlertTriangle className="w-8 h-8 text-yellow-500 mb-2" />
         <span className="font-medium text-gray-700">Không tìm thấy phiếu sự cố</span>
         <Link href="/san-pham/chat-luong-hang-hoa" className="mt-3 text-sm text-brand hover:underline">
@@ -116,35 +289,119 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
   // Open Assign Modal
   const handleOpenAssign = () => {
     setHandlingDirection(ticket.handlingDirection || "");
+    // Không mặc định chọn cả 4 bộ phận: chỉ giữ các bộ phận đã giao trước đó.
     setAssignedDepts(
       ticket.assignedDepartments?.length > 0
         ? [...ticket.assignedDepartments]
-        : [...DEPARTMENT_OPTIONS]
+        : []
     );
     setSeverity(ticket.severity || "Trung");
-    setFactoryName(ticket.factoryName || "");
-    setOutboundInvoiceCode(ticket.outboundInvoiceCode || "");
+    setResponsibilities(ticket.responsibilities || []);
+    setFactoryId(ticket.factoryId || undefined);
+    setFactorySearch(ticket.factoryName || "");
+    setOutboundInvoiceId(ticket.outboundInvoiceId || undefined);
+    setOutboundInvoiceSearch(ticket.outboundInvoiceCode || "");
+    setReason(ticket.reason || "");
+    setNote(ticket.note || "");
+    setNewAttachments([]);
+    setRemovedAttachmentIds([]);
+    setSelectedImagePreview(null);
+    setSelectedVideoPreview(null);
     setShowAssignModal(true);
+  };
+
+  // Tải ảnh/video mới trong bước cập nhật hướng xử lý
+  const handleUploadProcessingFiles = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    kind: "PROOF_IMAGE" | "PROOF_VIDEO"
+  ) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setIsUploadingProcessingFiles(true);
+    try {
+      const { items, errors } = await productQualityApi.uploadFiles(
+        Array.from(files),
+        kind
+      );
+      if (items.length > 0) {
+        setNewAttachments((prev) => [
+          ...prev,
+          ...items.map((it) => ({ ...it, kind, localId: ++newAttachmentSeq.current })),
+        ]);
+        toast.success(`Đã tải lên ${items.length} tệp minh chứng`);
+      }
+      if (errors.length > 0) {
+        toast.error(errors[0].reason);
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Tải tệp minh chứng thất bại"
+      );
+    } finally {
+      setIsUploadingProcessingFiles(false);
+      e.target.value = "";
+    }
+  };
+
+  const toggleRemoveAttachment = (attachmentId: number) => {
+    setRemovedAttachmentIds((prev) =>
+      prev.includes(attachmentId)
+        ? prev.filter((id) => id !== attachmentId)
+        : [...prev, attachmentId]
+    );
   };
 
   // Submit Assign Modal
   const handleSaveAssign = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!handlingDirection.trim()) {
+      toast.error("Vui lòng nhập hướng xử lý");
+      return;
+    }
+    if (assignedDepts.length === 0) {
+      toast.error("Vui lòng chọn ít nhất một bộ phận thực hiện");
+      return;
+    }
     assignMutation.mutate(
       {
         id: ticket.id,
         data: {
           handlingDirection,
           assignedDepartments: assignedDepts,
+          responsibilities,
           severity,
-          factoryName: factoryName || undefined,
-          outboundInvoiceCode: outboundInvoiceCode || undefined,
+          factoryId,
+          outboundInvoiceId,
+          reason,
+          note,
+          removeAttachmentIds: removedAttachmentIds,
+          attachments: newAttachments.map((a) => ({
+            filename: a.filename,
+            url: a.url,
+            originalName: a.originalName,
+            mimetype: a.mimetype,
+            size: a.size,
+            kind: a.kind,
+          })),
         },
       },
       {
         onSuccess: () => setShowAssignModal(false),
       }
     );
+  };
+
+  // Chuyển phiếu sang giai đoạn Đang khắc phục
+  const handleMoveToRemediating = () => {
+    if (!ticket.handlingDirection?.trim()) {
+      toast.error("Vui lòng nhập hướng xử lý trước khi chuyển sang Đang khắc phục");
+      return;
+    }
+    if (!ticket.assignedDepartments || ticket.assignedDepartments.length === 0) {
+      toast.error("Vui lòng chọn ít nhất một bộ phận thực hiện");
+      return;
+    }
+    moveToRemediatingMutation.mutate(ticket.id);
   };
 
   // Open Task Modal
@@ -186,6 +443,18 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
   const handleSaveTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!showTaskModal) return;
+    if (taskIsCompleted) {
+      const existingImages = (ticket.attachments || []).filter(
+        (a) => a.department === showTaskModal && isImageAttachment(a)
+      );
+      const newImages = taskAttachments.filter(isImageAttachment);
+      if (existingImages.length === 0 && newImages.length === 0) {
+        toast.error(
+          `Vui lòng tải lên ít nhất 1 hình ảnh minh chứng hoàn thành cho bộ phận ${showTaskModal}`
+        );
+        return;
+      }
+    }
     updateTaskMutation.mutate(
       {
         id: ticket.id,
@@ -206,7 +475,7 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
   const handleConfirmClose = (e: React.FormEvent) => {
     e.preventDefault();
     if (!closeReason.trim()) {
-      toast.error("Vui lòng nhập lý do kết thúc phiếu");
+      toast.error("Vui lòng nhập lý do hủy phiếu");
       return;
     }
     closeMutation.mutate(
@@ -217,17 +486,8 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
     );
   };
 
-  // Delete ticket
-  const handleDelete = () => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa phiếu sự cố này?")) {
-      deleteMutation.mutate(ticket.id, {
-        onSuccess: () => router.push("/san-pham/chat-luong-hang-hoa"),
-      });
-    }
-  };
-
   return (
-    <div className="flex-1 overflow-auto bg-gray-50 p-6 min-w-0">
+    <div className="h-full overflow-y-auto bg-gray-50 p-6 min-w-0">
       <div className="max-w-5xl mx-auto space-y-6">
         {/* 1. Header Toolbar */}
         <div className="bg-white rounded-xl border p-5 flex flex-wrap items-center justify-between gap-4 shadow-sm">
@@ -261,38 +521,154 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             {canAssign && ticket.status !== "ENDED" && (
               <button
                 onClick={handleOpenAssign}
                 className="px-3.5 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark flex items-center gap-1.5 transition-colors shadow-sm">
                 <CheckSquare className="w-4 h-4" />
-                {ticket.handlingDirection ? "Sửa hướng xử lý" : "Nhập hướng xử lý"}
+                {ticket.status === "NEW"
+                  ? "Nhập hướng xử lý"
+                  : "Sửa hướng xử lý"}
               </button>
             )}
 
-            {canClose && ticket.status !== "ENDED" && (
+            {canComplete &&
+              ["REMEDIATING", "COMPLETED"].includes(ticket.status) &&
+              assignedDepartmentList.length > 0 && (
+                <div className="relative" ref={quickTaskMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (assignedDepartmentList.length === 1) {
+                        handleOpenTask(assignedDepartmentList[0]);
+                        return;
+                      }
+                      setShowQuickTaskMenu((prev) => !prev);
+                    }}
+                    className="px-3.5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1.5 transition-colors shadow-sm">
+                    <CheckSquare className="w-4 h-4" />
+                    Cập nhật kết quả
+                    {assignedDepartmentList.length > 1 && (
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform ${
+                          showQuickTaskMenu ? "rotate-180" : ""
+                        }`}
+                      />
+                    )}
+                  </button>
+
+                  {showQuickTaskMenu && assignedDepartmentList.length > 1 && (
+                    <div className="absolute right-0 top-full mt-1 w-64 bg-white border rounded-lg shadow-xl z-40 overflow-hidden divide-y divide-gray-100">
+                      {assignedDepartmentList.map((dept) => {
+                        const task = ticket.tasks?.find(
+                          (t) => t.department === dept
+                        );
+                        const isDone = !!task?.isCompleted;
+                        return (
+                          <button
+                            key={dept}
+                            type="button"
+                            onClick={() => {
+                              setShowQuickTaskMenu(false);
+                              handleOpenTask(dept);
+                            }}
+                            className="w-full text-left px-3 py-2.5 text-xs hover:bg-brand-soft/70 flex items-center justify-between gap-2">
+                            <span className="font-medium text-gray-800 truncate">
+                              {dept}
+                            </span>
+                            <span
+                              className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                                isDone
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-amber-100 text-amber-700"
+                              }`}>
+                              {isDone ? "Đã xong" : "Chờ xử lý"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+            {canAssign && ticket.status === "IN_PROGRESS" && (
+              <button
+                onClick={handleMoveToRemediating}
+                disabled={moveToRemediatingMutation.isPending}
+                className="px-3.5 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 disabled:opacity-60 flex items-center gap-1.5 transition-colors shadow-sm">
+                {moveToRemediatingMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RotateCcw className="w-4 h-4" />
+                )}
+                Chuyển sang Đang khắc phục
+              </button>
+            )}
+
+            {canClose &&
+              ["NEW", "IN_PROGRESS", "REMEDIATING"].includes(ticket.status) && (
               <button
                 onClick={() => {
                   setCloseReason("");
                   setShowCloseModal(true);
                 }}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1.5">
-                <XCircle className="w-4 h-4 text-gray-500" />
-                Dừng / Kết thúc
-              </button>
-            )}
-
-            {canDelete && ticket.status === "NEW" && (
-              <button
-                onClick={handleDelete}
-                disabled={deleteMutation.isPending}
-                className="px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 flex items-center gap-1.5">
-                <Trash2 className="w-4 h-4" />
-                Xóa
+                className="px-3 py-2 border border-red-200 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 flex items-center gap-1.5">
+                <XCircle className="w-4 h-4" />
+                Hủy phiếu
               </button>
             )}
           </div>
+        </div>
+
+        {/* Thanh tiến trình 4 giai đoạn */}
+        <div className="bg-white rounded-xl border px-5 py-4 shadow-sm">
+          <div className="flex items-center overflow-x-auto">
+            {QUALITY_STAGES.map((stage, idx) => {
+              const activeIndex = QUALITY_STAGES.findIndex(
+                (s) => s.key === ticket.status
+              );
+              const isDone = activeIndex >= 0 && idx < activeIndex;
+              const isActive = idx === activeIndex;
+              return (
+                <div
+                  key={stage.key}
+                  className="flex items-center flex-1 last:flex-none min-w-0">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold border ${
+                        isDone
+                          ? "bg-brand text-white border-brand"
+                          : isActive
+                          ? "bg-brand-soft text-brand border-brand"
+                          : "bg-gray-50 text-gray-400 border-gray-200"
+                      }`}>
+                      {isDone ? <CheckCircle2 className="w-3.5 h-3.5" /> : idx + 1}
+                    </span>
+                    <span
+                      className={`text-xs font-semibold whitespace-nowrap ${
+                        isDone || isActive ? "text-gray-900" : "text-gray-400"
+                      }`}>
+                      {stage.label}
+                    </span>
+                  </div>
+                  {idx < QUALITY_STAGES.length - 1 && (
+                    <div
+                      className={`flex-1 h-0.5 mx-3 min-w-6 ${
+                        isDone ? "bg-brand" : "bg-gray-200"
+                      }`}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {ticket.status === "ENDED" && (
+            <div className="mt-2 text-xs text-gray-500">
+              Phiếu đã hủy. Lý do: {ticket.closeReason || "—"}
+            </div>
+          )}
         </div>
 
         {/* 2. Grid Overview: Thông tin sự cố + Hướng xử lý & SLA */}
@@ -306,6 +682,13 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
               </h2>
 
               <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-xs text-gray-400 block">Kho / Chi nhánh phát hiện</span>
+                  <span className="font-medium text-gray-800">
+                    {ticket.branch?.name || ticket.branchName || "—"}
+                  </span>
+                </div>
+
                 <div>
                   <span className="text-xs text-gray-400 block">Khách hàng</span>
                   <div className="font-semibold text-gray-800 mt-0.5">
@@ -387,10 +770,28 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
                   <span className="font-medium text-gray-800">{ticket.factoryName || "—"}</span>
                 </div>
 
-                {ticket.invoiceCode && (
+                <div>
+                  <span className="text-xs text-gray-400 block">Trách nhiệm thuộc về</span>
+                  <span className="font-medium text-gray-800">
+                    {ticket.responsibilities?.length
+                      ? ticket.responsibilities.join(", ")
+                      : "—"}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-xs text-gray-400 block">Nguồn hàng</span>
+                  <span className="font-medium text-gray-800">{ticket.sourceType || "—"}</span>
+                </div>
+
+                {relatedInvoiceCodes.length > 0 && (
                   <div>
                     <span className="text-xs text-gray-400 block">Hóa đơn mua hàng</span>
-                    <CodeLink entity="invoice" code={ticket.invoiceCode} />
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {relatedInvoiceCodes.map((code) => (
+                        <CodeLink key={code} entity="invoice" code={code} />
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -433,13 +834,17 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
                     return (
                       <div
                         key={att.id}
-                        onClick={() => !isVid && setSelectedImagePreview(att.url)}
+                        onClick={() =>
+                          isVid
+                            ? setSelectedVideoPreview(att.url)
+                            : setSelectedImagePreview(att.url)
+                        }
                         className="relative group aspect-square rounded-lg border overflow-hidden bg-gray-100 flex items-center justify-center cursor-pointer">
                         {isVid ? (
-                          <video
-                            src={att.url}
-                            controls
-                            className="w-full h-full object-cover"
+                          <VideoThumbnail
+                            url={att.url}
+                            className="w-full h-full transition-transform group-hover:scale-105"
+                            badgeClassName="w-9 h-9"
                           />
                         ) : (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -526,143 +931,200 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
                   </span>
                 </div>
 
-                {ticket.closeReason && (
-                  <div className="pt-2 border-t">
-                    <span className="text-red-500 font-medium block">Lý do kết thúc:</span>
-                    <span className="text-gray-700">{ticket.closeReason}</span>
+                {ticket.status === "ENDED" && (
+                  <div className="pt-2 border-t space-y-1">
+                    <div className="flex justify-between py-1">
+                      <span className="text-gray-400">Người hủy:</span>
+                      <span className="font-medium text-gray-700">
+                        {ticket.closer?.name || "—"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-gray-400">Thời gian hủy:</span>
+                      <span className="font-medium text-gray-700">
+                        {ticket.closedAt
+                          ? new Date(ticket.closedAt).toLocaleString("vi-VN")
+                          : "—"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-red-500 font-medium block">Lý do hủy:</span>
+                      <span className="text-gray-700">{ticket.closeReason || "—"}</span>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* 3. Nhiệm vụ các bộ phận (Tasks) */}
-        <div className="bg-white rounded-xl border p-5 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b pb-3">
-            <div>
-              <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+            {/* Bộ phận xử lý — nằm ngay dưới Hướng xử lý & Tiến độ SLA */}
+            <div className="bg-white rounded-xl border p-5 space-y-3 shadow-sm">
+              <h2 className="text-sm font-bold text-gray-900 border-b pb-2 flex items-center gap-2">
                 <CheckSquare className="w-4 h-4 text-brand" />
-                Nhiệm vụ các bộ phận phối hợp
+                Bộ phận xử lý
               </h2>
-              <p className="text-xs text-gray-400 mt-0.5">
-                Phiếu sẽ tự động chuyển trạng thái &ldquo;Hoàn thành&rdquo; khi tất cả bộ phận được giao hoàn tất
-              </p>
+
+              {assignedDepartmentList.length === 0 ? (
+                <div className="text-xs text-gray-400 italic bg-gray-50 p-3 rounded-lg">
+                  Chưa giao bộ phận nào.
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    {assignedDepartmentList.map((dept) => {
+                      const task = ticket.tasks?.find(
+                        (t) => t.department === dept
+                      );
+                      const isDone = !!task?.isCompleted;
+                      const deptProofs = (ticket.attachments ?? []).filter(
+                        (a) =>
+                          a.department === dept &&
+                          a.kind === "COMPLETION_PROOF"
+                      );
+                      return (
+                        <div
+                          key={dept}
+                          className="text-xs space-y-1.5 border-b border-gray-100 pb-2.5 last:border-0 last:pb-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="flex items-center gap-2 min-w-0">
+                              <span
+                                className={`w-2 h-2 rounded-full shrink-0 ${
+                                  isDone ? "bg-green-500" : "bg-amber-500"
+                                }`}
+                              />
+                              <span className="font-medium text-gray-800 truncate">
+                                {dept}
+                              </span>
+                            </span>
+                            <span
+                              className={`shrink-0 px-2 py-0.5 rounded-full font-medium ${
+                                isDone
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-amber-100 text-amber-700"
+                              }`}>
+                              {isDone ? "Đã xong" : "Chờ xử lý"}
+                            </span>
+                          </div>
+
+                          {task?.feedback ? (
+                            <p className="text-[11px] text-gray-600 bg-gray-50 rounded p-2 whitespace-pre-wrap">
+                              {task.feedback}
+                            </p>
+                          ) : (
+                            <p className="text-[11px] text-gray-400 italic">
+                              Chưa có phản hồi
+                            </p>
+                          )}
+
+                          {deptProofs.length > 0 && (
+                            <div className="grid grid-cols-4 gap-1.5">
+                              {deptProofs.map((att) => {
+                                const isVid =
+                                  att.kind === "PROOF_VIDEO" ||
+                                  att.mimetype?.startsWith("video");
+                                return (
+                                  <div
+                                    key={att.id}
+                                    onClick={() =>
+                                      isVid
+                                        ? setSelectedVideoPreview(att.url)
+                                        : setSelectedImagePreview(att.url)
+                                    }
+                                    className="relative aspect-square rounded border overflow-hidden bg-gray-100 cursor-pointer">
+                                    {isVid ? (
+                                      <VideoThumbnail
+                                        url={att.url}
+                                        className="w-full h-full"
+                                        badgeClassName="w-6 h-6"
+                                      />
+                                    ) : (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img
+                                        src={att.url}
+                                        alt={att.originalName || "Minh chứng"}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="border-t pt-2.5 text-[11px] text-gray-400 flex items-center justify-between">
+                    <span>
+                      Đã xong{" "}
+                      {
+                        assignedDepartmentList.filter(
+                          (d) =>
+                            ticket.tasks?.find((t) => t.department === d)
+                              ?.isCompleted
+                        ).length
+                      }
+                      /{assignedDepartmentList.length} bộ phận
+                    </span>
+                    {canComplete &&
+                      ["REMEDIATING", "COMPLETED"].includes(ticket.status) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // Mở nhanh bộ phận chưa hoàn tất đầu tiên.
+                            const nextDept =
+                              assignedDepartmentList.find(
+                                (d) =>
+                                  !ticket.tasks?.find(
+                                    (t) => t.department === d
+                                  )?.isCompleted
+                              ) ?? assignedDepartmentList[0];
+                            handleOpenTask(nextDept);
+                          }}
+                          className="text-brand font-semibold hover:underline">
+                          Cập nhật kết quả
+                        </button>
+                      )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {DEPARTMENT_OPTIONS.map((dept) => {
-              const isAssigned = ticket.assignedDepartments?.includes(dept);
-              const task = ticket.tasks?.find((t) => t.department === dept);
-              const isDone = task?.isCompleted;
-
-              return (
-                <div
-                  key={dept}
-                  className={`border rounded-xl p-4 transition-all ${
-                    isDone
-                      ? "border-green-200 bg-green-50/30"
-                      : isAssigned
-                      ? "border-amber-200 bg-amber-50/20"
-                      : "border-gray-200 bg-gray-50/40 opacity-70"
-                  }`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`w-2.5 h-2.5 rounded-full ${
-                          isDone ? "bg-green-500" : isAssigned ? "bg-amber-500" : "bg-gray-300"
-                        }`}
-                      />
-                      <span className="font-bold text-sm text-gray-800">{dept}</span>
-                      {!isAssigned && (
-                        <span className="text-[11px] text-gray-400 font-normal">
-                          (Không yêu cầu)
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Status badge */}
-                    <span
-                      className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
-                        isDone
-                          ? "bg-green-100 text-green-700"
-                          : isAssigned
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-gray-100 text-gray-500"
-                      }`}>
-                      {isDone ? "Đã xong" : isAssigned ? "Chờ xử lý" : "Bỏ qua"}
-                    </span>
-                  </div>
-
-                  {/* Task details */}
-                  <div className="space-y-2 text-xs text-gray-600 mt-2">
-                    {task?.assignedUserName && (
-                      <div>
-                        Phụ trách: <strong className="text-gray-800">{task.assignedUserName}</strong>
-                      </div>
-                    )}
-
-                    <div>
-                      <span className="text-gray-400 block mb-0.5">Phản hồi của bộ phận:</span>
-                      {task?.feedback ? (
-                        <div className="p-2 bg-white rounded border text-gray-800 whitespace-pre-wrap">
-                          {task.feedback}
-                        </div>
-                      ) : (
-                        <span className="italic text-gray-400">Chưa có phản hồi</span>
-                      )}
-                    </div>
-
-                    {isDone && task?.completedAt && (
-                      <div className="text-[11px] text-gray-400 pt-1">
-                        Hoàn tất ngày {new Date(task.completedAt).toLocaleString("vi-VN")} bởi{" "}
-                        {task.completedByName || "Thành viên"}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Action */}
-                  {canComplete && ticket.status !== "ENDED" && (
-                    <div className="border-t border-gray-200/60 pt-3 mt-3 flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenTask(dept)}
-                        className="text-xs font-semibold text-brand hover:underline flex items-center gap-1">
-                        <CheckSquare className="w-3.5 h-3.5" />
-                        {isDone ? "Chỉnh sửa phản hồi / Mở lại" : "Cập nhật kết quả"}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
         </div>
+
       </div>
 
-      {/* 4. Modal Hướng Xử Lý & Phân Công */}
+      {/* 3. Modal Hướng Xử Lý & Phân Công */}
       {showAssignModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h2 className="text-base font-bold text-gray-900">
-                Cập nhật hướng xử lý & Giao nhiệm vụ
-              </h2>
+          <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[94vh] flex flex-col shadow-xl">
+            <div className="flex items-start justify-between gap-4 border-b px-7 py-4 shrink-0">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">
+                  Cập nhật hướng xử lý &amp; Giao nhiệm vụ
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {ticket.code} · {ticket.customerName}
+                </p>
+              </div>
               <button
                 onClick={() => setShowAssignModal(false)}
-                className="text-gray-400 hover:text-gray-600">
+                className="shrink-0 text-gray-400 hover:text-gray-600 p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveAssign} className="space-y-4">
+            <form onSubmit={handleSaveAssign} className="flex-1 min-h-0 flex flex-col">
+              <div className="flex-1 min-h-0 overflow-y-auto px-7 py-5 space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Cột trái: nội dung xử lý */}
+              <div className="space-y-5">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
                   Hướng xử lý chốt cho sự cố này <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  rows={3}
+                  rows={4}
                   value={handlingDirection}
                   onChange={(e) => setHandlingDirection(e.target.value)}
                   placeholder="Ví dụ: Claim NCC bục rách, kho làm phiếu xuất hủy, kế toán điều chỉnh công nợ khách..."
@@ -671,6 +1133,35 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
                 />
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Hiện tượng &amp; Nguyên nhân sự cố
+                </label>
+                <textarea
+                  rows={4}
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Mô tả hiện tượng hàng lỗi và nguyên nhân ghi nhận được..."
+                  className="w-full p-2.5 border rounded-lg text-sm focus:ring-1 focus:ring-brand focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Ghi chú
+                </label>
+                <input
+                  type="text"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Ví dụ: hàng cont về ngày 8/9, đã liên hệ khách..."
+                  className="w-full p-2.5 border rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-brand"
+                />
+              </div>
+              </div>
+
+              {/* Cột phải: phân công & liên kết */}
+              <div className="space-y-5">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-2">
                   Các bộ phận phối hợp thực hiện:
@@ -705,6 +1196,42 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-2">
+                  Trách nhiệm thuộc về:
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {RESPONSIBILITY_OPTIONS.map((item) => {
+                    const checked = responsibilities.includes(item);
+                    return (
+                      <label
+                        key={item}
+                        className={`flex items-center gap-2 p-2.5 rounded-lg border text-xs font-medium cursor-pointer transition-colors ${
+                          checked
+                            ? "border-brand bg-brand-soft text-brand-dark"
+                            : "border-gray-200 hover:bg-gray-50 text-gray-700"
+                        }`}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setResponsibilities((prev) => [...prev, item]);
+                            } else {
+                              setResponsibilities((prev) =>
+                                prev.filter((r) => r !== item)
+                              );
+                            }
+                          }}
+                          className="rounded text-brand"
+                        />
+                        <span>{item}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
@@ -720,46 +1247,362 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
                   </select>
                 </div>
 
-                <div>
+                <div className="relative" ref={factoryDropdownRef}>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     Nhà máy sản xuất
                   </label>
-                  <input
-                    type="text"
-                    value={factoryName}
-                    onChange={(e) => setFactoryName(e.target.value)}
-                    placeholder="Guanling, Meijia..."
-                    className="w-full p-2 border rounded-lg text-xs bg-white"
-                  />
+                  <div className="relative">
+                    <Factory className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={factorySearch}
+                      onChange={(e) => {
+                        setFactorySearch(e.target.value);
+                        setFactoryId(undefined);
+                        setShowFactoryDropdown(true);
+                      }}
+                      onFocus={() => setShowFactoryDropdown(true)}
+                      placeholder="Tìm mã hoặc tên nhà máy..."
+                      className="w-full pl-8 pr-7 p-2 border rounded-lg text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand"
+                    />
+                    {factorySearch && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFactorySearch("");
+                          setFactoryId(undefined);
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  {showFactoryDropdown && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border rounded-lg shadow-xl z-40 max-h-44 overflow-y-auto divide-y divide-gray-100">
+                      {factorySearchResult.isLoading ? (
+                        <div className="p-2 text-xs text-center text-gray-400">
+                          Đang tải...
+                        </div>
+                      ) : factoryOptions.length === 0 ? (
+                        <div className="p-2 text-xs text-center text-gray-400">
+                          Không tìm thấy nhà máy phù hợp
+                        </div>
+                      ) : (
+                        factoryOptions.map((f) => (
+                          <button
+                            key={f.id}
+                            type="button"
+                            onClick={() => {
+                              setFactoryId(f.id);
+                              setFactorySearch(
+                                f.code ? `${f.name} (${f.code})` : f.name
+                              );
+                              setShowFactoryDropdown(false);
+                            }}
+                            className="w-full text-left px-2.5 py-2 text-xs hover:bg-brand-soft flex items-center justify-between">
+                            <span className="font-medium text-gray-800">
+                              {f.name}
+                            </span>
+                            {f.code && (
+                              <span className="text-gray-400 font-mono text-[10px]">
+                                {f.code}
+                              </span>
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div>
+              <div className="relative" ref={outboundInvoiceDropdownRef}>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Mã hóa đơn xuất bù / hoàn (nếu có)
+                  Hóa đơn xuất bù / hoàn (nếu có)
                 </label>
-                <input
-                  type="text"
-                  value={outboundInvoiceCode}
-                  onChange={(e) => setOutboundInvoiceCode(e.target.value)}
-                  placeholder="HD..."
-                  className="w-full p-2 border rounded-lg text-xs bg-white"
-                />
+                <div className="relative">
+                  <FileText className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={outboundInvoiceSearch}
+                    onChange={(e) => {
+                      setOutboundInvoiceSearch(e.target.value);
+                      setOutboundInvoiceId(undefined);
+                      setShowOutboundInvoiceDropdown(true);
+                    }}
+                    onFocus={() => setShowOutboundInvoiceDropdown(true)}
+                    placeholder="Gõ mã hóa đơn (HD...)"
+                    className="w-full pl-8 pr-7 p-2 border rounded-lg text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand"
+                  />
+                  {outboundInvoiceSearch && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOutboundInvoiceSearch("");
+                        setOutboundInvoiceId(undefined);
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                {showOutboundInvoiceDropdown && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white border rounded-lg shadow-xl z-40 max-h-44 overflow-y-auto divide-y divide-gray-100">
+                    {outboundInvoiceSearchResult.isLoading ? (
+                      <div className="p-2 text-xs text-center text-gray-400">
+                        Đang tải...
+                      </div>
+                    ) : outboundInvoiceOptions.length === 0 ? (
+                      <div className="p-2 text-xs text-center text-gray-400">
+                        Không tìm thấy hóa đơn phù hợp
+                      </div>
+                    ) : (
+                      outboundInvoiceOptions.map((inv) => (
+                        <button
+                          key={inv.id}
+                          type="button"
+                          onClick={() => {
+                            setOutboundInvoiceId(inv.id);
+                            setOutboundInvoiceSearch(inv.code);
+                            setShowOutboundInvoiceDropdown(false);
+                          }}
+                          className="w-full text-left px-2.5 py-2 text-xs hover:bg-blue-50 flex items-center justify-between">
+                          <span className="font-medium text-gray-800 font-mono">
+                            {inv.code}
+                          </span>
+                          <span className="text-gray-400 truncate ml-2 max-w-[140px]">
+                            {inv.customer?.name || "Khách"}
+                          </span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+              </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t">
+              {/* Minh chứng: ảnh & video */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Hình ảnh minh chứng: thêm/bớt ngay trong bước xử lý */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-semibold text-gray-700">
+                    Hình ảnh minh chứng
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => processingImageInputRef.current?.click()}
+                    disabled={isUploadingProcessingFiles}
+                    className="text-xs text-brand hover:underline flex items-center gap-1 disabled:opacity-50">
+                    {isUploadingProcessingFiles ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Plus className="w-3.5 h-3.5" />
+                    )}
+                    Thêm ảnh
+                  </button>
+                  <input
+                    ref={processingImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => handleUploadProcessingFiles(e, "PROOF_IMAGE")}
+                    className="hidden"
+                  />
+                </div>
+                {existingImages.length === 0 && newProcessingImages.length === 0 ? (
+                  <div className="text-xs text-gray-400 italic py-3 text-center border border-dashed rounded-lg">
+                    Chưa có ảnh minh chứng.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2">
+                    {existingImages.map((att) => {
+                      const removed = removedAttachmentIds.includes(att.id);
+                      return (
+                        <div
+                          key={`img-${att.id}`}
+                          onClick={() => setSelectedImagePreview(att.url)}
+                          className={`relative aspect-square rounded-lg border overflow-hidden bg-gray-100 cursor-pointer ${
+                            removed ? "opacity-40" : ""
+                          }`}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={att.url}
+                            alt={att.originalName || "Minh chứng"}
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleRemoveAttachment(att.id);
+                            }}
+                            title={removed ? "Hoàn tác" : "Bỏ ảnh này"}
+                            className={`absolute top-1 right-1 w-5 h-5 rounded-full text-white flex items-center justify-center ${
+                              removed ? "bg-brand hover:bg-brand-dark" : "bg-black/60 hover:bg-red-600"
+                            }`}>
+                            {removed ? (
+                              <RotateCcw className="w-3 h-3" />
+                            ) : (
+                              <X className="w-3 h-3" />
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {newProcessingImages.map((att) => (
+                      <div
+                        key={`new-img-${att.localId}`}
+                        onClick={() => setSelectedImagePreview(att.url)}
+                        className="relative aspect-square rounded-lg border overflow-hidden bg-gray-100 cursor-pointer">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={att.url}
+                          alt={att.originalName || "Ảnh mới"}
+                          className="w-full h-full object-cover"
+                        />
+                        <span className="absolute bottom-1 left-1 bg-brand text-white text-[10px] px-1 rounded">
+                          Mới
+                        </span>
+                        <button
+                          type="button"
+                          title="Bỏ ảnh vừa thêm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setNewAttachments((prev) =>
+                              prev.filter((a) => a.localId !== att.localId)
+                            );
+                          }}
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-red-600">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Video minh chứng: thêm/bớt */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-semibold text-gray-700">
+                    Video minh chứng
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => processingVideoInputRef.current?.click()}
+                    disabled={isUploadingProcessingFiles}
+                    className="text-xs text-brand hover:underline flex items-center gap-1 disabled:opacity-50">
+                    {isUploadingProcessingFiles ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Plus className="w-3.5 h-3.5" />
+                    )}
+                    Thêm video
+                  </button>
+                  <input
+                    ref={processingVideoInputRef}
+                    type="file"
+                    accept="video/*"
+                    multiple
+                    onChange={(e) => handleUploadProcessingFiles(e, "PROOF_VIDEO")}
+                    className="hidden"
+                  />
+                </div>
+                {existingVideos.length === 0 && newProcessingVideos.length === 0 ? (
+                  <div className="text-xs text-gray-400 italic py-3 text-center border border-dashed rounded-lg">
+                    Chưa có video minh chứng.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2">
+                    {existingVideos.map((att) => {
+                      const removed = removedAttachmentIds.includes(att.id);
+                      return (
+                        <div
+                          key={`video-${att.id}`}
+                          onClick={() => setSelectedVideoPreview(att.url)}
+                          className={`relative aspect-square rounded-lg border overflow-hidden bg-gray-100 cursor-pointer ${
+                            removed ? "opacity-40" : ""
+                          }`}>
+                          <VideoThumbnail
+                            url={att.url}
+                            className="w-full h-full"
+                            badgeClassName="w-7 h-7"
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleRemoveAttachment(att.id);
+                            }}
+                            title={removed ? "Hoàn tác" : "Bỏ video này"}
+                            className={`absolute top-1 right-1 w-5 h-5 rounded-full text-white flex items-center justify-center ${
+                              removed
+                                ? "bg-brand hover:bg-brand-dark"
+                                : "bg-black/60 hover:bg-red-600"
+                            }`}>
+                            {removed ? (
+                              <RotateCcw className="w-3 h-3" />
+                            ) : (
+                              <X className="w-3 h-3" />
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {newProcessingVideos.map((att) => (
+                      <div
+                        key={`new-video-${att.localId}`}
+                        onClick={() => setSelectedVideoPreview(att.url)}
+                        className="relative aspect-square rounded-lg border overflow-hidden bg-gray-100 cursor-pointer">
+                        <VideoThumbnail
+                          url={att.url}
+                          className="w-full h-full"
+                          badgeClassName="w-7 h-7"
+                        />
+                        <span className="absolute bottom-1 left-1 bg-brand text-white text-[10px] px-1 rounded">
+                          Mới
+                        </span>
+                        <button
+                          type="button"
+                          title="Bỏ video vừa thêm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setNewAttachments((prev) =>
+                              prev.filter((a) => a.localId !== att.localId)
+                            );
+                          }}
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-red-600">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              </div>
+
+              </div>
+
+              <div className="shrink-0 flex justify-end gap-2 border-t bg-gray-50 px-7 py-4 rounded-b-2xl">
                 <button
                   type="button"
                   onClick={() => setShowAssignModal(false)}
-                  className="px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                  className="px-5 py-2.5 border rounded-lg text-sm font-medium text-gray-600 hover:bg-white bg-white">
                   Hủy
                 </button>
                 <button
                   type="submit"
                   disabled={assignMutation.isPending}
-                  className="px-5 py-2 bg-brand text-white rounded-lg text-sm font-semibold hover:bg-brand-dark flex items-center gap-2">
+                  className="px-6 py-2.5 bg-brand text-white rounded-lg text-sm font-semibold hover:bg-brand-dark disabled:opacity-60 flex items-center gap-2 shadow-sm">
                   {assignMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <span>Lưu hướng xử lý</span>
+                  <span>
+                    {ticket.status === "NEW"
+                      ? "Chuyển sang Đang xử lý"
+                      : "Lưu hướng xử lý"}
+                  </span>
                 </button>
               </div>
             </form>
@@ -767,10 +1610,10 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
         </div>
       )}
 
-      {/* 5. Modal Cập Nhật Task Bộ Phận */}
+      {/* 4. Modal Cập Nhật Task Bộ Phận */}
       {showTaskModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl space-y-4">
+          <div className="bg-white rounded-xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
               <h2 className="text-base font-bold text-gray-900">
                 Nhiệm vụ bộ phận: {showTaskModal}
@@ -809,10 +1652,21 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
                     Đánh dấu bộ phận {showTaskModal} đã hoàn thành
                   </span>
                   <span className="text-xs text-gray-400 block">
-                    Xác nhận việc khắc phục thuộc trách nhiệm của bộ phận đã hoàn tất
+                    Xác nhận việc khắc phục thuộc trách nhiệm của bộ phận đã hoàn tất. Bắt buộc có ít nhất 1 ảnh minh chứng.
                   </span>
                 </div>
               </label>
+
+              {taskIsCompleted &&
+                !(ticket.attachments || []).some(
+                  (a) => a.department === showTaskModal && isImageAttachment(a)
+                ) &&
+                !taskAttachments.some(isImageAttachment) && (
+                  <div className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    Cần tải lên ít nhất 1 hình ảnh minh chứng để hoàn thành nhiệm vụ này.
+                  </div>
+                )}
 
               {/* Đính kèm chứng từ hoàn thành */}
               <div>
@@ -836,30 +1690,109 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
                     ref={taskFileInputRef}
                     type="file"
                     multiple
+                    accept="image/*,video/*"
                     onChange={handleTaskFileUpload}
                     className="hidden"
                   />
                 </div>
 
-                {taskAttachments.length > 0 && (
-                  <div className="space-y-1.5 max-h-32 overflow-auto">
-                    {taskAttachments.map((f, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between p-2 rounded border bg-gray-50 text-xs">
-                        <span className="truncate max-w-[300px]">
-                          {f.originalName || f.filename}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setTaskAttachments((prev) => prev.filter((_, idx) => idx !== i))}
-                          className="text-gray-400 hover:text-red-600">
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
+                {/* Chứng từ đã lưu trước đó của bộ phận (chỉ xem) */}
+                {existingCompletionAttachments.length > 0 && (
+                  <div className="mb-2.5">
+                    <span className="text-[11px] text-gray-400 block mb-1">
+                      Đã lưu trước đó ({existingCompletionAttachments.length})
+                    </span>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {existingCompletionAttachments.map((att) => {
+                        const isVid =
+                          att.kind === "PROOF_VIDEO" ||
+                          att.mimetype?.startsWith("video");
+                        return (
+                          <div
+                            key={att.id}
+                            onClick={() =>
+                              isVid
+                                ? setSelectedVideoPreview(att.url)
+                                : setSelectedImagePreview(att.url)
+                            }
+                            className="relative aspect-square rounded-lg border overflow-hidden bg-gray-100 cursor-pointer">
+                            {isVid ? (
+                              <VideoThumbnail
+                                url={att.url}
+                                className="w-full h-full"
+                                badgeClassName="w-6 h-6"
+                              />
+                            ) : (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={att.url}
+                                alt={att.originalName || "Chứng từ"}
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
+
+                {/* Tệp mới thêm trong phiên này */}
+                {taskAttachments.length > 0 ? (
+                  <div>
+                    <span className="text-[11px] text-brand font-medium block mb-1">
+                      Sẽ lưu ({taskAttachments.length})
+                    </span>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {taskAttachments.map((f, i) => {
+                        const isVid =
+                          f.kind === "PROOF_VIDEO" ||
+                          f.mimetype?.startsWith("video");
+                        return (
+                          <div
+                            key={i}
+                            onClick={() =>
+                              isVid
+                                ? setSelectedVideoPreview(f.url)
+                                : setSelectedImagePreview(f.url)
+                            }
+                            className="relative aspect-square rounded-lg border overflow-hidden bg-gray-100 cursor-pointer">
+                            {isVid ? (
+                              <VideoThumbnail
+                                url={f.url}
+                                className="w-full h-full"
+                                badgeClassName="w-6 h-6"
+                              />
+                            ) : (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={f.url}
+                                alt={f.originalName || "Chứng từ"}
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                            <button
+                              type="button"
+                              title="Bỏ tệp vừa thêm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setTaskAttachments((prev) =>
+                                  prev.filter((_, idx) => idx !== i)
+                                );
+                              }}
+                              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-red-600">
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : existingCompletionAttachments.length === 0 ? (
+                  <div className="text-xs text-gray-400 italic py-3 text-center border border-dashed rounded-lg">
+                    Chưa có chứng từ nào.
+                  </div>
+                ) : null}
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t">
@@ -882,13 +1815,13 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
         </div>
       )}
 
-      {/* 6. Modal Kết thúc phiếu */}
+      {/* 5. Modal Hủy phiếu */}
       {showCloseModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
               <h2 className="text-base font-bold text-gray-900">
-                Dừng / Kết thúc phiếu sự cố
+                Hủy phiếu chất lượng hàng hóa
               </h2>
               <button
                 onClick={() => setShowCloseModal(false)}
@@ -900,13 +1833,13 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
             <form onSubmit={handleConfirmClose} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Lý do kết thúc phiếu <span className="text-red-500">*</span>
+                  Lý do hủy phiếu <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   rows={3}
                   value={closeReason}
                   onChange={(e) => setCloseReason(e.target.value)}
-                  placeholder="Ví dụ: Khách không khiếu nại nữa, giải quyết ngoài quy trình..."
+                  placeholder="Ví dụ: Tạo nhầm phiếu, khách rút khiếu nại, xử lý ngoài quy trình..."
                   className="w-full p-2.5 border rounded-lg text-sm focus:ring-1 focus:ring-brand focus:outline-none"
                   required
                 />
@@ -924,7 +1857,7 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
                   disabled={closeMutation.isPending}
                   className="px-5 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 flex items-center gap-2">
                   {closeMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <span>Xác nhận kết thúc</span>
+                  <span>Xác nhận hủy phiếu</span>
                 </button>
               </div>
             </form>
@@ -932,17 +1865,45 @@ export function ProductQualityDetail({ ticketId }: ProductQualityDetailProps) {
         </div>
       )}
 
-      {/* 7. Image preview modal */}
-      {selectedImagePreview && (
+      {/* 6. Xem ảnh / video minh chứng */}
+      {(selectedImagePreview || selectedVideoPreview) && (
         <div
-          onClick={() => setSelectedImagePreview(null)}
-          className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 cursor-zoom-out">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={selectedImagePreview}
-            alt="Preview"
-            className="max-w-full max-h-[90vh] object-contain rounded-lg"
-          />
+          onClick={() => {
+            setSelectedImagePreview(null);
+            setSelectedVideoPreview(null);
+          }}
+          className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-[60]">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedImagePreview(null);
+              setSelectedVideoPreview(null);
+            }}
+            title="Đóng"
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 text-white hover:bg-black/70 flex items-center justify-center">
+            <X className="w-5 h-5" />
+          </button>
+
+          {selectedImagePreview && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={selectedImagePreview}
+              alt="Ảnh minh chứng"
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            />
+          )}
+
+          {selectedVideoPreview && (
+            <video
+              src={selectedVideoPreview}
+              controls
+              autoPlay
+              playsInline
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-full max-h-[90vh] rounded-lg bg-black"
+            />
+          )}
         </div>
       )}
     </div>
