@@ -342,6 +342,13 @@ async function mockGetRecommendations(
     },
     meta: {
       snapshotDate: today,
+      historyStartDate: today,
+      historyEndDate: today,
+      skuTotal: total,
+      needOrderSku: items.filter((item) => item.needsOrder).length,
+      lowConfidenceSku: items.filter((item) =>
+        ["LOW", "VERY_LOW", "NO_DATA"].includes(item.confidence)
+      ).length,
       isStale: false,
       lastRunAt: new Date().toISOString(),
       counts: buildMockCounts(),
@@ -390,13 +397,15 @@ export const purchasingPlanningApi = {
   },
 
   /** Chạy lại engine với tồn kho, đơn nhập và lịch sử bán hàng hiện tại. */
-  runCalculation: async (): Promise<RunPurchasingCalculationResult> => {
+  runCalculation: async (options?: {
+    snapshotDate?: string;
+  }): Promise<RunPurchasingCalculationResult> => {
     if (USE_MOCK) {
       throw new Error("Không thể chạy tính toán khi đang dùng dữ liệu mẫu");
     }
     return apiClient.post<RunPurchasingCalculationResult>(
       `${BASE}/calculations/run`,
-      { runType: "MANUAL" }
+      { runType: "MANUAL", snapshotDate: options?.snapshotDate }
     );
   },
 

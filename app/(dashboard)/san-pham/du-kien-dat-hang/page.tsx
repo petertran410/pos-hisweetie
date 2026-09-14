@@ -11,12 +11,12 @@ import { RecommendationPagination } from "@/components/purchasing-planning/Recom
 import { RecommendationDetailPanel } from "@/components/purchasing-planning/RecommendationDetailPanel";
 import {
   ExportExcelModal,
-  type ExportExcelOptions,
+  type ExportExcelOptions
 } from "@/components/purchasing-planning/ExportExcelModal";
 import { buildColumns } from "@/components/purchasing-planning/columns";
 import {
   useRecommendations,
-  useRunPurchasingCalculation,
+  useRunPurchasingCalculation
 } from "@/lib/hooks/usePurchasingPlanning";
 import { usePurchasingPlanningFilters } from "@/lib/hooks/usePurchasingPlanningTableState";
 import { useColumnVisibility } from "@/lib/hooks/useColumnVisibility";
@@ -27,11 +27,11 @@ import { useCan } from "@/lib/hooks/useCan";
 import { purchasingPlanningApi } from "@/lib/api/purchasing-planning";
 import {
   exportRecommendationsToExcel,
-  getExportableColumns,
+  getExportableColumns
 } from "@/lib/utils/purchasing-planning-export";
 import {
   buildExportFilters,
-  fetchAllForExport,
+  fetchAllForExport
 } from "@/lib/utils/purchasing-planning-fetch-all";
 import type { ViewMode } from "@/lib/types/purchasing-planning";
 
@@ -56,7 +56,9 @@ export default function PurchasingPlanningPage() {
 
   const handleRunCalculation = useCallback(async () => {
     try {
-      const result = await runCalculation.mutateAsync();
+      const result = await runCalculation.mutateAsync({
+        snapshotDate: filters.date
+      });
       toast.success(
         `Đã tính xong ${result.skuTotal.toLocaleString("vi-VN")} sản phẩm` +
           (result.skuBlocked > 0
@@ -66,7 +68,7 @@ export default function PurchasingPlanningPage() {
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Không chạy được tính toán");
     }
-  }, [runCalculation]);
+  }, [filters.date, runCalculation]);
 
   // Khôi phục chế độ xem đã chọn lần trước.
   // Dùng lazy initializer thay useEffect để tránh render thừa 1 lần.
@@ -119,7 +121,8 @@ export default function PurchasingPlanningPage() {
   );
 
   const columnMeta = useMemo(
-    () => columns.map((c) => ({ key: c.key, label: c.label, visible: c.visible })),
+    () =>
+      columns.map((c) => ({ key: c.key, label: c.label, visible: c.visible })),
     [columns]
   );
 
@@ -136,7 +139,9 @@ export default function PurchasingPlanningPage() {
     async ({ columnKeys, scope }: ExportExcelOptions) => {
       setIsExporting(true);
       try {
-        const rows = await fetchAllForExport(buildExportFilters(filters, scope));
+        const rows = await fetchAllForExport(
+          buildExportFilters(filters, scope)
+        );
 
         if (rows.length === 0) {
           toast.warning("Không có dữ liệu để xuất");

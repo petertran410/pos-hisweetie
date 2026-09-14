@@ -150,7 +150,7 @@ export function DecisionTimelineModal({
               <section className="rounded-xl border p-3 sm:p-4" style={{ borderColor: "var(--dt-border)" }}>
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="font-semibold text-gray-800">Doanh số 5 tháng gần nhất</h3>
+                    <h3 className="font-semibold text-gray-800">Lịch sử doanh số đến 24 tháng</h3>
                     <p className="text-xs text-gray-500">Cột màu cam/đỏ là tháng tăng hoặc giảm bất thường.</p>
                   </div>
                   <span className="rounded-full bg-gray-100 px-2 py-1 text-[11px] text-gray-500">Quá khứ</span>
@@ -187,7 +187,7 @@ export function DecisionTimelineModal({
               <section className="rounded-xl border p-3 sm:p-4" style={{ borderColor: "var(--dt-border)" }}>
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="font-semibold text-gray-800">Tồn kho dự kiến trong 90 ngày</h3>
+                    <h3 className="font-semibold text-gray-800">Tồn kho dự kiến trong kỳ kế hoạch</h3>
                     <p className="text-xs text-gray-500">Đường nhạt cho biết kịch bản nếu ghép xe về đúng hạn.</p>
                   </div>
                   <span className="rounded-full bg-blue-50 px-2 py-1 text-[11px] text-blue-700">Tương lai</span>

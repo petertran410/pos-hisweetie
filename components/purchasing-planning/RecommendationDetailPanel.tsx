@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, BarChart3, Loader2, Package, TrendingDown, TrendingUp, X } from "lucide-react";
 import { PriorityBadge, ReliabilityBadge, SeverityBadge } from "./PriorityBadge";
@@ -70,23 +70,63 @@ export function RecommendationDetailPanel({
   );
   const saveConfig = useSavePurchasingConfig();
   const [chartOpen, setChartOpen] = useState(false);
-  const [growthDraft, setGrowthDraft] = useState("");
-  const [growthNote, setGrowthNote] = useState("");
+  const [growthEditor, setGrowthEditor] = useState<{
+    itemId: number;
+    draft: string;
+    note: string;
+  } | null>(null);
+  const appliedFactor =
+    data?.forecastComparison.appliedGrowthFactor ??
+    data?.forecastComparison.growthFactor ??
+    1;
+  const baseGrowthNote = data?.forecastComparison.growthFactorNote ?? "";
+  const growthDraft =
+    growthEditor && growthEditor.itemId === data?.itemId
+      ? growthEditor.draft
+      : String(appliedFactor);
+  const growthNote =
+    growthEditor && growthEditor.itemId === data?.itemId
+      ? growthEditor.note
+      : baseGrowthNote;
 
-  useEffect(() => {
-    const factor =
-      data?.forecastComparison.appliedGrowthFactor ??
-      data?.forecastComparison.growthFactor ??
-      1;
-    setGrowthDraft(String(factor));
-    setGrowthNote(data?.forecastComparison.growthFactorNote ?? "");
-  }, [data?.itemId, data?.forecastComparison.appliedGrowthFactor, data?.forecastComparison.growthFactor]);
+  const updateGrowthDraft = (draft: string) => {
+    if (!data) return;
+    setGrowthEditor((previous) => ({
+      itemId: data.itemId,
+      draft,
+      note:
+        previous?.itemId === data.itemId ? previous.note : baseGrowthNote,
+    }));
+  };
+
+  const updateGrowthNote = (note: string) => {
+    if (!data) return;
+    setGrowthEditor((previous) => ({
+      itemId: data.itemId,
+      draft:
+        previous?.itemId === data.itemId
+          ? previous.draft
+          : String(appliedFactor),
+      note,
+    }));
+  };
 
   const saveGrowthFactor = async () => {
     if (!data) return;
     const factor = Number(growthDraft.replace(",", "."));
     if (!Number.isFinite(factor) || factor < 0.8 || factor > 1.5) {
       toast.error("Hệ số tăng trưởng phải nằm trong khoảng 0,80–1,50");
+      return;
+    }
+    const systemFactor = data.forecastComparison.systemGrowthFactor ?? 1;
+    if (
+      systemFactor > 0 &&
+      Math.abs(factor / systemFactor - 1) > 0.2 &&
+      !growthNote.trim()
+    ) {
+      toast.error(
+        "Hãy ghi lý do khi hệ số điều chỉnh lệch quá 20% so với hệ thống"
+      );
       return;
     }
     try {
@@ -352,14 +392,18 @@ export function RecommendationDetailPanel({
                         max="1.5"
                         step="0.01"
                         value={growthDraft}
-                        onChange={(event) => setGrowthDraft(event.target.value)}
+                        onChange={(event) =>
+                          updateGrowthDraft(event.target.value)
+                        }
                         className="w-20 rounded border border-teal-300 bg-white px-2 py-1 text-right text-xs tabular-nums"
                       />
                       <input
                         type="text"
                         placeholder="Lý do điều chỉnh (không bắt buộc)"
                         value={growthNote}
-                        onChange={(event) => setGrowthNote(event.target.value)}
+                        onChange={(event) =>
+                          updateGrowthNote(event.target.value)
+                        }
                         className="min-w-0 flex-1 rounded border border-teal-300 bg-white px-2 py-1 text-xs"
                       />
                       <button
@@ -382,6 +426,75 @@ export function RecommendationDetailPanel({
                       {data.forecastComparison.growthFactorNote
                         ? ` Lý do: ${data.forecastComparison.growthFactorNote}`
                         : ""}
+                    </div>
+                  )}
+                  <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-teal-200 pt-2 text-[11px] text-teal-800">
+                    <div>
+                      Xu hướng 6 tháng:{" "}
+                      <span className="font-medium tabular-nums">
+                        {num(data.forecastComparison.shortTermTrendFactor ?? 1, 2)}
+                      </span>
+                    </div>
+                    <div>
+                      Mùa vụ tháng mục tiêu:{" "}
+                      <span className="font-medium tabular-nums">
+                        {data.forecastComparison.seasonalIndex == null
+                          ? "chưa đủ dữ liệu"
+                          : num(data.forecastComparison.seasonalIndex, 2)}
+                      </span>
+                    </div>
+                    <div>
+                      Trọng số mùa vụ:{" "}
+                      <span className="font-medium tabular-nums">
+                        {num(data.forecastComparison.seasonalWeight ?? 0, 2)}
+                      </span>
+                    </div>
+                    <div>
+                      Dữ liệu:{" "}
+                      <span className="font-medium">
+                        {num(data.forecastComparison.growthFactorDataMonths ?? 0)} tháng
+                      </span>
+                    </div>
+                    <div>
+                      Tin cậy hệ số:{" "}
+                      <span className="font-medium">
+                        {
+                          GROWTH_FACTOR_CONFIDENCE_LABEL[
+                            data.forecastComparison.growthFactorConfidence ??
+                              "NO_DATA"
+                          ]
+                        }
+                      </span>
+                    </div>
+                    <div className="col-span-2">
+                      Phương pháp:{" "}
+                      <span className="font-medium">
+                        {data.forecastComparison.growthFactorMethod ??
+                          "Chưa xác định"}
+                      </span>
+                    </div>
+                    <div className="col-span-2">
+                      Nguồn áp dụng:{" "}
+                      <span className="font-medium">
+                        {data.forecastComparison.growthFactorSource
+                          ? CONFIG_SOURCE_LABEL[
+                              data.forecastComparison.growthFactorSource
+                            ]
+                          : "Tự học từ lịch sử"}
+                      </span>
+                    </div>
+                  </div>
+                  {(data.forecastComparison.growthFactorWarnings?.length ?? 0) >
+                    0 && (
+                    <div className="mt-2 rounded border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-800">
+                      <div className="font-medium">Cần kiểm tra hệ số</div>
+                      {data.forecastComparison.growthFactorWarnings?.map(
+                        (warning) => (
+                          <div key={warning} className="mt-0.5">
+                            • {GROWTH_FACTOR_WARNING_LABEL[warning] ?? warning}
+                          </div>
+                        )
+                      )}
                     </div>
                   )}
                   {data.forecastComparison.unexplainedAnomaly && (
@@ -416,7 +529,14 @@ export function RecommendationDetailPanel({
                         • {detail.demandMonth} · {detail.customerName ?? "Khách hàng"} · {num(detail.quantityBase)} {data.unit ?? "đv"}
                         {detail.skipped ? (
                           <div className="pl-3 text-[10px]">
-                            Không cộng vì đã có đơn đặt hàng nhập xen giữa
+                            {detail.skipReason === "CUSTOMER_ORDER"
+                              ? "Không cộng vì đã có Order khách đang chờ"
+                              : "Không cộng vì đã có đơn đặt hàng nhập xen giữa"}
+                          </div>
+                        ) : detail.customerOrderOffset ? (
+                          <div className="pl-3 text-[10px]">
+                            Đã trừ {num(detail.customerOrderOffset)}{" "}
+                            {data.unit ?? "đv"} do đã có Order khách đang chờ
                           </div>
                         ) : null}
                       </div>
@@ -449,10 +569,19 @@ export function RecommendationDetailPanel({
                 <div className="mt-3 space-y-1 text-[11px] text-gray-600">
                   {data.forecastComparison.monthBreakdown!.map((month) => (
                     <div key={month.month}>
-                      {month.month}: {num(month.dailyRate, 2)}/ngày
+                      {month.month}
+                      {month.isCurrentMonth ? " (đang chạy)" : ""}:{" "}
+                      {num(month.dailyRate, 2)}/ngày
+                      {month.validSellingDays != null &&
+                      month.daysInMonth != null
+                        ? ` · có hàng ${num(month.validSellingDays)}/${num(
+                            month.daysInMonth
+                          )} ngày`
+                        : ""}
                       {month.anomaly !== "NORMAL" ? ` · ${month.anomaly}` : ""}
                       {month.hasPromotion ? " · có KM" : ""}
                       {month.suspectedTrend ? " · bất thường chưa rõ" : ""}
+                      {month.anomalyReason ? ` · ${month.anomalyReason}` : ""}
                     </div>
                   ))}
                   {data.forecastComparison.lookbackMonths?.length ? (
@@ -598,6 +727,23 @@ const CONFIG_LABEL: Record<string, string> = {
   growthFactor: "Hệ số điều chỉnh",
   packSize: "Quy cách thùng",
   moq: "Đặt tối thiểu (MOQ)",
+};
+
+const GROWTH_FACTOR_WARNING_LABEL: Record<string, string> = {
+  INSUFFICIENT_HISTORY: "Chưa đủ lịch sử để xác nhận xu hướng.",
+  MISSING_STOCK_HISTORY:
+    "Thiếu lịch sử tồn kho theo ngày; tốc độ bán đang dùng dữ liệu suy đoán.",
+  SEASONALITY_UNCERTAIN:
+    "Mùa vụ giữa các năm chưa ổn định; hệ số mùa vụ đã giảm trọng số.",
+  SHORT_LONG_TERM_MISMATCH:
+    "Xu hướng ngắn hạn trái chiều với dài hạn.",
+};
+
+const GROWTH_FACTOR_CONFIDENCE_LABEL: Record<string, string> = {
+  HIGH: "Cao",
+  MEDIUM: "Trung bình",
+  LOW: "Thấp",
+  NO_DATA: "Không đủ dữ liệu",
 };
 
 const CALCULATION_STEP_LABEL: Record<string, string> = {

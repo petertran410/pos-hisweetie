@@ -7,7 +7,7 @@ import {
   Info,
   Loader2,
   RefreshCw,
-  Search,
+  Search
 } from "lucide-react";
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
 import { ViewModeToggle } from "./ViewModeToggle";
@@ -17,7 +17,7 @@ import type {
   RecommendationFilters,
   RecommendationListMeta,
   RecommendationSortBy,
-  ViewMode,
+  ViewMode
 } from "@/lib/types/purchasing-planning";
 
 interface Props {
@@ -53,7 +53,7 @@ export function RecommendationToolbar({
   onExportExcel,
   isExporting,
   onRunCalculation,
-  isCalculating,
+  isCalculating
 }: Props) {
   return (
     <>
@@ -71,6 +71,23 @@ export function RecommendationToolbar({
               onFiltersChange({ search: value || undefined, page: 1 })
             }
           />
+          <label className="flex items-center gap-1.5 text-xs text-gray-500">
+            Snapshot
+            <input
+              type="date"
+              aria-label="Chọn ngày snapshot"
+              title="Chọn ngày snapshot để xem hoặc chạy lại dữ liệu"
+              value={filters.date ?? ""}
+              onChange={(event) =>
+                onFiltersChange({
+                  date: event.target.value || undefined,
+                  page: 1
+                })
+              }
+              className="rounded-lg border bg-white px-2 py-1.5 text-xs text-gray-700 outline-none focus:ring-2 focus:ring-[var(--brand)]"
+              style={{ borderColor: "var(--dt-border)" }}
+            />
+          </label>
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -155,9 +172,17 @@ export function RecommendationToolbar({
             {isError
               ? "Lỗi tải dữ liệu"
               : pagination
-                ? `${num(pagination.total)} sản phẩm`
+                ? `${num(meta?.skuTotal ?? pagination.total)} SKU`
                 : "Đang tải..."}
           </span>
+          {meta?.needOrderSku !== undefined && (
+            <span className="text-gray-500">
+              Cần đặt:{" "}
+              <span className="font-medium text-gray-800">
+                {num(meta.needOrderSku)}
+              </span>
+            </span>
+          )}
           {meta?.totalEstimatedValue ? (
             <span className="text-gray-500">
               Giá trị đề xuất:{" "}
@@ -166,6 +191,19 @@ export function RecommendationToolbar({
               </span>
             </span>
           ) : null}
+          {meta?.lowConfidenceSku !== undefined && (
+            <span className="text-amber-700">
+              Tin cậy thấp:{" "}
+              <span className="font-medium">{num(meta.lowConfidenceSku)}</span>
+            </span>
+          )}
+          {meta?.historyStartDate && meta.historyEndDate && (
+            <span className="hidden text-gray-400 xl:inline">
+              Lịch sử:{" "}
+              {new Date(meta.historyStartDate).toLocaleDateString("vi-VN")} →{" "}
+              {new Date(meta.historyEndDate).toLocaleDateString("vi-VN")}
+            </span>
+          )}
         </div>
 
         {viewMode === "list" && (
@@ -176,7 +214,7 @@ export function RecommendationToolbar({
               onChange={(e) =>
                 onFiltersChange({
                   sortBy: e.target.value as RecommendationSortBy,
-                  page: 1,
+                  page: 1
                 })
               }
               className="rounded border bg-white px-2 py-1 outline-none"
@@ -201,7 +239,7 @@ export function RecommendationToolbar({
  */
 function SearchBox({
   value,
-  onCommit,
+  onCommit
 }: {
   value: string;
   onCommit: (value: string) => void;

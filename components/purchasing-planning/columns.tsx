@@ -92,7 +92,17 @@ export const COLUMN_GROUPS: Record<string, string[]> = {
     "leadTime",
   ],
   "Tồn kho": ["physical", "reserved", "available", "incoming"],
-  "Dự báo": ["forecast", "customerDemand", "ma30", "ma60", "ma90", "trend", "confidence"],
+  "Dự báo": [
+    "forecast",
+    "systemGrowthFactor",
+    "appliedGrowthFactor",
+    "customerDemand",
+    "ma30",
+    "ma60",
+    "ma90",
+    "trend",
+    "confidence",
+  ],
   "Thời gian": ["dos", "daysUntilStockout", "stockoutDate", "urgency"],
   Ngưỡng: ["rop", "position", "gap"],
   "Đề xuất": ["soq", "packCount", "unitPrice", "value"],
@@ -359,6 +369,40 @@ export function buildColumns(): ColumnConfig<RecommendationListItem>[] {
       tooltip: "Nhu cầu bán trung bình mỗi ngày, dùng để tính đề xuất.",
       render: (i) => <Num value={i.forecastDailyDemand} digits={1} />,
       exportValue: (i) => i.forecastDailyDemand,
+    },
+    {
+      key: "systemGrowthFactor",
+      label: "Hệ số hệ thống",
+      visible: true,
+      width: "115px",
+      tooltip: "Hệ số hệ thống tự suy từ xu hướng và mùa vụ lịch sử.",
+      render: (i) => (
+        <Num
+          value={i.systemGrowthFactor}
+          digits={2}
+          className="text-gray-600"
+        />
+      ),
+      exportValue: (i) => i.systemGrowthFactor ?? null,
+    },
+    {
+      key: "appliedGrowthFactor",
+      label: "Hệ số áp dụng",
+      visible: true,
+      width: "110px",
+      tooltip: "Hệ số thực tế được dùng để tính nhu cầu bán dự kiến.",
+      render: (i) => (
+        <Num
+          value={i.appliedGrowthFactor}
+          digits={2}
+          className={
+            i.appliedGrowthFactor !== i.systemGrowthFactor
+              ? "font-medium text-amber-700"
+              : "text-gray-600"
+          }
+        />
+      ),
+      exportValue: (i) => i.appliedGrowthFactor ?? null,
     },
     {
       key: "customerDemand",

@@ -5,11 +5,21 @@ import { apiClient, API_URL } from "@/lib/config/api";
 import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
 import { toast } from "sonner";
+import type {
+  CashFlowMutationPayload,
+  CashFlowQueryParams,
+  CashFlowSummary,
+} from "@/lib/types/cashflow";
 
-export function useCashFlows(params?: any) {
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
+export function useCashFlows(params?: CashFlowQueryParams) {
   return useQuery({
     queryKey: ["cashflows", params],
     queryFn: () => cashflowsApi.getCashFlows(params),
+    placeholderData: (previousData) => previousData,
+    staleTime: 15_000,
   });
 }
 
@@ -39,8 +49,8 @@ export function useCreateCashFlow() {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       toast.success("Tạo phiếu thu/chi thành công");
     },
-    onError: (error: any) => {
-      toast.error(error.message || "Tạo phiếu thu/chi thất bại");
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, "Tạo phiếu thu/chi thất bại"));
     },
   });
 }
@@ -48,14 +58,20 @@ export function useCreateCashFlow() {
 export function useUpdateCashFlow() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) =>
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: CashFlowMutationPayload;
+    }) =>
       cashflowsApi.updateCashFlow(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cashflows"] });
       toast.success("Cập nhật phiếu thu/chi thành công");
     },
-    onError: (error: any) => {
-      toast.error(error.message || "Cập nhật phiếu thu/chi thất bại");
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, "Cập nhật phiếu thu/chi thất bại"));
     },
   });
 }
@@ -70,8 +86,8 @@ export function useCancelCashFlow() {
       queryClient.invalidateQueries({ queryKey: ["sepay-transactions"] });
       toast.success("Hủy phiếu thu/chi thành công");
     },
-    onError: (error: any) => {
-      toast.error(error.message || "Hủy phiếu thu/chi thất bại");
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, "Hủy phiếu thu/chi thất bại"));
     },
   });
 }
@@ -85,19 +101,19 @@ export function useCreatePayment() {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       toast.success("Tạo thanh toán thành công");
     },
-    onError: (error: any) => {
-      toast.error(error.message || "Tạo thanh toán thất bại");
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, "Tạo thanh toán thất bại"));
     },
   });
 }
 
-export function useOpeningBalance(filters: any) {
+export function useOpeningBalance(filters: CashFlowQueryParams | null) {
   return useQuery({
     queryKey: ["cashflows", "opening-balance", filters],
     queryFn: async () => {
       const response = await apiClient.get(
         "/cashflows/opening-balance",
-        filters
+        filters ?? undefined
       );
       return response;
     },
@@ -105,20 +121,29 @@ export function useOpeningBalance(filters: any) {
     // (CashFlowsTable truyền null để tắt query) → phải optional-chaining, nếu
     // không sẽ throw TypeError ngay trong render phase → crash cả trang.
     enabled: !!filters?.startDate,
+    placeholderData: (previousData) => previousData,
+    staleTime: 15_000,
   });
 }
 
-export function useCashFlowSummary(filters: any) {
+export function useCashFlowSummary(filters: CashFlowQueryParams | null) {
   return useQuery({
     queryKey: ["cashflows", "summary", filters],
-    queryFn: async (): Promise<{
-      totalReceipt: number;
-      totalPayment: number;
-    }> => {
-      const response = await apiClient.get("/cashflows/summary", filters);
-      return response as { totalReceipt: number; totalPayment: number };
+    queryFn: async (): Promise<
+      Pick<CashFlowSummary, "totalReceipt" | "totalPayment">
+    > => {
+      const response = await apiClient.get(
+        "/cashflows/summary",
+        filters ?? undefined
+      );
+      return response as Pick<
+        CashFlowSummary,
+        "totalReceipt" | "totalPayment"
+      >;
     },
     enabled: !!filters,
+    placeholderData: (previousData) => previousData,
+    staleTime: 15_000,
   });
 }
 
@@ -162,15 +187,19 @@ export function useExportCashFlows() {
       URL.revokeObjectURL(objectUrl);
 
       toast.success("Xuất file thành công");
-    } catch (e: any) {
-      toast.error(e.message || "Lỗi khi xuất dữ liệu");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Lỗi khi xuất dữ liệu"));
     } finally {
       setLoading(false);
     }
   };
 
-  const exportOverview = async (filters: Record<string, any>) => {
-    const { pageSize: _ps, currentItem: _ci, ...exportFilters } = filters;
+  const exportOverview = async (filters: CashFlowQueryParams) => {
+    const exportFilters = Object.fromEntries(
+      Object.entries(filters).filter(
+        ([key]) => key !== "pageSize" && key !== "currentItem"
+      )
+    );
     const url = new URL(`${API_URL}/cashflows/export`);
     Object.entries(exportFilters).forEach(([k, v]) => {
       if (v !== undefined && v !== null && v !== "") {

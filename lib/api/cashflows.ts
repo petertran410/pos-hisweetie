@@ -1,8 +1,14 @@
 import { apiClient } from "@/lib/config/api";
-import type { CashFlowsResponse, CashFlow } from "@/lib/types/cashflow";
+import type {
+  CashFlow,
+  CashFlowMutationPayload,
+  CashFlowQueryParams,
+  CashFlowRelatedPaymentsResponse,
+  CashFlowsResponse,
+} from "@/lib/types/cashflow";
 
 export const cashflowsApi = {
-  getCashFlows: (params?: any): Promise<CashFlowsResponse> => {
+  getCashFlows: (params?: CashFlowQueryParams): Promise<CashFlowsResponse> => {
     return apiClient.get("/cashflows", params);
   },
 
@@ -10,15 +16,20 @@ export const cashflowsApi = {
     return apiClient.get(`/cashflows/${id}`);
   },
 
-  getRelatedInvoicePayments: (id: number): Promise<any> => {
+  getRelatedInvoicePayments: (
+    id: number
+  ): Promise<CashFlowRelatedPaymentsResponse> => {
     return apiClient.get(`/cashflows/${id}/invoice-payments`);
   },
 
-  createCashFlow: (data: any): Promise<CashFlow> => {
+  createCashFlow: (data: CashFlowMutationPayload): Promise<CashFlow> => {
     return apiClient.post("/cashflows", data);
   },
 
-  updateCashFlow: (id: number, data: any): Promise<CashFlow> => {
+  updateCashFlow: (
+    id: number,
+    data: CashFlowMutationPayload
+  ): Promise<CashFlow> => {
     return apiClient.put(`/cashflows/${id}`, data);
   },
 
@@ -26,15 +37,21 @@ export const cashflowsApi = {
     return apiClient.delete(`/cashflows/${id}`);
   },
 
-  createPayment: (data: any): Promise<any> => {
+  createPayment: (
+    data: CashFlowMutationPayload
+  ): Promise<Record<string, unknown>> => {
     return apiClient.post("/cashflows/payments", data);
   },
 
-  createCustomerPayment: (data: any): Promise<any> => {
+  createCustomerPayment: (
+    data: CashFlowMutationPayload
+  ): Promise<Record<string, unknown>> => {
     return apiClient.post("/cashflows/customer-payments", data);
   },
 
-  createSupplierPayment: (data: any): Promise<any> => {
+  createSupplierPayment: (
+    data: CashFlowMutationPayload
+  ): Promise<Record<string, unknown>> => {
     return apiClient.post("/cashflows/supplier-payments", data);
   },
 };

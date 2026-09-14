@@ -27,7 +27,7 @@ export const PRIORITY_LEVEL = {
   LOW: "LOW",
   HEALTHY: "HEALTHY",
   OVERSTOCK: "OVERSTOCK",
-  NO_DATA: "NO_DATA",
+  NO_DATA: "NO_DATA"
 } as const;
 
 export type PriorityLevel =
@@ -41,7 +41,7 @@ export const PRIORITY_RANK: Record<PriorityLevel, number> = {
   LOW: 4,
   HEALTHY: 5,
   OVERSTOCK: 6,
-  NO_DATA: 7,
+  NO_DATA: 7
 };
 
 export const PRIORITY_LABEL: Record<PriorityLevel, string> = {
@@ -51,7 +51,7 @@ export const PRIORITY_LABEL: Record<PriorityLevel, string> = {
   LOW: "Theo dõi",
   HEALTHY: "Ổn định",
   OVERSTOCK: "Tồn dư",
-  NO_DATA: "Thiếu dữ liệu",
+  NO_DATA: "Thiếu dữ liệu"
 };
 
 /** Độ tin cậy của forecast — PRD §5.4 */
@@ -60,7 +60,7 @@ export const CONFIDENCE_LEVEL = {
   MEDIUM: "MEDIUM",
   LOW: "LOW",
   VERY_LOW: "VERY_LOW",
-  NO_DATA: "NO_DATA",
+  NO_DATA: "NO_DATA"
 } as const;
 
 export type ConfidenceLevel =
@@ -71,7 +71,7 @@ export const CONFIDENCE_LABEL: Record<ConfidenceLevel, string> = {
   MEDIUM: "Trung bình",
   LOW: "Thấp",
   VERY_LOW: "Rất thấp",
-  NO_DATA: "Không có dữ liệu",
+  NO_DATA: "Không có dữ liệu"
 };
 
 /** Độ tin cậy tổng hợp của đề xuất — PRD §11.3 */
@@ -79,7 +79,7 @@ export const RELIABILITY_LEVEL = {
   RELIABLE: "RELIABLE",
   CAUTION: "CAUTION",
   UNRELIABLE: "UNRELIABLE",
-  BLOCKED: "BLOCKED",
+  BLOCKED: "BLOCKED"
 } as const;
 
 export type ReliabilityLevel =
@@ -89,7 +89,7 @@ export const RELIABILITY_LABEL: Record<ReliabilityLevel, string> = {
   RELIABLE: "Đáng tin cậy",
   CAUTION: "Cần chú ý",
   UNRELIABLE: "Không đáng tin",
-  BLOCKED: "Bị chặn",
+  BLOCKED: "Bị chặn"
 };
 
 /** Mức nghiêm trọng của cảnh báo dữ liệu */
@@ -101,7 +101,7 @@ export type EtaType = "CONFIRMED" | "ESTIMATED" | "OVERDUE";
 export const ETA_TYPE_LABEL: Record<EtaType, string> = {
   CONFIRMED: "Đã xác nhận",
   ESTIMATED: "Ước tính",
-  OVERDUE: "Quá hạn",
+  OVERDUE: "Quá hạn"
 };
 
 /** Nguồn cung cấp giá trị cấu hình — PRD §14.1 */
@@ -119,7 +119,7 @@ export const CONFIG_SOURCE_LABEL: Record<ConfigSource, string> = {
   SUPPLIER: "Theo nhà cung cấp",
   SKU: "Cấu hình riêng SKU",
   PRODUCT: "Sản phẩm · Định lượng đóng gói",
-  DERIVED: "Tự học từ lịch sử",
+  DERIVED: "Tự học từ lịch sử"
 };
 
 /**
@@ -131,7 +131,10 @@ export const CONFIG_SOURCE_LABEL: Record<ConfigSource, string> = {
  *  - `safetyDays`: suy từ độ dao động doanh số theo tháng
  *  - `growthFactor`: hệ thống tự suy từ lịch sử, người dùng có thể override theo scope
  */
-export const PURCHASING_CONFIG_FIELDS = ["coverageDays", "growthFactor"] as const;
+export const PURCHASING_CONFIG_FIELDS = [
+  "coverageDays",
+  "growthFactor"
+] as const;
 
 export type PurchasingConfigField = (typeof PURCHASING_CONFIG_FIELDS)[number];
 export type PurchasingConfigScope = "GLOBAL" | "CATEGORY" | "SUPPLIER" | "SKU";
@@ -215,7 +218,7 @@ export type DemandSource = "INVENTORY_LOG" | "INVOICE_DETAIL" | "HYBRID";
 export const DEMAND_SOURCE_LABEL: Record<DemandSource, string> = {
   INVENTORY_LOG: "Sổ cái kho",
   INVOICE_DETAIL: "Hoá đơn bán hàng",
-  HYBRID: "Kết hợp",
+  HYBRID: "Kết hợp"
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -310,6 +313,13 @@ export interface RecommendationListItem {
   trendRatio: number | null;
   /** Tổng Demand khách hàng/OEM trong planning horizon. */
   customerDemand?: number;
+  /** Hệ số hệ thống tự đề xuất từ lịch sử đã làm sạch. */
+  systemGrowthFactor?: number;
+  /** Hệ số thực tế dùng khi tính forecast. */
+  appliedGrowthFactor?: number;
+  growthFactorConfidence?: "HIGH" | "MEDIUM" | "LOW" | "NO_DATA";
+  growthFactorMethod?: string;
+  growthFactorWarnings?: string[];
 
   // ── Chỉ số thời gian ──
   /** null khi forecast = 0 (không xác định được) — PRD §15 Case 10 */
@@ -408,6 +418,16 @@ export interface ForecastComparison {
   growthFactorOverridden?: boolean;
   growthFactorSource?: PurchasingConfigScope | "DERIVED";
   growthFactorNote?: string | null;
+  growthFactorUpdatedBy?: number | null;
+  growthFactorUpdatedAt?: string | null;
+  shortTermTrendFactor?: number;
+  seasonalIndex?: number | null;
+  seasonalWeight?: number;
+  growthFactorConfidence?: "HIGH" | "MEDIUM" | "LOW" | "NO_DATA";
+  growthFactorMethod?: string;
+  growthFactorDataMonths?: number;
+  growthFactorWarnings?: string[];
+  growthFactorAnalysis?: GrowthFactorAnalysis | null;
   /** Giữ tương thích snapshot cũ */
   growthFactor: number;
   /** Nguồn dữ liệu thực tế đã dùng cho SKU này */
@@ -437,8 +457,16 @@ export interface ForecastComparison {
   unexplainedAnomaly?: boolean;
   monthBreakdown?: Array<{
     month: string;
+    quantity?: number;
+    daysInMonth?: number;
+    validSellingDays?: number;
+    hadStock?: boolean;
+    stockDataAvailable?: boolean;
+    stockDataDays?: number;
+    isCurrentMonth?: boolean;
     dailyRate: number;
     anomaly: string;
+    anomalyReason?: string | null;
     hasPromotion: boolean;
     hasTrend?: boolean;
     suspectedTrend: boolean;
@@ -454,8 +482,9 @@ export interface ForecastComparison {
       customerName: string | null;
       demandMonth: string;
       quantityBase: number;
+      customerOrderOffset?: number;
       skipped?: boolean;
-      skipReason?: "INBOUND_BETWEEN" | null;
+      skipReason?: "INBOUND_BETWEEN" | "CUSTOMER_ORDER" | null;
     }>;
     pastCustomerDemand?: number;
     pastCustomerDemandDetails?: Array<{
@@ -464,8 +493,9 @@ export interface ForecastComparison {
       customerName: string | null;
       demandMonth: string;
       quantityBase: number;
+      customerOrderOffset?: number;
       skipped?: boolean;
-      skipReason?: "INBOUND_BETWEEN" | null;
+      skipReason?: "INBOUND_BETWEEN" | "CUSTOMER_ORDER" | null;
     }>;
     companyNeed: number;
     salesDemand: number;
@@ -479,6 +509,18 @@ export interface ForecastComparison {
     vehicleRisk: number;
   };
   suggestedQuantityScenario?: number;
+}
+
+export interface GrowthFactorAnalysis {
+  inputMonths: number;
+  cleanMonths: number;
+  excludedMonths: string[];
+  shortTermTrend: number;
+  seasonalIndex: number | null;
+  seasonalWeight: number;
+  systemGrowthFactor: number;
+  confidence: "HIGH" | "MEDIUM" | "LOW" | "NO_DATA";
+  formula: string;
 }
 
 /** Một đợt khuyến mãi đang hoặc sắp chạy. */
@@ -566,6 +608,8 @@ export interface ConfigValueWithSource {
   systemValue?: number;
   overridden?: boolean;
   note?: string | null;
+  updatedBy?: number | null;
+  updatedAt?: string | null;
 }
 
 /** Bản ghi đầy đủ quá trình tính — PRD §13.3, TD §12.5 */
@@ -573,6 +617,7 @@ export interface CalculationTrace {
   version: string;
   /** ISO datetime */
   computedAt: string;
+  growthFactorAnalysis?: GrowthFactorAnalysis | null;
   decisionTimeline?: DecisionTimeline | null;
   inputs: {
     /** Snapshot cũ chưa có field này. */
@@ -593,6 +638,7 @@ export interface CalculationTrace {
     };
     shipments: IncomingShipmentInfo[];
     forecast: ForecastComparison;
+    growthFactorAnalysis?: GrowthFactorAnalysis | null;
   };
   steps: CalculationStep[];
   result: {
@@ -673,6 +719,11 @@ export const FLAG_CODE_LABEL: Record<string, string> = {
   VEHICLE_SHIPMENT_RISK: "Ghép xe chưa chắc ETA",
   VEHICLE_OVERSTOCK_RISK: "Có thể dư nếu ghép xe về đúng hạn",
   MISSING_FACTORY: "Chưa gắn nhà máy",
+  MISSING_STOCK_HISTORY: "Thiếu lịch sử tồn kho",
+  SEASONALITY_UNCERTAIN: "Mùa vụ chưa ổn định",
+  SHORT_LONG_TERM_MISMATCH: "Xu hướng ngắn/dài hạn trái chiều",
+  INSUFFICIENT_HISTORY: "Lịch sử bán hàng chưa đủ",
+  DEMAND_OVERLAP: "Demand trùng đơn nhập"
 };
 
 export interface RecommendationFilters {
@@ -750,6 +801,16 @@ export interface PaginationMeta {
 export interface RecommendationListMeta {
   /** ISO date của snapshot đang xem */
   snapshotDate: string;
+  /** Ngày bắt đầu cửa sổ lịch sử dùng cho forecast. */
+  historyStartDate?: string;
+  /** Ngày kết thúc cửa sổ lịch sử dùng cho forecast. */
+  historyEndDate?: string;
+  /** Số SKU trong tập kết quả sau khi lọc. */
+  skuTotal?: number;
+  /** Số SKU cần đặt trong tập kết quả sau khi lọc. */
+  needOrderSku?: number;
+  /** Số SKU có confidence thấp trong tập kết quả sau khi lọc. */
+  lowConfidenceSku?: number;
   /** true khi snapshot quá 26 giờ — TD §12.4 */
   isStale: boolean;
   /** ISO datetime lần tính gần nhất */
@@ -787,40 +848,40 @@ export const PRIORITY_STYLE: Record<
   CRITICAL: {
     badge: "bg-red-100 text-red-700 border-red-200",
     dot: "bg-red-500",
-    row: "bg-red-50/40",
+    row: "bg-red-50/40"
   },
   HIGH: {
     badge: "bg-orange-100 text-orange-700 border-orange-200",
     dot: "bg-orange-500",
-    row: "bg-orange-50/30",
+    row: "bg-orange-50/30"
   },
   MEDIUM: {
     badge: "bg-yellow-100 text-yellow-700 border-yellow-200",
-    dot: "bg-yellow-500",
+    dot: "bg-yellow-500"
   },
   LOW: {
     badge: "bg-blue-100 text-blue-700 border-blue-200",
-    dot: "bg-blue-500",
+    dot: "bg-blue-500"
   },
   HEALTHY: {
     badge: "bg-green-100 text-green-700 border-green-200",
-    dot: "bg-green-500",
+    dot: "bg-green-500"
   },
   OVERSTOCK: {
     badge: "bg-purple-100 text-purple-700 border-purple-200",
-    dot: "bg-purple-500",
+    dot: "bg-purple-500"
   },
   NO_DATA: {
     badge: "bg-gray-100 text-gray-600 border-gray-200",
-    dot: "bg-gray-400",
-  },
+    dot: "bg-gray-400"
+  }
 };
 
 export const SEVERITY_STYLE: Record<FlagSeverity, string> = {
   CRITICAL: "bg-red-100 text-red-700",
   HIGH: "bg-orange-100 text-orange-700",
   MEDIUM: "bg-yellow-100 text-yellow-700",
-  LOW: "bg-gray-100 text-gray-600",
+  LOW: "bg-gray-100 text-gray-600"
 };
 
 /** Danh sách mức ưu tiên theo thứ tự hiển thị */
@@ -831,7 +892,7 @@ export const PRIORITY_ORDER: PriorityLevel[] = [
   "LOW",
   "HEALTHY",
   "OVERSTOCK",
-  "NO_DATA",
+  "NO_DATA"
 ];
 
 export interface PlanningTrend {
