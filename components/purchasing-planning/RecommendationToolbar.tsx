@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
+  Calendar,
   Download,
   Info,
   Loader2,
@@ -10,6 +11,7 @@ import {
   Search
 } from "lucide-react";
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
+import { MiniCalendar } from "@/components/ui/MiniCalendar";
 import { ViewModeToggle } from "./ViewModeToggle";
 import { money, num } from "./columns";
 import type {
@@ -55,6 +57,36 @@ export function RecommendationToolbar({
   onRunCalculation,
   isCalculating
 }: Props) {
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const datePickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!datePickerOpen) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!datePickerRef.current?.contains(event.target as Node)) {
+        setDatePickerOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDatePickerOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [datePickerOpen]);
+
+  const calendarValue = filters.date ?? meta?.snapshotDate ?? "";
+  const calendarLabel = calendarValue
+    ? new Date(`${calendarValue}T00:00:00`).toLocaleDateString("vi-VN")
+    : "Chọn ngày";
+  const displayCalendarLabel =
+    !filters.date && meta?.snapshotDate
+      ? `${calendarLabel} (mới nhất)`
+      : calendarLabel;
+
   return (
     <>
       {/* ── Tiêu đề trang + tìm kiếm + hành động ── */}
@@ -71,23 +103,38 @@ export function RecommendationToolbar({
               onFiltersChange({ search: value || undefined, page: 1 })
             }
           />
-          <label className="flex items-center gap-1.5 text-xs text-gray-500">
-            Snapshot
-            <input
-              type="date"
-              aria-label="Chọn ngày snapshot"
-              title="Chọn ngày snapshot để xem hoặc chạy lại dữ liệu"
-              value={filters.date ?? ""}
-              onChange={(event) =>
-                onFiltersChange({
-                  date: event.target.value || undefined,
-                  page: 1
-                })
-              }
-              className="rounded-lg border bg-white px-2 py-1.5 text-xs text-gray-700 outline-none focus:ring-2 focus:ring-[var(--brand)]"
-              style={{ borderColor: "var(--dt-border)" }}
-            />
-          </label>
+          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+            <span className="whitespace-nowrap">Ngày chốt dữ liệu</span>
+            <div ref={datePickerRef} className="relative">
+              <button
+                type="button"
+                aria-label="Chọn ngày chốt dữ liệu"
+                title="Chọn ngày để xem hoặc tính lại đề xuất"
+                onClick={() => setDatePickerOpen((open) => !open)}
+                className="flex min-w-36 items-center justify-between gap-2 rounded-lg border bg-white px-2 py-1.5 text-xs text-gray-700 outline-none hover:border-gray-400 focus:ring-2 focus:ring-brand-soft"
+                style={{ borderColor: "var(--dt-border)" }}>
+                <span className={calendarValue ? "text-gray-800" : "text-gray-400"}>
+                  {displayCalendarLabel}
+                </span>
+                <Calendar className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+              </button>
+              {datePickerOpen && (
+                <div className="absolute top-full left-0 z-50 mt-1 w-64">
+                  <MiniCalendar
+                    value={calendarValue}
+                    onChange={(date) => {
+                      onFiltersChange({
+                        date: date || undefined,
+                        page: 1
+                      });
+                      setDatePickerOpen(false);
+                    }}
+                    onClose={() => setDatePickerOpen(false)}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center gap-2">
