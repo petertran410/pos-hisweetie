@@ -24,7 +24,7 @@ if ! docker inspect app-sandbox >/dev/null 2>&1; then
 fi
 
 # NEXT_PUBLIC_* bake vào bundle lúc build — cần truyền lúc docker-compose build
-export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-https://sandbox-api.hisweetievietnam.com/api}"
+export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-http://14.224.212.102:3060/api}"
 export NEXT_PUBLIC_TRACKASIA_API_KEY="${NEXT_PUBLIC_TRACKASIA_API_KEY:-8e86ff1568b86c178062981349dee4bf35}"
 
 echo "Env    : sandbox"
@@ -65,5 +65,5 @@ docker image prune -f --filter "dangling=true" >/dev/null || true
 echo ""
 echo "=== Sandbox frontend deployed ==="
 echo "Local : http://<NAS-IP>:3051"
-echo "Public: https://sandbox.hisweetievietnam.com"
+echo "Public: https://pos.hisweetievietnam.com"
 docker-compose -f "$COMPOSE_FILE" ps "$SERVICE_NAME"
