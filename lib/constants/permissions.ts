@@ -8,6 +8,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   transfers: "Chuyển kho",
   transfer_planning: "Dự kiến chuyển kho",
   productions: "Sản xuất",
+  recipes: "Công thức pha chế",
   destructions: "Hủy hàng",
   internal_use: "Xuất dùng nội bộ",
   "internal-use": "Xuất dùng nội bộ",
@@ -139,6 +140,13 @@ export const ACTION_LABELS: Record<string, string> = {
   assign_factory: "Gắn nhà máy",
   link_misa: "Liên kết Misa",
   config: "Cấu hình",
+  // ── Công thức pha chế (recipes:*) ──
+  view_cost: "Xem giá vốn",
+  comment: "Bình luận",
+  publish: "Xuất bản",
+  archive: "Lưu trữ",
+  clone: "Nhân bản",
+  calculate_cost: "Tính lại giá vốn",
 };
 
 export const CATEGORY_ICONS: Record<string, string> = {
