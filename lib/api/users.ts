@@ -8,6 +8,7 @@ export interface User {
   avatar?: string;
   branchId?: number;
   isActive: boolean;
+  larkUserId?: string | null;
   roles: Array<{ id: number; name: string }>;
   createdAt: string;
   updatedAt: string;
@@ -68,6 +69,7 @@ export const usersApi = {
       branchIds?: number[];
       canViewOtherStaffData?: boolean;
       canViewOnlyOwnPackings?: boolean;
+      larkUserId?: string | null;
     }
   ) => {
     return apiClient.put(`/users/${id}`, data);
