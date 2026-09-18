@@ -10,6 +10,7 @@ import { apiClient } from "@/lib/config/api";
 import type {
   RecommendationDetail,
   RecommendationFilters,
+  RecommendationListItem,
   RecommendationListResponse,
   PurchasingConfigListResponse,
   PurchasingConfigGroup,
@@ -152,6 +153,40 @@ function normalizeResolved(record: ConfigApiRecord): ResolvedPurchasingConfig {
 /** Giả lập độ trễ mạng để UI hiển thị đúng trạng thái loading */
 const delay = (ms = 350) => new Promise((r) => setTimeout(r, ms));
 
+const normalizeSearchText = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase();
+
+/**
+ * Mô phỏng searchProductIds: token tên phải khớp nguyên từ, token mã khớp
+ * chuỗi con, nhiều token áp dụng AND và không phụ thuộc thứ tự.
+ */
+function matchesMockProductSearch(
+  item: Pick<RecommendationListItem, "productCode" | "productName">,
+  search: string
+) {
+  const tokens = normalizeSearchText(search)
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+  if (tokens.length === 0) return true;
+
+  const nameTokens = new Set(
+    normalizeSearchText(item.productName)
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter(Boolean)
+  );
+  const code = normalizeSearchText(item.productCode);
+
+  return tokens.every(
+    (token) =>
+      nameTokens.has(token) || (token.length >= 2 && code.includes(token))
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // MOCK IMPLEMENTATION
 // ═══════════════════════════════════════════════════════════════════════════
@@ -266,11 +301,8 @@ async function mockGetRecommendations(
 
   // ── Tìm kiếm ──
   if (filters.search?.trim()) {
-    const q = filters.search.trim().toLowerCase();
     items = items.filter(
-      (i) =>
-        i.productCode.toLowerCase().includes(q) ||
-        i.productName.toLowerCase().includes(q)
+      (i) => matchesMockProductSearch(i, filters.search!)
     );
   }
 

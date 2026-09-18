@@ -23,6 +23,29 @@ import {
  * trong code, cấu hình cũ trong localStorage vẫn an toàn.
  */
 const STORAGE_KEY = "san-pham-du-kien-dat-hang-filters";
+const SIDEBAR_SECTIONS_STORAGE_KEY = "pp-sidebar-sections";
+
+const SIDEBAR_SECTION_KEYS = [
+  "level",
+  "classify",
+  "threshold",
+  "flags",
+] as const;
+
+export type PurchasingPlanningSidebarSectionKey =
+  (typeof SIDEBAR_SECTION_KEYS)[number];
+
+export type PurchasingPlanningSidebarSections = Record<
+  PurchasingPlanningSidebarSectionKey,
+  boolean
+>;
+
+export const DEFAULT_PP_SIDEBAR_SECTIONS: PurchasingPlanningSidebarSections = {
+  level: true,
+  classify: false,
+  threshold: false,
+  flags: false,
+};
 
 const PRIORITY_VALUES = new Set<string>(PRIORITY_ORDER);
 
@@ -259,4 +282,58 @@ export function usePurchasingPlanningFilters() {
   );
 
   return [filters, updateFilters] as const;
+}
+
+function sanitizeSidebarSections(
+  raw: unknown
+): PurchasingPlanningSidebarSections {
+  const next = { ...DEFAULT_PP_SIDEBAR_SECTIONS };
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return next;
+
+  const saved = raw as Record<string, unknown>;
+  for (const key of SIDEBAR_SECTION_KEYS) {
+    if (typeof saved[key] === "boolean") {
+      next[key] = saved[key];
+    }
+  }
+  return next;
+}
+
+/** Ghi nhớ trạng thái gập/mở từng nhóm của sidebar Dự kiến đặt hàng. */
+export function usePurchasingPlanningSidebarSections() {
+  const [openSections, setOpenSections] =
+    useState<PurchasingPlanningSidebarSections>(() => {
+      if (typeof window === "undefined") {
+        return { ...DEFAULT_PP_SIDEBAR_SECTIONS };
+      }
+      try {
+        const saved = localStorage.getItem(SIDEBAR_SECTIONS_STORAGE_KEY);
+        return saved
+          ? sanitizeSidebarSections(JSON.parse(saved))
+          : { ...DEFAULT_PP_SIDEBAR_SECTIONS };
+      } catch {
+        // JSON hỏng hoặc localStorage bị chặn — dùng cấu hình mặc định.
+        return { ...DEFAULT_PP_SIDEBAR_SECTIONS };
+      }
+    });
+
+  const toggleSection = useCallback(
+    (key: PurchasingPlanningSidebarSectionKey) => {
+      setOpenSections((prev) => {
+        const next = { ...prev, [key]: !prev[key] };
+        try {
+          localStorage.setItem(
+            SIDEBAR_SECTIONS_STORAGE_KEY,
+            JSON.stringify(next)
+          );
+        } catch {
+          // localStorage đầy hoặc bị chặn — vẫn dùng được trong phiên hiện tại.
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  return { openSections, toggleSection } as const;
 }

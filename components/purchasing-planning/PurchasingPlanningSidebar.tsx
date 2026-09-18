@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ChevronDown, RotateCcw } from "lucide-react";
 import {
   FilterMultiSelect,
@@ -20,6 +20,7 @@ import {
   type RecommendationListMeta,
   type ReliabilityLevel,
 } from "@/lib/types/purchasing-planning";
+import { usePurchasingPlanningSidebarSections } from "@/lib/hooks/usePurchasingPlanningTableState";
 
 interface Props {
   filters: RecommendationFilters;
@@ -49,10 +50,6 @@ const FLAG_OPTIONS: FilterOption[] = Object.entries(FLAG_CODE_LABEL).map(
   ([code, label]) => ({ value: code, label })
 );
 
-const STORAGE_KEY = "pp-sidebar-sections";
-
-type SectionKey = "level" | "classify" | "threshold" | "flags";
-
 export function PurchasingPlanningSidebar({
   filters,
   setFilters,
@@ -63,34 +60,8 @@ export function PurchasingPlanningSidebar({
   middleCategories = [],
   childCategories = [],
 }: Props) {
-  // Trạng thái gập/mở từng nhóm — ghi nhớ giữa các lần mở trang
-  const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
-    level: true,
-    classify: false,
-    threshold: false,
-    flags: false,
-  });
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setOpenSections(JSON.parse(saved));
-    } catch {
-      // bỏ qua lỗi localStorage (chế độ riêng tư…)
-    }
-  }, []);
-
-  const toggleSection = (key: SectionKey) => {
-    setOpenSections((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // bỏ qua
-      }
-      return next;
-    });
-  };
+  const { openSections, toggleSection } =
+    usePurchasingPlanningSidebarSections();
 
   const toOptions = (list: string[]): FilterOption[] =>
     list.map((v) => ({ value: v, label: v }));
