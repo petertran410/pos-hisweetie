@@ -311,8 +311,22 @@ export interface RecommendationListItem {
   ma90: number | null;
   /** ma30 / ma90 — > 1 là xu hướng tăng */
   trendRatio: number | null;
+  /** Nhu cầu bán dự báo trong planning horizon. */
+  salesDemand?: number;
+  /** Đơn khách đang chờ trong planning horizon. */
+  customerOrders?: number;
   /** Tổng Demand khách hàng/OEM trong planning horizon. */
   customerDemand?: number;
+  /** Nhu cầu tối thiểu của công ty. */
+  companyNeed?: number;
+  /** Phần nhu cầu tăng thêm do khuyến mãi. */
+  promotionExtra?: number;
+  /** Hàng thực tế đã mua theo Demand cũ, được trừ khỏi tổng nhu cầu. */
+  pastCustomerDemand?: number;
+  /** Tổng nhu cầu sau khi cộng/trừ mọi nguồn. */
+  totalDemand?: number;
+  /** Hàng ghép xe có rủi ro, chỉ dùng cho kịch bản. */
+  vehicleRisk?: number;
   /** Hệ số hệ thống tự đề xuất từ lịch sử đã làm sạch. */
   systemGrowthFactor?: number;
   /** Hệ số thực tế dùng khi tính forecast. */
@@ -320,6 +334,9 @@ export interface RecommendationListItem {
   growthFactorConfidence?: "HIGH" | "MEDIUM" | "LOW" | "NO_DATA";
   growthFactorMethod?: string;
   growthFactorWarnings?: string[];
+  formulaMode?: "LEGACY" | "NEW" | "SHADOW";
+  effectiveFormulaMode?: "LEGACY" | "NEW";
+  formulaFallbackApplied?: boolean;
 
   // ── Chỉ số thời gian ──
   /** null khi forecast = 0 (không xác định được) — PRD §15 Case 10 */
@@ -428,6 +445,17 @@ export interface ForecastComparison {
   growthFactorDataMonths?: number;
   growthFactorWarnings?: string[];
   growthFactorAnalysis?: GrowthFactorAnalysis | null;
+  formulaMode?: "LEGACY" | "NEW" | "SHADOW";
+  effectiveFormulaMode?: "LEGACY" | "NEW";
+  formulaFallbackApplied?: boolean;
+  formulaWarnings?: string[];
+  legacyShadow?: {
+    baselineDailyDemand: number;
+    growthFactor: number;
+    forecastDailyDemand: number;
+    monthsUsed: number;
+    excludedMonths: string[];
+  } | null;
   /** Giữ tương thích snapshot cũ */
   growthFactor: number;
   /** Nguồn dữ liệu thực tế đã dùng cho SKU này */
@@ -486,14 +514,26 @@ export interface ForecastComparison {
       skipped?: boolean;
       skipReason?: "INBOUND_BETWEEN" | "CUSTOMER_ORDER" | null;
     }>;
+    /**
+     * Hàng thực tế khách đã mua theo Demand cũ (tối đa bằng Demand gốc),
+     * lấy từ InvoiceDetail cùng khách/SKU/tháng và chỉ trong 3 tháng trước.
+     * Giá trị này được trừ khỏi tổng nhu cầu dự báo.
+     */
     pastCustomerDemand?: number;
     pastCustomerDemandDetails?: Array<{
       monthId: number | null;
       customerId: number | null;
       customerName: string | null;
       demandMonth: string;
+      /** Số lượng Demand gốc đã xác nhận. */
       quantityBase: number;
       customerOrderOffset?: number;
+      /** Số lượng thực tế khách đã mua trên hóa đơn trong tháng. */
+      actualPurchasedQuantity?: number;
+      /** Số lượng thực tế được khấu trừ (min(Demand, thực tế mua)). */
+      deductedQuantity?: number;
+      /** Phần Demand khách chưa mua. */
+      remainingQuantity?: number;
       skipped?: boolean;
       skipReason?: "INBOUND_BETWEEN" | "CUSTOMER_ORDER" | null;
     }>;
@@ -501,6 +541,7 @@ export interface ForecastComparison {
     salesDemand: number;
     promotionExtra: number;
     trendExtra?: number;
+    totalDemand?: number;
   };
   supplyBreakdown?: {
     available: number;
@@ -723,7 +764,9 @@ export const FLAG_CODE_LABEL: Record<string, string> = {
   SEASONALITY_UNCERTAIN: "Mùa vụ chưa ổn định",
   SHORT_LONG_TERM_MISMATCH: "Xu hướng ngắn/dài hạn trái chiều",
   INSUFFICIENT_HISTORY: "Lịch sử bán hàng chưa đủ",
-  DEMAND_OVERLAP: "Demand trùng đơn nhập"
+  DEMAND_OVERLAP: "Demand trùng đơn nhập",
+  FORMULA_MODE_FALLBACK: "Cấu hình công thức không hợp lệ",
+  GROWTH_FACTOR_FALLBACK: "Đã dùng hệ số an toàn 1,00"
 };
 
 export interface RecommendationFilters {

@@ -91,12 +91,18 @@ export const COLUMN_GROUPS: Record<string, string[]> = {
     "supplier",
     "leadTime",
   ],
-  "Tồn kho": ["physical", "reserved", "available", "incoming"],
+  "Tồn kho": ["physical", "reserved", "available", "incoming", "vehicleRisk"],
   "Dự báo": [
     "forecast",
     "systemGrowthFactor",
     "appliedGrowthFactor",
+    "salesDemand",
+    "customerOrders",
     "customerDemand",
+    "companyNeed",
+    "promotionExtra",
+    "pastCustomerDemand",
+    "totalDemand",
     "ma30",
     "ma60",
     "ma90",
@@ -347,10 +353,11 @@ export function buildColumns(): ColumnConfig<RecommendationListItem>[] {
     },
     {
       key: "incoming",
-      label: "Đang về",
+      label: "Hàng về chắc chắn",
       visible: true,
-      width: "90px",
-      tooltip: "Tổng lượng hàng đã đặt nhà cung cấp nhưng chưa nhập kho.",
+      width: "125px",
+      tooltip:
+        "Hàng đã đặt nhà cung cấp và đủ chắc chắn để trừ khỏi đề xuất đặt thêm.",
       render: (i) => (
         <Num
           value={i.incomingTotal}
@@ -358,6 +365,23 @@ export function buildColumns(): ColumnConfig<RecommendationListItem>[] {
         />
       ),
       exportValue: (i) => i.incomingTotal,
+    },
+    {
+      key: "vehicleRisk",
+      label: "Ghép xe rủi ro",
+      visible: false,
+      width: "115px",
+      tooltip:
+        "Hàng ghép xe chưa đủ chắc chắn; chỉ dùng ở kịch bản nếu hàng về đúng hạn.",
+      render: (i) => (
+        <Num
+          value={i.vehicleRisk}
+          className={
+            (i.vehicleRisk ?? 0) > 0 ? "text-violet-600" : "text-gray-400"
+          }
+        />
+      ),
+      exportValue: (i) => i.vehicleRisk ?? 0,
     },
 
     // ── Dự báo ──
@@ -414,6 +438,62 @@ export function buildColumns(): ColumnConfig<RecommendationListItem>[] {
       exportValue: (i) => i.customerDemand ?? 0,
     },
     {
+      key: "salesDemand",
+      label: "Nhu cầu bán dự báo",
+      visible: false,
+      width: "145px",
+      tooltip:
+        "Nhu cầu bán trong planning horizon sau khi nhân hệ số áp dụng.",
+      render: (i) => <Num value={i.salesDemand} digits={1} />,
+      exportValue: (i) => i.salesDemand ?? 0,
+    },
+    {
+      key: "customerOrders",
+      label: "Khách đặt",
+      visible: false,
+      width: "100px",
+      tooltip: "Đơn khách đang chờ trong planning horizon.",
+      render: (i) => <Num value={i.customerOrders} digits={1} />,
+      exportValue: (i) => i.customerOrders ?? 0,
+    },
+    {
+      key: "companyNeed",
+      label: "Công ty cần",
+      visible: false,
+      width: "105px",
+      tooltip: "Mức tồn tối thiểu cần giữ cho nhu cầu công ty.",
+      render: (i) => <Num value={i.companyNeed} digits={1} />,
+      exportValue: (i) => i.companyNeed ?? 0,
+    },
+    {
+      key: "promotionExtra",
+      label: "Khuyến mãi",
+      visible: false,
+      width: "100px",
+      tooltip: "Nhu cầu cộng thêm do chương trình khuyến mãi trong kỳ.",
+      render: (i) => <Num value={i.promotionExtra} digits={1} />,
+      exportValue: (i) => i.promotionExtra ?? 0,
+    },
+    {
+      key: "pastCustomerDemand",
+      label: "Trừ Demand cũ",
+      visible: false,
+      width: "115px",
+      tooltip:
+        "Hàng thực tế đã mua theo Demand cũ, được trừ khỏi tổng nhu cầu.",
+      render: (i) => <Num value={i.pastCustomerDemand} digits={1} />,
+      exportValue: (i) => i.pastCustomerDemand ?? 0,
+    },
+    {
+      key: "totalDemand",
+      label: "Tổng nhu cầu",
+      visible: false,
+      width: "110px",
+      tooltip: "Tổng nhu cầu sau khi cộng mọi nguồn và trừ Demand cũ.",
+      render: (i) => <Num value={i.totalDemand} digits={1} />,
+      exportValue: (i) => i.totalDemand ?? 0,
+    },
+    {
       key: "ma30",
       label: "MA30",
       visible: false,
@@ -448,7 +528,7 @@ export function buildColumns(): ColumnConfig<RecommendationListItem>[] {
     },
     {
       key: "trend",
-      label: "Xu hướng",
+      label: "Xu hướng bán gần đây",
       visible: false,
       width: "95px",
       tooltip: "Mức thay đổi của MA30 so với MA90; dương là đang bán tăng.",

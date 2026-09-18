@@ -149,17 +149,20 @@ export function useUpdateInvoice() {
   });
 }
 
-export function useDeleteInvoice() {
+export function useCancelInvoice() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: invoicesApi.deleteInvoice,
+    mutationFn: ({
+      id,
+      cancelPayments,
+    }: {
+      id: number;
+      cancelPayments?: boolean;
+    }) => invoicesApi.cancelInvoice(id, { cancelPayments }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["debt-tracking"] });
       invalidateConditionQueries(queryClient);
-      toast.success("Xóa hóa đơn thành công");
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Xóa hóa đơn thất bại");
     },
   });
 }

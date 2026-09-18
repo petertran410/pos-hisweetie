@@ -113,6 +113,10 @@ export interface MergeInvoicesRequest {
   idempotencyKey?: string;
 }
 
+export interface CancelInvoiceRequest {
+  cancelPayments?: boolean;
+}
+
 export interface CreateInvoiceFromOrderRequest {
   orderId: number;
   additionalPayment?: number;
@@ -166,14 +170,17 @@ export const invoicesApi = {
   updateInvoice: (id: number, data: UpdateInvoiceRequest): Promise<Invoice> => {
     return apiClient.put(`/invoices/${id}`, data);
   },
+  cancelInvoice: (
+    id: number,
+    data: CancelInvoiceRequest
+  ): Promise<Invoice> => {
+    return apiClient.put(`/invoices/${id}/cancel`, data);
+  },
   mergeInvoices: (data: MergeInvoicesRequest): Promise<{ invoice: Invoice }> => {
     return apiClient.post("/invoices/merge", data);
   },
   validateMerge: (sourceInvoiceIds: number[]): Promise<{ valid: boolean; errors: string[] }> => {
     return apiClient.post("/invoices/merge/validate", { sourceInvoiceIds });
-  },
-  deleteInvoice: (id: number): Promise<void> => {
-    return apiClient.delete(`/invoices/${id}`);
   },
   createInvoiceFromOrder: (
     params: CreateInvoiceFromOrderRequest

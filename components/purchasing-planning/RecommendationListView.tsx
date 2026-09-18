@@ -136,11 +136,51 @@ function RecommendationRow({
             </span>
           </span>
         )}
+        {(item.salesDemand ?? 0) > 0 && (
+          <span>
+            Nhu cầu bán{" "}
+            <span className="font-medium text-gray-700">
+              {num(item.salesDemand)}
+            </span>
+          </span>
+        )}
+        {(item.companyNeed ?? 0) > 0 && (
+          <span>
+            Công ty cần{" "}
+            <span className="font-medium text-gray-700">
+              {num(item.companyNeed)}
+            </span>
+          </span>
+        )}
+        {(item.promotionExtra ?? 0) > 0 && (
+          <span>
+            KM{" "}
+            <span className="font-medium text-orange-700">
+              {num(item.promotionExtra)}
+            </span>
+          </span>
+        )}
+        {(item.pastCustomerDemand ?? 0) > 0 && (
+          <span>
+            Trừ Demand cũ{" "}
+            <span className="font-medium text-amber-700">
+              -{num(item.pastCustomerDemand)}
+            </span>
+          </span>
+        )}
         {item.incomingTotal > 0 && (
           <span>
-            Đang về{" "}
+            Hàng về chắc chắn{" "}
             <span className="font-medium text-gray-700">
               {num(item.incomingTotal)}
+            </span>
+          </span>
+        )}
+        {(item.vehicleRisk ?? 0) > 0 && (
+          <span>
+            Ghép xe rủi ro{" "}
+            <span className="font-medium text-violet-700">
+              {num(item.vehicleRisk)}
             </span>
           </span>
         )}

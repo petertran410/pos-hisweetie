@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, BarChart3, Loader2, Package, TrendingDown, TrendingUp, X } from "lucide-react";
+import { AlertTriangle, BarChart3, Loader2, Package, RotateCcw, TrendingDown, TrendingUp, X } from "lucide-react";
 import { PriorityBadge, ReliabilityBadge, SeverityBadge } from "./PriorityBadge";
 import { DecisionTimelineModal } from "./DecisionTimelineModal";
 import {
   useRecommendationDetail,
+  useDeletePurchasingConfig,
   useResolvedPurchasingConfig,
   useSavePurchasingConfig,
 } from "@/lib/hooks/usePurchasingPlanning";
@@ -69,6 +70,7 @@ export function RecommendationDetailPanel({
     { enabled: canConfigure }
   );
   const saveConfig = useSavePurchasingConfig();
+  const deleteConfig = useDeletePurchasingConfig();
   const [chartOpen, setChartOpen] = useState(false);
   const [growthEditor, setGrowthEditor] = useState<{
     itemId: number;
@@ -149,6 +151,23 @@ export function RecommendationDetailPanel({
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Không lưu được hệ số tăng trưởng"
+      );
+    }
+  };
+
+  const resetGrowthFactor = async () => {
+    if (!data) return;
+    try {
+      if (resolvedConfig?.configId) {
+        await deleteConfig.mutateAsync(resolvedConfig.configId);
+      }
+      toast.success("Đã quay về hệ số hệ thống");
+      await onRunCalculation?.();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Không quay được về hệ số hệ thống"
       );
     }
   };
@@ -293,7 +312,7 @@ export function RecommendationDetailPanel({
                 <div className="mt-3">
                   <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600">
                     <Package className="h-3.5 w-3.5" />
-                    Hàng đang về ({num(data.incomingTotal)})
+                    Hàng về chắc chắn ({num(data.incomingTotal)})
                   </div>
                   <div className="space-y-1.5">
                     {data.shipments.map((s) => (
@@ -422,10 +441,34 @@ export function RecommendationDetailPanel({
                   )}
                   {data.forecastComparison.growthFactorOverridden && (
                     <div className="mt-1 text-amber-700">
-                      Đang dùng hệ số do người dùng điều chỉnh.
-                      {data.forecastComparison.growthFactorNote
-                        ? ` Lý do: ${data.forecastComparison.growthFactorNote}`
-                        : ""}
+                      <div>
+                        Đang dùng hệ số do người dùng điều chỉnh.
+                        {data.forecastComparison.growthFactorNote
+                          ? ` Lý do: ${data.forecastComparison.growthFactorNote}`
+                          : ""}
+                      </div>
+                      {(data.forecastComparison.growthFactorUpdatedBy ||
+                        data.forecastComparison.growthFactorUpdatedAt) && (
+                        <div className="mt-0.5 text-[11px]">
+                          Cập nhật bởi user #
+                          {data.forecastComparison.growthFactorUpdatedBy ?? "—"}
+                          {data.forecastComparison.growthFactorUpdatedAt
+                            ? ` · ${dateVn(
+                                data.forecastComparison.growthFactorUpdatedAt
+                              )}`
+                            : ""}
+                        </div>
+                      )}
+                      {canConfigure && resolvedConfig?.configId && (
+                        <button
+                          type="button"
+                          onClick={resetGrowthFactor}
+                          disabled={deleteConfig.isPending}
+                          className="mt-1.5 flex items-center gap-1 rounded border border-amber-300 bg-white px-2 py-1 text-[11px] font-medium text-amber-800 hover:bg-amber-50 disabled:opacity-60">
+                          <RotateCcw className="h-3 w-3" />
+                          Dùng hệ số hệ thống
+                        </button>
+                      )}
                     </div>
                   )}
                   <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-teal-200 pt-2 text-[11px] text-teal-800">
@@ -474,6 +517,17 @@ export function RecommendationDetailPanel({
                       </span>
                     </div>
                     <div className="col-span-2">
+                      Chế độ công thức:{" "}
+                      <span className="font-medium">
+                        {FORMULA_MODE_LABEL[
+                          data.forecastComparison.formulaMode ?? "NEW"
+                        ] ?? data.forecastComparison.formulaMode}
+                      </span>
+                      {data.forecastComparison.formulaFallbackApplied
+                        ? " · đã fallback an toàn"
+                        : ""}
+                    </div>
+                    <div className="col-span-2">
                       Nguồn áp dụng:{" "}
                       <span className="font-medium">
                         {data.forecastComparison.growthFactorSource
@@ -509,10 +563,11 @@ export function RecommendationDetailPanel({
                     rows={[
                       ["Khách đặt", num(data.forecastComparison.demandBreakdown.customerOrders), "Order đang chờ"],
                       ["Demand khách hàng/OEM", num(data.forecastComparison.demandBreakdown.customerDemand ?? 0), "Đã xác nhận trong kỳ kế hoạch"],
-                      ["Demand OEM 3 tháng trước", num(-(data.forecastComparison.demandBreakdown.pastCustomerDemand ?? 0)), "Đã xác nhận, trừ khỏi tổng nhu cầu"],
+                      ["Hàng thực tế đã mua theo Demand cũ", num(-(data.forecastComparison.demandBreakdown.pastCustomerDemand ?? 0)), "Từ hóa đơn thực tế · cùng khách/SKU/tháng"],
                       ["Công ty cần (tồn tối thiểu)", num(data.forecastComparison.demandBreakdown.companyNeed), ""],
                       ["Bán trong kỳ bao phủ", num(data.forecastComparison.demandBreakdown.salesDemand, 0), ""],
                       ["Khuyến mãi", num(data.forecastComparison.demandBreakdown.promotionExtra), ""],
+                      ["Tổng nhu cầu", num(data.forecastComparison.demandBreakdown.totalDemand, 0), "Sau khi cộng/trừ toàn bộ nguồn"],
                     ]}
                   />
                 </div>
@@ -546,19 +601,28 @@ export function RecommendationDetailPanel({
               )}
               {(data.forecastComparison.demandBreakdown?.pastCustomerDemandDetails?.length ?? 0) > 0 && (
                 <div className="mt-3 rounded border border-amber-200 bg-amber-50 px-3 py-2">
-                  <div className="text-xs font-medium text-amber-900">Demand OEM 3 tháng trước (đã trừ)</div>
-                  <div className="mt-1 space-y-0.5 text-[11px] text-amber-800">
+                  <div className="text-xs font-medium text-amber-900">Đối chiếu Demand cũ với hàng thực tế đã mua</div>
+                  <div className="mt-1 space-y-1 text-[11px] text-amber-800">
                     {data.forecastComparison.demandBreakdown?.pastCustomerDemandDetails?.map((detail, index) => (
                       <div
                         key={`${detail.monthId ?? "past-demand"}-${detail.demandMonth}-${index}`}
                         className={detail.skipped ? "text-amber-400" : undefined}
                       >
-                        • {detail.demandMonth} · {detail.customerName ?? "Khách hàng"} · {detail.skipped ? "" : "−"}{num(detail.quantityBase)} {data.unit ?? "đv"}
+                        <div>
+                          • {detail.demandMonth} · {detail.customerName ?? "Khách hàng"}
+                        </div>
                         {detail.skipped ? (
                           <div className="pl-3 text-[10px]">
-                            Không cộng vì đã có đơn đặt hàng nhập xen giữa
+                            Không tính vì đã có đơn đặt hàng nhập xen giữa
                           </div>
-                        ) : null}
+                        ) : (
+                          <div className="pl-3 text-[10px] tabular-nums">
+                            Demand gốc {num(detail.quantityBase)} {data.unit ?? "đv"}
+                            {" · "}Thực tế đã mua {num(detail.actualPurchasedQuantity ?? 0)} {data.unit ?? "đv"}
+                            {" · "}Khấu trừ {num(detail.deductedQuantity ?? 0)} {data.unit ?? "đv"}
+                            {" · "}Còn lại {num(detail.remainingQuantity ?? 0)} {data.unit ?? "đv"}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -737,6 +801,16 @@ const GROWTH_FACTOR_WARNING_LABEL: Record<string, string> = {
     "Mùa vụ giữa các năm chưa ổn định; hệ số mùa vụ đã giảm trọng số.",
   SHORT_LONG_TERM_MISMATCH:
     "Xu hướng ngắn hạn trái chiều với dài hạn.",
+  FORMULA_MODE_FALLBACK:
+    "Cấu hình công thức không hợp lệ; hệ thống đã quay về công thức mới.",
+  GROWTH_FACTOR_FALLBACK:
+    "Không đủ dữ liệu để suy hệ số; hệ thống đang áp dụng 1,00.",
+};
+
+const FORMULA_MODE_LABEL: Record<string, string> = {
+  LEGACY: "Công thức cũ 5 tháng",
+  NEW: "Công thức mới 6 tháng + mùa vụ",
+  SHADOW: "Chạy song song, dùng công thức mới",
 };
 
 const GROWTH_FACTOR_CONFIDENCE_LABEL: Record<string, string> = {
@@ -750,7 +824,7 @@ const CALCULATION_STEP_LABEL: Record<string, string> = {
   TARGET_STOCK: "Tồn kho mục tiêu",
   SALES_DEMAND: "Nhu cầu bán trong kỳ",
   CUSTOMER_DEMAND: "Demand khách hàng/OEM",
-  PAST_CUSTOMER_DEMAND: "Demand OEM 3 tháng trước",
+  PAST_CUSTOMER_DEMAND: "Hàng thực tế đã mua theo Demand cũ",
   TOTAL_DEMAND: "Tổng nhu cầu",
   SOQ_RAW: "Số lượng đặt hàng chắc chắn",
   SOQ_SCENARIO: "Số lượng theo kịch bản ghép xe",

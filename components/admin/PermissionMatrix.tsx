@@ -29,6 +29,7 @@ const isHiddenLegacyPermission = (perm: {
   action?: string;
 }) =>
   perm.resource === "debt_tickets" ||
+  (perm.resource === "invoices" && perm.action === "delete") ||
   (perm.resource === "debt_tracking" &&
     HIDDEN_LEGACY_ACTIONS.has(perm.action ?? ""));
 
