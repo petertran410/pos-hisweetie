@@ -31,8 +31,6 @@ export interface Factory {
   moqIncrement?: string | number | null;
   /** Số ngày sản xuất tại nhà máy. */
   productionLeadtimeDays?: number | null;
-  productionLeadtimeMin?: number | null;
-  productionLeadtimeMax?: number | null;
   paymentTerm?: string | null;
 
   // --- Logistics (sheet "Logistics & Leadtime") ---
@@ -95,8 +93,6 @@ export interface FactoryPayload {
   moqScope?: MoqScope | null;
   moqIncrement?: number | null;
   productionLeadtimeDays?: number | null;
-  productionLeadtimeMin?: number | null;
-  productionLeadtimeMax?: number | null;
   paymentTerm?: string | null;
 
   // Logistics (sheet "Logistics & Leadtime")

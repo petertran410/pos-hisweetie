@@ -50,16 +50,9 @@ const PAGE_SIZE = 6;
 const numberOrNull = (value: string) =>
   value.trim() === "" ? null : Number(value);
 
-/**
- * Tóm tắt thời gian sản xuất của nhà máy dưới dạng khoảng nhanh nhất–chậm nhất.
- */
 function formatProductionLeadtime(factory: Factory): string | null {
-  const days =
-    factory.productionLeadtimeDays ??
-    factory.productionLeadtimeMax ??
-    factory.productionLeadtimeMin;
-  if (days == null) return null;
-  return `SX ${days} ngày + 20 ngày về kho`;
+  if (factory.productionLeadtimeDays == null) return null;
+  return `SX ${factory.productionLeadtimeDays} ngày + 20 ngày về kho`;
 }
 
 /**

@@ -85,8 +85,6 @@ export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
     moqScope: undefined,
     moqIncrement: undefined,
     productionLeadtimeDays: undefined,
-    productionLeadtimeMin: undefined,
-    productionLeadtimeMax: undefined,
     paymentTerm: "",
   });
 
@@ -127,13 +125,7 @@ export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
           existing.moqIncrement != null
             ? Number(existing.moqIncrement)
             : undefined,
-        productionLeadtimeDays:
-          existing.productionLeadtimeDays ??
-          existing.productionLeadtimeMax ??
-          existing.productionLeadtimeMin ??
-          undefined,
-        productionLeadtimeMin: existing.productionLeadtimeMin ?? undefined,
-        productionLeadtimeMax: existing.productionLeadtimeMax ?? undefined,
+        productionLeadtimeDays: existing.productionLeadtimeDays ?? undefined,
         paymentTerm: existing.paymentTerm ?? "",
       });
     }
@@ -177,8 +169,6 @@ export function FactoryForm({ mode, factoryId, onClose }: FactoryFormProps) {
        moqScope: form.moqValue == null ? null : (form.moqScope ?? "PER_ORDER"),
        moqIncrement: form.moqValue == null ? null : (form.moqIncrement ?? null),
        productionLeadtimeDays: form.productionLeadtimeDays ?? null,
-       productionLeadtimeMin: form.productionLeadtimeDays ?? null,
-       productionLeadtimeMax: form.productionLeadtimeDays ?? null,
        paymentTerm: form.paymentTerm?.trim() || null,
     };
 
