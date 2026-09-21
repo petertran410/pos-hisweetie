@@ -3,6 +3,7 @@ import { customerDemandApi } from '@/lib/api/customer-demand';
 import type {
   CreateCustomerDemandRequest,
   CustomerDemandFilters,
+  UpdateCustomerDemandMonthRequest,
   UpdateCustomerDemandRequest,
 } from '@/lib/types/customer-demand';
 
@@ -49,6 +50,20 @@ export function useUpdateCustomerDemand() {
   return useMutation({ mutationFn: ({ id, data }: { id: number; data: UpdateCustomerDemandRequest }) => customerDemandApi.update(id, data), onSuccess: invalidate });
 }
 
+export function useUpdateCustomerDemandMonth() {
+  const invalidate = useInvalidateCustomerDemand();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: UpdateCustomerDemandMonthRequest;
+    }) => customerDemandApi.updateMonth(id, data),
+    onSuccess: invalidate,
+  });
+}
+
 export function useApproveCustomerDemandMonth() {
   const invalidate = useInvalidateCustomerDemand();
   return useMutation({ mutationFn: (id: number) => customerDemandApi.approveMonth(id), onSuccess: invalidate });
@@ -57,4 +72,26 @@ export function useApproveCustomerDemandMonth() {
 export function useCancelCustomerDemandMonth() {
   const invalidate = useInvalidateCustomerDemand();
   return useMutation({ mutationFn: ({ id, reason }: { id: number; reason?: string }) => customerDemandApi.cancelMonth(id, reason), onSuccess: invalidate });
+}
+
+export function useCustomerDemandLarkSyncStatus(enabled = true) {
+  return useQuery({
+    queryKey: [KEY, "lark-sync-status"],
+    queryFn: () => customerDemandApi.larkSyncStatus(),
+    enabled,
+  });
+}
+
+export function usePreviewCustomerDemandLarkSync() {
+  return useMutation({
+    mutationFn: () => customerDemandApi.previewLarkSync(),
+  });
+}
+
+export function useCommitCustomerDemandLarkSync() {
+  const invalidate = useInvalidateCustomerDemand();
+  return useMutation({
+    mutationFn: () => customerDemandApi.syncLark(),
+    onSuccess: invalidate,
+  });
 }

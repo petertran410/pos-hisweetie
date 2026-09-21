@@ -28,6 +28,18 @@ export function formatDemandMonth(value: string) {
   return `${month}/${year}`;
 }
 
+export function formatDemandDateTime(value: Date | string) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return "-";
+  return `${date.toLocaleDateString("vi-VN")} ${date.toLocaleTimeString(
+    "vi-VN",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+    }
+  )}`;
+}
+
 export function DemandButton({
   variant = "primary",
   size = "md",
@@ -121,7 +133,7 @@ export function DemandModalShell({
   onClose: () => void;
   title: string;
   subtitle?: ReactNode;
-  size?: "form" | "import";
+  size?: "form" | "import" | "sync";
   closeOnOverlay?: boolean;
   footer?: ReactNode;
   children: ReactNode;

@@ -108,7 +108,7 @@ export function CustomerDemandImportModal({
       size="import"
       closeOnOverlay
       title="Import Demand khách hàng"
-      subtitle="Gom theo khách hàng thành phiếu nháp; trùng SKU cùng tháng thì tách phiếu mới. Cần duyệt tháng trước khi cộng vào dự kiến đặt hàng."
+      subtitle="Mỗi khách hàng và tháng tạo thành một phiếu nháp; các dòng sản phẩm gồm cả SKU trùng đều được giữ riêng. Cần duyệt tháng trước khi cộng vào dự kiến đặt hàng."
       footer={
         result ? (
           <>
@@ -223,7 +223,7 @@ export function CustomerDemandImportModal({
                     ["Tổng dòng", preview.total],
                     ["Hợp lệ", preview.valid],
                     ["Phiếu sẽ tạo", preview.vouchers],
-                    ["Tháng", preview.months],
+                    ["Tháng / phiếu", preview.months],
                     ["Lỗi", preview.invalid],
                   ].map(([label, value]) => (
                     <div key={String(label)} className="cd-kpi">
@@ -316,7 +316,7 @@ export function CustomerDemandImportModal({
               Import thành công
             </p>
             <p className="cd-subtitle mx-auto max-w-lg">
-              Đã tạo {result.vouchers} phiếu nháp, {result.months} tháng,{" "}
+              Đã tạo {result.vouchers} phiếu nháp ({result.months} tháng),{" "}
               {result.imported} dòng trên tổng {result.total} dòng. Hãy duyệt
               từng tháng nếu muốn cộng vào dự kiến đặt hàng.
             </p>

@@ -5,8 +5,14 @@ import type {
   CustomerDemandFilters,
   CustomerDemandImportPreview,
   CustomerDemandImportResult,
+  CustomerDemandLarkSyncPreview,
+  CustomerDemandLarkSyncResult,
+  CustomerDemandLarkSyncStatus,
+  CustomerDemandLarkVoucherSplitPreview,
+  CustomerDemandLarkVoucherSplitResult,
   CustomerDemandListResponse,
   UpdateCustomerDemandRequest,
+  UpdateCustomerDemandMonthRequest,
 } from '@/lib/types/customer-demand';
 
 const BASE = '/customer-demand';
@@ -21,6 +27,10 @@ export const customerDemandApi = {
     apiClient.post(BASE, data),
   update: (id: number, data: UpdateCustomerDemandRequest): Promise<CustomerDemand> =>
     apiClient.patch(`${BASE}/${id}`, data),
+  updateMonth: (
+    id: number,
+    data: UpdateCustomerDemandMonthRequest
+  ): Promise<CustomerDemand> => apiClient.patch(`${BASE}/months/${id}`, data),
   approveMonth: (id: number): Promise<{ id: number; status: string }> =>
     apiClient.post(`${BASE}/months/${id}/approve`, {}),
   cancelMonth: (id: number, reason?: string): Promise<{ id: number; status: string }> =>
@@ -35,5 +45,15 @@ export const customerDemandApi = {
     data.append('file', file);
     return apiClient.postForm(`${BASE}/import`, data);
   },
+  previewLarkSync: (): Promise<CustomerDemandLarkSyncPreview> =>
+    apiClient.post(`${BASE}/sync/lark/preview`, {}),
+  syncLark: (): Promise<CustomerDemandLarkSyncResult> =>
+    apiClient.post(`${BASE}/sync/lark`, {}),
+  previewLarkVoucherSplit: (): Promise<CustomerDemandLarkVoucherSplitPreview> =>
+    apiClient.post(`${BASE}/sync/lark/vouchers/preview`, {}),
+  splitLarkVouchers: (): Promise<CustomerDemandLarkVoucherSplitResult> =>
+    apiClient.post(`${BASE}/sync/lark/vouchers`, {}),
+  larkSyncStatus: (): Promise<CustomerDemandLarkSyncStatus> =>
+    apiClient.get(`${BASE}/sync/lark/status`),
   importTemplateUrl: `${BASE}/import/template`,
 };
