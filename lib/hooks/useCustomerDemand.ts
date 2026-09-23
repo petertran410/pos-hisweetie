@@ -16,6 +16,17 @@ export function useCustomerDemands(filters: CustomerDemandFilters) {
   });
 }
 
+export function useCustomerDemandOrderSummary(
+  filters: CustomerDemandFilters,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: [KEY, "order-summary", filters],
+    queryFn: () => customerDemandApi.orderSummary(filters),
+    enabled,
+  });
+}
+
 export function useCustomerDemandCustomers(search?: string) {
   return useQuery({
     queryKey: [KEY, 'customers', search ?? ''],

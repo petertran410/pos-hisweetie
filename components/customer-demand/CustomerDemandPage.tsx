@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { useCan } from "@/lib/hooks/useCan";
 import { useCustomerDemand } from "@/lib/hooks/useCustomerDemand";
@@ -14,6 +14,8 @@ import { CustomerDemandFormModal } from "./CustomerDemandFormModal";
 import { CustomerDemandImportModal } from "./CustomerDemandImportModal";
 import { CustomerDemandLarkSyncModal } from "./CustomerDemandLarkSyncModal";
 import { CustomerDemandMobileView } from "./CustomerDemandMobileView";
+import { CustomerDemandOrderSummary } from "./CustomerDemandOrderSummary";
+import type { DemandViewMode } from "./DemandViewToggle";
 import { CustomerDemandSidebar } from "./CustomerDemandSidebar";
 import { CustomerDemandTable } from "./CustomerDemandTable";
 
@@ -24,6 +26,103 @@ const DEFAULT_FILTERS: CustomerDemandFilters = {
   sortOrder: "desc",
 };
 
+const SETUP_STORAGE_KEY = "customer-demand-page-setup";
+const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
+const STATUSES = new Set(["DRAFT", "CONFIRMED", "CANCELLED"]);
+const SORT_FIELDS = new Set(["createdAt", "updatedAt", "id", "customerName"]);
+const LIMITS = new Set([10, 20, 50]);
+
+type DemandPageSetup = {
+  filters: CustomerDemandFilters;
+  viewMode: DemandViewMode;
+  customerLabel: string;
+};
+
+const DEFAULT_SETUP: DemandPageSetup = {
+  filters: DEFAULT_FILTERS,
+  viewMode: "vouchers",
+  customerLabel: "",
+};
+
+const SETUP_EVENT = "customer-demand-setup";
+let currentSetup = DEFAULT_SETUP;
+let setupLoaded = false;
+
+function parseDemandSetup(raw: string | null): DemandPageSetup {
+  if (!raw) return DEFAULT_SETUP;
+  try {
+    const saved = JSON.parse(raw) as {
+      filters?: Partial<CustomerDemandFilters>;
+      viewMode?: DemandViewMode;
+      customerLabel?: string;
+    };
+    const source = saved.filters ?? {};
+    const month = (value: unknown) =>
+      typeof value === "string" && MONTH_PATTERN.test(value) ? value : undefined;
+    const limit = LIMITS.has(Number(source.limit)) ? Number(source.limit) : 20;
+    const pageNumber = Number(source.page);
+    return {
+      filters: {
+        ...DEFAULT_FILTERS,
+        customerId:
+          Number.isInteger(source.customerId) && Number(source.customerId) > 0
+            ? Number(source.customerId)
+            : undefined,
+        month: month(source.month),
+        monthFrom: month(source.monthFrom),
+        monthTo: month(source.monthTo),
+        status: STATUSES.has(String(source.status))
+          ? (source.status as CustomerDemandFilters["status"])
+          : undefined,
+        sortBy: SORT_FIELDS.has(String(source.sortBy))
+          ? (source.sortBy as CustomerDemandFilters["sortBy"])
+          : "createdAt",
+        sortOrder: source.sortOrder === "asc" ? "asc" : "desc",
+        page: Number.isInteger(pageNumber) && pageNumber > 0 ? pageNumber : 1,
+        limit,
+      },
+      viewMode: saved.viewMode === "summary" ? "summary" : "vouchers",
+      customerLabel:
+        typeof saved.customerLabel === "string" ? saved.customerLabel : "",
+    };
+  } catch {
+    return DEFAULT_SETUP;
+  }
+}
+
+function getDemandSetup() {
+  if (!setupLoaded && typeof window !== "undefined") {
+    currentSetup = parseDemandSetup(localStorage.getItem(SETUP_STORAGE_KEY));
+    setupLoaded = true;
+  }
+  return currentSetup;
+}
+
+function subscribeDemandSetup(onStoreChange: () => void) {
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key && event.key !== SETUP_STORAGE_KEY) return;
+    setupLoaded = false;
+    onStoreChange();
+  };
+  window.addEventListener("storage", handleStorage);
+  window.addEventListener(SETUP_EVENT, onStoreChange);
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener(SETUP_EVENT, onStoreChange);
+  };
+}
+
+function writeDemandSetup(next: DemandPageSetup) {
+  currentSetup = next;
+  setupLoaded = true;
+  try {
+    localStorage.setItem(SETUP_STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // Trình duyệt có thể chặn localStorage; trang vẫn dùng setup hiện tại.
+  }
+  window.dispatchEvent(new Event(SETUP_EVENT));
+}
+
 export function CustomerDemandPage() {
   const mounted = useIsClient();
   const isMobile = useIsMobile(1024);
@@ -31,8 +130,12 @@ export function CustomerDemandPage() {
   const canCreate = useCan("customer_demand", "create");
   const canUpdate = useCan("customer_demand", "update");
   const canSyncLark = user?.roles?.includes("Super Admin") ?? false;
-  const [filters, setFilters] =
-    useState<CustomerDemandFilters>(DEFAULT_FILTERS);
+  const setup = useSyncExternalStore(
+    subscribeDemandSetup,
+    getDemandSetup,
+    () => DEFAULT_SETUP
+  );
+  const { filters, viewMode, customerLabel } = setup;
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [formMonthId, setFormMonthId] = useState<number | null>(null);
   const [copySource, setCopySource] = useState<CustomerDemand | null>(null);
@@ -77,13 +180,22 @@ export function CustomerDemandPage() {
   };
 
   const setFiltersStable = (next: CustomerDemandFilters) => {
-    setFilters({
-      ...next,
-      sortBy: next.sortBy ?? "createdAt",
-      sortOrder: next.sortOrder ?? "desc",
-      page: next.page ?? 1,
-      limit: next.limit ?? 20,
+    writeDemandSetup({
+      ...setup,
+      filters: {
+        ...next,
+        sortBy: next.sortBy ?? "createdAt",
+        sortOrder: next.sortOrder ?? "desc",
+        page: next.page ?? 1,
+        limit: next.limit ?? 20,
+      },
     });
+  };
+  const setViewMode = (next: DemandViewMode) => {
+    writeDemandSetup({ ...setup, viewMode: next });
+  };
+  const setCustomerLabel = (next: string) => {
+    writeDemandSetup({ ...setup, customerLabel: next });
   };
 
   return (
@@ -105,6 +217,10 @@ export function CustomerDemandPage() {
             canCreate={canCreate}
             canUpdate={canUpdate}
             canSyncLark={canSyncLark}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            customerLabel={customerLabel}
+            onCustomerLabelChange={setCustomerLabel}
           />
         </div>
       ) : (
@@ -113,19 +229,31 @@ export function CustomerDemandPage() {
           style={{ borderColor: "var(--dt-border)" }}>
           <CustomerDemandSidebar
             filters={filters}
+            customerLabel={customerLabel}
+            onCustomerLabelChange={setCustomerLabel}
             onFiltersChange={setFiltersStable}
           />
-          <CustomerDemandTable
-            filters={filters}
-            onFiltersChange={setFiltersStable}
-            onEditDemand={openEditDemand}
-            onCopyDemand={openCopyDemand}
-            onCreate={openCreate}
-            onImport={() => setImportOpen(true)}
-            onSync={() => setSyncOpen(true)}
-            canCreate={canCreate}
-            canSyncLark={canSyncLark}
-          />
+          {viewMode === "summary" ? (
+            <CustomerDemandOrderSummary
+              filters={filters}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+            />
+          ) : (
+            <CustomerDemandTable
+              filters={filters}
+              onFiltersChange={setFiltersStable}
+              onEditDemand={openEditDemand}
+              onCopyDemand={openCopyDemand}
+              onCreate={openCreate}
+              onImport={() => setImportOpen(true)}
+              onSync={() => setSyncOpen(true)}
+              canCreate={canCreate}
+              canSyncLark={canSyncLark}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+            />
+          )}
         </div>
       )}
 

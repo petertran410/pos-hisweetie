@@ -83,12 +83,42 @@ export interface CustomerDemandListResponse {
   totalPages: number;
 }
 
+export interface CustomerDemandOrderSummary {
+  months: string[];
+  products: Array<{
+    product: { id: number; code: string; name: string; unit: string | null };
+    customerCount: number;
+    totalQuantityBase: number;
+    quantities: Record<string, number>;
+    customers?: Array<{ id: number; code: string | null; name: string }>;
+    customersByMonth?: Record<
+      string,
+      Array<{ id: number; code: string | null; name: string }>
+    >;
+    detailsByMonth?: Record<
+      string,
+      Array<{
+        demandId: number;
+        demandMonthId: number;
+        demandMonth: string;
+        customer: { id: number; code: string | null; name: string };
+        quantityBase: number;
+        inputQuantity: number;
+        inputUnit: string;
+      }>
+    >;
+  }>;
+  totals: Record<string, number>;
+  totalQuantityBase: number;
+}
+
 export interface CustomerDemandFilters {
   customerId?: number;
   month?: string;
   monthFrom?: string;
   monthTo?: string;
   status?: CustomerDemandStatus;
+  search?: string;
   sortBy?: CustomerDemandSortBy;
   sortOrder?: CustomerDemandSortOrder;
   page?: number;

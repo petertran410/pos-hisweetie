@@ -20,6 +20,7 @@ import type {
   CustomerDemandSortBy,
 } from "@/lib/types/customer-demand";
 import { CustomerDemandDetailRow } from "./CustomerDemandDetailRow";
+import { DemandViewToggle, type DemandViewMode } from "./DemandViewToggle";
 import {
   DemandMonthChip,
   DemandStatusChip,
@@ -37,6 +38,8 @@ interface CustomerDemandTableProps {
   onSync: () => void;
   canCreate: boolean;
   canSyncLark: boolean;
+  viewMode: DemandViewMode;
+  onViewModeChange: (mode: DemandViewMode) => void;
 }
 
 const SORTABLE_COLUMNS: Partial<Record<string, CustomerDemandSortBy>> = {
@@ -56,6 +59,8 @@ export function CustomerDemandTable({
   onSync,
   canCreate,
   canSyncLark,
+  viewMode,
+  onViewModeChange,
 }: CustomerDemandTableProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const { data, isLoading, isError } = useCustomerDemands(filters);
@@ -98,6 +103,7 @@ export function CustomerDemandTable({
           <span className="hidden rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 md:inline-flex">
             {total.toLocaleString("vi-VN")} phiếu
           </span>
+          <DemandViewToggle mode={viewMode} onChange={onViewModeChange} />
         </div>
 
         <div className="flex shrink-0 items-center gap-2">

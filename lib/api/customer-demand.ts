@@ -11,6 +11,7 @@ import type {
   CustomerDemandLarkVoucherSplitPreview,
   CustomerDemandLarkVoucherSplitResult,
   CustomerDemandListResponse,
+  CustomerDemandOrderSummary,
   UpdateCustomerDemandRequest,
   UpdateCustomerDemandMonthRequest,
 } from '@/lib/types/customer-demand';
@@ -22,6 +23,8 @@ export const customerDemandApi = {
     apiClient.get(BASE, filters),
   searchCustomers: (search?: string): Promise<Array<{ id: number; code?: string | null; name: string }>> =>
     apiClient.get(`${BASE}/customers/search`, search?.trim() ? { search: search.trim() } : {}),
+  orderSummary: (filters: CustomerDemandFilters = {}): Promise<CustomerDemandOrderSummary> =>
+    apiClient.get(`${BASE}/order-summary`, filters),
   get: (id: number): Promise<CustomerDemand> => apiClient.get(`${BASE}/${id}`),
   create: (data: CreateCustomerDemandRequest): Promise<CustomerDemand> =>
     apiClient.post(BASE, data),

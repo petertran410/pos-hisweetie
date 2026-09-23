@@ -19,6 +19,8 @@ import type {
 } from "@/lib/types/customer-demand";
 import { CustomerDemandDetail } from "./CustomerDemandDetailRow";
 import { CustomerDemandSidebar } from "./CustomerDemandSidebar";
+import { DemandViewToggle, type DemandViewMode } from "./DemandViewToggle";
+import { CustomerDemandOrderSummary } from "./CustomerDemandOrderSummary";
 import {
   DemandMonthChip,
   DemandStatusChip,
@@ -37,6 +39,10 @@ interface CustomerDemandMobileViewProps {
   canCreate: boolean;
   canUpdate: boolean;
   canSyncLark: boolean;
+  viewMode: DemandViewMode;
+  onViewModeChange: (mode: DemandViewMode) => void;
+  customerLabel: string;
+  onCustomerLabelChange: (label: string) => void;
 }
 
 export function CustomerDemandMobileView({
@@ -50,6 +56,10 @@ export function CustomerDemandMobileView({
   canCreate,
   canUpdate,
   canSyncLark,
+  viewMode,
+  onViewModeChange,
+  customerLabel,
+  onCustomerLabelChange,
 }: CustomerDemandMobileViewProps) {
   const { data, isLoading, isError } = useCustomerDemands(filters);
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -88,6 +98,7 @@ export function CustomerDemandMobileView({
           </span>
         </div>
         <div className="mt-2 flex items-center gap-2 overflow-x-auto pb-0.5">
+          <DemandViewToggle mode={viewMode} onChange={onViewModeChange} />
           {canSyncLark && (
             <button
               type="button"
@@ -118,6 +129,14 @@ export function CustomerDemandMobileView({
         </div>
       </div>
 
+      {viewMode === "summary" ? (
+        <CustomerDemandOrderSummary
+          filters={filters}
+          viewMode={viewMode}
+          onViewModeChange={onViewModeChange}
+          embedded
+        />
+      ) : (
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
         {isLoading ? (
           <div className="space-y-3">
@@ -238,7 +257,9 @@ export function CustomerDemandMobileView({
           </div>
         )}
       </div>
+      )}
 
+      {viewMode === "vouchers" && (
       <div className="flex shrink-0 items-center justify-between border-t bg-white px-3 py-2">
         <button
           type="button"
@@ -268,6 +289,8 @@ export function CustomerDemandMobileView({
         </button>
       </div>
 
+      )}
+
       {filtersOpen && (
         <div
           className="fixed inset-0 z-[70] flex bg-black/30"
@@ -277,6 +300,8 @@ export function CustomerDemandMobileView({
             onClick={(event) => event.stopPropagation()}>
             <CustomerDemandSidebar
               filters={filters}
+              customerLabel={customerLabel}
+              onCustomerLabelChange={onCustomerLabelChange}
               onFiltersChange={onFiltersChange}
               onClose={() => setFiltersOpen(false)}
             />

@@ -154,16 +154,20 @@ function StatusDropdown({
 
 interface CustomerDemandSidebarProps {
   filters: CustomerDemandFilters;
+  customerLabel: string;
+  onCustomerLabelChange: (label: string) => void;
   onFiltersChange: (filters: CustomerDemandFilters) => void;
   onClose?: () => void;
 }
 
 export function CustomerDemandSidebar({
   filters,
+  customerLabel,
+  onCustomerLabelChange,
   onFiltersChange,
   onClose,
 }: CustomerDemandSidebarProps) {
-  const [customerQuery, setCustomerQuery] = useState("");
+  const [customerQuery, setCustomerQuery] = useState(customerLabel);
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [customerOpen, setCustomerOpen] = useState(false);
   const customerRef = useRef<HTMLDivElement>(null);
@@ -214,6 +218,7 @@ export function CustomerDemandSidebar({
   const clearAll = () => {
     setCustomerQuery("");
     setCustomerOpen(false);
+    onCustomerLabelChange("");
     onFiltersChange({
       page: 1,
       limit: filters.limit ?? 20,
@@ -283,6 +288,7 @@ export function CustomerDemandSidebar({
               onChange={(event) => {
                 if (filters.customerId) {
                   patchFilters({ customerId: undefined });
+                  onCustomerLabelChange("");
                 }
                 setCustomerQuery(event.target.value);
                 setCustomerOpen(true);
@@ -294,7 +300,11 @@ export function CustomerDemandSidebar({
             {filters.customerId && (
               <button
                 type="button"
-                onClick={() => patchFilters({ customerId: undefined })}
+                onClick={() => {
+                  onCustomerLabelChange("");
+                  setCustomerQuery("");
+                  patchFilters({ customerId: undefined });
+                }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 hover:text-gray-700"
                 aria-label="Bỏ lọc khách hàng">
                 <X className="h-3.5 w-3.5" />
@@ -306,7 +316,7 @@ export function CustomerDemandSidebar({
             <div className="mt-2 rounded-lg bg-brand-soft px-2.5 py-2 text-xs font-medium text-gray-700">
               {selectedCustomer
                 ? `${selectedCustomer.code ? `${selectedCustomer.code} · ` : ""}${selectedCustomer.name}`
-                : `Khách hàng #${filters.customerId}`}
+                : customerLabel || `Khách hàng #${filters.customerId}`}
             </div>
           )}
 
@@ -324,7 +334,9 @@ export function CustomerDemandSidebar({
                       key={customer.id}
                       type="button"
                       onClick={() => {
+                        const label = `${customer.code ? `${customer.code} · ` : ""}${customer.name}`;
                         patchFilters({ customerId: customer.id });
+                        onCustomerLabelChange(label);
                         setCustomerQuery(customer.name);
                         setCustomerOpen(false);
                       }}
