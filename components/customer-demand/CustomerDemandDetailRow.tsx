@@ -331,18 +331,16 @@ export function CustomerDemandDetail({
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4">
         <div className="flex items-center gap-2">
-          {actionMonth &&
-            actionMonth.status !== "CANCELLED" &&
-            canCancel && (
-              <button
-                type="button"
-                disabled={cancel.isPending}
-                onClick={() => void handleCancel(actionMonth.id)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">
-                <SquareX className="h-3.5 w-3.5" />
-                Hủy
-              </button>
-            )}
+          {actionMonth && actionMonth.status !== "CANCELLED" && canCancel && (
+            <button
+              type="button"
+              disabled={cancel.isPending}
+              onClick={() => void handleCancel(actionMonth.id)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">
+              <SquareX className="h-3.5 w-3.5" />
+              Hủy
+            </button>
+          )}
           {actionMonth && canCreate && (
             <button
               type="button"
@@ -355,9 +353,7 @@ export function CustomerDemandDetail({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {actionMonth &&
-            actionMonth.status !== "CANCELLED" &&
-            canUpdate && (
+          {actionMonth && actionMonth.status !== "CANCELLED" && canUpdate && (
             <button
               type="button"
               onClick={() => onEditMonth(actionMonth.id)}
@@ -382,9 +378,7 @@ function InfoField({
   return (
     <div className="flex flex-col gap-2">
       <label className="block text-sm text-gray-500">{label}</label>
-      <span className="block border-b pb-1 text-sm text-gray-900">
-        {value}
-      </span>
+      <span className="block border-b pb-1 text-sm text-gray-900">{value}</span>
     </div>
   );
 }
