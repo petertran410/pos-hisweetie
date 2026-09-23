@@ -302,8 +302,9 @@ export function CustomerDemandLarkSyncModal({
                 </Notice>
               )}
               <Notice tone="success">
-                Dữ liệu hợp lệ sẽ vào trạng thái <b>Đã duyệt</b>. Đồng bộ không
-                xóa hoặc hủy dữ liệu POS hiện có.
+                Dữ liệu hợp lệ sẽ vào trạng thái <b>Hoàn thành</b> và được cộng
+                vào dự kiến đặt hàng. Đồng bộ không xóa hoặc hủy dữ liệu POS
+                hiện có.
               </Notice>
             </div>
 

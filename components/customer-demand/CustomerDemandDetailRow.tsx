@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import {
-  Check,
   ChevronDown,
   ChevronUp,
   Copy,
@@ -15,7 +14,6 @@ import {
 import { toast } from "sonner";
 import { useCan } from "@/lib/hooks/useCan";
 import {
-  useApproveCustomerDemandMonth,
   useCancelCustomerDemandMonth,
   useCustomerDemand,
 } from "@/lib/hooks/useCustomerDemand";
@@ -66,11 +64,9 @@ export function CustomerDemandDetail({
   onCopyMonth,
 }: CustomerDemandDetailProps) {
   const { data: demand, isLoading } = useCustomerDemand(demandId);
-  const canApprove = useCan("customer_demand", "approve");
   const canCancel = useCan("customer_demand", "cancel");
   const canCreate = useCan("customer_demand", "create");
   const canUpdate = useCan("customer_demand", "update");
-  const approve = useApproveCustomerDemandMonth();
   const cancel = useCancelCustomerDemandMonth();
   const [collapsedMonths, setCollapsedMonths] = useState<
     Record<number, boolean>
@@ -98,17 +94,6 @@ export function CustomerDemandDetail({
   );
   const actionMonth = editableMonths[0] ?? demand.months[0] ?? null;
   const aggregateStatus = getAggregateStatus(demand);
-
-  const handleApprove = async (monthId: number) => {
-    try {
-      await approve.mutateAsync(monthId);
-      toast.success("Đã xác nhận tháng Demand");
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Không thể xác nhận Demand"
-      );
-    }
-  };
 
   const handleCancel = async (monthId: number) => {
     if (
@@ -210,7 +195,9 @@ export function CustomerDemandDetail({
               (sum, line) => sum + Number(line.quantityBase || 0),
               0
             );
-            const logs = (month.changeLogs ?? []).slice(0, 3);
+            const logs = (month.changeLogs ?? [])
+              .filter((log) => log.action !== "APPROVE")
+              .slice(0, 3);
 
             return (
               <section key={month.id}>
@@ -312,7 +299,7 @@ export function CustomerDemandDetail({
                                     ? "Thùng"
                                     : (line.product?.unit ?? "Đơn vị")}
                                 </td>
-                                <td className="px-[10px] py-2 text-center text-sm font-semibold text-gray-900">
+                                <td className="px-[10px] py-2 text-right text-sm font-semibold text-gray-900">
                                   {formatDemandQty(line.inputQuantity)}
                                 </td>
                                 <td className="px-[10px] py-2 text-right text-sm font-semibold text-gray-900">
@@ -368,16 +355,6 @@ export function CustomerDemandDetail({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {actionMonth?.status === "DRAFT" && canApprove && (
-            <button
-              type="button"
-              disabled={approve.isPending}
-              onClick={() => void handleApprove(actionMonth.id)}
-              className="inline-flex items-center gap-1.5 rounded-full bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50">
-              <Check className="h-3.5 w-3.5" />
-              Duyệt
-            </button>
-          )}
           {actionMonth &&
             actionMonth.status !== "CANCELLED" &&
             canUpdate && (
@@ -436,8 +413,8 @@ function getAggregateStatusLabel(demand: CustomerDemand) {
   const cancelled = months.filter(
     (month) => month.status === "CANCELLED"
   ).length;
-  if (draft > 0) return `${draft} chờ duyệt`;
-  if (confirmed === months.length) return `${confirmed} đã duyệt`;
+  if (draft > 0) return `${draft} chưa cập nhật`;
+  if (confirmed === months.length) return `${confirmed} hoàn thành`;
   if (cancelled === months.length) return "Đã hủy";
-  return `${confirmed} duyệt · ${cancelled} hủy`;
+  return `${confirmed} hoàn thành · ${cancelled} hủy`;
 }

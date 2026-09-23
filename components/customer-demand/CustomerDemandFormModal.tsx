@@ -198,7 +198,7 @@ function CustomerDemandFormBody({
           note: note.trim() || undefined,
           months: [{ month, lines: preparedLines }],
         });
-        toast.success("Đã tạo Demand khách hàng ở trạng thái nháp");
+        toast.success("Đã tạo Demand khách hàng ở trạng thái hoàn thành");
       }
       onClose();
     } catch (error) {
@@ -227,7 +227,7 @@ function CustomerDemandFormBody({
       }
       subtitle={
         isCopy
-          ? "Dữ liệu đã được sao chép vào phiếu mới nhưng chưa được lưu. Chỉnh sửa nếu cần rồi bấm tạo phiếu nháp."
+          ? "Dữ liệu đã được sao chép vào phiếu mới nhưng chưa được lưu. Chỉnh sửa nếu cần rồi bấm tạo phiếu."
           : "Demand chỉ phục vụ dự kiến đặt hàng; không tạo Order, hóa đơn, công nợ hoặc giữ tồn."
       }
       footer={
@@ -247,7 +247,7 @@ function CustomerDemandFormBody({
               ) : undefined
             }
             onClick={submit}>
-            {editing ? "Lưu tháng" : "Tạo phiếu nháp"}
+            {editing ? "Lưu tháng" : "Tạo phiếu"}
           </DemandButton>
         </>
       }>
@@ -470,12 +470,12 @@ function CustomerDemandFormBody({
           {editMonth?.status === "CONFIRMED" && (
             <div className="mt-3 shrink-0">
               <label className="cd-field-label">
-                Lý do thay đổi tháng đã xác nhận *
+                Lý do thay đổi Demand đã hoàn thành *
               </label>
               <textarea
                 value={changeNote}
                 onChange={(event) => setChangeNote(event.target.value)}
-                placeholder="Nhập lý do nếu số lượng, sản phẩm hoặc tháng thay đổi"
+                placeholder="Nhập lý do nếu khách hàng, số lượng, sản phẩm hoặc tháng thay đổi"
                 className="cd-textarea"
                 rows={2}
               />

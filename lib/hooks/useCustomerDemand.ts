@@ -64,11 +64,6 @@ export function useUpdateCustomerDemandMonth() {
   });
 }
 
-export function useApproveCustomerDemandMonth() {
-  const invalidate = useInvalidateCustomerDemand();
-  return useMutation({ mutationFn: (id: number) => customerDemandApi.approveMonth(id), onSuccess: invalidate });
-}
-
 export function useCancelCustomerDemandMonth() {
   const invalidate = useInvalidateCustomerDemand();
   return useMutation({ mutationFn: ({ id, reason }: { id: number; reason?: string }) => customerDemandApi.cancelMonth(id, reason), onSuccess: invalidate });

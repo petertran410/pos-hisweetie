@@ -10,8 +10,8 @@ export type CustomerDemandSortBy =
 export type CustomerDemandSortOrder = 'asc' | 'desc';
 
 export const CUSTOMER_DEMAND_STATUS_LABEL: Record<CustomerDemandStatus, string> = {
-  DRAFT: 'Nháp',
-  CONFIRMED: 'Đã xác nhận',
+  DRAFT: 'Chưa cập nhật',
+  CONFIRMED: 'Hoàn thành',
   CANCELLED: 'Đã hủy',
 };
 
@@ -86,6 +86,8 @@ export interface CustomerDemandListResponse {
 export interface CustomerDemandFilters {
   customerId?: number;
   month?: string;
+  monthFrom?: string;
+  monthTo?: string;
   status?: CustomerDemandStatus;
   sortBy?: CustomerDemandSortBy;
   sortOrder?: CustomerDemandSortOrder;

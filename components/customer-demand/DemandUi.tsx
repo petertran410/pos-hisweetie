@@ -11,8 +11,8 @@ import type { CustomerDemandStatus } from "@/lib/types/customer-demand";
 import "./customer-demand.css";
 
 export const DEMAND_STATUS_DISPLAY: Record<CustomerDemandStatus, string> = {
-  DRAFT: "Chờ duyệt",
-  CONFIRMED: "Đã duyệt",
+  DRAFT: "Chưa cập nhật",
+  CONFIRMED: "Hoàn thành",
   CANCELLED: "Đã hủy",
 };
 

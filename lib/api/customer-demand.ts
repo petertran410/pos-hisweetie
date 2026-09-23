@@ -31,8 +31,6 @@ export const customerDemandApi = {
     id: number,
     data: UpdateCustomerDemandMonthRequest
   ): Promise<CustomerDemand> => apiClient.patch(`${BASE}/months/${id}`, data),
-  approveMonth: (id: number): Promise<{ id: number; status: string }> =>
-    apiClient.post(`${BASE}/months/${id}/approve`, {}),
   cancelMonth: (id: number, reason?: string): Promise<{ id: number; status: string }> =>
     apiClient.post(`${BASE}/months/${id}/cancel`, reason ? { reason } : {}),
   importPreview: (file: File): Promise<CustomerDemandImportPreview> => {

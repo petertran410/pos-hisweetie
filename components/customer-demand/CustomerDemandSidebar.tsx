@@ -4,13 +4,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
-  Calendar,
   Check,
   ChevronDown,
   RotateCcw,
   Search,
   X,
 } from "lucide-react";
+import { DatePickerInput } from "@/components/ui/DatePickerInput";
+import { SimpleDropdown } from "@/components/shared/SimpleDropdown";
 import { useCustomerDemandCustomers } from "@/lib/hooks/useCustomerDemand";
 import type {
   CustomerDemandFilters,
@@ -25,14 +26,8 @@ const STATUS_OPTIONS: Array<{
   dot: string;
 }> = [
   {
-    value: "DRAFT",
-    label: "Chờ duyệt",
-    className: "bg-yellow-100 text-yellow-700",
-    dot: "bg-yellow-400",
-  },
-  {
     value: "CONFIRMED",
-    label: "Đã duyệt",
+    label: "Hoàn thành",
     className: "bg-teal-100 text-teal-700",
     dot: "bg-teal-500",
   },
@@ -50,6 +45,112 @@ const SORT_OPTIONS: Array<{ value: CustomerDemandSortBy; label: string }> = [
   { value: "customerName", label: "Tên khách hàng" },
   { value: "id", label: "Mã phiếu" },
 ];
+
+function StatusDropdown({
+  options,
+  value,
+  placeholder,
+  onChange,
+}: {
+  options: typeof STATUS_OPTIONS;
+  value: CustomerDemandStatus | "";
+  placeholder: string;
+  onChange: (value: CustomerDemandStatus | "") => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const selected = options.find((option) => option.value === value);
+
+  return (
+    <div ref={ref} className="relative">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((current) => !current)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") setOpen((current) => !current);
+        }}
+        className={`flex w-full cursor-pointer select-none items-center justify-between gap-2 rounded-lg border bg-white px-2 py-1 text-sm transition-colors ${
+          open
+            ? "border-brand ring-2 ring-brand-soft"
+            : "hover:border-gray-400"
+        }`}>
+        <div className="flex min-w-0 items-center gap-2">
+          {selected ? (
+            <>
+              <span
+                className={`h-2 w-2 shrink-0 rounded-full ${selected.dot}`}
+              />
+              <span
+                className={`truncate rounded-full px-2 py-0.5 text-xs font-medium ${selected.className}`}>
+                {selected.label}
+              </span>
+            </>
+          ) : (
+            <span className="text-sm text-gray-400">{placeholder}</span>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          {selected && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onChange("");
+              }}
+              className="rounded p-0.5 text-gray-300 hover:text-gray-500">
+              <X className="h-3 w-3" />
+            </button>
+          )}
+          <ChevronDown
+            className={`h-4 w-4 text-gray-400 transition-transform ${
+              open ? "rotate-180" : ""
+            }`}
+          />
+        </div>
+      </div>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
+          {options.map((option, index) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => {
+                onChange(value === option.value ? "" : option.value);
+                setOpen(false);
+              }}
+              className={`flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm transition-colors ${
+                value === option.value ? "bg-brand-soft" : "hover:bg-gray-50"
+              } ${index > 0 ? "border-t border-gray-50" : ""}`}>
+              <span
+                className={`h-2 w-2 shrink-0 rounded-full ${option.dot}`}
+              />
+              <span
+                className={`flex-1 rounded-full px-2 py-0.5 text-xs font-medium ${option.className}`}>
+                {option.label}
+              </span>
+              {value === option.value && (
+                <Check className="h-3.5 w-3.5 shrink-0 text-brand" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface CustomerDemandSidebarProps {
   filters: CustomerDemandFilters;
@@ -100,7 +201,7 @@ export function CustomerDemandSidebar({
 
   const activeFilterCount =
     Number(!!filters.customerId) +
-    Number(!!filters.month) +
+    Number(!!filters.month || !!filters.monthFrom || !!filters.monthTo) +
     Number(!!filters.status) +
     Number(
       filters.sortBy !== "createdAt" || filters.sortOrder === "asc"
@@ -159,48 +260,16 @@ export function CustomerDemandSidebar({
           <label className="mb-2 block text-sm font-medium text-gray-700">
             Trạng thái
           </label>
-          <div className="space-y-1.5">
-            <button
-              type="button"
-              onClick={() => patchFilters({ status: undefined })}
-              className={`flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left text-sm transition-colors ${
-                !filters.status
-                  ? "border-brand bg-brand-soft text-gray-900"
-                  : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-              }`}>
-              <span className="flex-1">Tất cả trạng thái</span>
-              {!filters.status && <Check className="h-3.5 w-3.5 text-brand" />}
-            </button>
-            {STATUS_OPTIONS.map((option) => {
-              const active = filters.status === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() =>
-                    patchFilters({
-                      status: active ? undefined : option.value,
-                    })
-                  }
-                  className={`flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-colors ${
-                    active
-                      ? "border-brand bg-brand-soft"
-                      : "border-gray-200 bg-white hover:border-gray-300"
-                  }`}>
-                  <span
-                    className={`h-2 w-2 shrink-0 rounded-full ${option.dot}`}
-                  />
-                  <span
-                    className={`flex-1 rounded-full px-2 py-0.5 text-xs font-medium ${option.className}`}>
-                    {option.label}
-                  </span>
-                  {active && (
-                    <Check className="h-3.5 w-3.5 shrink-0 text-brand" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
+          <StatusDropdown
+            options={STATUS_OPTIONS}
+            value={filters.status ?? ""}
+            placeholder="Tất cả trạng thái"
+            onChange={(value) =>
+              patchFilters({
+                status: value || undefined,
+              })
+            }
+          />
         </div>
 
         <div ref={customerRef} className="relative">
@@ -279,25 +348,62 @@ export function CustomerDemandSidebar({
           <label className="mb-2 block text-sm font-medium text-gray-700">
             Tháng cần hàng
           </label>
-          <div className="relative">
-            <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              type="month"
-              value={filters.month ?? ""}
-              onChange={(event) =>
-                patchFilters({ month: event.target.value || undefined })
-              }
-              className="w-full rounded-lg border bg-white py-2 pl-9 pr-8 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand-soft"
-            />
-            {filters.month && (
-              <button
-                type="button"
-                onClick={() => patchFilters({ month: undefined })}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 hover:text-gray-700"
-                aria-label="Bỏ lọc tháng">
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
+          <div className="space-y-2 rounded-xl border border-gray-200 bg-gray-50/70 p-2.5">
+            <div>
+              <span className="mb-1 block text-xs text-gray-500">
+                Từ tháng
+              </span>
+              <DatePickerInput
+                monthOnly
+                value={
+                  filters.monthFrom ? `${filters.monthFrom}-01` : ""
+                }
+                onChange={(value) => {
+                  const monthFrom = value ? value.slice(0, 7) : undefined;
+                  patchFilters({
+                    monthFrom,
+                    month: undefined,
+                    ...(monthFrom &&
+                    filters.monthTo &&
+                    filters.monthTo < monthFrom
+                      ? { monthTo: undefined }
+                      : {}),
+                  });
+                }}
+                placeholder="Chọn tháng"
+                className={`flex w-full items-center justify-between border rounded-lg px-2 py-1.5 text-sm text-left transition-colors ${
+                  filters.monthFrom
+                    ? "border-brand bg-brand-soft text-gray-800"
+                    : "border-gray-200 bg-white text-gray-400 hover:border-gray-300"
+                }`}
+              />
+            </div>
+            <div>
+              <span className="mb-1 block text-xs text-gray-500">
+                Đến tháng
+              </span>
+              <DatePickerInput
+                monthOnly
+                value={filters.monthTo ? `${filters.monthTo}-01` : ""}
+                minDate={
+                  filters.monthFrom
+                    ? `${filters.monthFrom}-01`
+                    : undefined
+                }
+                onChange={(value) =>
+                  patchFilters({
+                    monthTo: value ? value.slice(0, 7) : undefined,
+                    month: undefined,
+                  })
+                }
+                placeholder="Chọn tháng"
+                className={`flex w-full items-center justify-between border rounded-lg px-2 py-1.5 text-sm text-left transition-colors ${
+                  filters.monthTo
+                    ? "border-brand bg-brand-soft text-gray-800"
+                    : "border-gray-200 bg-white text-gray-400 hover:border-gray-300"
+                }`}
+              />
+            </div>
           </div>
         </div>
 
@@ -306,24 +412,20 @@ export function CustomerDemandSidebar({
             Sắp xếp
           </label>
           <div className="flex items-center gap-2">
-            <div className="relative min-w-0 flex-1">
-              <select
+            <div className="min-w-0 flex-1">
+              <SimpleDropdown
+                options={SORT_OPTIONS}
                 value={filters.sortBy ?? "createdAt"}
-                onChange={(event) =>
+                placeholder="Ngày tạo"
+                onChange={(value) => {
+                  if (!value) return;
+                  const sortBy = value as CustomerDemandSortBy;
                   patchFilters({
-                    sortBy: event.target.value as CustomerDemandSortBy,
-                    sortOrder:
-                      event.target.value === "customerName" ? "asc" : "desc",
-                  })
-                }
-                className="w-full appearance-none rounded-lg border bg-white px-3 py-2 pr-8 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand-soft">
-                {SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    sortBy,
+                    sortOrder: sortBy === "customerName" ? "asc" : "desc",
+                  });
+                }}
+              />
             </div>
             <button
               type="button"

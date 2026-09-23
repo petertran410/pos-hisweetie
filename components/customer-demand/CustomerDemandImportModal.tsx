@@ -46,7 +46,7 @@ export function CustomerDemandImportModal({
       queryClient.invalidateQueries({ queryKey: ["customer-demand"] });
       queryClient.invalidateQueries({ queryKey: ["purchasing-planning"] });
       toast.success(
-        `Đã import ${data.vouchers} phiếu nháp (${data.imported} dòng)`
+        `Đã import ${data.vouchers} phiếu hoàn thành (${data.imported} dòng)`
       );
     },
     onError: (error: Error) => toast.error(error.message || "Import thất bại"),
@@ -108,7 +108,7 @@ export function CustomerDemandImportModal({
       size="import"
       closeOnOverlay
       title="Import Demand khách hàng"
-      subtitle="Mỗi khách hàng và tháng tạo thành một phiếu nháp; các dòng sản phẩm gồm cả SKU trùng đều được giữ riêng. Cần duyệt tháng trước khi cộng vào dự kiến đặt hàng."
+      subtitle="Mỗi khách hàng và tháng tạo thành một phiếu hoàn thành; các dòng sản phẩm gồm cả SKU trùng đều được giữ riêng và được cộng ngay vào dự kiến đặt hàng."
       footer={
         result ? (
           <>
@@ -138,7 +138,7 @@ export function CustomerDemandImportModal({
               {commitMutation.isPending
                 ? "Đang import..."
                 : preview
-                  ? `Import ${preview.vouchers} phiếu nháp`
+                  ? `Import ${preview.vouchers} phiếu hoàn thành`
                   : "Import"}
             </DemandButton>
           </>
@@ -290,7 +290,7 @@ export function CustomerDemandImportModal({
                                 {row.errors.join("; ")}
                               </span>
                             ) : (row.voucherIndex ?? 1) > 1 ? (
-                              <span className="cd-chip cd-chip-draft">
+                              <span className="cd-chip cd-chip-confirmed">
                                 Phiếu {row.voucherIndex}
                               </span>
                             ) : (
@@ -316,9 +316,9 @@ export function CustomerDemandImportModal({
               Import thành công
             </p>
             <p className="cd-subtitle mx-auto max-w-lg">
-              Đã tạo {result.vouchers} phiếu nháp ({result.months} tháng),{" "}
-              {result.imported} dòng trên tổng {result.total} dòng. Hãy duyệt
-              từng tháng nếu muốn cộng vào dự kiến đặt hàng.
+              Đã tạo {result.vouchers} phiếu hoàn thành ({result.months} tháng),{" "}
+              {result.imported} dòng trên tổng {result.total} dòng và đã cộng
+              vào dự kiến đặt hàng.
             </p>
           </div>
         )}

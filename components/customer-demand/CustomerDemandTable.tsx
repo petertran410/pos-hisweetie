@@ -427,13 +427,15 @@ function RowStatus({ row }: { row: CustomerDemand }) {
   ).length;
 
   if (draft > 0) {
-    return <DemandStatusChip status="DRAFT" label={`Chờ duyệt (${draft})`} />;
+    return (
+      <DemandStatusChip status="DRAFT" label={`Chưa cập nhật (${draft})`} />
+    );
   }
   if (months.length > 0 && confirmed === months.length) {
     return (
       <DemandStatusChip
         status="CONFIRMED"
-        label={`Đã duyệt (${confirmed})`}
+        label={`Hoàn thành (${confirmed})`}
       />
     );
   }
@@ -443,7 +445,7 @@ function RowStatus({ row }: { row: CustomerDemand }) {
   return (
     <DemandStatusChip
       status="mixed"
-      label={`${confirmed} duyệt · ${cancelled} hủy`}
+      label={`${confirmed} hoàn thành · ${cancelled} hủy`}
     />
   );
 }
