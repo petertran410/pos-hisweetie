@@ -21,8 +21,19 @@ const BASE = '/customer-demand';
 export const customerDemandApi = {
   list: (filters: CustomerDemandFilters = {}): Promise<CustomerDemandListResponse> =>
     apiClient.get(BASE, filters),
-  searchCustomers: (search?: string): Promise<Array<{ id: number; code?: string | null; name: string }>> =>
-    apiClient.get(`${BASE}/customers/search`, search?.trim() ? { search: search.trim() } : {}),
+  searchCustomers: async (
+    search?: string
+  ): Promise<Array<{ id: number; code?: string | null; name: string }>> => {
+    const response = await apiClient.get<
+      | Array<{ id: number; code?: string | null; name: string }>
+      | { data?: Array<{ id: number; code?: string | null; name: string }> }
+    >(
+      "/customers/search",
+      search?.trim() ? { search: search.trim() } : {}
+    );
+    if (Array.isArray(response)) return response;
+    return Array.isArray(response?.data) ? response.data : [];
+  },
   orderSummary: (filters: CustomerDemandFilters = {}): Promise<CustomerDemandOrderSummary> =>
     apiClient.get(`${BASE}/order-summary`, filters),
   get: (id: number): Promise<CustomerDemand> => apiClient.get(`${BASE}/${id}`),

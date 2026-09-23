@@ -19,6 +19,8 @@ import type {
 } from "@/lib/types/customer-demand";
 import { CustomerDemandDetail } from "./CustomerDemandDetailRow";
 import { CustomerDemandSidebar } from "./CustomerDemandSidebar";
+import { CustomerDemandCustomerSearch } from "./CustomerDemandCustomerSearch";
+import { CustomerDemandExportMenu } from "./CustomerDemandExportMenu";
 import { DemandViewToggle, type DemandViewMode } from "./DemandViewToggle";
 import { CustomerDemandOrderSummary } from "./CustomerDemandOrderSummary";
 import {
@@ -39,10 +41,9 @@ interface CustomerDemandMobileViewProps {
   canCreate: boolean;
   canUpdate: boolean;
   canSyncLark: boolean;
+  canExport: boolean;
   viewMode: DemandViewMode;
   onViewModeChange: (mode: DemandViewMode) => void;
-  customerLabel: string;
-  onCustomerLabelChange: (label: string) => void;
 }
 
 export function CustomerDemandMobileView({
@@ -56,10 +57,9 @@ export function CustomerDemandMobileView({
   canCreate,
   canUpdate,
   canSyncLark,
+  canExport,
   viewMode,
   onViewModeChange,
-  customerLabel,
-  onCustomerLabelChange,
 }: CustomerDemandMobileViewProps) {
   const { data, isLoading, isError } = useCustomerDemands(filters);
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -99,6 +99,17 @@ export function CustomerDemandMobileView({
         </div>
         <div className="mt-2 flex items-center gap-2 overflow-x-auto pb-0.5">
           <DemandViewToggle mode={viewMode} onChange={onViewModeChange} />
+          {viewMode !== "summary" && (
+            <CustomerDemandCustomerSearch
+              filters={filters}
+              onFiltersChange={onFiltersChange}
+              className="min-w-[280px] shrink-0"
+            />
+          )}
+          <CustomerDemandExportMenu
+            filters={filters}
+            canExport={canExport}
+          />
           {canSyncLark && (
             <button
               type="button"
@@ -134,6 +145,7 @@ export function CustomerDemandMobileView({
           filters={filters}
           viewMode={viewMode}
           onViewModeChange={onViewModeChange}
+          canExport={canExport}
           embedded
         />
       ) : (
@@ -300,8 +312,6 @@ export function CustomerDemandMobileView({
             onClick={(event) => event.stopPropagation()}>
             <CustomerDemandSidebar
               filters={filters}
-              customerLabel={customerLabel}
-              onCustomerLabelChange={onCustomerLabelChange}
               onFiltersChange={onFiltersChange}
               onClose={() => setFiltersOpen(false)}
             />

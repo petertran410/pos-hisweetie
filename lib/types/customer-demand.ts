@@ -114,6 +114,7 @@ export interface CustomerDemandOrderSummary {
 
 export interface CustomerDemandFilters {
   customerId?: number;
+  customerSearch?: string;
   month?: string;
   monthFrom?: string;
   monthTo?: string;

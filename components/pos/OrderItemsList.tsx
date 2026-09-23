@@ -43,11 +43,22 @@ import {
 import { ProductInventoryModal } from "./ProductInventoryModal";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { ProductInventoryMobileSheet } from "./ProductInventoryMobileSheet";
+import { UnitPicker } from "./UnitPicker";
 import {
   getItemOnHand as getItemOnHandHelper,
   getPromoStockWarning,
   getStockWarning as getStockWarningHelper,
 } from "@/lib/utils/inventory";
+import {
+  formatDisplayedQuantity,
+  getBaseUnitLabel,
+  getQuantityStep,
+  normalizeQuantityUnit,
+  parseQuantityInput,
+  supportsCartonUnit,
+  toBaseQuantity,
+  type CartQuantityUnit,
+} from "./quantity-utils";
 
 interface CartItemsListProps {
   cartItems: CartItem[];
@@ -222,17 +233,39 @@ export function OrderItemsList({
 
   const getCartItemKey = (item: CartItem): string => item.rowId;
 
+  const getQuantityUnit = (item: CartItem): CartQuantityUnit =>
+    normalizeQuantityUnit(
+      item.quantityUnit,
+      item.product,
+      item.conversionValueSnapshot,
+    );
+
   const getQuantityDisplay = (item: CartItem): string => {
-    return quantityDisplays[getCartItemKey(item)] ?? String(item.quantity);
+    return (
+      quantityDisplays[getCartItemKey(item)] ??
+      formatDisplayedQuantity(
+        item.quantity,
+        getQuantityUnit(item),
+        item.product,
+        item.conversionValueSnapshot,
+      )
+    );
   };
 
   const handleQuantityChange = (item: CartItem, value: string) => {
     const key = getCartItemKey(item);
-    const onlyNumbers = value.replace(/[^\d]/g, "");
-    setQuantityDisplays((prev) => ({ ...prev, [key]: onlyNumbers }));
-    if (onlyNumbers !== "" && onlyNumbers !== "0") {
-      const parsed = parseInt(onlyNumbers, 10);
-      onUpdateItem(item.rowId, { quantity: parsed });
+    const displayValue = value.replace(/[^\d.,]/g, "");
+    setQuantityDisplays((prev) => ({ ...prev, [key]: displayValue }));
+    const parsed = parseQuantityInput(displayValue);
+    if (parsed != null) {
+      onUpdateItem(item.rowId, {
+        quantity: toBaseQuantity(
+          parsed,
+          getQuantityUnit(item),
+          item.product,
+          item.conversionValueSnapshot,
+        ),
+      });
     }
   };
 
@@ -240,17 +273,42 @@ export function OrderItemsList({
     const key = getCartItemKey(item);
     const display = quantityDisplays[key];
     if (display === undefined) return;
-    const parsed = parseInt(display, 10);
-    const validQty =
-      !display || isNaN(parsed) || parsed < 1
-        ? item.quantity
-        : Math.max(1, parsed);
-    onUpdateItem(item.rowId, { quantity: validQty });
+    const parsed = parseQuantityInput(display);
+    if (parsed != null) {
+      onUpdateItem(item.rowId, {
+        quantity: toBaseQuantity(
+          parsed,
+          getQuantityUnit(item),
+          item.product,
+          item.conversionValueSnapshot,
+        ),
+      });
+    }
     setQuantityDisplays((prev) => {
       const next = { ...prev };
       delete next[key];
       return next;
     });
+  };
+
+  const handleQuantityUnitChange = (
+    item: CartItem,
+    quantityUnit: CartQuantityUnit,
+  ) => {
+    clearQuantityDisplay(item);
+    onUpdateItem(item.rowId, { quantityUnit });
+  };
+
+  const adjustQuantity = (item: CartItem, direction: -1 | 1) => {
+    const step = getQuantityStep(
+      getQuantityUnit(item),
+      item.product,
+      item.conversionValueSnapshot,
+    );
+    onUpdateItem(item.rowId, {
+      quantity: Math.max(1, Number(item.quantity || 0) + direction * step),
+    });
+    clearQuantityDisplay(item);
   };
 
   const clearQuantityDisplay = (item: CartItem) => {
@@ -390,8 +448,15 @@ export function OrderItemsList({
     <div className={className ?? "w-[60%] bg-white flex flex-col"}>
       <div className="flex-1 p-3 overflow-y-auto">
         <div>
-          {cartItems.map((item, index) => (
-            <div
+          {cartItems.map((item, index) => {
+            const quantityUnit = getQuantityUnit(item);
+            const canUseCartonUnit =
+              !item.isPromoGift &&
+              documentType !== "consignment" &&
+              supportsCartonUnit(item.product);
+
+            return (
+              <div
               key={`${item.product.id}_${item.conditionType || "normal"}_${index}`}
               className={`border p-2 lg:p-3 hover:shadow-md transition-shadow ${
                 isFirstOfGroup(index) ? "rounded-t-lg mt-2" : "border-t-0"
@@ -657,12 +722,7 @@ export function OrderItemsList({
                     ) : (
                       <>
                         <button
-                          onClick={() => {
-                            onUpdateItem(item.rowId, {
-                              quantity: Math.max(1, item.quantity - 1),
-                            });
-                            clearQuantityDisplay(item);
-                          }}
+                          onClick={() => adjustQuantity(item, -1)}
                           className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
                           <Minus className="w-3 h-3" />
                         </button>
@@ -673,19 +733,35 @@ export function OrderItemsList({
                             handleQuantityChange(item, e.target.value)
                           }
                           onBlur={() => handleQuantityBlur(item)}
-                          className="w-9 h-5 text-center border border-gray-300 rounded px-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-                          min="1"
+                          inputMode="decimal"
+                          className="w-12 h-5 text-center border border-gray-300 rounded px-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                          min="0.0001"
+                          step="any"
                         />
                         <button
-                          onClick={() => {
-                            onUpdateItem(item.rowId, {
-                              quantity: item.quantity + 1,
-                            });
-                            clearQuantityDisplay(item);
-                          }}
+                          onClick={() => adjustQuantity(item, 1)}
                           className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
                           <Plus className="w-3 h-3" />
                         </button>
+                        {canUseCartonUnit && (
+                          <UnitPicker
+                            size="quantity"
+                            value={quantityUnit}
+                            options={[
+                              {
+                                value: "base",
+                                label: getBaseUnitLabel(item.product),
+                              },
+                              { value: "carton", label: "Thùng" },
+                            ]}
+                            onChange={(value) =>
+                              handleQuantityUnitChange(
+                                item,
+                                value as CartQuantityUnit,
+                              )
+                            }
+                          />
+                        )}
                       </>
                     )}
                   </div>
@@ -761,12 +837,7 @@ export function OrderItemsList({
                     ) : (
                       <>
                         <button
-                          onClick={() => {
-                            onUpdateItem(item.rowId, {
-                              quantity: Math.max(1, item.quantity - 1),
-                            });
-                            clearQuantityDisplay(item);
-                          }}
+                          onClick={() => adjustQuantity(item, -1)}
                           className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
                           <Minus className="w-3 h-3" />
                         </button>
@@ -777,19 +848,35 @@ export function OrderItemsList({
                             handleQuantityChange(item, e.target.value)
                           }
                           onBlur={() => handleQuantityBlur(item)}
+                          inputMode="decimal"
                           className="w-14 h-9 text-center border border-gray-300 rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-brand"
-                          min="1"
+                          min="0.0001"
+                          step="any"
                         />
                         <button
-                          onClick={() => {
-                            onUpdateItem(item.rowId, {
-                              quantity: Math.max(1, item.quantity + 1),
-                            });
-                            clearQuantityDisplay(item);
-                          }}
+                          onClick={() => adjustQuantity(item, 1)}
                           className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
                           <Plus className="w-3 h-3" />
                         </button>
+                        {canUseCartonUnit && (
+                          <UnitPicker
+                            size="quantity"
+                            value={quantityUnit}
+                            options={[
+                              {
+                                value: "base",
+                                label: getBaseUnitLabel(item.product),
+                              },
+                              { value: "carton", label: "Thùng" },
+                            ]}
+                            onChange={(value) =>
+                              handleQuantityUnitChange(
+                                item,
+                                value as CartQuantityUnit,
+                              )
+                            }
+                          />
+                        )}
                       </>
                     )}
                   </div>
@@ -874,8 +961,9 @@ export function OrderItemsList({
                   </div>
                 )}
               </div>
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       </div>
 

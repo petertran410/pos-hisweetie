@@ -5,6 +5,7 @@ import { Check, ChevronDown, Search } from "lucide-react";
 import { useCustomerDemandOrderSummary } from "@/lib/hooks/useCustomerDemand";
 import type { CustomerDemandFilters } from "@/lib/types/customer-demand";
 import { DemandViewToggle, type DemandViewMode } from "./DemandViewToggle";
+import { CustomerDemandExportMenu } from "./CustomerDemandExportMenu";
 import {
   DemandButton,
   DemandModalShell,
@@ -33,6 +34,7 @@ interface CustomerDemandOrderSummaryProps {
   viewMode: DemandViewMode;
   onViewModeChange: (mode: DemandViewMode) => void;
   embedded?: boolean;
+  canExport: boolean;
 }
 
 export function CustomerDemandOrderSummary({
@@ -40,6 +42,7 @@ export function CustomerDemandOrderSummary({
   viewMode,
   onViewModeChange,
   embedded = false,
+  canExport,
 }: CustomerDemandOrderSummaryProps) {
   const [search, setSearch] = useState("");
   const [pickedMonths, setPickedMonths] = useState<string[] | null>(
@@ -62,6 +65,7 @@ export function CustomerDemandOrderSummary({
   const summaryFilters = useMemo(
     () => ({
       customerId: filters.customerId,
+      customerSearch: filters.customerSearch,
       month: filters.month,
       monthFrom: filters.monthFrom,
       monthTo: filters.monthTo,
@@ -69,6 +73,7 @@ export function CustomerDemandOrderSummary({
     }),
     [
       filters.customerId,
+      filters.customerSearch,
       filters.month,
       filters.monthFrom,
       filters.monthTo,
@@ -169,6 +174,11 @@ export function CustomerDemandOrderSummary({
           )}
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <CustomerDemandExportMenu
+            filters={filters}
+            search={search}
+            canExport={canExport}
+          />
           <MonthPicker
             months={availableMonths}
             selected={visibleMonths}

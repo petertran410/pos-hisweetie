@@ -35,13 +35,11 @@ const LIMITS = new Set([10, 20, 50]);
 type DemandPageSetup = {
   filters: CustomerDemandFilters;
   viewMode: DemandViewMode;
-  customerLabel: string;
 };
 
 const DEFAULT_SETUP: DemandPageSetup = {
   filters: DEFAULT_FILTERS,
   viewMode: "vouchers",
-  customerLabel: "",
 };
 
 const SETUP_EVENT = "customer-demand-setup";
@@ -54,7 +52,6 @@ function parseDemandSetup(raw: string | null): DemandPageSetup {
     const saved = JSON.parse(raw) as {
       filters?: Partial<CustomerDemandFilters>;
       viewMode?: DemandViewMode;
-      customerLabel?: string;
     };
     const source = saved.filters ?? {};
     const month = (value: unknown) =>
@@ -67,6 +64,10 @@ function parseDemandSetup(raw: string | null): DemandPageSetup {
         customerId:
           Number.isInteger(source.customerId) && Number(source.customerId) > 0
             ? Number(source.customerId)
+            : undefined,
+        customerSearch:
+          typeof source.customerSearch === "string"
+            ? source.customerSearch
             : undefined,
         month: month(source.month),
         monthFrom: month(source.monthFrom),
@@ -82,8 +83,6 @@ function parseDemandSetup(raw: string | null): DemandPageSetup {
         limit,
       },
       viewMode: saved.viewMode === "summary" ? "summary" : "vouchers",
-      customerLabel:
-        typeof saved.customerLabel === "string" ? saved.customerLabel : "",
     };
   } catch {
     return DEFAULT_SETUP;
@@ -129,13 +128,14 @@ export function CustomerDemandPage() {
   const { user } = useAuthStore();
   const canCreate = useCan("customer_demand", "create");
   const canUpdate = useCan("customer_demand", "update");
+  const canExport = useCan("customer_demand", "export");
   const canSyncLark = user?.roles?.includes("Super Admin") ?? false;
   const setup = useSyncExternalStore(
     subscribeDemandSetup,
     getDemandSetup,
     () => DEFAULT_SETUP
   );
-  const { filters, viewMode, customerLabel } = setup;
+  const { filters, viewMode } = setup;
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [formMonthId, setFormMonthId] = useState<number | null>(null);
   const [copySource, setCopySource] = useState<CustomerDemand | null>(null);
@@ -180,8 +180,9 @@ export function CustomerDemandPage() {
   };
 
   const setFiltersStable = (next: CustomerDemandFilters) => {
+    const currentSetup = getDemandSetup();
     writeDemandSetup({
-      ...setup,
+      ...currentSetup,
       filters: {
         ...next,
         sortBy: next.sortBy ?? "createdAt",
@@ -192,12 +193,8 @@ export function CustomerDemandPage() {
     });
   };
   const setViewMode = (next: DemandViewMode) => {
-    writeDemandSetup({ ...setup, viewMode: next });
+    writeDemandSetup({ ...getDemandSetup(), viewMode: next });
   };
-  const setCustomerLabel = (next: string) => {
-    writeDemandSetup({ ...setup, customerLabel: next });
-  };
-
   return (
     <PagePermissionGuard resource="customer_demand" action="view">
       {!mounted ? (
@@ -217,10 +214,9 @@ export function CustomerDemandPage() {
             canCreate={canCreate}
             canUpdate={canUpdate}
             canSyncLark={canSyncLark}
+            canExport={canExport}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
-            customerLabel={customerLabel}
-            onCustomerLabelChange={setCustomerLabel}
           />
         </div>
       ) : (
@@ -229,8 +225,6 @@ export function CustomerDemandPage() {
           style={{ borderColor: "var(--dt-border)" }}>
           <CustomerDemandSidebar
             filters={filters}
-            customerLabel={customerLabel}
-            onCustomerLabelChange={setCustomerLabel}
             onFiltersChange={setFiltersStable}
           />
           {viewMode === "summary" ? (
@@ -238,6 +232,7 @@ export function CustomerDemandPage() {
               filters={filters}
               viewMode={viewMode}
               onViewModeChange={setViewMode}
+              canExport={canExport}
             />
           ) : (
             <CustomerDemandTable
@@ -250,6 +245,7 @@ export function CustomerDemandPage() {
               onSync={() => setSyncOpen(true)}
               canCreate={canCreate}
               canSyncLark={canSyncLark}
+              canExport={canExport}
               viewMode={viewMode}
               onViewModeChange={setViewMode}
             />

@@ -1,18 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
   Check,
   ChevronDown,
   RotateCcw,
-  Search,
   X,
 } from "lucide-react";
 import { DatePickerInput } from "@/components/ui/DatePickerInput";
 import { SimpleDropdown } from "@/components/shared/SimpleDropdown";
-import { useCustomerDemandCustomers } from "@/lib/hooks/useCustomerDemand";
 import type {
   CustomerDemandFilters,
   CustomerDemandSortBy,
@@ -154,54 +152,15 @@ function StatusDropdown({
 
 interface CustomerDemandSidebarProps {
   filters: CustomerDemandFilters;
-  customerLabel: string;
-  onCustomerLabelChange: (label: string) => void;
   onFiltersChange: (filters: CustomerDemandFilters) => void;
   onClose?: () => void;
 }
 
 export function CustomerDemandSidebar({
   filters,
-  customerLabel,
-  onCustomerLabelChange,
   onFiltersChange,
   onClose,
 }: CustomerDemandSidebarProps) {
-  const [customerQuery, setCustomerQuery] = useState(customerLabel);
-  const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [customerOpen, setCustomerOpen] = useState(false);
-  const customerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQuery(customerQuery.trim()), 300);
-    return () => clearTimeout(timer);
-  }, [customerQuery]);
-
-  useEffect(() => {
-    const handleOutside = (event: MouseEvent) => {
-      if (
-        customerRef.current &&
-        !customerRef.current.contains(event.target as Node)
-      ) {
-        setCustomerOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
-  }, []);
-
-  const { data: customerData } = useCustomerDemandCustomers(
-    debouncedQuery.length >= 2 ? debouncedQuery : undefined
-  );
-  const customers = useMemo(
-    () => (Array.isArray(customerData) ? customerData : []),
-    [customerData]
-  );
-
-  const selectedCustomer = useMemo(
-    () => customers.find((item) => item.id === filters.customerId),
-    [customers, filters.customerId]
-  );
 
   const activeFilterCount =
     Number(!!filters.customerId) +
@@ -216,9 +175,6 @@ export function CustomerDemandSidebar({
   };
 
   const clearAll = () => {
-    setCustomerQuery("");
-    setCustomerOpen(false);
-    onCustomerLabelChange("");
     onFiltersChange({
       page: 1,
       limit: filters.limit ?? 20,
@@ -275,85 +231,6 @@ export function CustomerDemandSidebar({
               })
             }
           />
-        </div>
-
-        <div ref={customerRef} className="relative">
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Khách hàng
-          </label>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              value={customerQuery}
-              onChange={(event) => {
-                if (filters.customerId) {
-                  patchFilters({ customerId: undefined });
-                  onCustomerLabelChange("");
-                }
-                setCustomerQuery(event.target.value);
-                setCustomerOpen(true);
-              }}
-              onFocus={() => setCustomerOpen(true)}
-              placeholder="Tìm mã hoặc tên khách..."
-              className="w-full rounded-lg border bg-white py-2 pl-9 pr-8 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand-soft"
-            />
-            {filters.customerId && (
-              <button
-                type="button"
-                onClick={() => {
-                  onCustomerLabelChange("");
-                  setCustomerQuery("");
-                  patchFilters({ customerId: undefined });
-                }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 hover:text-gray-700"
-                aria-label="Bỏ lọc khách hàng">
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-
-          {filters.customerId && (
-            <div className="mt-2 rounded-lg bg-brand-soft px-2.5 py-2 text-xs font-medium text-gray-700">
-              {selectedCustomer
-                ? `${selectedCustomer.code ? `${selectedCustomer.code} · ` : ""}${selectedCustomer.name}`
-                : customerLabel || `Khách hàng #${filters.customerId}`}
-            </div>
-          )}
-
-          {customerOpen &&
-            !filters.customerId &&
-            debouncedQuery.length >= 2 && (
-              <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-xl border bg-white p-1.5 shadow-xl">
-                {customers.length === 0 ? (
-                  <div className="px-3 py-3 text-center text-xs text-gray-400">
-                    Không tìm thấy khách hàng
-                  </div>
-                ) : (
-                  customers.map((customer) => (
-                    <button
-                      key={customer.id}
-                      type="button"
-                      onClick={() => {
-                        const label = `${customer.code ? `${customer.code} · ` : ""}${customer.name}`;
-                        patchFilters({ customerId: customer.id });
-                        onCustomerLabelChange(label);
-                        setCustomerQuery(customer.name);
-                        setCustomerOpen(false);
-                      }}
-                      className="block w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-brand-soft">
-                      <span className="block font-medium">
-                        {customer.name}
-                      </span>
-                      {customer.code && (
-                        <span className="mt-0.5 block text-[11px] text-gray-400">
-                          {customer.code}
-                        </span>
-                      )}
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
         </div>
 
         <div>

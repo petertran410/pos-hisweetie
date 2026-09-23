@@ -20,6 +20,8 @@ import type {
   CustomerDemandSortBy,
 } from "@/lib/types/customer-demand";
 import { CustomerDemandDetailRow } from "./CustomerDemandDetailRow";
+import { CustomerDemandCustomerSearch } from "./CustomerDemandCustomerSearch";
+import { CustomerDemandExportMenu } from "./CustomerDemandExportMenu";
 import { DemandViewToggle, type DemandViewMode } from "./DemandViewToggle";
 import {
   DemandMonthChip,
@@ -38,6 +40,7 @@ interface CustomerDemandTableProps {
   onSync: () => void;
   canCreate: boolean;
   canSyncLark: boolean;
+  canExport: boolean;
   viewMode: DemandViewMode;
   onViewModeChange: (mode: DemandViewMode) => void;
 }
@@ -59,6 +62,7 @@ export function CustomerDemandTable({
   onSync,
   canCreate,
   canSyncLark,
+  canExport,
   viewMode,
   onViewModeChange,
 }: CustomerDemandTableProps) {
@@ -104,9 +108,18 @@ export function CustomerDemandTable({
             {total.toLocaleString("vi-VN")} phiếu
           </span>
           <DemandViewToggle mode={viewMode} onChange={onViewModeChange} />
+          <CustomerDemandCustomerSearch
+            filters={filters}
+            onFiltersChange={onFiltersChange}
+            className="hidden min-w-[320px] lg:block"
+          />
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
+          <CustomerDemandExportMenu
+            filters={filters}
+            canExport={canExport}
+          />
           {canSyncLark && (
             <button
               type="button"
