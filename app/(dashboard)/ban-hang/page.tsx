@@ -53,11 +53,19 @@ import { getPriceWarning, type PriceWarning } from "@/lib/utils/price-warning";
 import { formatCurrency } from "@/lib/utils";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import Swal from "sweetalert2";
+import {
+  getConversionValue,
+  normalizeQuantityUnit,
+  supportsCartonUnit,
+  type CartQuantityUnit,
+} from "@/components/pos/quantity-utils";
 
 export interface CartItem {
   rowId: string;
   product: any;
   quantity: number;
+  quantityUnit?: CartQuantityUnit;
+  conversionValueSnapshot?: number;
   price: number;
   discount: number;
   note?: string;
@@ -308,6 +316,26 @@ const getCartLineKey = (item: CartItem): string =>
     item.conditionType || "normal",
   );
 
+const getQuantityPersistence = (item: CartItem) => {
+  if (!supportsCartonUnit(item.product)) {
+    return { quantityUnit: "base" as const, conversionValueSnapshot: 1 };
+  }
+
+  const conversionValueSnapshot = getConversionValue(
+    item.product,
+    item.conversionValueSnapshot,
+  );
+
+  return {
+    quantityUnit: normalizeQuantityUnit(
+      item.quantityUnit,
+      item.product,
+      conversionValueSnapshot,
+    ),
+    conversionValueSnapshot,
+  };
+};
+
 export interface MissingOrderLine {
   productId: number;
   productName: string;
@@ -429,6 +457,17 @@ const mapDocumentLinesToCartItems = (
         rowId,
         product: item.product,
         quantity: Number(item.quantity),
+        quantityUnit: normalizeQuantityUnit(
+          item.quantityUnit,
+          item.product,
+          item.conversionValueSnapshot ??
+            item.product?.conversionValue ??
+            1,
+        ),
+        conversionValueSnapshot:
+          Number(item.conversionValueSnapshot) > 0
+            ? Number(item.conversionValueSnapshot)
+            : getConversionValue(item.product),
         price: Number(item.price),
         discount: Number(item.discount) || 0,
         note: item.note || "",
@@ -458,6 +497,17 @@ const mapDocumentLinesToCartItems = (
       rowId,
       product: item.product,
       quantity: Number(item.quantity),
+      quantityUnit: normalizeQuantityUnit(
+        item.quantityUnit,
+        item.product,
+        item.conversionValueSnapshot ??
+          item.product?.conversionValue ??
+          1,
+      ),
+      conversionValueSnapshot:
+        Number(item.conversionValueSnapshot) > 0
+          ? Number(item.conversionValueSnapshot)
+          : getConversionValue(item.product),
       price: Number(item.price),
       discount: Number(item.discount) || 0,
       note: item.note || "",
@@ -2332,6 +2382,15 @@ export default function BanHangPage() {
         rowId: `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
         product: item.product,
         quantity: Number(item.quantity),
+        quantityUnit: normalizeQuantityUnit(
+          item.quantityUnit,
+          item.product,
+          item.conversionValueSnapshot ?? item.product?.conversionValue ?? 1,
+        ),
+        conversionValueSnapshot:
+          Number(item.conversionValueSnapshot) > 0
+            ? Number(item.conversionValueSnapshot)
+            : getConversionValue(item.product),
         price: Number(item.price),
         discount: Number(item.discount) || 0,
         note: item.note || "",
@@ -2400,6 +2459,15 @@ export default function BanHangPage() {
         rowId: `${item.product?.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
         product: item.product,
         quantity: Number(item.quantity),
+        quantityUnit: normalizeQuantityUnit(
+          item.quantityUnit,
+          item.product,
+          item.conversionValueSnapshot ?? item.product?.conversionValue ?? 1,
+        ),
+        conversionValueSnapshot:
+          Number(item.conversionValueSnapshot) > 0
+            ? Number(item.conversionValueSnapshot)
+            : getConversionValue(item.product),
         price: Number(item.price),
         discount: Number(item.discount) || 0,
         note: item.note || "",
@@ -2829,6 +2897,8 @@ export default function BanHangPage() {
           orderId: activeTab.sourceOrderId,
           additionalPayment: actualPayment,
           payments: payments,
+          paymentNoteType: activeTab.paymentNoteType ?? undefined,
+          paymentType: activeTab.paymentNoteType ?? undefined,
           forceComplete,
           soldById: activeTab.soldById ?? undefined,
           // Giảm giá cấp HĐ user đang thấy trên màn tạo hóa đơn. Bắt buộc gửi
@@ -2862,6 +2932,7 @@ export default function BanHangPage() {
               productCode: item.product.code,
               productName: item.product.name,
               quantity,
+              ...getQuantityPersistence(item),
               price,
               discount,
               discountRatio: 0,
@@ -3223,6 +3294,8 @@ export default function BanHangPage() {
                   rowId: `${product.id}_${conditionType}_${soldExpiryDate || ""}_${Date.now()}`,
                   product,
                   quantity,
+                  quantityUnit: "base",
+                  conversionValueSnapshot: getConversionValue(product),
                   price: productPrice,
                   discount: 0,
                   conditionType,
@@ -3259,6 +3332,9 @@ export default function BanHangPage() {
       rowId: `${item.product.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
       product: item.product,
       quantity: 1,
+      quantityUnit: item.quantityUnit || "base",
+      conversionValueSnapshot:
+        item.conversionValueSnapshot || getConversionValue(item.product),
       price: item.price,
       discount: item.discount,
       conditionType: item.conditionType,
@@ -3372,6 +3448,7 @@ export default function BanHangPage() {
               item.isPromoGift && item.promoLineType === "discounted_buy";
             return {
               productId: Number(item.product.id),
+              ...getQuantityPersistence(item),
               quantity: Number(item.quantity),
               unitPrice: isGift ? 0 : Number(item.price),
               discount: item.isPromoGift ? 0 : Number(item.discount) || 0,
@@ -3618,12 +3695,13 @@ export default function BanHangPage() {
           const price = isGift ? 0 : Number(item.price);
           const quantity = Number(item.quantity);
           const discount = item.isPromoGift ? 0 : Number(item.discount) || 0;
-          return {
-            productId: Number(item.product.id),
-            productCode: item.product.code,
-            productName: item.product.name,
-            quantity: quantity,
-            price: price,
+            return {
+              productId: Number(item.product.id),
+              productCode: item.product.code,
+              productName: item.product.name,
+              quantity: quantity,
+              ...getQuantityPersistence(item),
+              price: price,
             discount: discount,
             discountRatio: 0,
             totalPrice: (price - discount) * quantity,
@@ -3877,6 +3955,7 @@ export default function BanHangPage() {
           item.isPromoGift && item.promoLineType === "discounted_buy";
         return {
           productId: Number(item.product.id),
+          ...getQuantityPersistence(item),
           quantity: Number(item.quantity),
           unitPrice: isGift ? 0 : Number(item.price),
           discount: item.isPromoGift ? 0 : Number(item.discount) || 0,
@@ -3964,6 +4043,10 @@ export default function BanHangPage() {
       documentData.purchaseDate = new Date().toISOString();
       documentData.description = activeTab.orderNote;
       documentData.paidAmount = Number(actualPayment) || 0;
+      if (activeTab.paymentNoteType) {
+        documentData.paymentNoteType = activeTab.paymentNoteType;
+        documentData.paymentType = activeTab.paymentNoteType;
+      }
       if (actualPayment > 0) {
         documentData.payments =
           activeTab.paymentMethods && activeTab.paymentMethods.length > 0
@@ -3986,6 +4069,7 @@ export default function BanHangPage() {
           productCode: item.product.code,
           productName: item.product.name,
           quantity: quantity,
+          ...getQuantityPersistence(item),
           price: price,
           discount: discount,
           discountRatio: 0,

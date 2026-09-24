@@ -1,4 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import {
   invoicesApi,
   type CreateInvoiceFromOrderRequest,
@@ -15,6 +20,7 @@ export function useInvoices(params?: any) {
   return useQuery({
     queryKey: ["invoices", params],
     queryFn: () => invoicesApi.getInvoices(params),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -26,6 +32,7 @@ export function useInvoicesTotals(params?: any) {
   return useQuery({
     queryKey: ["invoices-totals", params],
     queryFn: () => invoicesApi.getTotals(params),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -142,17 +149,20 @@ export function useUpdateInvoice() {
   });
 }
 
-export function useDeleteInvoice() {
+export function useCancelInvoice() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: invoicesApi.deleteInvoice,
+    mutationFn: ({
+      id,
+      cancelPayments,
+    }: {
+      id: number;
+      cancelPayments?: boolean;
+    }) => invoicesApi.cancelInvoice(id, { cancelPayments }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["debt-tracking"] });
       invalidateConditionQueries(queryClient);
-      toast.success("Xóa hóa đơn thành công");
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Xóa hóa đơn thất bại");
     },
   });
 }
@@ -178,34 +188,8 @@ export function useMergeInvoices() {
 export function useCreateInvoiceFromOrder() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      orderId,
-      additionalPayment,
-      items,
-      payments,
-      soldById,
-      forceComplete,
-      appliedPromotions,
-      appliedPromotionIds,
-      skipPromotions,
-      discountAmount,
-      discountRatio,
-      shippingFee,
-    }: CreateInvoiceFromOrderRequest) =>
-      invoicesApi.createInvoiceFromOrder({
-        orderId,
-        additionalPayment,
-        items,
-        payments,
-        soldById,
-        forceComplete,
-        appliedPromotions,
-        appliedPromotionIds,
-        skipPromotions,
-        discountAmount,
-        discountRatio,
-        shippingFee,
-      }),
+    mutationFn: (params: CreateInvoiceFromOrderRequest) =>
+      invoicesApi.createInvoiceFromOrder(params),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
@@ -221,34 +205,8 @@ export function useCreateInvoiceFromOrder() {
 export function useCreatePosInvoiceFromOrder() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      orderId,
-      additionalPayment,
-      items,
-      payments,
-      soldById,
-      forceComplete,
-      appliedPromotions,
-      appliedPromotionIds,
-      skipPromotions,
-      discountAmount,
-      discountRatio,
-      shippingFee,
-    }: CreateInvoiceFromOrderRequest) =>
-      invoicesApi.createPosInvoiceFromOrder({
-        orderId,
-        additionalPayment,
-        items,
-        payments,
-        soldById,
-        forceComplete,
-        appliedPromotions,
-        appliedPromotionIds,
-        skipPromotions,
-        discountAmount,
-        discountRatio,
-        shippingFee,
-      }),
+    mutationFn: (params: CreateInvoiceFromOrderRequest) =>
+      invoicesApi.createPosInvoiceFromOrder(params),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });

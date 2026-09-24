@@ -140,4 +140,27 @@ export const authApi = {
 
     return res.json();
   },
+
+  larkLoginUrl: (returnTo?: string) => {
+    const url = new URL(`${API_URL}/auth/lark`);
+    if (returnTo) url.searchParams.set("return_to", returnTo);
+    return url.toString();
+  },
+
+  setupLarkPassword: async (data: {
+    setupToken: string;
+    password: string;
+    confirmPassword: string;
+  }): Promise<LoginResponse> => {
+    const res = await fetch(`${API_URL}/auth/lark/setup-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error(error.message || "Không thể tạo mật khẩu");
+    }
+    return res.json();
+  },
 };

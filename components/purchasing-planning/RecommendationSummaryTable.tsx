@@ -166,12 +166,17 @@ const isSticky = idx < STICKY_COUNT;
           {items.map((item) => {
             const style = PRIORITY_STYLE[item.priority];
             const selected = selectedItemId === item.itemId;
+            const lowReliability =
+              item.reliability === "UNRELIABLE" || item.reliability === "BLOCKED";
+            const rowTint = style.row ?? (lowReliability ? "bg-amber-50/40" : "");
             const stickyBg = selected
               ? "bg-brand-soft group-hover:bg-brand-soft"
               : item.priority === "CRITICAL"
                 ? "bg-red-50 group-hover:bg-red-100"
                 : item.priority === "HIGH"
                   ? "bg-orange-50 group-hover:bg-orange-100"
+                  : lowReliability
+                    ? "bg-amber-50 group-hover:bg-amber-100"
                   : "bg-white group-hover:bg-gray-50";
 
             return (
@@ -179,7 +184,7 @@ const isSticky = idx < STICKY_COUNT;
                 key={item.itemId}
                 onClick={() => onSelectItem(item.itemId)}
                 className={`group cursor-pointer transition-colors hover:bg-gray-50 ${
-                  selected ? "bg-brand-soft" : (style.row ?? "")
+                  selected ? "bg-brand-soft" : rowTint
                 }`}>
                 {visibleColumns.map((col, idx) => {
                   const isSticky = idx < STICKY_COUNT;

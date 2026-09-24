@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect, Fragment, useMemo, useRef } from "react";
+import dynamic from "next/dynamic";
 import {
   useCashFlows,
   useExportCashFlows,
-  useOpeningBalance,
-  useCashFlowSummary,
 } from "@/lib/hooks/useCashflows";
 import { useBranchStore } from "@/lib/store/branch";
 import {
@@ -18,10 +17,11 @@ import {
   Download,
   Loader2,
 } from "lucide-react";
-import type { CashFlow } from "@/lib/types/cashflow";
-import { CashFlowDetailRow } from "./CashFlowDetailRow";
+import type {
+  CashFlow,
+  CashFlowQueryParams,
+} from "@/lib/types/cashflow";
 import { formatCurrency } from "@/lib/utils";
-import { CreateCashFlowModal } from "./CreateCashFlowModal";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { useCan } from "@/lib/hooks/useCan";
 import { CodeLink } from "../shared/CodeLink";
@@ -31,10 +31,22 @@ import {
   type ColumnConfig,
 } from "@/lib/hooks/useColumnVisibility";
 
+const CashFlowDetailRow = dynamic(
+  () =>
+    import("./CashFlowDetailRow").then((module) => module.CashFlowDetailRow),
+  { ssr: false }
+);
+
+const CreateCashFlowModal = dynamic(
+  () =>
+    import("./CreateCashFlowModal").then(
+      (module) => module.CreateCashFlowModal
+    ),
+  { ssr: false }
+);
+
 interface CashFlowsTableProps {
-  filters: any;
-  onCreateReceiptClick: () => void;
-  onCreatePaymentClick: () => void;
+  filters: CashFlowQueryParams;
 }
 
 const STATUS_COLOR: Record<number, string> = {
@@ -231,10 +243,9 @@ const DEFAULT_COLUMNS: ColumnConfig<CashFlow>[] = [
 
 export function CashFlowsTable({
   filters,
-  onCreateReceiptClick,
-  onCreatePaymentClick,
 }: CashFlowsTableProps) {
   const { selectedBranch } = useBranchStore();
+  const selectedBranchId = selectedBranch?.id;
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedCashFlowId, setExpandedCashFlowId] = useState<number | null>(
     null
@@ -243,7 +254,6 @@ export function CashFlowsTable({
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
-  const [activeStatusTab, setActiveStatusTab] = useState("all");
 
   // Create modal state
   const [createModalType, setCreateModalType] = useState<
@@ -258,6 +268,7 @@ export function CashFlowsTable({
   const [showExportDropdown, setShowExportDropdown] = useState(false);
 
   const { exportOverview, isExportingOverview } = useExportCashFlows();
+  const canViewBalance = useCan("cash_flows", "view_balance");
 
   // Debounce search
   useEffect(() => {
@@ -267,17 +278,11 @@ export function CashFlowsTable({
 
   // Reset page khi filter/search/tab đổi
   useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch, filters, activeStatusTab]);
+    const timer = window.setTimeout(() => setPage(1), 0);
+    return () => window.clearTimeout(timer);
+  }, [debouncedSearch, filters]);
 
-  // Tab override sidebar
-  const effectiveFilters = useMemo(() => {
-    const f = { ...filters };
-    if (activeStatusTab === "receipt") f.isReceipt = true;
-    else if (activeStatusTab === "payment") f.isReceipt = false;
-    else if (activeStatusTab === "2") f.status = 2;
-    return f;
-  }, [filters, activeStatusTab]);
+  const effectiveFilters = filters;
 
   const { columns, visibleColumns, toggleColumn } = useColumnVisibility(
     "cashFlowTableColumns",
@@ -291,18 +296,24 @@ export function CashFlowsTable({
     () => ({
       ...(effectiveFilters.code
         ? {}
-        : { branchIds: selectedBranch?.id ? [selectedBranch.id] : undefined }),
+        : { branchIds: selectedBranchId ? [selectedBranchId] : undefined }),
       ...(debouncedSearch ? { search: debouncedSearch } : {}),
       ...effectiveFilters,
     }),
-    [effectiveFilters, selectedBranch?.id, debouncedSearch]
+    [effectiveFilters, selectedBranchId, debouncedSearch]
   );
 
-  const { data, isLoading } = useCashFlows({
-    pageSize: limit,
-    currentItem: (page - 1) * limit,
-    ...summaryFilters,
-  });
+  const listParams = useMemo<CashFlowQueryParams>(
+    () => ({
+      pageSize: limit,
+      currentItem: (page - 1) * limit,
+      includeSummary: canViewBalance,
+      ...summaryFilters,
+    }),
+    [canViewBalance, limit, page, summaryFilters]
+  );
+
+  const { data, isLoading, isFetching } = useCashFlows(listParams);
 
   // Đóng dropdown khi click ngoài
   useEffect(() => {
@@ -327,31 +338,37 @@ export function CashFlowsTable({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const cashFlows = data?.data || [];
+  const cashFlows = useMemo(() => data?.data ?? [], [data?.data]);
   const total = data?.total ?? 0;
-  const totalPages = Math.ceil(total / limit) || 1;
+  const totalPages = useMemo(
+    () => Math.ceil(total / limit) || 1,
+    [total, limit]
+  );
 
   const handleExportOverview = async () => {
     setShowExportDropdown(false);
     await exportOverview(effectiveFilters);
   };
 
-  const canViewBalance = useCan("cash_flows", "view_balance");
-
-  const { data: openingBalance } = useOpeningBalance(
-    canViewBalance ? summaryFilters : null
-  );
-
-  // Tổng thu/chi lấy từ backend trên toàn bộ tập đã lọc (không theo trang).
-  const { data: summary } = useCashFlowSummary(summaryFilters);
-
-  const totalReceipt = Number(summary?.totalReceipt || 0);
-  const totalPayment = Number(summary?.totalPayment || 0);
+  const openingBalance = data?.summary?.openingBalance ?? 0;
+  const totalReceipt = data?.summary?.totalReceipt ?? 0;
+  const totalPayment = data?.summary?.totalPayment ?? 0;
 
   const closingBalance = useMemo(
-    () => Number(openingBalance || 0) + totalReceipt - totalPayment,
+    () => Number(openingBalance) + Number(totalReceipt) - Number(totalPayment),
     [openingBalance, totalReceipt, totalPayment]
   );
+
+  useEffect(() => {
+    const visibleIds = new Set(cashFlows.map((cashFlow) => cashFlow.id));
+    const timer = window.setTimeout(() => {
+      setSelectedIds((current) => {
+        const next = current.filter((id) => visibleIds.has(id));
+        return next.length === current.length ? current : next;
+      });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [cashFlows]);
 
   const toggleSelectAll = () =>
     setSelectedIds(
@@ -393,11 +410,18 @@ export function CashFlowsTable({
             </h2>
             <input
               type="text"
-              placeholder="Tìm mã phiếu, người nộp..."
+              placeholder="Tìm mã phiếu, mã tham chiếu, người nộp..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="dt-input !rounded-lg w-64"
             />
+            {isFetching && !isLoading && (
+              <Loader2
+                className="w-4 h-4 animate-spin shrink-0"
+                style={{ color: "var(--dt-primary)" }}
+                aria-label="Đang cập nhật danh sách"
+              />
+            )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <PermissionGate resource="cash_flows" action="create">

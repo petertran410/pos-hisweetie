@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Printer, Search, X } from "lucide-react";
 import type { Invoice } from "@/lib/types/invoice";
+import { invoicesApi } from "@/lib/api/invoices";
 
 type PickupRow = {
   productId: number;
@@ -145,9 +146,37 @@ function printRows(rows: PickupRow[], invoices: Invoice[]) {
 }
 
 export function InvoicePickupSummaryModal({ invoices, onClose }: Props) {
+  const [detailedInvoices, setDetailedInvoices] = useState<Invoice[] | null>(
+    null
+  );
+  const [isLoadingDetails, setIsLoadingDetails] = useState(true);
   const [search, setSearch] = useState("");
   const [isPrinting, setIsPrinting] = useState(false);
-  const rows = useMemo(() => buildRows(invoices), [invoices]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fallbackToIndividualRequests = () =>
+      Promise.all(invoices.map((invoice) => invoicesApi.getInvoice(invoice.id)));
+
+    invoicesApi
+      .getPickupDetails(invoices.map((invoice) => invoice.id))
+      .catch(fallbackToIndividualRequests)
+      .then((items) => {
+        if (!cancelled) setDetailedInvoices(items);
+      })
+      .catch(() => {
+        if (!cancelled) setDetailedInvoices(invoices);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingDetails(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [invoices]);
+
+  const sourceInvoices = detailedInvoices || invoices;
+  const rows = useMemo(() => buildRows(sourceInvoices), [sourceInvoices]);
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return rows;
@@ -173,7 +202,7 @@ export function InvoicePickupSummaryModal({ invoices, onClose }: Props) {
 
   const handlePrint = () => {
     setIsPrinting(true);
-    printRows(rows, invoices);
+    printRows(rows, sourceInvoices);
     setTimeout(() => setIsPrinting(false), 500);
   };
 
@@ -258,7 +287,24 @@ export function InvoicePickupSummaryModal({ invoices, onClose }: Props) {
                   <td className="border px-3 py-2 text-right font-bold">{numberText(rowTotal(row))}</td>
                 </tr>
               ))}
-              {filteredRows.length === 0 && <tr><td colSpan={8} className="border px-3 py-10 text-center text-gray-400">Không có sản phẩm phù hợp</td></tr>}
+              {isLoadingDetails && (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="border px-3 py-10 text-center text-gray-400">
+                    Đang tải chi tiết hóa đơn...
+                  </td>
+                </tr>
+              )}
+              {!isLoadingDetails && filteredRows.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="border px-3 py-10 text-center text-gray-400">
+                    Không có sản phẩm phù hợp
+                  </td>
+                </tr>
+              )}
             </tbody>
             <tfoot className="bg-gray-100 font-bold">
               <tr>
@@ -275,9 +321,13 @@ export function InvoicePickupSummaryModal({ invoices, onClose }: Props) {
 
         <div className="flex justify-end gap-2 border-t bg-gray-50 px-5 py-3">
           <button onClick={onClose} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Đóng</button>
-          <button onClick={handlePrint} disabled={isPrinting || rows.length === 0} className="flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-50">
+          <button onClick={handlePrint} disabled={isPrinting || isLoadingDetails || rows.length === 0} className="flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-50">
             <Printer className="h-4 w-4" />
-            {isPrinting ? "Đang tạo bản in..." : "In A5"}
+            {isPrinting
+              ? "Đang tạo bản in..."
+              : isLoadingDetails
+                ? "Đang tải dữ liệu..."
+                : "In A5"}
           </button>
         </div>
       </div>

@@ -5,21 +5,22 @@ import { useSearchParams } from "next/navigation";
 import { CashFlowsTable } from "@/components/cashflows/CashFlowsTable";
 import { CashFlowsSidebar } from "@/components/cashflows/CashFlowsSidebar";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import type { CashFlowQueryParams } from "@/lib/types/cashflow";
 
 export default function SoQuyPage() {
   const searchParams = useSearchParams();
   const codeParam = searchParams.get("Code");
 
-  const [filters, setFilters] = useState<any>(() =>
-    codeParam ? { code: codeParam } : {}
+  const [filters, setFilters] = useState<CashFlowQueryParams>(() =>
+    codeParam ? { code: [codeParam] } : {}
   );
 
   const handleFiltersChange = useCallback(
-    (newFilters: any) => {
+    (newFilters: CashFlowQueryParams) => {
       if (codeParam) {
         // Khi đang filter theo code: bỏ qua toàn bộ sidebar filters
         // để queryKey không thay đổi, tránh React Query refetch gây mất data
-        setFilters({ code: codeParam });
+        setFilters({ code: [codeParam] });
         return;
       }
       setFilters(newFilters);
@@ -38,8 +39,6 @@ export default function SoQuyPage() {
         />
         <CashFlowsTable
           filters={filters}
-          onCreateReceiptClick={() => {}}
-          onCreatePaymentClick={() => {}}
         />
       </div>
     </PagePermissionGuard>

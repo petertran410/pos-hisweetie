@@ -155,8 +155,11 @@ export function CustomerForm({
   // Đây là cấu hình dài hạn của khách nên đặt ngay trong form khách hàng,
   // không bắt người dùng sang trang theo dõi công nợ để chỉnh.
   const canManageDebtPolicy = usePermission("debt_tracking", "update_policy");
+  const canAssignSalePic = usePermission("customers", "assign_sale_pic");
   const { data: debtPolicyData } = useDebtPolicy(
-    canManageDebtPolicy && customer?.id ? customer.id : undefined
+    (canManageDebtPolicy || canAssignSalePic) && customer?.id
+      ? customer.id
+      : undefined
   );
   const { data: usersForPic } = useUsersForFilter();
   const upsertDebtPolicy = useUpsertDebtPolicy();
@@ -586,7 +589,7 @@ export function CustomerForm({
       return;
     }
 
-    if (canManageDebtPolicy && !debtPolicyForm.salePicId) {
+    if (canAssignSalePic && !debtPolicyForm.salePicId) {
       toast.error("Vui lòng chọn Sale PIC");
       setActiveFormTab("basic");
       return;
@@ -679,6 +682,14 @@ export function CustomerForm({
       birthDate: birthDate ? birthDate.toISOString() : undefined,
       gender: data.gender === "" ? undefined : data.gender === "true",
       addresses: sanitizeAddresses(addresses),
+      ...(canAssignSalePic
+        ? {
+            salePicId:
+              debtPolicyForm.salePicId === ""
+                ? undefined
+                : Number(debtPolicyForm.salePicId),
+          }
+        : {}),
       invoiceCityCode: data.invoiceCityCode || undefined,
       invoiceCityName: data.invoiceCityName || undefined,
       invoiceWardCode: data.invoiceWardCode || undefined,
@@ -753,7 +764,7 @@ export function CustomerForm({
             } catch {
               // Khách đã được tạo nên không giữ modal mở để tránh người dùng
               // bấm Tạo lần nữa. Sale PIC có thể được chọn lại khi mở khách.
-              toast.error("Khách đã tạo nhưng chưa lưu được Sale PIC. Hãy mở lại khách hàng để cập nhật.");
+              toast.error("Khách đã tạo nhưng chưa lưu được thiết lập công nợ. Hãy mở lại khách hàng để cập nhật.");
               onSuccess?.(createdCustomer);
               onClose();
               return;
@@ -974,7 +985,7 @@ export function CustomerForm({
                 />
               </div>
 
-              {canManageDebtPolicy && (
+              {canAssignSalePic && (
                 <div>
                   <label className="block text-sm font-medium mb-1 sm:mb-2">
                     Sale PIC <span className="text-red-500">*</span>

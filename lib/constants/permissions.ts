@@ -23,6 +23,8 @@ export const RESOURCE_LABELS: Record<string, string> = {
   vehicle_shipments: "Ghép xe",
   customers: "Khách hàng",
   customer_groups: "Nhóm khách hàng",
+  customer_demand: "Demand khách hàng",
+  customer_demands: "Demand khách hàng",
   suppliers: "Nhà cung cấp",
   order_suppliers: "Đơn đặt NCC",
   purchase_orders: "Nhập hàng",
@@ -68,12 +70,15 @@ export const RESOURCE_LABELS: Record<string, string> = {
   assign_factory: "Gắn nhà máy",
   link_misa: "Liên kết Misa",
   purchasing_planning: "Dự kiến đặt hàng",
+  product_quality: "Chất lượng hàng hóa",
 };
 
 export const ACTION_LABELS: Record<string, string> = {
   view: "Xem",
+  view_all_branches: "Xem tất cả chi nhánh",
   create: "Tạo mới",
   update: "Chỉnh sửa",
+  assign: "Giao hướng xử lý",
   merge: "Gộp",
   delete: "Xóa",
   push: "Đẩy Misa",
@@ -90,6 +95,9 @@ export const ACTION_LABELS: Record<string, string> = {
   print: "In",
   report_delivered: "Báo đơn (Giao thành công)",
   update_policy: "Thiết lập kiểu công nợ",
+  assign_sale_pic: "Gắn Sale PIC",
+  stop_delivery: "Tạo phiếu ngừng đi hàng",
+  close_stop_delivery: "Kết thúc phiếu ngừng đi hàng",
   close: "Kết thúc",
   sales: "Báo cáo bán hàng",
   inventory: "Báo cáo tồn kho",
@@ -128,6 +136,7 @@ export const ACTION_LABELS: Record<string, string> = {
   view_cost_price: "Xem giá vốn",
   view_sale_price: "Xem giá bán",
   view_publication: "Xem thông tin công bố",
+  edit_publication: "Sửa thông tin công bố",
   view_profit: "Xem lợi nhuận",
   view_other_staff: "Xem dữ liệu NV khác",
   view_balance: "Xem số dư",
@@ -365,8 +374,8 @@ export function getPermLeafLabel(resource: string, action: string): string {
  * - report subgroup theo REPORT_SUBGROUP_ORDER.
  */
 export function orderReportEntries(
-  entries: [string, any][],
-): [string, any][] {
+  entries: [string, unknown][],
+): [string, unknown][] {
   return [...entries].sort((a, b) => {
     const ao = REPORT_SUBGROUP_ORDER[a[0]];
     const bo = REPORT_SUBGROUP_ORDER[b[0]];

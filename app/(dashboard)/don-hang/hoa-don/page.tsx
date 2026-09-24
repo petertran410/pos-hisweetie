@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useCallback } from "react";
+import dynamic from "next/dynamic";
+import { usePathname, useSearchParams } from "next/navigation";
 import { InvoicesTable } from "@/components/invoices/InvoicesTable";
 import { InvoicesSidebar } from "@/components/invoices/InvoicesSidebar";
-import { PackingSlipForm } from "@/components/packing-slips/PackingSlipForm";
-import { PackingHangForm } from "@/components/packing-hangs/PackingHangForm";
-import { PackingLoadingForm } from "@/components/packing-loadings/PackingLoadingForm";
 import { useCreatePackingSlip } from "@/lib/hooks/usePackingSlips";
 import { useCreatePackingHang } from "@/lib/hooks/usePackingHangs";
 import { useCreatePackingLoading } from "@/lib/hooks/usePackingLoadings";
@@ -16,11 +14,48 @@ import { toast } from "sonner";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { usePendingPrint } from "@/lib/hooks/usePendingPrint";
 import { InvoicesMobileView } from "@/components/invoices/InvoicesMobileView";
+import { useIsClient, useIsMobile } from "@/lib/hooks/useIsMobile";
+
+const FormFallback = () => (
+  <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center">
+    <div className="bg-white px-5 py-3 rounded-xl shadow-lg text-sm text-gray-600">
+      Đang tải biểu mẫu...
+    </div>
+  </div>
+);
+
+const PackingSlipForm = dynamic(
+  () =>
+    import("@/components/packing-slips/PackingSlipForm").then(
+      (m) => m.PackingSlipForm
+    ),
+  { ssr: false, loading: FormFallback }
+);
+
+const PackingHangForm = dynamic(
+  () =>
+    import("@/components/packing-hangs/PackingHangForm").then(
+      (m) => m.PackingHangForm
+    ),
+  { ssr: false, loading: FormFallback }
+);
+
+const PackingLoadingForm = dynamic(
+  () =>
+    import("@/components/packing-loadings/PackingLoadingForm").then(
+      (m) => m.PackingLoadingForm
+    ),
+  { ssr: false, loading: FormFallback }
+);
 
 type FormType = "giao-hang" | "dong-hang" | "loading" | null;
 
 export default function HoaDonPage() {
+  const isMobile = useIsMobile(768);
+  const mounted = useIsClient();
+
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const codeParam = searchParams.get("Code");
 
@@ -46,6 +81,21 @@ export default function HoaDonPage() {
     },
     [codeParam]
   );
+
+  const clearCodeParam = useCallback(() => {
+    if (!codeParam) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("Code");
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, {
+      scroll: false,
+    });
+    setFilters((previous: any) => {
+      const next = { ...previous };
+      delete next.search;
+      return next;
+    });
+  }, [codeParam, pathname, router, searchParams]);
 
   const [formType, setFormType] = useState<FormType>(null);
   const [preselectedInvoiceIds, setPreselectedInvoiceIds] = useState<number[]>(
@@ -133,61 +183,70 @@ export default function HoaDonPage() {
   return (
     // <PagePermissionGuard resource="invoices" action="view">
     <>
-      <div
-        className="hidden md:flex h-full border-t"
-        style={{ borderColor: "var(--dt-border)" }}>
-        <InvoicesSidebar
-          filters={filters}
-          onFiltersChange={handleFiltersChange}
-          splitTimeFilters
-          showPriceWarningFilter
-        />
-        <InvoicesTable
-          filters={filters}
-          onCreateClick={handleCreateClick}
-          onEditClick={handleEditClick}
-          onCreateGiaoHang={handleCreateGiaoHang}
-          onCreateDongHang={handleCreateDongHang}
-          onCreateLoading={handleCreateLoading}
-          autoExpandCode={codeParam || undefined}
-        />
-
-        {formType === "giao-hang" && (
-          <PackingSlipForm
-            onClose={handleCloseForm}
-            onSubmit={handleGiaoHangSubmit}
-            preselectedInvoiceIds={preselectedInvoiceIds}
-            preselectedBranchId={preselectedBranchId}
+      {!mounted ? (
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand" />
+        </div>
+      ) : isMobile ? (
+        <div className="h-full">
+          <InvoicesMobileView
+            key={`mobile-${codeParam ?? "all"}`}
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+            onCreateClick={handleCreateClick}
+            onClearCode={clearCodeParam}
           />
-        )}
-
-        {formType === "dong-hang" && (
-          <PackingHangForm
-            onClose={handleCloseForm}
-            onSubmit={handleDongHangSubmit}
-            preselectedInvoiceIds={preselectedInvoiceIds}
-            preselectedBranchId={preselectedBranchId}
+        </div>
+      ) : (
+        <div
+          className="flex h-full border-t"
+          style={{ borderColor: "var(--dt-border)" }}>
+          <InvoicesSidebar
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+            splitTimeFilters
+            showPriceWarningFilter
           />
-        )}
-
-        {formType === "loading" && (
-          <PackingLoadingForm
-            onClose={handleCloseForm}
-            onSubmit={handleLoadingSubmit}
-            preselectedInvoiceIds={preselectedInvoiceIds}
-            preselectedBranchId={preselectedBranchId}
+          <InvoicesTable
+            key={`desktop-${codeParam ?? "all"}`}
+            filters={filters}
+            onCreateClick={handleCreateClick}
+            onEditClick={handleEditClick}
+            onCreateGiaoHang={handleCreateGiaoHang}
+            onCreateDongHang={handleCreateDongHang}
+            onCreateLoading={handleCreateLoading}
+            autoExpandCode={codeParam || undefined}
+            onClearCode={clearCodeParam}
           />
-        )}
-      </div>
 
-      {/* ── Mobile (dưới md) ── */}
-      <div className="md:hidden h-full">
-        <InvoicesMobileView
-          filters={filters}
-          onFiltersChange={handleFiltersChange}
-          onCreateClick={handleCreateClick}
-        />
-      </div>
+          {formType === "giao-hang" && (
+            <PackingSlipForm
+              onClose={handleCloseForm}
+              onSubmit={handleGiaoHangSubmit}
+              preselectedInvoiceIds={preselectedInvoiceIds}
+              preselectedBranchId={preselectedBranchId}
+            />
+          )}
+
+          {formType === "dong-hang" && (
+            <PackingHangForm
+              onClose={handleCloseForm}
+              onSubmit={handleDongHangSubmit}
+              preselectedInvoiceIds={preselectedInvoiceIds}
+              preselectedBranchId={preselectedBranchId}
+            />
+          )}
+
+          {formType === "loading" && (
+            <PackingLoadingForm
+              onClose={handleCloseForm}
+              onSubmit={handleLoadingSubmit}
+              preselectedInvoiceIds={preselectedInvoiceIds}
+              preselectedBranchId={preselectedBranchId}
+            />
+          )}
+        </div>
+      )}
       {/* </PagePermissionGuard> */}
     </>
   );

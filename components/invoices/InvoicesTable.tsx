@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Fragment, useMemo, useRef } from "react";
+import dynamic from "next/dynamic";
 import {
   useExportInvoices,
   useInvoices,
@@ -30,12 +31,9 @@ import {
   PackageCheck,
 } from "lucide-react";
 import type { Invoice } from "@/lib/types/invoice";
-import { InvoiceDetailRow } from "./InvoiceDetailRow";
 import { formatCurrency } from "@/lib/utils";
-import { InvoiceImportModal } from "./InvoiceImportModal";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { CodeLink } from "../shared/CodeLink";
-import { useInvoicePriceBookWarnings } from "@/lib/hooks/useInvoicePriceBookWarnings";
 import { ColumnToggle } from "../shared/ColumnToggle";
 import { InvoicePickupSummaryModal } from "./InvoicePickupSummaryModal";
 import { MergeInvoicesModal } from "./MergeInvoicesModal";
@@ -43,6 +41,25 @@ import {
   useColumnVisibility,
   type ColumnConfig,
 } from "@/lib/hooks/useColumnVisibility";
+
+const InvoiceDetailRow = dynamic(
+  () => import("./InvoiceDetailRow").then((m) => m.InvoiceDetailRow),
+  {
+    ssr: false,
+    loading: () => (
+      <tr>
+        <td className="py-8 text-center text-gray-400 text-sm">
+          Đang tải chi tiết...
+        </td>
+      </tr>
+    ),
+  }
+);
+
+const InvoiceImportModal = dynamic(
+  () => import("./InvoiceImportModal").then((m) => m.InvoiceImportModal),
+  { ssr: false }
+);
 
 interface InvoicesTableProps {
   filters: any;
@@ -53,6 +70,7 @@ interface InvoicesTableProps {
   onCreateLoading: (selectedIds: number[], branchId: number | null) => void;
   /** Mã HĐ cần tự mở rộng chi tiết khi vào trang qua deep-link (?Code=). */
   autoExpandCode?: string;
+  onClearCode?: () => void;
 }
 
 const STATUS_COLOR: Record<number, string> = {
@@ -407,6 +425,7 @@ export function InvoicesTable({
   onCreateDongHang,
   onCreateLoading,
   autoExpandCode,
+  onClearCode,
 }: InvoicesTableProps) {
   const { selectedBranch } = useBranchStore();
   const [selectedInvoicesMap, setSelectedInvoicesMap] = useState<Map<number, Invoice>>(
@@ -416,7 +435,7 @@ export function InvoicesTable({
     null
   );
   const [didAutoExpand, setDidAutoExpand] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => filters?.search ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
@@ -632,6 +651,7 @@ export function InvoicesTable({
   // Tab override sidebar status — chỉ khi tab khác "all" VÀ sidebar không gửi multi-status
   const effectiveFilters = useMemo(() => {
     const f = { ...filters };
+    delete f.search;
     if (activeStatusTab !== "all" && (!f.statusIds || f.statusIds.length <= 1))
       f.statusIds = [Number(activeStatusTab)];
     return f;
@@ -774,9 +794,6 @@ export function InvoicesTable({
       setDidAutoExpand(true);
     }
   }, [autoExpandCode, invoices, didAutoExpand]);
-
-  // Hóa đơn nào (bảng giá 2/3) có giá thực bán thấp hơn giá niêm yết → cảnh báo.
-  const priceWarningIds = useInvoicePriceBookWarnings(invoices);
 
   const visibleColumns = useMemo(
     () => columns.filter((c) => c.key !== "discount" && c.visible),
@@ -982,11 +999,15 @@ export function InvoicesTable({
             </h2>
             <div ref={advancedRef} className="relative">
               <div className="flex items-center gap-1">
-                <input
-                  type="text"
-                  placeholder="Theo mã hóa đơn"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+            <input
+              type="text"
+              placeholder="Theo mã hóa đơn"
+              value={search}
+              onChange={(e) => {
+                if (filters?.search) onClearCode?.();
+                if (!e.target.value) setDebouncedSearch("");
+                setSearch(e.target.value);
+              }}
                   className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                 />
                 <button
@@ -1441,7 +1462,7 @@ export function InvoicesTable({
                             ? "border-t-2 border-brand"
                             : ""
                         }`}>
-                        {priceWarningIds.has(invoice.id) && (
+                        {invoice.hasPriceBookWarning && (
                           <span
                             title="Có sản phẩm bán thấp hơn giá niêm yết của bảng giá"
                             className="inline-flex">

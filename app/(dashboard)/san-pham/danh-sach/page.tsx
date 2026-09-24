@@ -6,6 +6,7 @@ import { ProductsTable } from "@/components/products/ProductTable";
 import { ProductsMobileView } from "@/components/products/ProductsMobileView";
 import { useSearchParams } from "next/navigation";
 import { ProductImportModal } from "@/components/products/ProductImportModal";
+import { FactoryProductImportModal } from "@/components/factories/FactoryProductImportModal";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 
 export default function ProductListPage() {
@@ -15,6 +16,8 @@ export default function ProductListPage() {
   // Mặc định luôn hiển thị sản phẩm "Đang hoạt động".
   const [filters, setFilters] = useState<any>({ isActive: true });
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showFactoryMappingImportModal, setShowFactoryMappingImportModal] =
+    useState(false);
 
   const handleFiltersChange = useCallback(
     (newFilters: any) => {
@@ -40,6 +43,9 @@ export default function ProductListPage() {
           filters={filters}
           codeFilter={codeParam || undefined}
           onImportClick={() => setShowImportModal(true)}
+          onFactoryMappingImportClick={() =>
+            setShowFactoryMappingImportModal(true)
+          }
         />
       </div>
 
@@ -54,6 +60,11 @@ export default function ProductListPage() {
 
       {showImportModal && (
         <ProductImportModal onClose={() => setShowImportModal(false)} />
+      )}
+      {showFactoryMappingImportModal && (
+        <FactoryProductImportModal
+          onClose={() => setShowFactoryMappingImportModal(false)}
+        />
       )}
     </PagePermissionGuard>
   );

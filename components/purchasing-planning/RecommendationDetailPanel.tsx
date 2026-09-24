@@ -1,9 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Package, TrendingDown, TrendingUp, X } from "lucide-react";
+import { AlertTriangle, BarChart3, Loader2, Package, RotateCcw, TrendingDown, TrendingUp, X } from "lucide-react";
 import { PriorityBadge, ReliabilityBadge, SeverityBadge } from "./PriorityBadge";
-import { useRecommendationDetail } from "@/lib/hooks/usePurchasingPlanning";
+import { DecisionTimelineModal } from "./DecisionTimelineModal";
+import {
+  useRecommendationDetail,
+  useDeletePurchasingConfig,
+  useResolvedPurchasingConfig,
+  useSavePurchasingConfig,
+} from "@/lib/hooks/usePurchasingPlanning";
+import { toast } from "sonner";
 import {
   CONFIDENCE_LABEL,
   CONFIG_SOURCE_LABEL,
@@ -16,6 +24,8 @@ import {
 interface Props {
   itemId: number | null;
   onClose: () => void;
+  canConfigure?: boolean;
+  onRunCalculation?: () => void | Promise<void>;
 }
 
 const num = (v: number | null | undefined, digits = 0) =>
@@ -47,13 +57,126 @@ const ORDER_URGENCY_BOX: Record<string, string> = {
   NO_ACTION: "border-gray-200 bg-gray-50 text-gray-700",
 };
 
-export function RecommendationDetailPanel({ itemId, onClose }: Props) {
+export function RecommendationDetailPanel({
+  itemId,
+  onClose,
+  canConfigure = false,
+  onRunCalculation,
+}: Props) {
   const { data, isLoading, isError } = useRecommendationDetail(itemId);
+  const { data: resolvedConfig } = useResolvedPurchasingConfig(
+    "SKU",
+    data?.productId,
+    { enabled: canConfigure }
+  );
+  const saveConfig = useSavePurchasingConfig();
+  const deleteConfig = useDeletePurchasingConfig();
+  const [chartOpen, setChartOpen] = useState(false);
+  const [growthEditor, setGrowthEditor] = useState<{
+    itemId: number;
+    draft: string;
+    note: string;
+  } | null>(null);
+  const appliedFactor =
+    data?.forecastComparison.appliedGrowthFactor ??
+    data?.forecastComparison.growthFactor ??
+    1;
+  const baseGrowthNote = data?.forecastComparison.growthFactorNote ?? "";
+  const growthDraft =
+    growthEditor && growthEditor.itemId === data?.itemId
+      ? growthEditor.draft
+      : String(appliedFactor);
+  const growthNote =
+    growthEditor && growthEditor.itemId === data?.itemId
+      ? growthEditor.note
+      : baseGrowthNote;
+
+  const updateGrowthDraft = (draft: string) => {
+    if (!data) return;
+    setGrowthEditor((previous) => ({
+      itemId: data.itemId,
+      draft,
+      note:
+        previous?.itemId === data.itemId ? previous.note : baseGrowthNote,
+    }));
+  };
+
+  const updateGrowthNote = (note: string) => {
+    if (!data) return;
+    setGrowthEditor((previous) => ({
+      itemId: data.itemId,
+      draft:
+        previous?.itemId === data.itemId
+          ? previous.draft
+          : String(appliedFactor),
+      note,
+    }));
+  };
+
+  const saveGrowthFactor = async () => {
+    if (!data) return;
+    const factor = Number(growthDraft.replace(",", "."));
+    if (!Number.isFinite(factor) || factor < 0.8 || factor > 1.5) {
+      toast.error("Hệ số tăng trưởng phải nằm trong khoảng 0,80–1,50");
+      return;
+    }
+    const systemFactor = data.forecastComparison.systemGrowthFactor ?? 1;
+    if (
+      systemFactor > 0 &&
+      Math.abs(factor / systemFactor - 1) > 0.2 &&
+      !growthNote.trim()
+    ) {
+      toast.error(
+        "Hãy ghi lý do khi hệ số điều chỉnh lệch quá 20% so với hệ thống"
+      );
+      return;
+    }
+    try {
+      await saveConfig.mutateAsync({
+        configId: resolvedConfig?.configId ?? null,
+        data: {
+          ...(resolvedConfig?.configId
+            ? {}
+            : { scopeType: "SKU" as const, scopeId: data.productId }),
+          growthFactor: factor,
+          note: growthNote.trim() || null,
+        },
+      });
+      toast.success(
+        onRunCalculation
+          ? "Đã lưu hệ số và chạy lại tính toán"
+          : "Đã lưu hệ số tăng trưởng cho SKU; hãy chạy tính toán để áp dụng"
+      );
+      await onRunCalculation?.();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Không lưu được hệ số tăng trưởng"
+      );
+    }
+  };
+
+  const resetGrowthFactor = async () => {
+    if (!data) return;
+    try {
+      if (resolvedConfig?.configId) {
+        await deleteConfig.mutateAsync(resolvedConfig.configId);
+      }
+      toast.success("Đã quay về hệ số hệ thống");
+      await onRunCalculation?.();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Không quay được về hệ số hệ thống"
+      );
+    }
+  };
 
   if (itemId === null) return null;
 
   return (
-    <aside
+    <>
+      <aside
       className="flex w-[520px] shrink-0 flex-col overflow-hidden border-l bg-white"
       style={{ borderColor: "var(--dt-border)" }}>
       {/* ── Header ── */}
@@ -101,6 +224,16 @@ export function RecommendationDetailPanel({ itemId, onClose }: Props) {
                 {data.summaryText}
               </p>
 
+              {data && (
+                <button
+                  type="button"
+                  onClick={() => setChartOpen(true)}
+                  className="mt-3 flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-medium text-teal-900 hover:bg-teal-100">
+                  <BarChart3 className="h-4 w-4" />
+                  Xem biểu đồ tổng quan
+                </button>
+              )}
+
               {data.suggestedQuantity > 0 && (
                 <div className="mt-3 rounded border border-gray-900 bg-gray-900 px-3 py-2 text-white">
                   <div className="text-[11px] opacity-70">Đề xuất đặt</div>
@@ -140,14 +273,13 @@ export function RecommendationDetailPanel({ itemId, onClose }: Props) {
                     {data.latestOrderDate && (
                       <div>Hạn đặt: {dateVn(data.latestOrderDate)}</div>
                     )}
-                    <div>
-                      Chờ hàng:{" "}
-                      {data.leadTimeMinDays != null &&
-                      data.leadTimeMinDays !== data.leadTimeDays
-                        ? `${data.leadTimeMinDays}–${data.leadTimeDays}`
-                        : data.leadTimeDays}{" "}
-                      ngày
-                    </div>
+                    <div>Chờ hàng: {data.leadTimeDays} ngày</div>
+                    {data.suggestedQuantityScenario != null &&
+                      data.suggestedQuantityScenario !== data.suggestedQuantity && (
+                      <div>
+                        Nếu ghép xe về đúng hạn: {num(data.suggestedQuantityScenario)}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -167,11 +299,11 @@ export function RecommendationDetailPanel({ itemId, onClose }: Props) {
                       ] as [string, string, string]
                   ),
                   [
-                    "Hàng đã hứa cho khách",
-                    `−${num(data.reservedStock)}`,
-                    "đơn chưa giao",
+                    "Khách đặt",
+                    num(data.reservedStock),
+                    "cộng vào nhu cầu",
                   ],
-                  ["= Tồn kho khả dụng", num(data.availableStock), ""],
+                  ["Tồn kho khả dụng", num(data.availableStock), ""],
                 ]}
                 highlightLast
               />
@@ -180,7 +312,7 @@ export function RecommendationDetailPanel({ itemId, onClose }: Props) {
                 <div className="mt-3">
                   <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600">
                     <Package className="h-3.5 w-3.5" />
-                    Hàng đang về ({num(data.incomingTotal)})
+                    Hàng về chắc chắn ({num(data.incomingTotal)})
                   </div>
                   <div className="space-y-1.5">
                     {data.shipments.map((s) => (
@@ -263,13 +395,279 @@ export function RecommendationDetailPanel({ itemId, onClose }: Props) {
                     {DEMAND_SOURCE_LABEL[data.forecastComparison.demandSource]}
                   </span>
                 </div>
-                {data.forecastComparison.growthFactor !== 1 && (
-                  <div className="text-orange-600">
-                    ⚠️ Đã nhân hệ số điều chỉnh{" "}
-                    {data.forecastComparison.growthFactor}
+                <div className="mt-2 rounded border border-teal-200 bg-teal-50 px-2.5 py-2 text-teal-900">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">Hệ số tăng trưởng</span>
+                    <span>
+                      Hệ thống đề xuất: {num(data.forecastComparison.systemGrowthFactor ?? 1, 2)}
+                    </span>
                   </div>
-                )}
+                  {canConfigure ? (
+                    <div className="mt-2 flex items-center gap-2">
+                      <label className="whitespace-nowrap text-teal-800">Áp dụng:</label>
+                      <input
+                        type="number"
+                        min="0.8"
+                        max="1.5"
+                        step="0.01"
+                        value={growthDraft}
+                        onChange={(event) =>
+                          updateGrowthDraft(event.target.value)
+                        }
+                        className="w-20 rounded border border-teal-300 bg-white px-2 py-1 text-right text-xs tabular-nums"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Lý do điều chỉnh (không bắt buộc)"
+                        value={growthNote}
+                        onChange={(event) =>
+                          updateGrowthNote(event.target.value)
+                        }
+                        className="min-w-0 flex-1 rounded border border-teal-300 bg-white px-2 py-1 text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={saveGrowthFactor}
+                        disabled={saveConfig.isPending}
+                        className="ml-auto flex items-center gap-1 rounded bg-teal-700 px-2 py-1 text-xs font-medium text-white hover:bg-teal-800 disabled:opacity-60">
+                        {saveConfig.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
+                        {onRunCalculation ? "Lưu & tính lại" : "Lưu hệ số"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-1">
+                      Hệ số áp dụng: {num(data.forecastComparison.appliedGrowthFactor ?? data.forecastComparison.growthFactor ?? 1, 2)}
+                    </div>
+                  )}
+                  {data.forecastComparison.growthFactorOverridden && (
+                    <div className="mt-1 text-amber-700">
+                      <div>
+                        Đang dùng hệ số do người dùng điều chỉnh.
+                        {data.forecastComparison.growthFactorNote
+                          ? ` Lý do: ${data.forecastComparison.growthFactorNote}`
+                          : ""}
+                      </div>
+                      {(data.forecastComparison.growthFactorUpdatedBy ||
+                        data.forecastComparison.growthFactorUpdatedAt) && (
+                        <div className="mt-0.5 text-[11px]">
+                          Cập nhật bởi user #
+                          {data.forecastComparison.growthFactorUpdatedBy ?? "—"}
+                          {data.forecastComparison.growthFactorUpdatedAt
+                            ? ` · ${dateVn(
+                                data.forecastComparison.growthFactorUpdatedAt
+                              )}`
+                            : ""}
+                        </div>
+                      )}
+                      {canConfigure && resolvedConfig?.configId && (
+                        <button
+                          type="button"
+                          onClick={resetGrowthFactor}
+                          disabled={deleteConfig.isPending}
+                          className="mt-1.5 flex items-center gap-1 rounded border border-amber-300 bg-white px-2 py-1 text-[11px] font-medium text-amber-800 hover:bg-amber-50 disabled:opacity-60">
+                          <RotateCcw className="h-3 w-3" />
+                          Dùng hệ số hệ thống
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-teal-200 pt-2 text-[11px] text-teal-800">
+                    <div>
+                      Xu hướng 6 tháng:{" "}
+                      <span className="font-medium tabular-nums">
+                        {num(data.forecastComparison.shortTermTrendFactor ?? 1, 2)}
+                      </span>
+                    </div>
+                    <div>
+                      Mùa vụ tháng mục tiêu:{" "}
+                      <span className="font-medium tabular-nums">
+                        {data.forecastComparison.seasonalIndex == null
+                          ? "chưa đủ dữ liệu"
+                          : num(data.forecastComparison.seasonalIndex, 2)}
+                      </span>
+                    </div>
+                    <div>
+                      Trọng số mùa vụ:{" "}
+                      <span className="font-medium tabular-nums">
+                        {num(data.forecastComparison.seasonalWeight ?? 0, 2)}
+                      </span>
+                    </div>
+                    <div>
+                      Dữ liệu:{" "}
+                      <span className="font-medium">
+                        {num(data.forecastComparison.growthFactorDataMonths ?? 0)} tháng
+                      </span>
+                    </div>
+                    <div>
+                      Tin cậy hệ số:{" "}
+                      <span className="font-medium">
+                        {
+                          GROWTH_FACTOR_CONFIDENCE_LABEL[
+                            data.forecastComparison.growthFactorConfidence ??
+                              "NO_DATA"
+                          ]
+                        }
+                      </span>
+                    </div>
+                    <div className="col-span-2">
+                      Phương pháp:{" "}
+                      <span className="font-medium">
+                        {data.forecastComparison.growthFactorMethod ??
+                          "Chưa xác định"}
+                      </span>
+                    </div>
+                    <div className="col-span-2">
+                      Chế độ công thức:{" "}
+                      <span className="font-medium">
+                        {FORMULA_MODE_LABEL[
+                          data.forecastComparison.formulaMode ?? "NEW"
+                        ] ?? data.forecastComparison.formulaMode}
+                      </span>
+                      {data.forecastComparison.formulaFallbackApplied
+                        ? " · đã fallback an toàn"
+                        : ""}
+                    </div>
+                    <div className="col-span-2">
+                      Nguồn áp dụng:{" "}
+                      <span className="font-medium">
+                        {data.forecastComparison.growthFactorSource
+                          ? CONFIG_SOURCE_LABEL[
+                              data.forecastComparison.growthFactorSource
+                            ]
+                          : "Tự học từ lịch sử"}
+                      </span>
+                    </div>
+                  </div>
+                  {(data.forecastComparison.growthFactorWarnings?.length ?? 0) >
+                    0 && (
+                    <div className="mt-2 rounded border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-800">
+                      <div className="font-medium">Cần kiểm tra hệ số</div>
+                      {data.forecastComparison.growthFactorWarnings?.map(
+                        (warning) => (
+                          <div key={warning} className="mt-0.5">
+                            • {GROWTH_FACTOR_WARNING_LABEL[warning] ?? warning}
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
+                  {data.forecastComparison.unexplainedAnomaly && (
+                    <div className="mt-1 text-amber-700">⚠️ Có tháng bán bất thường; kiểm tra hệ số trước khi đặt.</div>
+                  )}
+                </div>
               </div>
+
+              {data.forecastComparison.demandBreakdown && (
+                <div className="mt-3">
+                  <Table
+                    rows={[
+                      ["Khách đặt", num(data.forecastComparison.demandBreakdown.customerOrders), "Order đang chờ"],
+                      ["Demand khách hàng/OEM", num(data.forecastComparison.demandBreakdown.customerDemand ?? 0), "Đã xác nhận trong kỳ kế hoạch"],
+                      ["Hàng thực tế đã mua theo Demand cũ", num(-(data.forecastComparison.demandBreakdown.pastCustomerDemand ?? 0)), "Từ hóa đơn thực tế · cùng khách/SKU/tháng"],
+                      ["Công ty cần (tồn tối thiểu)", num(data.forecastComparison.demandBreakdown.companyNeed), ""],
+                      ["Bán trong kỳ bao phủ", num(data.forecastComparison.demandBreakdown.salesDemand, 0), ""],
+                      ["Khuyến mãi", num(data.forecastComparison.demandBreakdown.promotionExtra), ""],
+                      ["Tổng nhu cầu", num(data.forecastComparison.demandBreakdown.totalDemand, 0), "Sau khi cộng/trừ toàn bộ nguồn"],
+                    ]}
+                  />
+                </div>
+              )}
+              {(data.forecastComparison.demandBreakdown?.customerDemandDetails?.length ?? 0) > 0 && (
+                <div className="mt-3 rounded border border-violet-200 bg-violet-50 px-3 py-2">
+                  <div className="text-xs font-medium text-violet-900">Demand khách hàng theo tháng</div>
+                  <div className="mt-1 space-y-0.5 text-[11px] text-violet-800">
+                    {data.forecastComparison.demandBreakdown?.customerDemandDetails?.map((detail, index) => (
+                      <div
+                        key={`${detail.monthId ?? "demand"}-${detail.demandMonth}-${index}`}
+                        className={detail.skipped ? "text-violet-400" : undefined}
+                      >
+                        • {detail.demandMonth} · {detail.customerName ?? "Khách hàng"} · {num(detail.quantityBase)} {data.unit ?? "đv"}
+                        {detail.skipped ? (
+                          <div className="pl-3 text-[10px]">
+                            {detail.skipReason === "CUSTOMER_ORDER"
+                              ? "Không cộng vì đã có Order khách đang chờ"
+                              : "Không cộng vì đã có đơn đặt hàng nhập xen giữa"}
+                          </div>
+                        ) : detail.customerOrderOffset ? (
+                          <div className="pl-3 text-[10px]">
+                            Đã trừ {num(detail.customerOrderOffset)}{" "}
+                            {data.unit ?? "đv"} do đã có Order khách đang chờ
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(data.forecastComparison.demandBreakdown?.pastCustomerDemandDetails?.length ?? 0) > 0 && (
+                <div className="mt-3 rounded border border-amber-200 bg-amber-50 px-3 py-2">
+                  <div className="text-xs font-medium text-amber-900">Đối chiếu Demand cũ với hàng thực tế đã mua</div>
+                  <div className="mt-1 space-y-1 text-[11px] text-amber-800">
+                    {data.forecastComparison.demandBreakdown?.pastCustomerDemandDetails?.map((detail, index) => (
+                      <div
+                        key={`${detail.monthId ?? "past-demand"}-${detail.demandMonth}-${index}`}
+                        className={detail.skipped ? "text-amber-400" : undefined}
+                      >
+                        <div>
+                          • {detail.demandMonth} · {detail.customerName ?? "Khách hàng"}
+                        </div>
+                        {detail.skipped ? (
+                          <div className="pl-3 text-[10px]">
+                            Không tính vì đã có đơn đặt hàng nhập xen giữa
+                          </div>
+                        ) : (
+                          <div className="pl-3 text-[10px] tabular-nums">
+                            Demand gốc {num(detail.quantityBase)} {data.unit ?? "đv"}
+                            {" · "}Thực tế đã mua {num(detail.actualPurchasedQuantity ?? 0)} {data.unit ?? "đv"}
+                            {" · "}Khấu trừ {num(detail.deductedQuantity ?? 0)} {data.unit ?? "đv"}
+                            {" · "}Còn lại {num(detail.remainingQuantity ?? 0)} {data.unit ?? "đv"}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(data.forecastComparison.monthBreakdown?.length ?? 0) > 0 && (
+                <div className="mt-3 space-y-1 text-[11px] text-gray-600">
+                  {data.forecastComparison.monthBreakdown!.map((month) => (
+                    <div key={month.month}>
+                      {month.month}
+                      {month.isCurrentMonth ? " (đang chạy)" : ""}:{" "}
+                      {num(month.dailyRate, 2)}/ngày
+                      {month.validSellingDays != null &&
+                      month.daysInMonth != null
+                        ? ` · có hàng ${num(month.validSellingDays)}/${num(
+                            month.daysInMonth
+                          )} ngày`
+                        : ""}
+                      {month.anomaly !== "NORMAL" ? ` · ${month.anomaly}` : ""}
+                      {month.hasPromotion ? " · có KM" : ""}
+                      {month.suspectedTrend ? " · bất thường chưa rõ" : ""}
+                      {month.anomalyReason ? ` · ${month.anomalyReason}` : ""}
+                    </div>
+                  ))}
+                  {data.forecastComparison.lookbackMonths?.length ? (
+                    <div>
+                      Tháng 4-5: {data.forecastComparison.lookbackMonths.map((m) => m.month).join(", ")}
+                      {data.forecastComparison.lookbackRepeatsAnomaly ? " · lặp lại bất thường" : ""}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+              {data.forecastComparison.supplyBreakdown && (
+                <div className="mt-3">
+                  <Table
+                    rows={[
+                      ["Tồn khả dụng", num(data.forecastComparison.supplyBreakdown.available), ""],
+                      ["Hàng về chắc chắn", num(data.forecastComparison.supplyBreakdown.confirmedIncoming), ""],
+                      ["Ghép xe có ETA", num(data.forecastComparison.supplyBreakdown.vehicleConfirmed), ""],
+                      ["Ghép xe chưa chắc", num(data.forecastComparison.supplyBreakdown.vehicleRisk), "không trừ hết"],
+                    ]}
+                  />
+                </div>
+              )}
 
               {/* Khuyến mãi sắp tới đã được cộng vào số lượng đề xuất */}
               {(data.forecastComparison.upcomingPromotions?.length ?? 0) > 0 && (
@@ -365,7 +763,20 @@ export function RecommendationDetailPanel({ itemId, onClose }: Props) {
           </div>
         )}
       </div>
-    </aside>
+      </aside>
+      <DecisionTimelineModal
+        open={chartOpen}
+        onClose={() => setChartOpen(false)}
+        productName={data?.productName ?? ""}
+        unit={data?.unit ?? null}
+        timeline={data?.decisionTimeline}
+        availableStock={data?.availableStock ?? 0}
+        forecastDailyDemand={data?.forecastDailyDemand ?? 0}
+        leadTimeDays={data?.leadTimeDays ?? 0}
+        confidence={data?.confidence ?? "NO_DATA"}
+        reliability={data?.reliability ?? "BLOCKED"}
+      />
+    </>
   );
 }
 
@@ -382,9 +793,41 @@ const CONFIG_LABEL: Record<string, string> = {
   moq: "Đặt tối thiểu (MOQ)",
 };
 
+const GROWTH_FACTOR_WARNING_LABEL: Record<string, string> = {
+  INSUFFICIENT_HISTORY: "Chưa đủ lịch sử để xác nhận xu hướng.",
+  MISSING_STOCK_HISTORY:
+    "Thiếu lịch sử tồn kho theo ngày; tốc độ bán đang dùng dữ liệu suy đoán.",
+  SEASONALITY_UNCERTAIN:
+    "Mùa vụ giữa các năm chưa ổn định; hệ số mùa vụ đã giảm trọng số.",
+  SHORT_LONG_TERM_MISMATCH:
+    "Xu hướng ngắn hạn trái chiều với dài hạn.",
+  FORMULA_MODE_FALLBACK:
+    "Cấu hình công thức không hợp lệ; hệ thống đã quay về công thức mới.",
+  GROWTH_FACTOR_FALLBACK:
+    "Không đủ dữ liệu để suy hệ số; hệ thống đang áp dụng 1,00.",
+};
+
+const FORMULA_MODE_LABEL: Record<string, string> = {
+  LEGACY: "Công thức cũ 5 tháng",
+  NEW: "Công thức mới 6 tháng + mùa vụ",
+  SHADOW: "Chạy song song, dùng công thức mới",
+};
+
+const GROWTH_FACTOR_CONFIDENCE_LABEL: Record<string, string> = {
+  HIGH: "Cao",
+  MEDIUM: "Trung bình",
+  LOW: "Thấp",
+  NO_DATA: "Không đủ dữ liệu",
+};
+
 const CALCULATION_STEP_LABEL: Record<string, string> = {
   TARGET_STOCK: "Tồn kho mục tiêu",
-  SOQ_RAW: "Số lượng đặt hàng thô",
+  SALES_DEMAND: "Nhu cầu bán trong kỳ",
+  CUSTOMER_DEMAND: "Demand khách hàng/OEM",
+  PAST_CUSTOMER_DEMAND: "Hàng thực tế đã mua theo Demand cũ",
+  TOTAL_DEMAND: "Tổng nhu cầu",
+  SOQ_RAW: "Số lượng đặt hàng chắc chắn",
+  SOQ_SCENARIO: "Số lượng theo kịch bản ghép xe",
   ROUND_TO_PURCHASE_MULTIPLE: "Làm tròn theo bội số đặt hàng",
   MOQ_POLICY: "Áp dụng chính sách MOQ",
 };

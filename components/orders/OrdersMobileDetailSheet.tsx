@@ -28,7 +28,6 @@ import {
 } from "@/lib/types/order";
 import { INVOICE_STATUS } from "@/lib/types/invoice";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { useAuthStore } from "@/lib/store/auth";
 import { useCan } from "@/lib/hooks/useCan";
 import { CancelOrderModal } from "./CancelOrderModal";
 import { CodeLink } from "../shared/CodeLink";
@@ -86,7 +85,6 @@ export function OrdersMobileDetailSheet({
   const { data: order, isLoading } = useOrder(orderId);
   const updateOrder = useUpdateOrder();
   const cancelOrder = useCancelOrder();
-  const { user } = useAuthStore();
 
   const [selectedStatus, setSelectedStatus] = useState<number>(
     ORDER_STATUS.PENDING
@@ -100,10 +98,6 @@ export function OrdersMobileDetailSheet({
   const hasPermCancel = useCan("orders", "cancel");
   const hasPermUpdate = useCan("orders", "update");
   const hasPermPrint = useCan("orders", "print");
-
-  const isAdmin = user?.roles?.some(
-    (role: string) => role === "Admin" || role === "Super Admin"
-  );
 
   // Sync state khi order load xong — giống OrderDetailRow
   useEffect(() => {
@@ -154,7 +148,7 @@ export function OrdersMobileDetailSheet({
     order?.status === ORDER_STATUS.PENDING ||
     order?.status === ORDER_STATUS.CONFIRMED ||
     order?.status === ORDER_STATUS.PARTIALLY_INVOICED ||
-    (order?.status === ORDER_STATUS.COMPLETED && isAdmin);
+    order?.status === ORDER_STATUS.COMPLETED;
 
   const showProcessButton =
     hasPermUpdate &&

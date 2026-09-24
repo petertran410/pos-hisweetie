@@ -18,6 +18,7 @@ export const ordersApi = {
     total: number;
     page: number;
     limit: number;
+    statusCounts?: Record<string, number>;
   }> => {
     return apiClient.get("/orders", params);
   },

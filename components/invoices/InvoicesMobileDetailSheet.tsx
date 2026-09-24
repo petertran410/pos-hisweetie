@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useInvoice, useUpdateInvoice } from "@/lib/hooks/useInvoices";
+import {
+  useCancelInvoice,
+  useInvoice,
+  useUpdateInvoice,
+} from "@/lib/hooks/useInvoices";
 import {
   ArrowLeft,
   Building2,
@@ -89,6 +93,7 @@ export function InvoicesMobileDetailSheet({
   const router = useRouter();
   const { data: invoice, isLoading } = useInvoice(invoiceId);
   const updateInvoice = useUpdateInvoice();
+  const cancelInvoice = useCancelInvoice();
 
   const [selectedStatus, setSelectedStatus] = useState<number>(
     INVOICE_STATUS.PROCESSING
@@ -139,7 +144,7 @@ export function InvoicesMobileDetailSheet({
 
   const isStatusEditable = !isFinalState;
 
-  const canCancelInvoice = !isFinalState;
+  const canCancelInvoice = invoice?.status !== INVOICE_STATUS.CANCELLED;
 
   const showProcessButton =
     hasPermUpdate && !isSaving && invoice?.status !== INVOICE_STATUS.CANCELLED;
@@ -170,9 +175,9 @@ export function InvoicesMobileDetailSheet({
       const cancelPayments = result.isConfirmed;
       try {
         setIsSaving(true);
-        await updateInvoice.mutateAsync({
+        await cancelInvoice.mutateAsync({
           id: invoice.id,
-          data: { status: INVOICE_STATUS.CANCELLED, cancelPayments },
+          cancelPayments,
         });
         toast.success(
           cancelPayments
@@ -199,10 +204,7 @@ export function InvoicesMobileDetailSheet({
       if (!result.isConfirmed) return;
       try {
         setIsSaving(true);
-        await updateInvoice.mutateAsync({
-          id: invoice.id,
-          data: { status: INVOICE_STATUS.CANCELLED },
-        });
+        await cancelInvoice.mutateAsync({ id: invoice.id });
         toast.success("Đã hủy hóa đơn thành công");
         onClose();
       } catch {

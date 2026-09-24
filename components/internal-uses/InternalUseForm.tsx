@@ -10,6 +10,7 @@ import {
   useInternalUsePurposes,
 } from "@/lib/hooks/useInternalUses";
 import { usePermission } from "@/lib/hooks/usePermissions";
+import { useCanViewInternalUseCost } from "./useCanViewInternalUseCost";
 import { useBranchStore } from "@/lib/store/branch";
 import { useAuthStore } from "@/lib/store/auth";
 import type { InternalUse } from "@/lib/api/internalUses";
@@ -104,7 +105,7 @@ export function InternalUseForm({
   );
 
   const canManagePurpose = usePermission("internal-use-purpose", "manage");
-  const canViewCost = usePermission("internal-use", "view_cost_price");
+  const canViewCost = useCanViewInternalUseCost();
   // Chỉ người duyệt (có internal-use:complete) mới được "Hoàn thành" (duyệt +
   // xuất kho). Người tạo thường chỉ được "Lưu tạm".
   const canComplete = usePermission("internal-use", "complete");

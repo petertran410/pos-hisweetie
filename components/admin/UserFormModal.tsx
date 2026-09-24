@@ -26,6 +26,7 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
     denyPermissionIds: [] as number[],
     branchIds: [] as number[],
     isActive: true,
+    larkUserId: "",
   });
 
   const currentUser = useAuthStore((s) => s.user);
@@ -73,6 +74,7 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
         denyPermissionIds: user.denyPermissions?.map((p: any) => p.id) || [],
         branchIds: user.assignedBranches?.map((b: any) => b.id) || [],
         isActive: user.isActive ?? true,
+        larkUserId: user.larkUserId || "",
       });
     }
   }, [user]);
@@ -98,11 +100,21 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
         if (formData.password) {
           updateData.password = formData.password;
         }
+        updateData.larkUserId = formData.larkUserId.trim() || null;
         await updateUser.mutateAsync({ id: userId, data: updateData });
       } else {
         await createUser.mutateAsync({
-          ...formData,
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          phone: formData.phone,
+          branchId: formData.branchId,
           supplierId: formData.supplierId || null,
+          roleIds: formData.roleIds,
+          permissionIds: formData.permissionIds,
+          denyPermissionIds: formData.denyPermissionIds,
+          branchIds: formData.branchIds,
+          isActive: formData.isActive,
         });
       }
       onClose();
@@ -204,6 +216,9 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
                 </div>
               </div>
 
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Số điện thoại
@@ -218,6 +233,22 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
                   placeholder="0123456789"
                 />
               </div>
+              {userId ? (
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Lark ID
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.larkUserId}
+                    onChange={(e) =>
+                      setFormData({ ...formData, larkUserId: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                    placeholder="ou_..."
+                  />
+                </div>
+              ) : null}
             </div>
 
             <div>

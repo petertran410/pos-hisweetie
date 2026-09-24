@@ -2,7 +2,11 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useInvoice, useUpdateInvoice } from "@/lib/hooks/useInvoices";
+import {
+  useCancelInvoice,
+  useInvoice,
+  useUpdateInvoice,
+} from "@/lib/hooks/useInvoices";
 import { Copy, ExternalLink, Loader2, MapPin, Printer } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -58,6 +62,7 @@ export function InvoiceDetailRow({
   const router = useRouter();
   const { data: invoice, isLoading } = useInvoice(invoiceId);
   const updateInvoice = useUpdateInvoice();
+  const cancelInvoice = useCancelInvoice();
   const [isSaving, setIsSaving] = useState(false);
   const [description, setDescription] = useState("");
   const [activeTab, setActiveTab] = useState<
@@ -131,9 +136,9 @@ export function InvoiceDetailRow({
       const cancelPayments = result.isConfirmed;
       try {
         setIsSaving(true);
-        await updateInvoice.mutateAsync({
+        await cancelInvoice.mutateAsync({
           id: invoice.id,
-          data: { status: INVOICE_STATUS.CANCELLED, cancelPayments },
+          cancelPayments,
         });
         toast.success(
           cancelPayments
@@ -159,10 +164,7 @@ export function InvoiceDetailRow({
       if (result.isConfirmed) {
         try {
           setIsSaving(true);
-          await updateInvoice.mutateAsync({
-            id: invoice.id,
-            data: { status: INVOICE_STATUS.CANCELLED },
-          });
+          await cancelInvoice.mutateAsync({ id: invoice.id });
           toast.success("Đã hủy hóa đơn thành công");
         } catch {
           toast.error("Không thể hủy hóa đơn");
@@ -325,14 +327,10 @@ export function InvoiceDetailRow({
     );
   }
 
-  const isFinalState =
-    invoice.status === INVOICE_STATUS.COMPLETED ||
-    invoice.status === INVOICE_STATUS.CANCELLED ||
-    invoice.status === INVOICE_STATUS.DELIVERED;
-
-  // Chỉ ẩn nút chỉnh sửa khi hóa đơn đã bị hủy.
-  const canCancel = !isFinalState || isAdmin;
+  // Có quyền Hủy thì được hủy mọi trạng thái chưa hủy.
+  const canCancel = invoice.status !== INVOICE_STATUS.CANCELLED;
   const canProcess = invoice.status !== INVOICE_STATUS.CANCELLED;
+  const customerDebt = Math.max(0, Number(invoice.debtAmount || 0));
 
   // Nút "Đã Báo Đơn":
   // - User: chỉ thấy khi hóa đơn CHƯA giao thành công.
@@ -773,12 +771,15 @@ export function InvoiceDetailRow({
                           </span>
                           <span className="text-lg font-bold text-red-600">
                             {formatCurrency(
-                              Number((invoice as any).returnOrderAmount || 0) >
-                                0
-                                ? Number(invoice.grandTotal) -
-                                    Number((invoice as any).returnOrderAmount) -
-                                    Number(invoice.paidAmount)
-                                : Number(invoice.debtAmount)
+                              Math.max(
+                                0,
+                                Number((invoice as any).returnOrderAmount || 0) >
+                                  0
+                                  ? Number(invoice.grandTotal) -
+                                      Number((invoice as any).returnOrderAmount) -
+                                      Number(invoice.paidAmount)
+                                  : customerDebt
+                              )
                             )}
                           </span>
                         </div>

@@ -4,8 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import Swal from "sweetalert2";
 import { DebtOpenTicket, DebtTrackingRow } from "@/lib/api/debt-tracking";
-import { useCloseDebtTicket, useDebtTicket } from "@/lib/hooks/useDebtTickets";
+import {
+  useCloseStopDeliveryTicket,
+  useDebtTicket,
+} from "@/lib/hooks/useDebtTickets";
 import { formatCurrency } from "@/lib/utils";
+import { usePermission } from "@/lib/hooks/usePermissions";
 
 const fmtDate = (value: string | null) =>
   value ? new Date(value).toLocaleString("vi-VN") : "—";
@@ -20,7 +24,13 @@ export function StopDeliveryDetailModal({
   onClose: () => void;
 }) {
   const { data: detail, isLoading } = useDebtTicket(ticketSummary.ticketId);
-  const close = useCloseDebtTicket();
+  const close = useCloseStopDeliveryTicket();
+  const canCloseByTracking = usePermission(
+    "debt_tracking",
+    "close_stop_delivery",
+  );
+  const canCloseLegacy = usePermission("debt_tickets", "cancel");
+  const canClose = canCloseByTracking || canCloseLegacy;
   const dialogRef = useRef<HTMLDivElement>(null);
   const [closing, setClosing] = useState(false);
 
@@ -55,7 +65,7 @@ export function StopDeliveryDetailModal({
       cancelButtonText: "Hủy",
       inputValidator: (value) => (!value?.trim() ? "Vui lòng nhập lý do" : undefined),
     });
-    if (!result.isConfirmed || !result.value) return;
+    if (!result.isConfirmed || !result.value || !canClose) return;
     setClosing(true);
     close.mutate(
       { id: current.id, reason: result.value, finalStatus: "DONE" },
@@ -92,7 +102,7 @@ export function StopDeliveryDetailModal({
             </>
           )}
         </div>
-        {detail?.isOpen && <div className="flex justify-end gap-2 px-5 py-3 border-t"><button onClick={handleClose} disabled={closing || isLoading} className="px-3 py-1.5 rounded bg-brand text-white text-sm disabled:opacity-50">{closing ? "Đang kết thúc…" : "Kết thúc"}</button></div>}
+        {detail?.isOpen && canClose && <div className="flex justify-end gap-2 px-5 py-3 border-t"><button onClick={handleClose} disabled={closing || isLoading} className="px-3 py-1.5 rounded bg-brand text-white text-sm disabled:opacity-50">{closing ? "Đang kết thúc…" : "Kết thúc"}</button></div>}
       </div>
     </div>
   );

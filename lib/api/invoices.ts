@@ -43,6 +43,8 @@ export interface Invoice {
     createdAt: string;
     updatedAt: string;
   }>;
+  /** Backend tính theo batch ID của trang hiện tại (bảng giá 2/3). */
+  hasPriceBookWarning?: boolean;
 }
 
 export interface InvoicesResponse {
@@ -50,6 +52,7 @@ export interface InvoicesResponse {
   total: number;
   page: number;
   limit: number;
+  statusCounts?: Record<string, number>;
 }
 
 export interface InvoicesTotalsResponse {
@@ -96,6 +99,8 @@ export interface CreateInvoiceRequest {
   customerId: number;
   shippingFee?: number;
   items: Array<Record<string, unknown>>;
+  paymentNoteType?: "cash" | "transfer";
+  paymentType?: "cash" | "transfer";
   [key: string]: unknown;
 }
 
@@ -106,6 +111,10 @@ export interface MergeInvoicesRequest {
   representativeInvoiceId: number;
   reason?: string;
   idempotencyKey?: string;
+}
+
+export interface CancelInvoiceRequest {
+  cancelPayments?: boolean;
 }
 
 export interface CreateInvoiceFromOrderRequest {
@@ -121,6 +130,8 @@ export interface CreateInvoiceFromOrderRequest {
   discountAmount?: number;
   discountRatio?: number;
   shippingFee?: number;
+  paymentNoteType?: "cash" | "transfer";
+  paymentType?: "cash" | "transfer";
 }
 
 export const invoicesApi = {
@@ -136,6 +147,12 @@ export const invoicesApi = {
   },
   getInvoice: (id: number): Promise<Invoice> => {
     return apiClient.get(`/invoices/${id}`);
+  },
+  getPickupDetails: (ids: number[]): Promise<Invoice[]> => {
+    if (ids.length === 0) return Promise.resolve([]);
+    return apiClient.get("/invoices/pickup-details", {
+      ids: ids.join(","),
+    });
   },
   getInvoicePayments: async (invoiceId: number) => {
     const response = await apiClient.get(
@@ -153,14 +170,17 @@ export const invoicesApi = {
   updateInvoice: (id: number, data: UpdateInvoiceRequest): Promise<Invoice> => {
     return apiClient.put(`/invoices/${id}`, data);
   },
+  cancelInvoice: (
+    id: number,
+    data: CancelInvoiceRequest
+  ): Promise<Invoice> => {
+    return apiClient.put(`/invoices/${id}/cancel`, data);
+  },
   mergeInvoices: (data: MergeInvoicesRequest): Promise<{ invoice: Invoice }> => {
     return apiClient.post("/invoices/merge", data);
   },
   validateMerge: (sourceInvoiceIds: number[]): Promise<{ valid: boolean; errors: string[] }> => {
     return apiClient.post("/invoices/merge/validate", { sourceInvoiceIds });
-  },
-  deleteInvoice: (id: number): Promise<void> => {
-    return apiClient.delete(`/invoices/${id}`);
   },
   createInvoiceFromOrder: (
     params: CreateInvoiceFromOrderRequest
@@ -178,6 +198,8 @@ export const invoicesApi = {
       discountAmount,
       discountRatio,
       shippingFee,
+      paymentNoteType,
+      paymentType,
     } = params;
     return apiClient.post(`/invoices/from-order/${orderId}`, {
       additionalPayment: additionalPayment || 0,
@@ -191,6 +213,8 @@ export const invoicesApi = {
       ...(discountAmount != null ? { discountAmount } : {}),
       ...(discountRatio != null ? { discountRatio } : {}),
       ...(shippingFee != null ? { shippingFee } : {}),
+      ...(paymentNoteType ? { paymentNoteType } : {}),
+      ...(paymentType ? { paymentType } : {}),
     });
   },
   /** Route POS có rule khách PREPAID + Không công nợ phải trả đủ trên đơn. */
@@ -210,6 +234,8 @@ export const invoicesApi = {
       discountAmount,
       discountRatio,
       shippingFee,
+      paymentNoteType,
+      paymentType,
     } = params;
     return apiClient.post(`/invoices/pos/from-order/${orderId}`, {
       additionalPayment: additionalPayment || 0,
@@ -223,6 +249,8 @@ export const invoicesApi = {
       ...(discountAmount != null ? { discountAmount } : {}),
       ...(discountRatio != null ? { discountRatio } : {}),
       ...(shippingFee != null ? { shippingFee } : {}),
+      ...(paymentNoteType ? { paymentNoteType } : {}),
+      ...(paymentType ? { paymentType } : {}),
     });
   },
   getInvoicesForReturnOrder: (params: {

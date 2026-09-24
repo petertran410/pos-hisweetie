@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Fragment, useMemo, useRef } from "react";
+import dynamic from "next/dynamic";
 import { useOrders, useOrdersTotals, useExportOrders } from "@/lib/hooks/useOrders";
 import { useBranchStore } from "@/lib/store/branch";
 import {
@@ -17,7 +18,6 @@ import {
   Loader2,
 } from "lucide-react";
 import type { Order } from "@/lib/types/order";
-import { OrderDetailRow } from "./OrderDetailRow";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { CodeLink } from "../shared/CodeLink";
@@ -27,12 +27,27 @@ import {
   type ColumnConfig,
 } from "@/lib/hooks/useColumnVisibility";
 
+const OrderDetailRow = dynamic(
+  () => import("./OrderDetailRow").then((m) => m.OrderDetailRow),
+  {
+    ssr: false,
+    loading: () => (
+      <tr>
+        <td className="py-8 text-center text-gray-400 text-sm">
+          Đang tải chi tiết...
+        </td>
+      </tr>
+    ),
+  }
+);
+
 interface OrdersTableProps {
   filters: any;
   onCreateClick: () => void;
   onEditClick: (order: Order) => void;
   /** Mã đơn cần tự mở rộng chi tiết khi vào trang qua deep-link (?Code=). */
   autoExpandCode?: string;
+  onClearCode?: () => void;
 }
 
 const STATUS_COLOR: Record<number, string> = {
@@ -259,12 +274,17 @@ const DEFAULT_COLUMNS: ColumnConfig<Order>[] = [
   },
 ];
 
-export function OrdersTable({ filters, onCreateClick, autoExpandCode }: OrdersTableProps) {
+export function OrdersTable({
+  filters,
+  onCreateClick,
+  autoExpandCode,
+  onClearCode,
+}: OrdersTableProps) {
   const { selectedBranch } = useBranchStore();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const [didAutoExpand, setDidAutoExpand] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => filters?.search ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
@@ -324,6 +344,7 @@ export function OrdersTable({ filters, onCreateClick, autoExpandCode }: OrdersTa
   // Tab status override sidebar status filter (tab takes priority)
   const effectiveFilters = useMemo(() => {
     const f = { ...filters };
+    delete f.search;
     if (activeStatusTab !== "all") f.status = activeStatusTab;
     return f;
   }, [filters, activeStatusTab]);
@@ -489,7 +510,11 @@ export function OrdersTable({ filters, onCreateClick, autoExpandCode }: OrdersTa
               type="text"
               placeholder="Tìm mã đơn, khách hàng..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                if (filters?.search) onClearCode?.();
+                if (!e.target.value) setDebouncedSearch("");
+                setSearch(e.target.value);
+              }}
               className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingSlip } from "@/lib/types/packing-slip";
 import { X, Plus, FileText } from "lucide-react";
@@ -10,6 +10,7 @@ import {
   useColumnVisibility,
   type ColumnConfig,
 } from "@/lib/hooks/useColumnVisibility";
+import { apiClient } from "@/lib/config/api";
 
 interface PackingSlipsTableProps {
   packingSlips: (PackingSlip & { type?: string })[];
@@ -64,11 +65,60 @@ export function PackingSlipsTable({
     if (!isControlled) setInternalSearch(value);
   };
   const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [viewingImagesList, setViewingImagesList] = useState<any[]>([]);
+  const [loadingActionId, setLoadingActionId] = useState<string | null>(null);
   const [viewingExpenseFiles, setViewingExpenseFiles] =
     useState<PackingSlip | null>(null);
   const [showCreateDropdown, setShowCreateDropdown] = useState(false);
+  const [viewingInvoices, setViewingInvoices] = useState<any>(null);
 
-  const DEFAULT_COLUMNS: ColumnConfig<PackingSlip>[] = [
+  const handleViewImages = async (slip: any) => {
+    if (slip.images?.[0]?.imageUrl) {
+      setViewingImagesList(slip.images);
+      setViewingImage(slip.images[0].imageUrl);
+      return;
+    }
+    const actionKey = `img-${slip.type || "giao-hang"}-${slip.id}`;
+    setLoadingActionId(actionKey);
+    try {
+      const url =
+        slip.type === "dong-hang"
+          ? `/packing-hangs/${slip.id}`
+          : slip.type === "loading"
+          ? `/packing-loadings/${slip.id}`
+          : `/packing-slips/${slip.id}`;
+      const full = await apiClient.get<any>(url);
+      const images = full.images || [];
+      if (images.length > 0) {
+        setViewingImagesList(images);
+        setViewingImage(images[0].imageUrl);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingActionId(null);
+    }
+  };
+
+  const handleViewExpenseFiles = async (slip: any) => {
+    if (slip.expenseFiles?.[0]?.fileUrl) {
+      setViewingExpenseFiles(slip);
+      return;
+    }
+    const actionKey = `exp-${slip.id}`;
+    setLoadingActionId(actionKey);
+    try {
+      const full = await apiClient.get<any>(`/packing-slips/${slip.id}`);
+      setViewingExpenseFiles(full);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingActionId(null);
+    }
+  };
+
+  const DEFAULT_COLUMNS: ColumnConfig<PackingSlip>[] = useMemo(
+    () => [
     {
       key: "type",
       label: "Loại",
@@ -219,16 +269,19 @@ export function PackingSlipsTable({
       visible: true,
       width: "150px",
       render: (slip) => {
-        const files = slip.expenseFiles || [];
-        if (files.length === 0) return "0";
+        const count =
+          (slip as any).expenseFileCount ?? slip.expenseFiles?.length ?? 0;
+        if (count === 0) return "0";
+        const isLoadingThis = loadingActionId === `exp-${slip.id}`;
         return (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              setViewingExpenseFiles(slip);
+              handleViewExpenseFiles(slip);
             }}
-            className="text-brand hover:text-brand-dark">
-            {files.length} file
+            disabled={isLoadingThis}
+            className="text-brand hover:text-brand-dark disabled:opacity-50">
+            {isLoadingThis ? "Đang tải..." : `${count} file`}
           </button>
         );
       },
@@ -239,19 +292,21 @@ export function PackingSlipsTable({
       visible: true,
       width: "120px",
       render: (slip) => {
-        const imageCount = slip.images?.length || 0;
+        const imageCount =
+          (slip as any).imageCount ?? slip.images?.length ?? 0;
         if (imageCount === 0) return "0";
+        const isLoadingThis =
+          loadingActionId === `img-${slip.type || "giao-hang"}-${slip.id}`;
 
         return (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              if (slip.images && slip.images.length > 0) {
-                setViewingImage(slip.images[0].imageUrl);
-              }
+              handleViewImages(slip);
             }}
-            className="text-brand hover:text-brand-dark">
-            {imageCount} hình
+            disabled={isLoadingThis}
+            className="text-brand hover:text-brand-dark disabled:opacity-50">
+            {isLoadingThis ? "Đang tải..." : `${imageCount} hình`}
           </button>
         );
       },
@@ -277,9 +332,9 @@ export function PackingSlipsTable({
       width: "220px",
       render: (slip) => new Date(slip.createdAt).toLocaleString("vi-VN"),
     },
-  ];
-
-  const [viewingInvoices, setViewingInvoices] = useState<any>(null);
+  ],
+  [loadingActionId]
+  );
   const { columns, visibleColumns, toggleColumn } = useColumnVisibility(
     "packingSlipTableColumns",
     DEFAULT_COLUMNS
@@ -665,10 +720,16 @@ export function PackingSlipsTable({
       {viewingImage && (
         <div
           className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
-          onClick={() => setViewingImage(null)}>
+          onClick={() => {
+            setViewingImage(null);
+            setViewingImagesList([]);
+          }}>
           <div className="relative max-w-6xl w-full max-h-[90vh]">
             <button
-              onClick={() => setViewingImage(null)}
+              onClick={() => {
+                setViewingImage(null);
+                setViewingImagesList([]);
+              }}
               className="absolute -top-10 right-0 text-white hover:text-gray-300 z-10">
               <X className="w-8 h-8" />
             </button>
@@ -677,7 +738,10 @@ export function PackingSlipsTable({
               const currentSlip = filteredSlips.find((slip) =>
                 slip.images?.some((img: any) => img.imageUrl === viewingImage)
               );
-              const images = currentSlip?.images || [];
+              const images =
+                viewingImagesList.length > 0
+                  ? viewingImagesList
+                  : currentSlip?.images || [];
               const currentIndex = images.findIndex(
                 (img: any) => img.imageUrl === viewingImage
               );

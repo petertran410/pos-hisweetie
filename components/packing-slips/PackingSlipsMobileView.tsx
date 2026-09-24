@@ -5,6 +5,7 @@ import { useAllPacking } from "@/lib/hooks/useAllPacking";
 import { useBranchStore } from "@/lib/store/branch";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { formatCurrency } from "@/lib/utils";
+import { apiClient } from "@/lib/config/api";
 import {
   Search,
   Plus,
@@ -66,7 +67,7 @@ function PackingMobileCard({
   const badge = TYPE_BADGE[typeKey];
   const Icon = badge.icon;
   const invoices = item.invoices || [];
-  const imageCount = item.images?.length || 0;
+  const imageCount = item.imageCount ?? item.images?.length ?? 0;
   const customerNames = invoices
     .map((inv: any) => inv.invoice?.customer?.name)
     .filter(Boolean);
@@ -368,6 +369,39 @@ function PackingMobileDetailSheet({
   onResendLoadingLark?: () => void;
 }) {
   const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [detail, setDetail] = useState<any>(item);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const hasImageUrls = item?.images?.some((img: any) => !!img.imageUrl);
+    const needsFetch =
+      !hasImageUrls && (item?.imageCount ?? item?.images?.length ?? 0) > 0;
+
+    if (needsFetch) {
+      setLoadingDetail(true);
+      const url =
+        item.type === "dong-hang"
+          ? `/packing-hangs/${item.id}`
+          : item.type === "loading"
+          ? `/packing-loadings/${item.id}`
+          : `/packing-slips/${item.id}`;
+      apiClient
+        .get(url)
+        .then((res) => {
+          if (active && res) setDetail((prev: any) => ({ ...prev, ...res }));
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (active) setLoadingDetail(false);
+        });
+    } else {
+      setDetail(item);
+    }
+    return () => {
+      active = false;
+    };
+  }, [item]);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -380,7 +414,7 @@ function PackingMobileDetailSheet({
   const badge = TYPE_BADGE[typeKey];
   const Icon = badge.icon;
   const invoices = item.invoices || [];
-  const images = item.images || [];
+  const images = detail?.images || [];
 
   return (
     <>
@@ -513,11 +547,17 @@ function PackingMobileDetailSheet({
             )}
 
             {/* Hình ảnh */}
-            {images.length > 0 && (
+            {(images.length > 0 || loadingDetail) && (
               <div className="bg-gray-50 rounded-2xl p-4">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-                  Hình ảnh ({images.length})
+                  Hình ảnh {images.length > 0 ? `(${images.length})` : ""}
                 </p>
+                {loadingDetail && images.length === 0 ? (
+                  <div className="flex items-center justify-center py-6 gap-2 text-gray-400 text-xs">
+                    <Loader2 className="w-4 h-4 animate-spin text-brand" />
+                    Đang tải hình ảnh...
+                  </div>
+                ) : (
                 <div className="grid grid-cols-3 gap-2">
                   {images.map((img: any, idx: number) => (
                     <button
@@ -532,6 +572,7 @@ function PackingMobileDetailSheet({
                     </button>
                   ))}
                 </div>
+                )}
               </div>
             )}
 

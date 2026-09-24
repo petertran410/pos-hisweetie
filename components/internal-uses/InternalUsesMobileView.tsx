@@ -6,7 +6,7 @@ import { useBranches } from "@/lib/hooks/useBranches";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useInternalUsePurposes } from "@/lib/hooks/useInternalUses";
 import { useBranchStore } from "@/lib/store/branch";
-import { usePermission } from "@/lib/hooks/usePermissions";
+import { useCanViewInternalUseCost } from "./useCanViewInternalUseCost";
 import { formatCurrency, formatDate, getDateRangeFromPreset } from "@/lib/utils";
 import type { InternalUse } from "@/lib/api/internalUses";
 import {
@@ -399,7 +399,7 @@ export function InternalUsesMobileView({
   onCreateClick,
 }: InternalUsesMobileViewProps) {
   const { selectedBranch } = useBranchStore();
-  const canViewCost = usePermission("internal-use", "view_cost_price");
+  const canViewCost = useCanViewInternalUseCost();
 
   // Filter riêng mobile (khôi phục từ localStorage). Mặc định lọc tháng này.
   const [localFilters, setLocalFilters] = useState<any>(() => {

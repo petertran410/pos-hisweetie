@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 
-export default function LegacyDebtTicketDetailPage({
+export default async function LegacyDebtTicketDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  redirect(`/khach-hang/theo-doi-cong-no?ticketId=${encodeURIComponent(params.id)}`);
+  const { id } = await params;
+  redirect(`/khach-hang/theo-doi-cong-no?ticketId=${encodeURIComponent(id)}`);
 }

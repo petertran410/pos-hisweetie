@@ -294,8 +294,8 @@ export function DatePickerInput({
       if (popRef.current?.contains(t)) return;
       setOpen(false);
     };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
+    document.addEventListener("mousedown", h, true);
+    return () => document.removeEventListener("mousedown", h, true);
   }, [open]);
 
   const toggle = () => {

@@ -1,4 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import { ordersApi, type UpdateOrderRequest } from "../api/orders";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -104,6 +109,7 @@ export function useOrders(params?: any) {
   return useQuery({
     queryKey: ["orders", params],
     queryFn: () => ordersApi.getOrders(params),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -115,6 +121,7 @@ export function useOrdersTotals(params?: any) {
   return useQuery({
     queryKey: ["orders-totals", params],
     queryFn: () => ordersApi.getTotals(params),
+    placeholderData: keepPreviousData,
   });
 }
 

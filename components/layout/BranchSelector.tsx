@@ -35,7 +35,7 @@ export function BranchSelector({
   //   return allBranches.filter((b) => userBranchIds.includes(b.id));
   // }, [allBranches, user?.branchIds]);
 
-  const branches = allBranches ?? [];
+  const branches = Array.isArray(allBranches) ? allBranches : [];
 
   useEffect(() => {
     if (!selectedBranch && branches && branches.length > 0) {

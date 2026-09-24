@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
+  Calendar,
   Download,
   Info,
   Loader2,
   RefreshCw,
-  Search,
+  Search
 } from "lucide-react";
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
+import { MiniCalendar } from "@/components/ui/MiniCalendar";
 import { ViewModeToggle } from "./ViewModeToggle";
 import { money, num } from "./columns";
 import type {
@@ -17,7 +19,7 @@ import type {
   RecommendationFilters,
   RecommendationListMeta,
   RecommendationSortBy,
-  ViewMode,
+  ViewMode
 } from "@/lib/types/purchasing-planning";
 
 interface Props {
@@ -53,8 +55,38 @@ export function RecommendationToolbar({
   onExportExcel,
   isExporting,
   onRunCalculation,
-  isCalculating,
+  isCalculating
 }: Props) {
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const datePickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!datePickerOpen) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!datePickerRef.current?.contains(event.target as Node)) {
+        setDatePickerOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDatePickerOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [datePickerOpen]);
+
+  const calendarValue = filters.date ?? meta?.snapshotDate ?? "";
+  const calendarLabel = calendarValue
+    ? new Date(`${calendarValue}T00:00:00`).toLocaleDateString("vi-VN")
+    : "Chọn ngày";
+  const displayCalendarLabel =
+    !filters.date && meta?.snapshotDate
+      ? `${calendarLabel} (mới nhất)`
+      : calendarLabel;
+
   return (
     <>
       {/* ── Tiêu đề trang + tìm kiếm + hành động ── */}
@@ -66,14 +98,43 @@ export function RecommendationToolbar({
             Dự kiến đặt hàng
           </h1>
           <SearchBox
-            // Remount khi bộ lọc bị xoá từ nơi khác (nút "Xóa tất cả" ở
-            // sidebar) để ô nhập tự trả về rỗng, thay vì đồng bộ bằng effect.
-            key={filters.search ?? ""}
             value={filters.search ?? ""}
             onCommit={(value) =>
               onFiltersChange({ search: value || undefined, page: 1 })
             }
           />
+          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+            <span className="whitespace-nowrap">Ngày chốt dữ liệu</span>
+            <div ref={datePickerRef} className="relative">
+              <button
+                type="button"
+                aria-label="Chọn ngày chốt dữ liệu"
+                title="Chọn ngày để xem hoặc tính lại đề xuất"
+                onClick={() => setDatePickerOpen((open) => !open)}
+                className="flex min-w-36 items-center justify-between gap-2 rounded-lg border bg-white px-2 py-1.5 text-xs text-gray-700 outline-none hover:border-gray-400 focus:ring-2 focus:ring-brand-soft"
+                style={{ borderColor: "var(--dt-border)" }}>
+                <span className={calendarValue ? "text-gray-800" : "text-gray-400"}>
+                  {displayCalendarLabel}
+                </span>
+                <Calendar className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+              </button>
+              {datePickerOpen && (
+                <div className="absolute top-full left-0 z-50 mt-1 w-64">
+                  <MiniCalendar
+                    value={calendarValue}
+                    onChange={(date) => {
+                      onFiltersChange({
+                        date: date || undefined,
+                        page: 1
+                      });
+                      setDatePickerOpen(false);
+                    }}
+                    onClose={() => setDatePickerOpen(false)}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -158,9 +219,17 @@ export function RecommendationToolbar({
             {isError
               ? "Lỗi tải dữ liệu"
               : pagination
-                ? `${num(pagination.total)} sản phẩm`
+                ? `${num(meta?.skuTotal ?? pagination.total)} SKU`
                 : "Đang tải..."}
           </span>
+          {meta?.needOrderSku !== undefined && (
+            <span className="text-gray-500">
+              Cần đặt:{" "}
+              <span className="font-medium text-gray-800">
+                {num(meta.needOrderSku)}
+              </span>
+            </span>
+          )}
           {meta?.totalEstimatedValue ? (
             <span className="text-gray-500">
               Giá trị đề xuất:{" "}
@@ -169,6 +238,19 @@ export function RecommendationToolbar({
               </span>
             </span>
           ) : null}
+          {meta?.lowConfidenceSku !== undefined && (
+            <span className="text-amber-700">
+              Tin cậy thấp:{" "}
+              <span className="font-medium">{num(meta.lowConfidenceSku)}</span>
+            </span>
+          )}
+          {meta?.historyStartDate && meta.historyEndDate && (
+            <span className="hidden text-gray-400 xl:inline">
+              Lịch sử:{" "}
+              {new Date(meta.historyStartDate).toLocaleDateString("vi-VN")} →{" "}
+              {new Date(meta.historyEndDate).toLocaleDateString("vi-VN")}
+            </span>
+          )}
         </div>
 
         {viewMode === "list" && (
@@ -179,7 +261,7 @@ export function RecommendationToolbar({
               onChange={(e) =>
                 onFiltersChange({
                   sortBy: e.target.value as RecommendationSortBy,
-                  page: 1,
+                  page: 1
                 })
               }
               className="rounded border bg-white px-2 py-1 outline-none"
@@ -204,24 +286,37 @@ export function RecommendationToolbar({
  */
 function SearchBox({
   value,
-  onCommit,
+  onCommit
 }: {
   value: string;
   onCommit: (value: string) => void;
 }) {
+  // Giữ draft trong chính ô nhập giống trang Danh sách sản phẩm. Không dùng
+  // `key` để remount input sau mỗi lần debounce, vì remount sẽ làm mất focus
+  // và khiến người dùng phải bấm lại vào ô search.
   const [draft, setDraft] = useState(value);
 
+  // Đồng bộ các thay đổi từ bên ngoài, ví dụ nút "Xóa tất cả" ở sidebar.
   useEffect(() => {
-    if (draft === value) return;
-    const timer = setTimeout(() => onCommit(draft), 350);
+    setDraft(value);
+  }, [value]);
+
+  useEffect(() => {
+    const normalized = draft.trim();
+    if (normalized === value.trim()) return;
+    const timer = setTimeout(() => onCommit(normalized), 300);
     return () => clearTimeout(timer);
   }, [draft, value, onCommit]);
 
   return (
     <div className="relative">
-      <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
+      <Search
+        aria-hidden="true"
+        className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400"
+      />
       <input
         type="text"
+        aria-label="Tìm theo mã hoặc tên sản phẩm"
         placeholder="Theo mã, tên sản phẩm"
         value={draft}
         onChange={(e) => setDraft(e.target.value)}

@@ -196,6 +196,16 @@ export const debtTicketsApi = {
   ): Promise<DebtTicket> =>
     apiClient.post(`/debt-tickets/${id}/close`, { reason, finalStatus }),
 
+  closeStopDelivery: (
+    id: number,
+    reason: string,
+    finalStatus: "DONE" | "ENDED" = "DONE"
+  ): Promise<DebtTicket> =>
+    apiClient.post(`/debt-tickets/${id}/stop-delivery/close`, {
+      reason,
+      finalStatus,
+    }),
+
   /** Dừng phiếu — không thu được. */
   cancel: (id: number, reason: string): Promise<DebtTicket> =>
     apiClient.post(`/debt-tickets/${id}/cancel`, { reason }),

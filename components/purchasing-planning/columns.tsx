@@ -91,8 +91,24 @@ export const COLUMN_GROUPS: Record<string, string[]> = {
     "supplier",
     "leadTime",
   ],
-  "Tồn kho": ["physical", "reserved", "available", "incoming"],
-  "Dự báo": ["forecast", "ma30", "ma60", "ma90", "trend", "confidence"],
+  "Tồn kho": ["physical", "reserved", "available", "incoming", "vehicleRisk"],
+  "Dự báo": [
+    "forecast",
+    "systemGrowthFactor",
+    "appliedGrowthFactor",
+    "salesDemand",
+    "customerOrders",
+    "customerDemand",
+    "companyNeed",
+    "promotionExtra",
+    "pastCustomerDemand",
+    "totalDemand",
+    "ma30",
+    "ma60",
+    "ma90",
+    "trend",
+    "confidence",
+  ],
   "Thời gian": ["dos", "daysUntilStockout", "stockoutDate", "urgency"],
   Ngưỡng: ["rop", "position", "gap"],
   "Đề xuất": ["soq", "packCount", "unitPrice", "value"],
@@ -230,21 +246,13 @@ export function buildColumns(): ColumnConfig<RecommendationListItem>[] {
       visible: true,
       width: "100px",
       tooltip:
-        "Khoảng thời gian từ lúc đặt nhà máy tới khi hàng về công ty: Sản xuất → Thông quan → Về công ty.",
-      render: (i) =>
-        i.leadTimeMinDays != null && i.leadTimeMinDays !== i.leadTimeDays ? (
-          <span className="whitespace-nowrap tabular-nums">
-            {i.leadTimeMinDays}–{i.leadTimeDays} ngày
-          </span>
-        ) : (
+        "Thời gian từ lúc đặt nhà máy tới khi hàng về kho gốc: sản xuất + 10 ngày thông quan + 10 ngày về kho.",
+      render: (i) => (
           <span className="whitespace-nowrap tabular-nums">
             {i.leadTimeDays} ngày
           </span>
         ),
-      exportValue: (i) =>
-        i.leadTimeMinDays != null && i.leadTimeMinDays !== i.leadTimeDays
-          ? `${i.leadTimeMinDays}-${i.leadTimeDays}`
-          : String(i.leadTimeDays),
+      exportValue: (i) => String(i.leadTimeDays),
     },
     {
       key: "orderUrgency",
@@ -345,10 +353,11 @@ export function buildColumns(): ColumnConfig<RecommendationListItem>[] {
     },
     {
       key: "incoming",
-      label: "Đang về",
+      label: "Hàng về chắc chắn",
       visible: true,
-      width: "90px",
-      tooltip: "Tổng lượng hàng đã đặt nhà cung cấp nhưng chưa nhập kho.",
+      width: "125px",
+      tooltip:
+        "Hàng đã đặt nhà cung cấp và đủ chắc chắn để trừ khỏi đề xuất đặt thêm.",
       render: (i) => (
         <Num
           value={i.incomingTotal}
@@ -356,6 +365,23 @@ export function buildColumns(): ColumnConfig<RecommendationListItem>[] {
         />
       ),
       exportValue: (i) => i.incomingTotal,
+    },
+    {
+      key: "vehicleRisk",
+      label: "Ghép xe rủi ro",
+      visible: false,
+      width: "115px",
+      tooltip:
+        "Hàng ghép xe chưa đủ chắc chắn; chỉ dùng ở kịch bản nếu hàng về đúng hạn.",
+      render: (i) => (
+        <Num
+          value={i.vehicleRisk}
+          className={
+            (i.vehicleRisk ?? 0) > 0 ? "text-violet-600" : "text-gray-400"
+          }
+        />
+      ),
+      exportValue: (i) => i.vehicleRisk ?? 0,
     },
 
     // ── Dự báo ──
@@ -367,6 +393,105 @@ export function buildColumns(): ColumnConfig<RecommendationListItem>[] {
       tooltip: "Nhu cầu bán trung bình mỗi ngày, dùng để tính đề xuất.",
       render: (i) => <Num value={i.forecastDailyDemand} digits={1} />,
       exportValue: (i) => i.forecastDailyDemand,
+    },
+    {
+      key: "systemGrowthFactor",
+      label: "Hệ số hệ thống",
+      visible: true,
+      width: "115px",
+      tooltip: "Hệ số hệ thống tự suy từ xu hướng và mùa vụ lịch sử.",
+      render: (i) => (
+        <Num
+          value={i.systemGrowthFactor}
+          digits={2}
+          className="text-gray-600"
+        />
+      ),
+      exportValue: (i) => i.systemGrowthFactor ?? null,
+    },
+    {
+      key: "appliedGrowthFactor",
+      label: "Hệ số áp dụng",
+      visible: true,
+      width: "110px",
+      tooltip: "Hệ số thực tế được dùng để tính nhu cầu bán dự kiến.",
+      render: (i) => (
+        <Num
+          value={i.appliedGrowthFactor}
+          digits={2}
+          className={
+            i.appliedGrowthFactor !== i.systemGrowthFactor
+              ? "font-medium text-amber-700"
+              : "text-gray-600"
+          }
+        />
+      ),
+      exportValue: (i) => i.appliedGrowthFactor ?? null,
+    },
+    {
+      key: "customerDemand",
+      label: "Demand khách hàng",
+      visible: true,
+      width: "125px",
+      tooltip: "Tổng nhu cầu OEM/đặt hộ đã xác nhận trong kỳ kế hoạch.",
+      render: (i) => (i.customerDemand ?? 0) > 0 ? <Num value={i.customerDemand} digits={1} className="font-medium text-violet-700" /> : <span className="block text-right text-gray-400">—</span>,
+      exportValue: (i) => i.customerDemand ?? 0,
+    },
+    {
+      key: "salesDemand",
+      label: "Nhu cầu bán dự báo",
+      visible: false,
+      width: "145px",
+      tooltip:
+        "Nhu cầu bán trong planning horizon sau khi nhân hệ số áp dụng.",
+      render: (i) => <Num value={i.salesDemand} digits={1} />,
+      exportValue: (i) => i.salesDemand ?? 0,
+    },
+    {
+      key: "customerOrders",
+      label: "Khách đặt",
+      visible: false,
+      width: "100px",
+      tooltip: "Đơn khách đang chờ trong planning horizon.",
+      render: (i) => <Num value={i.customerOrders} digits={1} />,
+      exportValue: (i) => i.customerOrders ?? 0,
+    },
+    {
+      key: "companyNeed",
+      label: "Công ty cần",
+      visible: false,
+      width: "105px",
+      tooltip: "Mức tồn tối thiểu cần giữ cho nhu cầu công ty.",
+      render: (i) => <Num value={i.companyNeed} digits={1} />,
+      exportValue: (i) => i.companyNeed ?? 0,
+    },
+    {
+      key: "promotionExtra",
+      label: "Khuyến mãi",
+      visible: false,
+      width: "100px",
+      tooltip: "Nhu cầu cộng thêm do chương trình khuyến mãi trong kỳ.",
+      render: (i) => <Num value={i.promotionExtra} digits={1} />,
+      exportValue: (i) => i.promotionExtra ?? 0,
+    },
+    {
+      key: "pastCustomerDemand",
+      label: "Trừ Demand cũ",
+      visible: false,
+      width: "115px",
+      tooltip:
+        "Hàng thực tế đã mua theo Demand cũ, được trừ khỏi tổng nhu cầu.",
+      render: (i) => <Num value={i.pastCustomerDemand} digits={1} />,
+      exportValue: (i) => i.pastCustomerDemand ?? 0,
+    },
+    {
+      key: "totalDemand",
+      label: "Tổng nhu cầu",
+      visible: false,
+      width: "110px",
+      tooltip: "Tổng nhu cầu sau khi cộng mọi nguồn và trừ Demand cũ.",
+      render: (i) => <Num value={i.totalDemand} digits={1} />,
+      exportValue: (i) => i.totalDemand ?? 0,
     },
     {
       key: "ma30",
@@ -403,7 +528,7 @@ export function buildColumns(): ColumnConfig<RecommendationListItem>[] {
     },
     {
       key: "trend",
-      label: "Xu hướng",
+      label: "Xu hướng bán gần đây",
       visible: false,
       width: "95px",
       tooltip: "Mức thay đổi của MA30 so với MA90; dương là đang bán tăng.",
