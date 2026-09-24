@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useLayoutEffect, useRef } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { ExternalLink, Loader2, Printer } from "lucide-react";
+import { Copy, ExternalLink, Loader2, Printer } from "lucide-react";
 import {
   useCancelInternalUse,
   useCompleteInternalUse,
@@ -66,6 +66,7 @@ export function InternalUseDetailRow({
   const canViewCost = useCanViewInternalUseCost();
   // Chỉ người duyệt (có internal-use:complete) mới được duyệt/hoàn thành phiếu.
   const canComplete = usePermission("internal-use", "complete");
+  const canCreate = usePermission("internal-use", "create");
   const { data: internalUse, isLoading } = useInternalUse(internalUseId);
 
   const [searchCode, setSearchCode] = useState("");
@@ -144,6 +145,12 @@ export function InternalUseDetailRow({
 
   const handleOpenEdit = () => {
     router.push(`/san-pham/xuat-dung-noi-bo/${internalUseId}`);
+  };
+
+  const handleCopy = () => {
+    router.push(
+      `/san-pham/xuat-dung-noi-bo/new?copyInternalUseId=${internalUseId}`,
+    );
   };
 
   const handlePrint = async () => {
@@ -420,6 +427,16 @@ export function InternalUseDetailRow({
                   <Printer className="w-3.5 h-3.5" />
                   In
                 </button>
+                {canCreate && (
+                  <button
+                    onClick={handleCopy}
+                    title="Sao chép phiếu xuất dùng nội bộ"
+                    className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    Sao chép
+                  </button>
+                )}
                 {showCancelButton && (
                   <button
                     onClick={handleCancel}
