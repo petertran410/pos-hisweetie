@@ -115,13 +115,13 @@ const DEFAULT_COLUMNS: ColumnConfig<Invoice>[] = [
     render: (inv) =>
       inv.order?.code ? <CodeLink entity="order" code={inv.order.code} /> : "-",
   },
-  {
-    key: "orderCode",
-    label: "Mã vận đơn",
-    visible: false,
-    width: "160px",
-    render: (inv) => inv.delivery?.deliveryCode || "-",
-  },
+  // {
+  //   key: "orderCode",
+  //   label: "Mã vận đơn",
+  //   visible: false,
+  //   width: "160px",
+  //   render: (inv) => inv.delivery?.deliveryCode || "-",
+  // },
   {
     key: "deliveryStatus",
     label: "Trạng thái giao hàng",
@@ -174,13 +174,6 @@ const DEFAULT_COLUMNS: ColumnConfig<Invoice>[] = [
     render: (inv) => inv.customer?.name || "-",
   },
   {
-    key: "debtRuleType",
-    label: "Loại công nợ",
-    visible: true,
-    width: "210px",
-    render: (inv) => getDebtRuleTypeLabel(inv.customer?.debtPolicy?.debtRuleType),
-  },
-  {
     key: "phone",
     label: "Điện thoại",
     visible: false,
@@ -208,13 +201,13 @@ const DEFAULT_COLUMNS: ColumnConfig<Invoice>[] = [
     width: "160px",
     render: (inv) => inv.delivery?.wardName || "-",
   },
-  {
-    key: "deliveryPartner",
-    label: "Đối tác giao hàng",
-    visible: false,
-    width: "180px",
-    render: (inv) => inv.delivery?.partnerDelivery?.name || "-",
-  },
+  // {
+  //   key: "deliveryPartner",
+  //   label: "Đối tác giao hàng",
+  //   visible: false,
+  //   width: "180px",
+  //   render: (inv) => inv.delivery?.partnerDelivery?.name || "-",
+  // },
   {
     key: "branch",
     label: "Chi nhánh",
@@ -236,13 +229,13 @@ const DEFAULT_COLUMNS: ColumnConfig<Invoice>[] = [
     width: "140px",
     render: (inv) => inv.creator?.name || "-",
   },
-  {
-    key: "saleChannel",
-    label: "Kênh bán",
-    visible: false,
-    width: "140px",
-    render: (inv) => inv.saleChannel?.name || "Khác",
-  },
+  // {
+  //   key: "saleChannel",
+  //   label: "Kênh bán",
+  //   visible: false,
+  //   width: "140px",
+  //   render: (inv) => inv.saleChannel?.name || "Khác",
+  // },
   {
     key: "notes",
     label: "Ghi chú",
@@ -346,20 +339,28 @@ const DEFAULT_COLUMNS: ColumnConfig<Invoice>[] = [
     },
   },
   {
-    key: "codAmount",
-    label: "Còn cần thu (COD)",
-    visible: false,
-    width: "140px",
-    render: (inv) => formatCurrency(Number(inv.debtAmount)),
-  },
-  {
-    key: "deliveryFee",
-    label: "Phí trả ĐTGH",
-    visible: false,
-    width: "120px",
+    key: "debtRuleType",
+    label: "Loại công nợ",
+    visible: true,
+    width: "210px",
     render: (inv) =>
-      inv.delivery?.price ? formatCurrency(Number(inv.delivery.price)) : "-",
+      getDebtRuleTypeLabel(inv.customer?.debtPolicy?.debtRuleType),
   },
+  // {
+  //   key: "codAmount",
+  //   label: "Còn cần thu (COD)",
+  //   visible: false,
+  //   width: "140px",
+  //   render: (inv) => formatCurrency(Number(inv.debtAmount)),
+  // },
+  // {
+  //   key: "deliveryFee",
+  //   label: "Phí trả ĐTGH",
+  //   visible: false,
+  //   width: "120px",
+  //   render: (inv) =>
+  //     inv.delivery?.price ? formatCurrency(Number(inv.delivery.price)) : "-",
+  // },
   {
     key: "status",
     label: "Trạng thái",
@@ -436,9 +437,9 @@ export function InvoicesTable({
   onClearCode,
 }: InvoicesTableProps) {
   const { selectedBranch } = useBranchStore();
-  const [selectedInvoicesMap, setSelectedInvoicesMap] = useState<Map<number, Invoice>>(
-    () => new Map()
-  );
+  const [selectedInvoicesMap, setSelectedInvoicesMap] = useState<
+    Map<number, Invoice>
+  >(() => new Map());
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<number | null>(
     null
   );
@@ -1007,15 +1008,15 @@ export function InvoicesTable({
             </h2>
             <div ref={advancedRef} className="relative">
               <div className="flex items-center gap-1">
-            <input
-              type="text"
-              placeholder="Theo mã hóa đơn"
-              value={search}
-              onChange={(e) => {
-                if (filters?.search) onClearCode?.();
-                if (!e.target.value) setDebouncedSearch("");
-                setSearch(e.target.value);
-              }}
+                <input
+                  type="text"
+                  placeholder="Theo mã hóa đơn"
+                  value={search}
+                  onChange={(e) => {
+                    if (filters?.search) onClearCode?.();
+                    if (!e.target.value) setDebouncedSearch("");
+                    setSearch(e.target.value);
+                  }}
                   className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                 />
                 <button
@@ -1252,7 +1253,11 @@ export function InvoicesTable({
             <button
               onClick={() => setShowPickupSummary(true)}
               disabled={selectedInvoices.length === 0}
-              title={selectedInvoices.length === 0 ? "Chọn ít nhất một hóa đơn" : "Tổng hợp hàng đã chọn"}
+              title={
+                selectedInvoices.length === 0
+                  ? "Chọn ít nhất một hóa đơn"
+                  : "Tổng hợp hàng đã chọn"
+              }
               className="px-3 py-1.5 border border-brand text-brand rounded-lg hover:bg-brand-soft text-sm font-medium flex items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-50">
               <PackageCheck className="w-4 h-4" />
               Pick-up ({selectedInvoices.length})
@@ -1260,9 +1265,15 @@ export function InvoicesTable({
             <button
               onClick={handleMergeClick}
               disabled={selectedInvoices.length < 2 || isMergeValidating}
-              title={selectedInvoices.length < 2 ? "Chọn ít nhất hai hóa đơn" : "Gộp các hóa đơn đã chọn"}
+              title={
+                selectedInvoices.length < 2
+                  ? "Chọn ít nhất hai hóa đơn"
+                  : "Gộp các hóa đơn đã chọn"
+              }
               className="px-3 py-1.5 border border-brand text-brand rounded-lg hover:bg-brand-soft text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50">
-              {isMergeValidating ? "Đang kiểm tra..." : `Gộp hóa đơn (${selectedInvoices.length})`}
+              {isMergeValidating
+                ? "Đang kiểm tra..."
+                : `Gộp hóa đơn (${selectedInvoices.length})`}
             </button>
             {selectedInvoices.length > 0 && (
               <button
@@ -1458,7 +1469,7 @@ export function InvoicesTable({
                         onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
-                           checked={selectedInvoicesMap.has(invoice.id)}
+                          checked={selectedInvoicesMap.has(invoice.id)}
                           onChange={() => toggleSelect(invoice.id)}
                           className="cursor-pointer"
                         />
@@ -1594,7 +1605,7 @@ export function InvoicesTable({
         </div>
       </div>
 
-        {showExportDetailModal && (
+      {showExportDetailModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
           <div className="bg-white rounded-xl shadow-2xl w-[540px] max-h-[80vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b">
