@@ -18,6 +18,7 @@ import {
   Loader2,
 } from "lucide-react";
 import type { Order } from "@/lib/types/order";
+import { getDebtRuleTypeLabel } from "@/lib/api/debt-tracking";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { CodeLink } from "../shared/CodeLink";
@@ -118,6 +119,13 @@ const DEFAULT_COLUMNS: ColumnConfig<Order>[] = [
     visible: true,
     width: "180px",
     render: (o) => o.customer?.name || "Khách vãng lai",
+  },
+  {
+    key: "debtRuleType",
+    label: "Loại công nợ",
+    visible: true,
+    width: "210px",
+    render: (o) => getDebtRuleTypeLabel(o.customer?.debtPolicy?.debtRuleType),
   },
   {
     key: "phone",

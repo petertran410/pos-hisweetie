@@ -1,5 +1,6 @@
 import { CustomerAddress } from "./customer";
 import { PaymentNote } from "./invoice";
+import type { DebtRuleType } from "@/lib/api/debt-tracking";
 
 export const ORDER_STATUS = {
   PENDING: 1,
@@ -65,8 +66,9 @@ export interface Order {
     addresses?: CustomerAddress[];
     debtPolicy?: {
       debtForm?: "TRUST" | "CONTRACT" | "COD" | "PREPAID" | null;
-      hasCreditLimit: boolean;
-      hasTermDays: boolean;
+      debtRuleType?: DebtRuleType | null;
+      hasCreditLimit?: boolean;
+      hasTermDays?: boolean;
       isActive?: boolean;
     } | null;
   };

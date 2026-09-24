@@ -31,6 +31,7 @@ import {
   PackageCheck,
 } from "lucide-react";
 import type { Invoice } from "@/lib/types/invoice";
+import { getDebtRuleTypeLabel } from "@/lib/api/debt-tracking";
 import { formatCurrency } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { CodeLink } from "../shared/CodeLink";
@@ -171,6 +172,13 @@ const DEFAULT_COLUMNS: ColumnConfig<Invoice>[] = [
     visible: true,
     width: "180px",
     render: (inv) => inv.customer?.name || "-",
+  },
+  {
+    key: "debtRuleType",
+    label: "Loại công nợ",
+    visible: true,
+    width: "210px",
+    render: (inv) => getDebtRuleTypeLabel(inv.customer?.debtPolicy?.debtRuleType),
   },
   {
     key: "phone",

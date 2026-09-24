@@ -31,6 +31,18 @@ export const DEBT_FORM_LABELS: Record<DebtForm, string> = {
   PREPAID: "Chuyển khoản ngay",
 };
 
+export const DEBT_RULE_TYPE_LABELS: Record<DebtRuleType, string> = {
+  NONE: "Không công nợ",
+  CREDIT_LIMIT: "Hạn mức công nợ",
+  TERM_DAYS: "Công nợ theo số ngày",
+  MONTHLY_SCHEDULE: "Thanh toán cố định theo tháng",
+  WEEKLY_SCHEDULE: "Thanh toán cố định theo tuần",
+};
+
+export function getDebtRuleTypeLabel(type?: DebtRuleType | null): string {
+  return type ? DEBT_RULE_TYPE_LABELS[type] ?? "—" : "—";
+}
+
 export type PaymentHistory =
   | "ON_TIME"
   | "SLIGHT_LATE"

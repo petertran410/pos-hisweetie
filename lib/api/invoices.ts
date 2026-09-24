@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/config/api";
+import type { InvoiceCustomer } from "@/lib/types/invoice";
 
 export interface Invoice {
   id: number;
@@ -26,7 +27,7 @@ export interface Invoice {
   updatedAt: string;
   orderId?: number | null;
   order?: { id: number; code: string } | null;
-  customer?: any;
+  customer?: InvoiceCustomer | null;
   branch?: any;
   soldBy?: any;
   creator?: any;
