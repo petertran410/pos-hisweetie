@@ -418,51 +418,55 @@ export function InternalUseDetailRow({
               )}
 
               {/* Footer */}
-              <div className="flex items-center justify-end pt-4 mt-4 border-t border-gray-200 gap-2">
-                <button
-                  onClick={handlePrint}
-                  title="In phiếu xuất dùng nội bộ"
-                  className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  In
-                </button>
-                {canCreate && (
+              <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200">
+                <div className="flex gap-2">
+                  {showCancelButton && (
+                    <button
+                      onClick={handleCancel}
+                      disabled={cancelInternalUse.isPending}
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-full hover:bg-red-700 transition-colors disabled:opacity-50"
+                    >
+                      Hủy
+                    </button>
+                  )}
+                  {canCreate && (
+                    <button
+                      onClick={handleCopy}
+                      title="Sao chép phiếu xuất dùng nội bộ"
+                      className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      Sao chép
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  {showCompleteButton && (
+                    <button
+                      onClick={handleComplete}
+                      disabled={completeInternalUse.isPending}
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-full hover:bg-green-700 transition-colors disabled:opacity-50"
+                    >
+                      {completeInternalUse.isPending ? "Đang duyệt..." : "Duyệt"}
+                    </button>
+                  )}
+                  {showOpenButton && (
+                    <button
+                      onClick={handleOpenEdit}
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-brand rounded-full hover:bg-brand-dark transition-colors"
+                    >
+                      Mở phiếu
+                    </button>
+                  )}
                   <button
-                    onClick={handleCopy}
-                    title="Sao chép phiếu xuất dùng nội bộ"
+                    onClick={handlePrint}
+                    title="In phiếu xuất dùng nội bộ"
                     className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5"
                   >
-                    <Copy className="w-3.5 h-3.5" />
-                    Sao chép
+                    <Printer className="w-3.5 h-3.5" />
+                    In
                   </button>
-                )}
-                {showCancelButton && (
-                  <button
-                    onClick={handleCancel}
-                    disabled={cancelInternalUse.isPending}
-                    className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-full hover:bg-red-700 transition-colors disabled:opacity-50"
-                  >
-                    Hủy
-                  </button>
-                )}
-                {showCompleteButton && (
-                  <button
-                    onClick={handleComplete}
-                    disabled={completeInternalUse.isPending}
-                    className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-full hover:bg-green-700 transition-colors disabled:opacity-50"
-                  >
-                    {completeInternalUse.isPending ? "Đang duyệt..." : "Duyệt"}
-                  </button>
-                )}
-                {showOpenButton && (
-                  <button
-                    onClick={handleOpenEdit}
-                    className="px-3 py-1.5 text-sm font-medium text-white bg-brand rounded-full hover:bg-brand-dark transition-colors"
-                  >
-                    Mở phiếu
-                  </button>
-                )}
+                </div>
               </div>
             </div>
           </div>

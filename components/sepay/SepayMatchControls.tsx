@@ -6,7 +6,10 @@ import { invoicesApi } from "@/lib/api/invoices";
 import { useCustomer, useSearchCustomers } from "@/lib/hooks/useCustomers";
 import {
   useAssignSepayCustomer,
+  useAssignSepayOrder,
+  useSepayOrderCandidates,
   useUnassignSepayCustomer,
+  useUnassignSepayOrder,
   useConfirmSepayReceipt,
   useHideSepayTransaction,
   useUnhideSepayTransaction,
@@ -18,7 +21,11 @@ import {
   SepayDebtViewModal,
   SepayDebtViewCustomer,
 } from "@/components/sepay/SepayDebtViewModal";
-import type { SepayTransaction, SepayMatchCustomer } from "@/lib/api/sepay";
+import type {
+  SepayOrderSummary,
+  SepayTransaction,
+  SepayMatchCustomer,
+} from "@/lib/api/sepay";
 import {
   Search,
   Loader2,
@@ -32,6 +39,8 @@ import {
   Eye,
   EyeOff,
   UserMinus,
+  ChevronDown,
+  ShoppingCart,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import Swal from "sweetalert2";
@@ -56,6 +65,7 @@ export function SepayStatusBadge({ status }: { status?: string | null }) {
 export function SepayCustomerCell({ tx }: { tx: SepayTransaction }) {
   const customers = tx.match?.customers || [];
   const unassigned = tx.match?.unassignedAmount || 0;
+  const suggestedOrder = tx.match?.suggestedOrder;
   if (customers.length === 0 && unassigned <= 0)
     return <span className="text-gray-400">-</span>;
 
@@ -81,6 +91,12 @@ export function SepayCustomerCell({ tx }: { tx: SepayTransaction }) {
                 {c.name}
               </span>
             ) : null}
+            {suggestedOrder && customers.length === 1 && i === 0 && (
+              <span className="inline-flex w-fit items-center gap-1 text-xs text-brand break-words">
+                <ShoppingCart className="w-3 h-3 shrink-0" />
+                Đơn {suggestedOrder.code}
+              </span>
+            )}
             {(amount > 0 || showUnassignedHere) && (
               <div className="flex flex-wrap items-center gap-1">
                 {amount > 0 && (
@@ -165,7 +181,7 @@ function CustomerPickerModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 p-4 pt-24"
+      className="fixed inset-0 z-[100] flex items-start justify-center whitespace-normal bg-black/40 p-4 pt-24"
       onMouseDown={onClose}>
       <div
         className="w-full max-w-lg bg-white rounded-xl shadow-2xl flex flex-col max-h-[75vh]"
@@ -317,6 +333,181 @@ function CustomerPickerModal({
   );
 }
 
+/** Modal tìm và chọn đơn Phiếu tạm/Đã xác nhận để tự gắn khách hàng. */
+function OrderPickerModal({
+  tx,
+  onSelect,
+  onClose,
+  isPending,
+}: {
+  tx: SepayTransaction;
+  onSelect: (order: SepayOrderSummary) => void;
+  onClose: () => void;
+  isPending: boolean;
+}) {
+  const [search, setSearch] = useState("");
+  const [debounced, setDebounced] = useState("");
+  const [page, setPage] = useState(1);
+  const limit = 20;
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebounced(search.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const { data, isFetching } = useSepayOrderCandidates(
+    tx.id,
+    { page, limit, search: debounced || undefined },
+    true
+  );
+  const allOrders = data?.data || [];
+  const total = data?.total || allOrders.length;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const orders = allOrders.slice((page - 1) * limit, page * limit);
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center whitespace-normal bg-black/40 p-6"
+      onMouseDown={onClose}>
+      <div
+        className="w-full max-w-4xl h-[min(720px,calc(100vh-3rem))] bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden"
+        onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <div>
+            <h3 className="text-base font-semibold text-gray-800">
+              Chọn đơn hàng để gắn khách
+            </h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Chỉ hiển thị đơn ở trạng thái Phiếu tạm hoặc Đã xác nhận
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="px-5 py-3 border-b">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              autoFocus
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Tìm mã đơn, mã khách hoặc tên khách..."
+              className="pl-9 pr-3 py-2.5 border rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-brand"
+            />
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-auto">
+          {isFetching ? (
+            <div className="px-4 py-10 text-center text-gray-400 text-sm">
+              <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
+              Đang tải đơn hàng...
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="px-4 py-10 text-center text-gray-400 text-sm">
+              {debounced
+                ? "Không tìm thấy đơn hàng phù hợp"
+                : "Không có đơn Phiếu tạm/Đã xác nhận"}
+            </div>
+          ) : (
+            <div className="flex flex-col divide-y">
+              {orders.map((order, index) => (
+                <button
+                  key={`${order.id}-${index}`}
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => onSelect(order)}
+                  className="block w-full shrink-0 whitespace-normal text-left px-5 py-3 hover:bg-brand-soft transition-colors disabled:opacity-50">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <ShoppingCart className="w-4 h-4 text-brand shrink-0" />
+                        <span className="font-semibold text-sm text-brand">
+                          {order.code}
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${
+                            order.status === 1
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-blue-100 text-blue-700"
+                          }`}>
+                          {order.statusValue}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-xs text-gray-600">
+                        {order.customer.name}
+                        {order.customer.code
+                          ? ` · ${order.customer.code}`
+                          : ""}
+                        {order.branch?.name ? ` · ${order.branch.name}` : ""}
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500">
+                        {new Date(order.orderDate).toLocaleString("vi-VN")}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0 text-xs">
+                      <div className="font-semibold text-gray-800">
+                        {formatCurrency(order.grandTotal)}
+                      </div>
+                      <div className="text-gray-500">
+                        Đã trả: {formatCurrency(order.paidAmount)}
+                      </div>
+                      <div className="text-red-600">
+                        Còn lại: {formatCurrency(order.debtAmount)}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="px-5 py-3 border-t bg-gray-50 rounded-b-xl flex items-center justify-between text-xs">
+          <span className="text-gray-500">
+            Hiển thị {orders.length} đơn · Tổng{" "}
+            {Number(total).toLocaleString("vi-VN")} đơn
+            {total ? ` · Trang ${page}/${totalPages}` : ""}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              disabled={page <= 1 || isFetching}
+              className="p-1.5 border rounded disabled:opacity-40 hover:bg-white">
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setPage((current) => Math.min(totalPages, current + 1))
+              }
+              disabled={page >= totalPages || isFetching}
+              className="p-1.5 border rounded disabled:opacity-40 hover:bg-white">
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface InvoiceAlloc {
   invoiceId: number;
   amount: number;
@@ -326,6 +517,7 @@ interface AllocRow {
   customerId: number;
   name: string;
   amount: string; // chuỗi để dễ nhập
+  orderId?: number;
   invoices: Record<number, string>; // invoiceId -> tiền thu (chuỗi)
 }
 
@@ -341,6 +533,16 @@ const onlyDigitsStr = (raw: string) => raw.replace(/[^\d]/g, "");
 const displayAmount = (v: string) =>
   v === "" ? "" : Number(v).toLocaleString("en-US");
 
+interface InvoiceApiRow {
+  id: number;
+  code: string;
+  purchaseDate: string;
+  grandTotal: number | string;
+  debtAmount: number | string;
+  status: number;
+  returnOrderAmount?: number | string | null;
+}
+
 /** Lọc + sắp xếp hóa đơn còn nợ của 1 khách (đồng bộ logic CustomerPaymentModal). */
 function useUnpaidInvoices(customerId: number, enabled: boolean) {
   const { data, isLoading } = useQuery({
@@ -353,7 +555,7 @@ function useUnpaidInvoices(customerId: number, enabled: boolean) {
   const invoices = useMemo<UnpaidInvoice[]>(() => {
     return (
       (data?.data || [])
-        .filter((invoice: any) => {
+        .filter((invoice: InvoiceApiRow) => {
           const debtAmount = Number(invoice.debtAmount);
           if (debtAmount <= 0) return false;
           if (invoice.status === 2) return false;
@@ -362,11 +564,11 @@ function useUnpaidInvoices(customerId: number, enabled: boolean) {
           return true;
         })
         .sort(
-          (a: any, b: any) =>
+          (a: InvoiceApiRow, b: InvoiceApiRow) =>
             new Date(a.purchaseDate).getTime() -
             new Date(b.purchaseDate).getTime()
         )
-        .map((inv: any) => ({
+        .map((inv: InvoiceApiRow) => ({
           id: inv.id,
           code: inv.code,
           purchaseDate: inv.purchaseDate,
@@ -609,6 +811,7 @@ function AllocationModal({
       customerId: number;
       amount: number;
       note: string;
+      orderId?: number;
       invoices: InvoiceAlloc[];
     }[]
   ) => void;
@@ -617,6 +820,7 @@ function AllocationModal({
 }) {
   const amountIn = Number(tx.amountIn);
   const allCustomers = tx.match?.customers || [];
+  const suggestedOrder = tx.match?.suggestedOrder || null;
   // Khách đã có phiếu thu còn hiệu lực → giữ nguyên, KHÔNG phân bổ lại.
   const pendingCustomers = allCustomers.filter((c) => !c.cashFlow);
   const targetAmount =
@@ -626,6 +830,7 @@ function AllocationModal({
     pendingCustomers.map((c, i) => ({
       customerId: c.id,
       name: c.name,
+      orderId: suggestedOrder?.id,
       amount:
         pendingCustomers.length === 1
           ? String(targetAmount)
@@ -682,6 +887,7 @@ function AllocationModal({
         customerId: r.customerId,
         amount: Number(r.amount),
         note: autoNote,
+        orderId: r.orderId,
         invoices: Object.entries(r.invoices)
           .map(([invoiceId, amt]) => ({
             invoiceId: Number(invoiceId),
@@ -694,15 +900,19 @@ function AllocationModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 p-4 pt-16"
+      className={`fixed inset-0 z-[100] flex justify-center whitespace-normal bg-black/40 p-4 ${
+        suggestedOrder ? "items-center" : "items-start pt-16"
+      }`}
       onMouseDown={onClose}>
       <div
-        className="w-full max-w-2xl bg-white rounded-xl shadow-2xl flex flex-col max-h-[85vh]"
+        className="w-full max-w-2xl bg-white rounded-xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden"
         onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div>
             <h3 className="text-base font-semibold text-gray-800">
-              {pendingCustomers.length > 1
+              {suggestedOrder
+                ? "Tạo phiếu thu theo đơn hàng"
+                : pendingCustomers.length > 1
                 ? "Phân bổ & tạo phiếu thu"
                 : "Tạo phiếu thu"}
             </h3>
@@ -728,14 +938,53 @@ function AllocationModal({
         </div>
 
         <div className="flex-1 overflow-auto px-5 py-4 space-y-4">
-          {rows.map((r, idx) => (
-            <CustomerInvoiceAllocator
-              key={r.customerId}
-              row={r}
-              onAmountChange={(next) => setAmount(idx, next)}
-              onInvoicesChange={(next) => setRow(idx, { invoices: next })}
-            />
-          ))}
+          {suggestedOrder ? (
+            <div className="border rounded-lg p-4 space-y-3">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <ShoppingCart className="w-4 h-4 text-brand" />
+                    <span className="font-semibold text-brand">
+                      {suggestedOrder.code}
+                    </span>
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
+                      {suggestedOrder.statusValue}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-sm font-medium text-gray-800">
+                    {suggestedOrder.customer.name}
+                    {suggestedOrder.customer.code
+                      ? ` · ${suggestedOrder.customer.code}`
+                      : ""}
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    Tổng đơn: {formatCurrency(suggestedOrder.grandTotal)} ·
+                    Còn phải thu: {formatCurrency(suggestedOrder.debtAmount)}
+                  </div>
+                </div>
+                <div className="text-right text-xs text-gray-500">
+                  {suggestedOrder.branch?.name || "Không rõ chi nhánh"}
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-3 border-t pt-3">
+                <span className="text-sm text-gray-600">
+                  Số tiền lập phiếu thu
+                </span>
+                <span className="text-lg font-semibold text-brand dt-mono">
+                  {formatCurrency(targetAmount)}
+                </span>
+              </div>
+            </div>
+          ) : (
+            rows.map((r, idx) => (
+              <CustomerInvoiceAllocator
+                key={r.customerId}
+                row={r}
+                onAmountChange={(next) => setAmount(idx, next)}
+                onInvoicesChange={(next) => setRow(idx, { invoices: next })}
+              />
+            ))
+          )}
         </div>
 
         <div className="px-5 py-3 border-t">
@@ -791,21 +1040,26 @@ export function SepayMatchActions({
   isHidden?: boolean;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [orderPickerOpen, setOrderPickerOpen] = useState(false);
   const [allocOpen, setAllocOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   // Danh sách khách để xem bảng công nợ (mở modal). null = đóng.
   const [debtCustomers, setDebtCustomers] = useState<
     SepayDebtViewCustomer[] | null
   >(null);
   // Element menu — dùng để đóng khi click ngoài
   const [menuEl, setMenuEl] = useState<HTMLDivElement | null>(null);
+  const [attachMenuEl, setAttachMenuEl] = useState<HTMLDivElement | null>(null);
 
   const { selectedBranch } = useBranchStore();
   const canAssign = usePermission("sepay", "assign");
   const canConfirm = usePermission("sepay", "confirm");
 
   const assignMut = useAssignSepayCustomer();
+  const assignOrderMut = useAssignSepayOrder();
   const unassignMut = useUnassignSepayCustomer();
+  const unassignOrderMut = useUnassignSepayOrder();
   const confirmMut = useConfirmSepayReceipt();
   const hideMut = useHideSepayTransaction();
   const unhideMut = useUnhideSepayTransaction();
@@ -830,9 +1084,35 @@ export function SepayMatchActions({
     };
   }, [menuOpen, menuEl]);
 
+  useEffect(() => {
+    if (!attachMenuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (
+        attachMenuEl &&
+        !attachMenuEl.contains(e.target as Node)
+      ) {
+        setAttachMenuOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setAttachMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [attachMenuOpen, attachMenuEl]);
+
   const handleAssign = (picked: PickedCustomer[]) => {
     setPickerOpen(false);
     assignMut.mutate({ id: tx.id, customerIds: picked.map((c) => c.id) });
+  };
+
+  const handleSelectOrder = (order: SepayOrderSummary) => {
+    setOrderPickerOpen(false);
+    assignOrderMut.mutate({ id: tx.id, orderId: order.id });
   };
 
   const openAlloc = () => {
@@ -852,6 +1132,7 @@ export function SepayMatchActions({
       customerId: number;
       amount: number;
       note: string;
+      orderId?: number;
       invoices: { invoiceId: number; amount: number }[];
     }[]
   ) => {
@@ -902,22 +1183,49 @@ export function SepayMatchActions({
     .filter(Boolean) as string[];
   const hidePending = hideMut.isPending || unhideMut.isPending;
 
-  // CTA ngoài: chỉ Gán KH / Tạo phiếu thu / mã Phiếu thu (sau khi hoàn thành)
+  // CTA ngoài: chọn đối tượng / tạo phiếu thu / mã phiếu thu.
   let primary: ReactNode = null;
   if (status === "processing" && canAssign) {
     primary = (
-      <button
-        onClick={() => setPickerOpen(true)}
-        disabled={assignMut.isPending}
-        title="Gán khách hàng"
-        className="inline-flex items-center gap-1 px-2.5 py-1.5 border rounded-lg text-xs text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap">
-        {assignMut.isPending ? (
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-        ) : (
-          <UserPlus className="w-3.5 h-3.5" />
+      <div className="relative" ref={setAttachMenuEl}>
+        <button
+          onClick={() => setAttachMenuOpen((open) => !open)}
+          disabled={assignMut.isPending || assignOrderMut.isPending}
+          title="Gắn đối tượng"
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 border rounded-lg text-xs text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap">
+          {assignMut.isPending || assignOrderMut.isPending ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <UserPlus className="w-3.5 h-3.5" />
+          )}
+          Gắn đối tượng
+          <ChevronDown className="w-3.5 h-3.5" />
+        </button>
+        {attachMenuOpen && (
+          <div className="absolute right-0 top-full mt-1 z-30 min-w-[160px] bg-white border rounded-lg shadow-lg py-1">
+            <button
+              type="button"
+              onClick={() => {
+                setAttachMenuOpen(false);
+                setPickerOpen(true);
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left text-gray-700 hover:bg-gray-50">
+              <UserPlus className="w-3.5 h-3.5" />
+              Gắn KH
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAttachMenuOpen(false);
+                setOrderPickerOpen(true);
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left text-gray-700 hover:bg-gray-50">
+              <ShoppingCart className="w-3.5 h-3.5" />
+              Chọn đơn hàng
+            </button>
+          </div>
         )}
-        Gán KH
-      </button>
+      </div>
     );
   } else if (status === "assigned" && canConfirm) {
     primary = (
@@ -971,26 +1279,43 @@ export function SepayMatchActions({
   }[] = [];
 
   if (status === "assigned" && canAssign) {
-    menuItems.push({
-      key: "edit-kh",
-      label: "Sửa KH",
-      icon: <UserPlus className="w-3.5 h-3.5" />,
-      onClick: () => {
-        setMenuOpen(false);
-        setPickerOpen(true);
-      },
-      disabled: assignMut.isPending,
-    });
+    if (tx.match?.suggestedOrder) {
+      menuItems.push({
+        key: "edit-order",
+        label: "Đổi đơn hàng",
+        icon: <ShoppingCart className="w-3.5 h-3.5" />,
+        onClick: () => {
+          setMenuOpen(false);
+          setOrderPickerOpen(true);
+        },
+        disabled: assignOrderMut.isPending,
+      });
+    } else {
+      menuItems.push({
+        key: "edit-kh",
+        label: "Sửa KH",
+        icon: <UserPlus className="w-3.5 h-3.5" />,
+        onClick: () => {
+          setMenuOpen(false);
+          setPickerOpen(true);
+        },
+        disabled: assignMut.isPending,
+      });
+    }
     menuItems.push({
       key: "unassign",
       label: "Bỏ gán",
       icon: <UserMinus className="w-3.5 h-3.5" />,
       onClick: () => {
         setMenuOpen(false);
-        unassignMut.mutate(tx.id);
+        if (tx.match?.suggestedOrder) {
+          unassignOrderMut.mutate(tx.id);
+        } else {
+          unassignMut.mutate(tx.id);
+        }
       },
       danger: true,
-      disabled: unassignMut.isPending,
+      disabled: unassignMut.isPending || unassignOrderMut.isPending,
     });
   }
 
@@ -1062,6 +1387,15 @@ export function SepayMatchActions({
           initial={initialPicked}
           onConfirm={handleAssign}
           onClose={() => setPickerOpen(false)}
+        />
+      )}
+
+      {orderPickerOpen && (
+        <OrderPickerModal
+          tx={tx}
+          onSelect={handleSelectOrder}
+          onClose={() => setOrderPickerOpen(false)}
+          isPending={assignOrderMut.isPending}
         />
       )}
 

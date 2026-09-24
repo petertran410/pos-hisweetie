@@ -24,12 +24,30 @@ export interface SepayMatchCustomer {
   cashFlow?: { id: number; code: string } | null;
 }
 
+export interface SepayOrderSummary {
+  id: number;
+  code: string;
+  orderDate: string;
+  grandTotal: number;
+  paidAmount: number;
+  debtAmount: number;
+  status: number;
+  statusValue: string;
+  customer: {
+    id: number;
+    code: string | null;
+    name: string;
+  };
+  branch: { id: number; name: string } | null;
+}
+
 export interface SepayMatchInfo {
   status: "processing" | "assigned" | "completed";
   completedSource: "webhook" | "manual" | null;
   customers: SepayMatchCustomer[];
   refCode: string | null;
   unassignedAmount?: number;
+  suggestedOrder?: SepayOrderSummary | null;
 }
 
 export interface SepayTransaction {
@@ -101,6 +119,26 @@ export const sepayApi = {
   }> => {
     return apiClient.put(`/sepay/transactions/${id}/assign`, { customerIds });
   },
+  getOrderCandidates: (
+    id: number,
+    params?: { page?: number; limit?: number; search?: string }
+  ): Promise<{
+    data: SepayOrderSummary[];
+    total: number;
+    page: number;
+    limit: number;
+  }> => {
+    return apiClient.get(`/sepay/transactions/${id}/order-candidates`, params);
+  },
+  selectOrder: (
+    id: number,
+    orderId: number
+  ): Promise<{ success: boolean; order: SepayOrderSummary }> => {
+    return apiClient.put(`/sepay/transactions/${id}/order`, { orderId });
+  },
+  unselectOrder: (id: number): Promise<{ success: boolean }> => {
+    return apiClient.delete(`/sepay/transactions/${id}/order`);
+  },
   /** Bỏ gán khách hàng (chỉ khi chưa tạo phiếu thu) */
   unassignCustomer: (id: number): Promise<{ success: boolean }> => {
     return apiClient.delete(`/sepay/transactions/${id}/assign`);
@@ -123,6 +161,7 @@ export const sepayApi = {
         customerId: number;
         amount: number;
         note?: string;
+        orderId?: number;
         invoices?: { invoiceId: number; amount: number }[];
       }[];
     }
