@@ -369,18 +369,18 @@ export function usePublication(product?: Product) {
 
   /**
    * Upload các file mới + gói payload công bố để merge vào formData khi submit.
-   * Chỉ trả dữ liệu khi `canViewPublication` = true (tránh ghi đè/xóa trắng
+   * Chỉ trả dữ liệu khi `canEditPublication` = true (tránh ghi đè/xóa trắng
    * khi backend đã strip phần công bố vì thiếu quyền).
    */
   const getPayload = async (
-    canViewPublication: boolean
+    canEditPublication: boolean
   ): Promise<{
     documents?: any[];
     publicationLocation?: any;
     publicationDate?: string;
     publicationLink?: string;
   }> => {
-    if (!canViewPublication) return {};
+    if (!canEditPublication) return {};
 
     const documentsPayload: {
       url: string;

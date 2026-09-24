@@ -135,6 +135,7 @@ export const ACTION_LABELS: Record<string, string> = {
   view_cost_price: "Xem giá vốn",
   view_sale_price: "Xem giá bán",
   view_publication: "Xem thông tin công bố",
+  edit_publication: "Sửa thông tin công bố",
   view_profit: "Xem lợi nhuận",
   view_other_staff: "Xem dữ liệu NV khác",
   view_balance: "Xem số dư",

@@ -25,7 +25,6 @@ import {
 } from "@/lib/types/order";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { INVOICE_STATUS } from "@/lib/types/invoice";
-import { useAuthStore } from "@/lib/store/auth";
 import { CancelOrderModal } from "./CancelOrderModal";
 import { printDeliverySlip, printEntity } from "@/lib/utils/print";
 import Link from "next/link";
@@ -73,16 +72,11 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const cancelOrder = useCancelOrder();
-  const { user } = useAuthStore();
 
   const hasPermCancel = useCan("orders", "cancel");
   const hasPermUpdate = useCan("orders", "update");
   const hasPermPrint = useCan("orders", "print");
   const hasPermExport = useCan("orders", "export");
-
-  const isAdmin = user?.roles?.some(
-    (role: string) => role === "Admin" || role === "Super Admin"
-  );
 
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -122,7 +116,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
     order?.status === ORDER_STATUS.PENDING ||
     order?.status === ORDER_STATUS.CONFIRMED ||
     order?.status === ORDER_STATUS.PARTIALLY_INVOICED ||
-    (order?.status === ORDER_STATUS.COMPLETED && isAdmin);
+    order?.status === ORDER_STATUS.COMPLETED;
 
   useEffect(() => {
     if (order) {

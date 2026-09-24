@@ -21,6 +21,7 @@ import { useOrdersPendingSummary } from "@/lib/hooks/useOrders";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import Link from "next/link";
 import { CodeLink } from "../shared/CodeLink";
+import { ProductPublicationTab } from "./ProductPublicationTab";
 
 interface ProductDetailRowProps {
   productId: number;
@@ -133,9 +134,18 @@ export function ProductDetailRow({
   const canDelete = usePermission("products", "delete");
   const canViewCostPrice = usePermission("products", "view_cost_price");
   const canViewSalePrice = usePermission("products", "view_sale_price");
+  const canViewPublication = usePermission(
+    "products",
+    "view_publication"
+  );
 
   const [activeTab, setActiveTab] = useState<
-    "info" | "description" | "inventoryLog" | "conditionLog" | "inventory"
+    | "info"
+    | "description"
+    | "publication"
+    | "inventoryLog"
+    | "conditionLog"
+    | "inventory"
   >("info");
   const [isEditing, setIsEditing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -310,6 +320,9 @@ export function ProductDetailRow({
   const TABS = [
     { key: "info", label: "Thông tin" },
     { key: "description", label: "Mô tả, ghi chú" },
+    ...(canViewPublication
+      ? [{ key: "publication", label: "Xem công bố" }]
+      : []),
     { key: "inventoryLog", label: "Thẻ kho" },
     { key: "conditionLog", label: "Thẻ kho loại tồn" },
     { key: "inventory", label: "Tồn kho" },
@@ -658,6 +671,10 @@ export function ProductDetailRow({
                   </p>
                 </div>
               </div>
+            )}
+
+            {canViewPublication && activeTab === "publication" && (
+              <ProductPublicationTab product={product} />
             )}
 
             {/* ═══════════════════════════════════════════

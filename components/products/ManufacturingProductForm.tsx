@@ -225,7 +225,10 @@ export function ManufacturingProductForm({
   const watchedWeightUnit = watch("weightUnit");
 
   const canLinkMisa = usePermission("products", "link_misa");
-  const canViewPublication = usePermission("products", "view_publication");
+  const canEditPublication = usePermission(
+    "products",
+    "edit_publication"
+  );
   const canViewCostPrice = usePermission("products", "view_cost_price");
   const canViewSalePrice = usePermission("products", "view_sale_price");
   // view_cost_price/view_sale_price chỉ ẩn ô giá trên UI, không quyết định
@@ -525,7 +528,7 @@ export function ManufacturingProductForm({
         }
       }
 
-      const publicationPayload = await pub.getPayload(canViewPublication);
+      const publicationPayload = await pub.getPayload(canEditPublication);
 
       const formData: Record<string, any> = {
         code: data.code,
@@ -665,7 +668,7 @@ export function ManufacturingProductForm({
             }`}>
             Mô tả
           </button>
-          {canViewPublication && (
+          {canEditPublication && (
             <button
               type="button"
               onClick={() => setActiveTab("publication")}
@@ -1323,7 +1326,7 @@ export function ManufacturingProductForm({
           {/* Tab Công bố */}
           <div
             className={
-              canViewPublication && activeTab === "publication"
+              canEditPublication && activeTab === "publication"
                 ? "p-6 space-y-5"
                 : "hidden"
             }>
