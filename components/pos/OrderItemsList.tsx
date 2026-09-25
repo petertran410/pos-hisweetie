@@ -55,6 +55,7 @@ import {
   getQuantityStep,
   normalizeQuantityUnit,
   parseQuantityInput,
+  sanitizeQuantityInput,
   supportsCartonUnit,
   toBaseQuantity,
   type CartQuantityUnit,
@@ -114,7 +115,6 @@ export function OrderItemsList({
   onTogglePromotion,
   onSetGiftSelection,
 }: CartItemsListProps) {
-  const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
   const [quantityDisplays, setQuantityDisplays] = useState<
     Record<string, string>
   >({});
@@ -237,7 +237,7 @@ export function OrderItemsList({
     normalizeQuantityUnit(
       item.quantityUnit,
       item.product,
-      item.conversionValueSnapshot,
+      item.conversionValueSnapshot
     );
 
   const getQuantityDisplay = (item: CartItem): string => {
@@ -247,14 +247,22 @@ export function OrderItemsList({
         item.quantity,
         getQuantityUnit(item),
         item.product,
-        item.conversionValueSnapshot,
+        item.conversionValueSnapshot
       )
     );
   };
 
   const handleQuantityChange = (item: CartItem, value: string) => {
     const key = getCartItemKey(item);
-    const displayValue = value.replace(/[^\d.,]/g, "");
+    const previousValue =
+      quantityDisplays[key] ??
+      formatDisplayedQuantity(
+        item.quantity,
+        getQuantityUnit(item),
+        item.product,
+        item.conversionValueSnapshot
+      );
+    const displayValue = sanitizeQuantityInput(value, previousValue);
     setQuantityDisplays((prev) => ({ ...prev, [key]: displayValue }));
     const parsed = parseQuantityInput(displayValue);
     if (parsed != null) {
@@ -263,7 +271,7 @@ export function OrderItemsList({
           parsed,
           getQuantityUnit(item),
           item.product,
-          item.conversionValueSnapshot,
+          item.conversionValueSnapshot
         ),
       });
     }
@@ -280,7 +288,7 @@ export function OrderItemsList({
           parsed,
           getQuantityUnit(item),
           item.product,
-          item.conversionValueSnapshot,
+          item.conversionValueSnapshot
         ),
       });
     }
@@ -293,7 +301,7 @@ export function OrderItemsList({
 
   const handleQuantityUnitChange = (
     item: CartItem,
-    quantityUnit: CartQuantityUnit,
+    quantityUnit: CartQuantityUnit
   ) => {
     clearQuantityDisplay(item);
     onUpdateItem(item.rowId, { quantityUnit });
@@ -303,7 +311,7 @@ export function OrderItemsList({
     const step = getQuantityStep(
       getQuantityUnit(item),
       item.product,
-      item.conversionValueSnapshot,
+      item.conversionValueSnapshot
     );
     onUpdateItem(item.rowId, {
       quantity: Math.max(1, Number(item.quantity || 0) + direction * step),
@@ -433,534 +441,574 @@ export function OrderItemsList({
     }
   };
 
-  // Nhóm items: cùng productId sẽ không có gap
-  const isFirstOfGroup = (index: number) => {
-    if (index === 0) return true;
-    return cartItems[index].product.id !== cartItems[index - 1].product.id;
-  };
-
-  const isLastOfGroup = (index: number) => {
-    if (index === cartItems.length - 1) return true;
-    return cartItems[index].product.id !== cartItems[index + 1].product.id;
-  };
+  // Các dòng copy liền nhau của cùng sản phẩm dùng một viền liền.
+  const productLineGroups: CartItem[][] = [];
+  for (const item of cartItems) {
+    const currentGroup = productLineGroups[productLineGroups.length - 1];
+    if (
+      currentGroup &&
+      currentGroup[currentGroup.length - 1].product.id === item.product.id
+    ) {
+      currentGroup.push(item);
+    } else {
+      productLineGroups.push([item]);
+    }
+  }
 
   return (
     <div className={className ?? "w-[60%] bg-white flex flex-col"}>
       <div className="flex-1 p-3 overflow-y-auto">
-        <div>
-          {cartItems.map((item, index) => {
-            const quantityUnit = getQuantityUnit(item);
-            const canUseCartonUnit =
-              !item.isPromoGift &&
-              documentType !== "consignment" &&
-              supportsCartonUnit(item.product);
-
+        <div className="space-y-2">
+          {productLineGroups.map((group) => {
+            const hasStockWarning = group.some((line) => getStockWarning(line));
             return (
               <div
-              key={`${item.product.id}_${item.conditionType || "normal"}_${index}`}
-              className={`border p-2 lg:p-3 hover:shadow-md transition-shadow ${
-                isFirstOfGroup(index) ? "rounded-t-lg mt-2" : "border-t-0"
-              } ${isLastOfGroup(index) ? "rounded-b-lg" : ""} ${
-                isFirstOfGroup(index) && index === 0 ? "mt-0" : ""
-              } ${getStockWarning(item) ? "border-red-400 bg-red-50/30" : ""}`}
-              onMouseEnter={() => setHoveredItemId(item.product.id)}
-              onMouseLeave={() => setHoveredItemId(null)}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex gap-1.5 lg:gap-2 mb-0.5 lg:mb-1">
-                    <span className="hidden lg:inline text-sm lg:text-base font-medium text-gray-600">
-                      {item.product.code}
-                    </span>
-                    <span className="text-sm lg:text-sm font-semibold text-gray-900">
-                      {item.product.name}
-                    </span>
-                    {(() => {
-                      const label = getConditionLabel(item.conditionType);
-                      if (!label) return null;
-                      const lotSuffix =
-                        item.conditionType === "near_expiry" &&
-                        item.soldExpiryDate
-                          ? ` (NSX ${new Date(
-                              item.soldExpiryDate
-                            ).toLocaleDateString("vi-VN")})`
-                          : "";
-                      return (
-                        <span
-                          className={`px-1.5 py-0.5 text-xs rounded-full border ${label.className}`}>
-                          {label.text}
-                          {lotSuffix}
-                        </span>
-                      );
-                    })()}
-                    {item.isPromoGift && (
-                      <span className="flex items-center gap-0.5 px-1.5 py-0.5 text-xs rounded-full border border-pink-300 bg-pink-50 text-pink-700 font-medium">
-                        KM
-                      </span>
-                    )}
-                    {/* Dòng X: badge mã KM đang áp (opt-in) → link chi tiết KM */}
-                    {!item.isPromoGift &&
-                      item.eligiblePromos
-                        ?.filter(
-                          (p) =>
-                            (item.promoEnabledIds || []).includes(
-                              p.promotionId
-                            ) && p.code
-                        )
-                        .map((p) => (
-                          <CodeLink
-                            key={p.promotionId}
-                            entity="promotion"
-                            code={p.code}
-                            label={p.code}
-                            className="px-1.5 py-0.5 text-xs rounded-full border border-pink-300 bg-pink-50 text-pink-700 font-medium hover:bg-pink-100"
-                          />
-                        ))}
-                  </div>
-                  {item.isPromoGift && item.promotionName && (
-                    <div className="text-xs text-blue-600 font-medium">
-                      🎁 {item.promotionName}
-                    </div>
-                  )}
-                  {/* KM cộng dồn: chọn quà ở dialog phân bổ, KHÔNG dùng dropdown legacy */}
-                  {item.isPromoGift &&
-                    !item.cumulative &&
-                    item.rewardOptions &&
-                    item.rewardOptions.length > 1 && (
-                      <select
-                        className="mt-1 w-full max-w-xs rounded border border-gray-300 px-2 py-1 text-xs"
-                        value={item.product?.id || ""}
-                        onChange={(e) => {
-                          const opt = item.rewardOptions!.find(
-                            (o) => o.productId === Number(e.target.value)
-                          );
-                          if (opt) {
-                            const capped =
-                              opt.remaining != null
-                                ? Math.max(
-                                    0,
-                                    Math.min(
-                                      item.quantity,
-                                      Number(opt.remaining)
-                                    )
-                                  )
-                                : item.quantity;
-                            if (
-                              opt.remaining != null &&
-                              Number(opt.remaining) < item.quantity
-                            ) {
-                              toast.warning(
-                                `Tồn khuyến mãi/còn tặng của ${opt.productName || opt.productId} còn ${opt.remaining}, đang xuất ${item.quantity}. Vẫn cho phép xuất.`
+                key={`${group[0].product.id}_${group[0].rowId}`}
+                className={`group/line rounded-lg border border-solid transition-[border-color,box-shadow] hover:border-blue-500 hover:shadow-md hover:ring-1 hover:ring-blue-100 ${
+                  hasStockWarning ? "border-red-400" : "border-gray-300"
+                }`}>
+                {group.map((item, lineIndex) => {
+                  const quantityUnit = getQuantityUnit(item);
+                  const canUseCartonUnit =
+                    !item.isPromoGift &&
+                    documentType !== "consignment" &&
+                    supportsCartonUnit(item.product);
+
+                  return (
+                    <div
+                      key={`${item.rowId}_${lineIndex}`}
+                      className={`p-2 lg:p-3 ${
+                        lineIndex === 0
+                          ? "rounded-t-lg"
+                          : "border-t border-dashed border-gray-300"
+                      } ${
+                        lineIndex === group.length - 1 ? "rounded-b-lg" : ""
+                      } ${getStockWarning(item) ? "bg-red-50/30" : ""}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline gap-2 flex-wrap mb-0.5 lg:mb-1">
+                            <span className="text-xs lg:text-sm font-medium text-gray-500">
+                              {item.product.code}
+                            </span>
+                            <span className="text-sm lg:text-base font-semibold text-gray-900">
+                              {item.product.name}
+                            </span>
+                            {(() => {
+                              const label = getConditionLabel(
+                                item.conditionType
                               );
+                              if (!label) return null;
+                              const lotSuffix =
+                                item.conditionType === "near_expiry" &&
+                                item.soldExpiryDate
+                                  ? ` (NSX ${new Date(
+                                      item.soldExpiryDate
+                                    ).toLocaleDateString("vi-VN")})`
+                                  : "";
+                              return (
+                                <span
+                                  className={`px-1.5 py-0.5 text-xs rounded-full border ${label.className}`}>
+                                  {label.text}
+                                  {lotSuffix}
+                                </span>
+                              );
+                            })()}
+                            {item.isPromoGift && (
+                              <span className="flex items-center gap-0.5 px-1.5 py-0.5 text-xs rounded-full border border-pink-300 bg-pink-50 text-pink-700 font-medium">
+                                KM
+                              </span>
+                            )}
+                            {/* Dòng X: badge mã KM đang áp (opt-in) → link chi tiết KM */}
+                            {!item.isPromoGift &&
+                              item.eligiblePromos
+                                ?.filter(
+                                  (p) =>
+                                    (item.promoEnabledIds || []).includes(
+                                      p.promotionId
+                                    ) && p.code
+                                )
+                                .map((p) => (
+                                  <CodeLink
+                                    key={p.promotionId}
+                                    entity="promotion"
+                                    code={p.code}
+                                    label={p.code}
+                                    className="px-1.5 py-0.5 text-xs rounded-full border border-pink-300 bg-pink-50 text-pink-700 font-medium hover:bg-pink-100"
+                                  />
+                                ))}
+                          </div>
+                          {item.isPromoGift && item.promotionName && (
+                            <div className="text-xs text-blue-600 font-medium">
+                              🎁 {item.promotionName}
+                            </div>
+                          )}
+                          {/* KM cộng dồn: chọn quà ở dialog phân bổ, KHÔNG dùng dropdown legacy */}
+                          {item.isPromoGift &&
+                            !item.cumulative &&
+                            item.rewardOptions &&
+                            item.rewardOptions.length > 1 && (
+                              <select
+                                className="mt-1 w-full max-w-xs rounded border border-gray-300 px-2 py-1 text-xs"
+                                value={item.product?.id || ""}
+                                onChange={(e) => {
+                                  const opt = item.rewardOptions!.find(
+                                    (o) =>
+                                      o.productId === Number(e.target.value)
+                                  );
+                                  if (opt) {
+                                    const capped =
+                                      opt.remaining != null
+                                        ? Math.max(
+                                            0,
+                                            Math.min(
+                                              item.quantity,
+                                              Number(opt.remaining)
+                                            )
+                                          )
+                                        : item.quantity;
+                                    if (
+                                      opt.remaining != null &&
+                                      Number(opt.remaining) < item.quantity
+                                    ) {
+                                      toast.warning(
+                                        `Tồn khuyến mãi/còn tặng của ${opt.productName || opt.productId} còn ${opt.remaining}, đang xuất ${item.quantity}. Vẫn cho phép xuất.`
+                                      );
+                                    }
+                                    onUpdateItem(item.rowId, {
+                                      product: {
+                                        id: opt.productId,
+                                        name: opt.productName,
+                                        code: opt.productCode || "",
+                                        basePrice: 0,
+                                      },
+                                      quantity: Math.max(1, capped),
+                                      requiresChoice: false,
+                                    });
+                                  }
+                                }}>
+                                <option value="">-- Chọn quà tặng --</option>
+                                {item.rewardOptions.map((o) => (
+                                  <option
+                                    key={o.productId}
+                                    value={o.productId}
+                                    disabled={
+                                      o.remaining != null && o.remaining <= 0
+                                    }>
+                                    {o.productName || `SP#${o.productId}`} (tồn{" "}
+                                    {o.availableStock}
+                                    {o.remaining != null
+                                      ? `, còn tặng ${o.remaining}`
+                                      : ""}
+                                    )
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+
+                          {canViewInventory &&
+                            (() => {
+                              const warning = getStockWarning(item);
+                              if (!warning) return null;
+                              return (
+                                <div className="text-xs text-red-600 font-medium mt-0.5">
+                                  ⚠ {warning}
+                                </div>
+                              );
+                            })()}
+
+                          <NoteDropdown
+                            value={item.note || ""}
+                            onChange={(note) =>
+                              onUpdateItem(item.rowId, { note })
                             }
-                            onUpdateItem(item.rowId, {
-                              product: {
-                                id: opt.productId,
-                                name: opt.productName,
-                                code: opt.productCode || "",
-                                basePrice: 0,
-                              },
-                              quantity: Math.max(1, capped),
-                              requiresChoice: false,
-                            });
-                          }
-                        }}>
-                        <option value="">-- Chọn quà tặng --</option>
-                        {item.rewardOptions.map((o) => (
-                          <option
-                            key={o.productId}
-                            value={o.productId}
-                            disabled={o.remaining != null && o.remaining <= 0}>
-                            {o.productName || `SP#${o.productId}`} (tồn{" "}
-                            {o.availableStock}
-                            {o.remaining != null
-                              ? `, còn tặng ${o.remaining}`
-                              : ""}
-                            )
-                          </option>
-                        ))}
-                      </select>
-                    )}
-
-                  {canViewInventory &&
-                    (() => {
-                      const warning = getStockWarning(item);
-                      if (!warning) return null;
-                      return (
-                        <div className="text-xs text-red-600 font-medium mt-0.5">
-                          ⚠ {warning}
+                            templates={noteTemplates}
+                            onCreateTemplate={handleCreateTemplate}
+                            onEditTemplate={handleEditTemplate}
+                            canManageTemplates={canManageNoteTemplates}
+                          />
                         </div>
-                      );
-                    })()}
 
-                  <NoteDropdown
-                    value={item.note || ""}
-                    onChange={(note) => onUpdateItem(item.rowId, { note })}
-                    templates={noteTemplates}
-                    onCreateTemplate={handleCreateTemplate}
-                    onEditTemplate={handleEditTemplate}
-                    canManageTemplates={canManageNoteTemplates}
-                  />
-
-                </div>
-
-                <div className="flex-shrink-0 flex items-center gap-1">
-                  {item.isPromoGift ? null : (
-                    <>
-                      {/* Chọn loại tồn để bán: [dropdown NSX] [Cận date] [Bục rách].
+                        <div className="flex-shrink-0 flex items-center gap-1">
+                          {item.isPromoGift ? null : (
+                            <>
+                              {/* Chọn loại tồn để bán: [dropdown NSX] [Cận date] [Bục rách].
                           Đặt bên TRÁI icon "!" cho đồng bộ với nút Khuyến Mãi.
                           Ẩn với phiếu ký gửi: nghiệp vụ ký gửi không quản lý
                           loại tồn (BE không lưu conditionType/soldExpiryDate). */}
-                      {documentType !== "consignment" && (
-                        <ItemConditionSelector
-                          item={item}
-                          damagedAvailable={
-                            damagedMap.get(item.product.id) ?? 0
-                          }
-                          nearExpiryAvailable={
-                            nearExpiryMap.get(item.product.id) ?? 0
-                          }
-                          branchId={selectedBranch?.id}
-                          onUpdateItem={onUpdateItem}
-                        />
-                      )}
-                      {canViewInventory && (
-                        <button
-                          onClick={() => setSelectedItemForInventory(item)}
-                          className="p-1 hover:bg-brand-soft rounded transition-colors"
-                          title="Xem tồn kho tất cả chi nhánh">
-                          <AlertCircle className="w-4 h-4 text-brand" />
-                        </button>
-                      )}
-                      {canEditPrice && (
-                        <ProductPriceHistory
-                          customerId={selectedCustomerId}
-                          productId={item.product.id}
-                          documentType="invoice"
-                          branchId={selectedBranch?.id}
-                        />
-                      )}
-                      <button
-                        onClick={() => onDuplicateItem(item)}
-                        className="p-1 hover:bg-green-50 rounded transition-colors"
-                        title="Thêm dòng mới cho sản phẩm này">
-                        <Copy className="w-4 h-4 text-green-600" />
-                      </button>
-                      {/* KM cộng dồn: điều khiển ở khối "Khuyến mãi của đơn hàng"
+                              {documentType !== "consignment" && (
+                                <ItemConditionSelector
+                                  item={item}
+                                  damagedAvailable={
+                                    damagedMap.get(item.product.id) ?? 0
+                                  }
+                                  nearExpiryAvailable={
+                                    nearExpiryMap.get(item.product.id) ?? 0
+                                  }
+                                  branchId={selectedBranch?.id}
+                                  onUpdateItem={onUpdateItem}
+                                />
+                              )}
+                              {canViewInventory && (
+                                <button
+                                  onClick={() =>
+                                    setSelectedItemForInventory(item)
+                                  }
+                                  className="p-1 hover:bg-brand-soft rounded transition-colors"
+                                  title="Xem tồn kho tất cả chi nhánh">
+                                  <AlertCircle className="w-4 h-4 text-brand" />
+                                </button>
+                              )}
+                              {canEditPrice && (
+                                <ProductPriceHistory
+                                  customerId={selectedCustomerId}
+                                  productId={item.product.id}
+                                  documentType="invoice"
+                                  branchId={selectedBranch?.id}
+                                />
+                              )}
+                              <button
+                                onClick={() => onDuplicateItem(item)}
+                                className="p-1 hover:bg-green-50 rounded transition-colors"
+                                title="Thêm dòng mới cho sản phẩm này">
+                                <Copy className="w-4 h-4 text-green-600" />
+                              </button>
+                              {/* KM cộng dồn: điều khiển ở khối "Khuyến mãi của đơn hàng"
                           phía trên, KHÔNG hiện nút trên card (tránh 2 lối bật/tắt).
                           Chỉ hiện nút cho KM thường (per-row). */}
-                      {item.eligiblePromos &&
-                        item.eligiblePromos.some((p) => !p.cumulative) &&
-                        (() => {
-                          const regularPromos = item.eligiblePromos!.filter(
-                            (p) => !p.cumulative
-                          );
-                          const enabled = item.promoEnabledIds || [];
-                          const applied = regularPromos.some((p) =>
-                            enabled.includes(p.promotionId)
-                          );
-                          const colorCls = applied
-                            ? "text-pink-600 group-hover:text-gray-400"
-                            : "text-gray-400 group-hover:text-pink-600";
-                          return (
-                            <button
-                              onClick={() => {
-                                const regIds = regularPromos.map(
-                                  (p) => p.promotionId
-                                );
-                                const cur = new Set(item.promoEnabledIds || []);
-                                if (applied) {
-                                  regIds.forEach((id) => cur.delete(id));
-                                } else {
-                                  regIds.forEach((id) => cur.add(id));
-                                }
-                                onUpdateItem(item.rowId, {
-                                  promoEnabledIds: [...cur],
-                                });
+                              {item.eligiblePromos &&
+                                item.eligiblePromos.some(
+                                  (p) => !p.cumulative
+                                ) &&
+                                (() => {
+                                  const regularPromos =
+                                    item.eligiblePromos!.filter(
+                                      (p) => !p.cumulative
+                                    );
+                                  const enabled = item.promoEnabledIds || [];
+                                  const applied = regularPromos.some((p) =>
+                                    enabled.includes(p.promotionId)
+                                  );
+                                  const colorCls = applied
+                                    ? "text-pink-600 group-hover:text-gray-400"
+                                    : "text-gray-400 group-hover:text-pink-600";
+                                  return (
+                                    <button
+                                      onClick={() => {
+                                        const regIds = regularPromos.map(
+                                          (p) => p.promotionId
+                                        );
+                                        const cur = new Set(
+                                          item.promoEnabledIds || []
+                                        );
+                                        if (applied) {
+                                          regIds.forEach((id) =>
+                                            cur.delete(id)
+                                          );
+                                        } else {
+                                          regIds.forEach((id) => cur.add(id));
+                                        }
+                                        onUpdateItem(item.rowId, {
+                                          promoEnabledIds: [...cur],
+                                        });
+                                      }}
+                                      className={`group flex items-center gap-1 px-1.5 py-1 rounded transition-colors ${
+                                        applied
+                                          ? "bg-pink-100 hover:bg-gray-100"
+                                          : "bg-gray-100 hover:bg-pink-100"
+                                      }`}
+                                      title={
+                                        applied
+                                          ? "Bỏ áp dụng khuyến mãi cho dòng này"
+                                          : "Đủ điều kiện khuyến mãi — bấm để tặng quà"
+                                      }>
+                                      <Gift className={`w-4 h-4 ${colorCls}`} />
+                                      <span
+                                        className={`text-xs font-medium ${colorCls}`}>
+                                        Khuyến Mãi
+                                      </span>
+                                    </button>
+                                  );
+                                })()}
+                              <button
+                                onClick={() => onRemoveItem(item.rowId)}
+                                className="p-1 hover:bg-red-50 rounded transition-colors">
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* ── MOBILE LAYOUT ── lg:hidden ───────────────── */}
+                      <div className="lg:hidden mt-1.5 space-y-1.5">
+                        {/* Row 1: Quantity controls + Thành tiền */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1">
+                            {/* Dòng quà KM: SL do hệ thống quản → ẩn +/−, ô readonly */}
+                            {item.isPromoGift ? (
+                              <input
+                                type="text"
+                                value={item.quantity}
+                                readOnly
+                                tabIndex={-1}
+                                className="w-9 h-5 text-center border border-gray-200 bg-gray-50 rounded px-1 text-sm text-gray-500 cursor-default"
+                              />
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => adjustQuantity(item, -1)}
+                                  className="w-6 h-6 shrink-0 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center hover:bg-gray-200 transition-colors">
+                                  <Minus className="w-3 h-3" />
+                                </button>
+                                <input
+                                  type="text"
+                                  value={getQuantityDisplay(item)}
+                                  onChange={(e) =>
+                                    handleQuantityChange(item, e.target.value)
+                                  }
+                                  onBlur={() => handleQuantityBlur(item)}
+                                  inputMode="decimal"
+                                  className="w-12 h-5 text-center border-0 border-b border-gray-300 rounded-none bg-transparent px-1 text-sm focus:outline-none focus:border-brand focus:ring-0"
+                                  min="0.0001"
+                                  step="any"
+                                />
+                                <button
+                                  onClick={() => adjustQuantity(item, 1)}
+                                  className="w-6 h-6 shrink-0 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center hover:bg-gray-200 transition-colors">
+                                  <Plus className="w-3 h-3" />
+                                </button>
+                                {canUseCartonUnit && (
+                                  <UnitPicker
+                                    size="quantity"
+                                    value={quantityUnit}
+                                    options={[
+                                      {
+                                        value: "base",
+                                        label: getBaseUnitLabel(item.product),
+                                      },
+                                      { value: "carton", label: "Thùng" },
+                                    ]}
+                                    onChange={(value) =>
+                                      handleQuantityUnitChange(
+                                        item,
+                                        value as CartQuantityUnit
+                                      )
+                                    }
+                                  />
+                                )}
+                              </>
+                            )}
+                          </div>
+                          <span className="text-sm font-semibold text-gray-900">
+                            {(
+                              (item.price - item.discount) *
+                              item.quantity
+                            ).toLocaleString()}
+                          </span>
+                        </div>
+
+                        {/* Dòng tồn theo chi nhánh, hiển thị cho cả hàng mua và quà KM */}
+                        {canViewInventory && (
+                          <div className="text-[11px] italic text-black">
+                            Tồn: {getOnHandRealtime(item)} | KH Đặt:{" "}
+                            {getCustomerOrdered(item).toLocaleString()} | Đặt
+                            NCC: {getSupplierOrdered(item).toLocaleString()} |
+                            Tồn KM:{" "}
+                            {getPromoInventoryRealtime(item).toLocaleString()}
+                          </div>
+                        )}
+
+                        {/* Row 2: Đơn giá + Chiết khấu + Giảm giá */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-400">
+                            Đơn giá:
+                          </span>
+                          {canEditPrice ? (
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={getPriceInputValue(item)}
+                              onChange={(e) =>
+                                handlePriceChange(item, e.target.value)
+                              }
+                              onBlur={() => handlePriceBlur(item)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") e.currentTarget.blur();
                               }}
-                              className={`group flex items-center gap-1 px-1.5 py-1 rounded transition-colors ${
-                                applied
-                                  ? "bg-pink-100 hover:bg-gray-100"
-                                  : "bg-gray-100 hover:bg-pink-100"
-                              }`}
-                              title={
-                                applied
-                                  ? "Bỏ áp dụng khuyến mãi cho dòng này"
-                                  : "Đủ điều kiện khuyến mãi — bấm để tặng quà"
-                              }>
-                              <Gift className={`w-4 h-4 ${colorCls}`} />
-                              <span
-                                className={`text-xs font-medium ${colorCls}`}>
-                                Khuyến Mãi
-                              </span>
+                              className="w-20 h-6 text-right border border-gray-300 rounded px-1 text-xs focus:outline-none focus:ring-2 focus:ring-brand"
+                            />
+                          ) : (
+                            <span className="text-xs text-gray-700">
+                              {item.price.toLocaleString()}
+                            </span>
+                          )}
+                          {item.discount > 0 && (
+                            <span className="text-xs text-red-500">
+                              -{item.discount.toLocaleString()}
+                            </span>
+                          )}
+                          {canEditDiscount && (
+                            <button
+                              onClick={() => handleOpenDiscountModal(item)}
+                              className="ml-auto text-xs text-brand font-medium">
+                              Giảm giá
                             </button>
-                          );
-                        })()}
-                      <button
-                        onClick={() => onRemoveItem(item.rowId)}
-                        className="p-1 hover:bg-red-50 rounded transition-colors">
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
+                          )}
+                        </div>
 
-              {/* ── MOBILE LAYOUT ── lg:hidden ───────────────── */}
-              <div className="lg:hidden mt-1.5 space-y-1.5">
-                {/* Row 1: Quantity controls + Thành tiền */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    {/* Dòng quà KM: SL do hệ thống quản → ẩn +/−, ô readonly */}
-                    {item.isPromoGift ? (
-                      <input
-                        type="text"
-                        value={item.quantity}
-                        readOnly
-                        tabIndex={-1}
-                        className="w-9 h-5 text-center border border-gray-200 bg-gray-50 rounded px-1 text-sm text-gray-500 cursor-default"
-                      />
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => adjustQuantity(item, -1)}
-                          className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <input
-                          type="text"
-                          value={getQuantityDisplay(item)}
-                          onChange={(e) =>
-                            handleQuantityChange(item, e.target.value)
-                          }
-                          onBlur={() => handleQuantityBlur(item)}
-                          inputMode="decimal"
-                          className="w-12 h-5 text-center border border-gray-300 rounded px-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-                          min="0.0001"
-                          step="any"
+                        {/* Cảnh báo lệch giá so với giá bán gần nhất */}
+                        <PriceMismatchNote
+                          warning={priceWarnings?.[item.rowId]}
                         />
-                        <button
-                          onClick={() => adjustQuantity(item, 1)}
-                          className="w-5 h-5 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
-                          <Plus className="w-3 h-3" />
-                        </button>
-                        {canUseCartonUnit && (
-                          <UnitPicker
-                            size="quantity"
-                            value={quantityUnit}
-                            options={[
-                              {
-                                value: "base",
-                                label: getBaseUnitLabel(item.product),
-                              },
-                              { value: "carton", label: "Thùng" },
-                            ]}
-                            onChange={(value) =>
-                              handleQuantityUnitChange(
-                                item,
-                                value as CartQuantityUnit,
-                              )
-                            }
-                          />
+                      </div>
+
+                      {/* ── DESKTOP LAYOUT ── hidden lg:flex ──────────── */}
+                      <div className="hidden lg:flex flex-wrap items-center mt-2 gap-y-2">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            {/* Dòng quà KM: SL do hệ thống quản → ẩn +/−, ô readonly */}
+                            {item.isPromoGift ? (
+                              <input
+                                type="text"
+                                value={item.quantity}
+                                readOnly
+                                tabIndex={-1}
+                                className="w-14 h-9 text-center border border-gray-200 bg-gray-50 rounded px-2 py-1 text-md text-gray-500 cursor-default"
+                              />
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => adjustQuantity(item, -1)}
+                                  className="w-8 h-8 shrink-0 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center hover:bg-gray-200 opacity-0 pointer-events-none transition-opacity group-hover/line:pointer-events-auto group-hover/line:opacity-100 group-focus-within/line:pointer-events-auto group-focus-within/line:opacity-100">
+                                  <Minus className="w-4 h-4" />
+                                </button>
+                                <input
+                                  type="text"
+                                  value={getQuantityDisplay(item)}
+                                  onChange={(e) =>
+                                    handleQuantityChange(item, e.target.value)
+                                  }
+                                  onBlur={() => handleQuantityBlur(item)}
+                                  inputMode="decimal"
+                                  className="w-16 h-9 text-center border-0 border-b border-gray-300 rounded-none bg-transparent px-2 py-1 text-md focus:outline-none focus:border-brand focus:ring-0"
+                                  min="0.0001"
+                                  step="any"
+                                />
+                                <button
+                                  onClick={() => adjustQuantity(item, 1)}
+                                  className="w-8 h-8 shrink-0 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center hover:bg-gray-200 opacity-0 pointer-events-none transition-opacity group-hover/line:pointer-events-auto group-hover/line:opacity-100 group-focus-within/line:pointer-events-auto group-focus-within/line:opacity-100">
+                                  <Plus className="w-4 h-4" />
+                                </button>
+                                {canUseCartonUnit && (
+                                  <UnitPicker
+                                    size="quantity"
+                                    revealOnHover
+                                    value={quantityUnit}
+                                    options={[
+                                      {
+                                        value: "base",
+                                        label: getBaseUnitLabel(item.product),
+                                      },
+                                      { value: "carton", label: "Thùng" },
+                                    ]}
+                                    onChange={(value) =>
+                                      handleQuantityUnitChange(
+                                        item,
+                                        value as CartQuantityUnit
+                                      )
+                                    }
+                                  />
+                                )}
+                              </>
+                            )}
+                          </div>
+
+                          {/* Dòng tồn theo chi nhánh, hiển thị cho cả hàng mua và quà KM */}
+                          {canViewInventory && (
+                            <div className="text-xs italic text-black whitespace-nowrap">
+                              Tồn: {getOnHandRealtime(item)} | KH Đặt:{" "}
+                              {getCustomerOrdered(item).toLocaleString()} | Đặt
+                              NCC: {getSupplierOrdered(item).toLocaleString()} |
+                              Tồn KM:{" "}
+                              {getPromoInventoryRealtime(item).toLocaleString()}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-end gap-3 ml-auto">
+                          <div className="flex flex-col items-end min-w-[60px]">
+                            <span className="mb-0.5"></span>
+                            <button
+                              onClick={() => handleOpenDiscountModal(item)}
+                              className="text-brand hover:text-brand-dark text-md font-medium">
+                              Giảm giá
+                            </button>
+                          </div>
+                          <div className="flex flex-col items-end min-w-[60px]">
+                            <span className="text-xs lg:text-sm text-gray-400 mb-0.5">
+                              Chiết khấu
+                            </span>
+                            <span
+                              className={`text-md ${canEditDiscount ? "cursor-pointer hover:text-brand" : ""} ${item.discount > 0 ? "text-red-500" : "text-gray-400"}`}
+                              onClick={
+                                canEditDiscount
+                                  ? () => handleOpenDiscountModal(item)
+                                  : undefined
+                              }>
+                              {item.discount > 0
+                                ? `-${item.discount.toLocaleString()}`
+                                : "0"}
+                            </span>
+                          </div>
+                          <div className="flex flex-col items-end min-w-[60px]">
+                            <span className="text-xs lg:text-sm text-gray-400 mb-0.5">
+                              Đơn giá
+                            </span>
+                            {canEditPrice ? (
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={getPriceInputValue(item)}
+                                onChange={(e) =>
+                                  handlePriceChange(item, e.target.value)
+                                }
+                                onBlur={() => handlePriceBlur(item)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") e.currentTarget.blur();
+                                }}
+                                className="w-24 h-6 text-right border border-gray-300 rounded px-2 text-md focus:outline-none focus:ring-2 focus:ring-brand text-gray-700"
+                              />
+                            ) : (
+                              <span className="text-md text-gray-500">
+                                {(item.price - item.discount).toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end min-w-[60px]">
+                            <span className="text-xs lg:text-sm text-gray-400 mb-0.5">
+                              Thành tiền
+                            </span>
+                            <span className="text-md font-medium">
+                              {(
+                                (item.price - item.discount) *
+                                item.quantity
+                              ).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Cảnh báo lệch giá so với giá bán gần nhất */}
+                        {priceWarnings?.[item.rowId] && (
+                          <div className="w-full flex justify-end">
+                            <PriceMismatchNote
+                              warning={priceWarnings[item.rowId]}
+                            />
+                          </div>
                         )}
-                      </>
-                    )}
-                  </div>
-                  <span className="text-sm font-semibold text-gray-900">
-                    {(
-                      (item.price - item.discount) *
-                      item.quantity
-                    ).toLocaleString()}
-                  </span>
-                </div>
-
-                {/* Dòng tồn theo chi nhánh, hiển thị cho cả hàng mua và quà KM */}
-                {canViewInventory && (
-                  <div className="text-[11px] italic text-black">
-                    Tồn: {getOnHandRealtime(item)} | KH Đặt:{" "}
-                    {getCustomerOrdered(item).toLocaleString()} | Đặt NCC:{" "}
-                    {getSupplierOrdered(item).toLocaleString()} | Tồn KM:{" "}
-                    {getPromoInventoryRealtime(item).toLocaleString()}
-                  </div>
-                )}
-
-                {/* Row 2: Đơn giá + Chiết khấu + Giảm giá */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400">Đơn giá:</span>
-                  {canEditPrice ? (
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={getPriceInputValue(item)}
-                      onChange={(e) => handlePriceChange(item, e.target.value)}
-                      onBlur={() => handlePriceBlur(item)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") e.currentTarget.blur();
-                      }}
-                      className="w-20 h-6 text-right border border-gray-300 rounded px-1 text-xs focus:outline-none focus:ring-2 focus:ring-brand"
-                    />
-                  ) : (
-                    <span className="text-xs text-gray-700">
-                      {item.price.toLocaleString()}
-                    </span>
-                  )}
-                  {item.discount > 0 && (
-                    <span className="text-xs text-red-500">
-                      -{item.discount.toLocaleString()}
-                    </span>
-                  )}
-                  {canEditDiscount && (
-                    <button
-                      onClick={() => handleOpenDiscountModal(item)}
-                      className="ml-auto text-xs text-brand font-medium">
-                      Giảm giá
-                    </button>
-                  )}
-                </div>
-
-                {/* Cảnh báo lệch giá so với giá bán gần nhất */}
-                <PriceMismatchNote warning={priceWarnings?.[item.rowId]} />
-              </div>
-
-              {/* ── DESKTOP LAYOUT ── hidden lg:flex ──────────── */}
-              <div className="hidden lg:flex flex-wrap items-center mt-2 gap-y-2">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    {/* Dòng quà KM: SL do hệ thống quản → ẩn +/−, ô readonly */}
-                    {item.isPromoGift ? (
-                      <input
-                        type="text"
-                        value={item.quantity}
-                        readOnly
-                        tabIndex={-1}
-                        className="w-14 h-9 text-center border border-gray-200 bg-gray-50 rounded px-2 py-1 text-md text-gray-500 cursor-default"
-                      />
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => adjustQuantity(item, -1)}
-                          className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <input
-                          type="text"
-                          value={getQuantityDisplay(item)}
-                          onChange={(e) =>
-                            handleQuantityChange(item, e.target.value)
-                          }
-                          onBlur={() => handleQuantityBlur(item)}
-                          inputMode="decimal"
-                          className="w-14 h-9 text-center border border-gray-300 rounded px-2 py-1 text-md focus:outline-none focus:ring-2 focus:ring-brand"
-                          min="0.0001"
-                          step="any"
-                        />
-                        <button
-                          onClick={() => adjustQuantity(item, 1)}
-                          className="w-9 h-9 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors">
-                          <Plus className="w-3 h-3" />
-                        </button>
-                        {canUseCartonUnit && (
-                          <UnitPicker
-                            size="quantity"
-                            value={quantityUnit}
-                            options={[
-                              {
-                                value: "base",
-                                label: getBaseUnitLabel(item.product),
-                              },
-                              { value: "carton", label: "Thùng" },
-                            ]}
-                            onChange={(value) =>
-                              handleQuantityUnitChange(
-                                item,
-                                value as CartQuantityUnit,
-                              )
-                            }
-                          />
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  {/* Dòng tồn theo chi nhánh, hiển thị cho cả hàng mua và quà KM */}
-                  {canViewInventory && (
-                    <div className="text-xs italic text-black whitespace-nowrap">
-                      Tồn: {getOnHandRealtime(item)} | KH Đặt:{" "}
-                      {getCustomerOrdered(item).toLocaleString()} | Đặt NCC:{" "}
-                      {getSupplierOrdered(item).toLocaleString()} | Tồn KM:{" "}
-                      {getPromoInventoryRealtime(item).toLocaleString()}
+                      </div>
                     </div>
-                  )}
-                </div>
-
-                <div className="flex items-end gap-3 ml-auto">
-                  <div className="flex flex-col items-end min-w-[60px]">
-                    <span className="mb-0.5"></span>
-                    <button
-                      onClick={() => handleOpenDiscountModal(item)}
-                      className="text-brand hover:text-brand-dark text-md font-medium">
-                      Giảm giá
-                    </button>
-                  </div>
-                  <div className="flex flex-col items-end min-w-[60px]">
-                    <span className="text-xs lg:text-sm text-gray-400 mb-0.5">
-                      Chiết khấu
-                    </span>
-                    <span
-                      className={`text-md ${canEditDiscount ? "cursor-pointer hover:text-brand" : ""} ${item.discount > 0 ? "text-red-500" : "text-gray-400"}`}
-                      onClick={
-                        canEditDiscount
-                          ? () => handleOpenDiscountModal(item)
-                          : undefined
-                      }>
-                      {item.discount > 0
-                        ? `-${item.discount.toLocaleString()}`
-                        : "0"}
-                    </span>
-                  </div>
-                  <div className="flex flex-col items-end min-w-[60px]">
-                    <span className="text-xs lg:text-sm text-gray-400 mb-0.5">
-                      Đơn giá
-                    </span>
-                    {canEditPrice ? (
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={getPriceInputValue(item)}
-                        onChange={(e) =>
-                          handlePriceChange(item, e.target.value)
-                        }
-                        onBlur={() => handlePriceBlur(item)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") e.currentTarget.blur();
-                        }}
-                        className="w-24 h-6 text-right border border-gray-300 rounded px-2 text-md focus:outline-none focus:ring-2 focus:ring-brand text-gray-700"
-                      />
-                    ) : (
-                      <span className="text-md text-gray-500">
-                        {(item.price - item.discount).toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-col items-end min-w-[60px]">
-                    <span className="text-xs lg:text-sm text-gray-400 mb-0.5">
-                      Thành tiền
-                    </span>
-                    <span className="text-md font-medium">
-                      {(
-                        (item.price - item.discount) *
-                        item.quantity
-                      ).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Cảnh báo lệch giá so với giá bán gần nhất */}
-                {priceWarnings?.[item.rowId] && (
-                  <div className="w-full flex justify-end">
-                    <PriceMismatchNote warning={priceWarnings[item.rowId]} />
-                  </div>
-                )}
-              </div>
+                  );
+                })}
               </div>
             );
           })}

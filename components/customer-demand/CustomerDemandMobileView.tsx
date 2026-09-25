@@ -20,7 +20,9 @@ import type {
 import { CustomerDemandDetail } from "./CustomerDemandDetailRow";
 import { CustomerDemandSidebar } from "./CustomerDemandSidebar";
 import { CustomerDemandCustomerSearch } from "./CustomerDemandCustomerSearch";
+import { CustomerDemandCustomerSummary } from "./CustomerDemandCustomerSummary";
 import { CustomerDemandExportMenu } from "./CustomerDemandExportMenu";
+import { CustomerDemandSummarySearch } from "./CustomerDemandSummarySearch";
 import { DemandViewToggle, type DemandViewMode } from "./DemandViewToggle";
 import { CustomerDemandOrderSummary } from "./CustomerDemandOrderSummary";
 import {
@@ -93,14 +95,22 @@ export function CustomerDemandMobileView({
           <h1 className="truncate text-sm font-semibold text-gray-900">
             Demand khách hàng
           </h1>
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
-            {data?.total ?? 0}
-          </span>
+          {viewMode === "vouchers" && (
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+              {data?.total ?? 0}
+            </span>
+          )}
         </div>
         <div className="mt-2 flex items-center gap-2 overflow-x-auto pb-0.5">
           <DemandViewToggle mode={viewMode} onChange={onViewModeChange} />
-          {viewMode !== "summary" && (
+          {viewMode === "vouchers" ? (
             <CustomerDemandCustomerSearch
+              filters={filters}
+              onFiltersChange={onFiltersChange}
+              className="min-w-[280px] shrink-0"
+            />
+          ) : (
+            <CustomerDemandSummarySearch
               filters={filters}
               onFiltersChange={onFiltersChange}
               className="min-w-[280px] shrink-0"
@@ -109,6 +119,7 @@ export function CustomerDemandMobileView({
           <CustomerDemandExportMenu
             filters={filters}
             canExport={canExport}
+            groupBy={viewMode === "customerSummary" ? "customer" : "product"}
           />
           {canSyncLark && (
             <button
@@ -143,6 +154,16 @@ export function CustomerDemandMobileView({
       {viewMode === "summary" ? (
         <CustomerDemandOrderSummary
           filters={filters}
+          onFiltersChange={onFiltersChange}
+          viewMode={viewMode}
+          onViewModeChange={onViewModeChange}
+          canExport={canExport}
+          embedded
+        />
+      ) : viewMode === "customerSummary" ? (
+        <CustomerDemandCustomerSummary
+          filters={filters}
+          onFiltersChange={onFiltersChange}
           viewMode={viewMode}
           onViewModeChange={onViewModeChange}
           canExport={canExport}

@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useCustomerDemandOrderSummary } from "@/lib/hooks/useCustomerDemand";
 import type { CustomerDemandFilters } from "@/lib/types/customer-demand";
 import { DemandViewToggle, type DemandViewMode } from "./DemandViewToggle";
 import { CustomerDemandExportMenu } from "./CustomerDemandExportMenu";
+import { CustomerDemandMonthPicker } from "./CustomerDemandMonthPicker";
+import { CustomerDemandSummarySearch } from "./CustomerDemandSummarySearch";
+import { toDemandSummaryFilters } from "./demand-summary";
+import { useDemandSummaryMonths } from "./useDemandSummaryMonths";
 import {
   DemandButton,
   DemandModalShell,
@@ -13,24 +16,9 @@ import {
   formatDemandQty,
 } from "./DemandUi";
 
-const SUMMARY_MONTHS_STORAGE_KEY = "customer-demand-summary-months";
-
-function readSavedSummaryMonths() {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(SUMMARY_MONTHS_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0
-      ? parsed.filter((value): value is string => typeof value === "string")
-      : null;
-  } catch {
-    return null;
-  }
-}
-
 interface CustomerDemandOrderSummaryProps {
   filters: CustomerDemandFilters;
+  onFiltersChange: (filters: CustomerDemandFilters) => void;
   viewMode: DemandViewMode;
   onViewModeChange: (mode: DemandViewMode) => void;
   embedded?: boolean;
@@ -39,15 +27,12 @@ interface CustomerDemandOrderSummaryProps {
 
 export function CustomerDemandOrderSummary({
   filters,
+  onFiltersChange,
   viewMode,
   onViewModeChange,
   embedded = false,
   canExport,
 }: CustomerDemandOrderSummaryProps) {
-  const [search, setSearch] = useState("");
-  const [pickedMonths, setPickedMonths] = useState<string[] | null>(
-    readSavedSummaryMonths
-  );
   const [detail, setDetail] = useState<{
     product: { code: string; name: string; unit: string | null };
     month?: string;
@@ -63,50 +48,15 @@ export function CustomerDemandOrderSummary({
     }>;
   } | null>(null);
   const summaryFilters = useMemo(
-    () => ({
-      customerId: filters.customerId,
-      customerSearch: filters.customerSearch,
-      month: filters.month,
-      monthFrom: filters.monthFrom,
-      monthTo: filters.monthTo,
-      status: filters.status,
-    }),
-    [
-      filters.customerId,
-      filters.customerSearch,
-      filters.month,
-      filters.monthFrom,
-      filters.monthTo,
-      filters.status,
-    ]
+    () => toDemandSummaryFilters(filters),
+    [filters]
   );
   const { data, isLoading, isError } = useCustomerDemandOrderSummary(
     summaryFilters
   );
   const availableMonths = useMemo(() => data?.months ?? [], [data?.months]);
-  const visibleMonths = useMemo(() => {
-    const picked = (pickedMonths ?? availableMonths).filter((month) =>
-      availableMonths.includes(month)
-    );
-    return picked.length ? picked : availableMonths;
-  }, [availableMonths, pickedMonths]);
-
-  useEffect(() => {
-    try {
-      if (pickedMonths?.length) {
-        localStorage.setItem(
-          SUMMARY_MONTHS_STORAGE_KEY,
-          JSON.stringify(pickedMonths)
-        );
-      } else {
-        localStorage.removeItem(SUMMARY_MONTHS_STORAGE_KEY);
-      }
-    } catch {
-      // localStorage bị chặn thì vẫn giữ lựa chọn trong phiên hiện tại.
-    }
-  }, [pickedMonths]);
-
-  const query = search.trim().toLowerCase();
+  const { visibleMonths, setPickedMonths } =
+    useDemandSummaryMonths(availableMonths);
   const products = useMemo(
     () =>
       (data?.products ?? [])
@@ -130,14 +80,8 @@ export function CustomerDemandOrderSummary({
             customerCount: customers.size || row.customerCount,
           };
         })
-        .filter((row) => {
-          if (row.totalQuantityBase <= 0) return false;
-          if (!query) return true;
-          return `${row.product.code} ${row.product.name}`
-            .toLowerCase()
-            .includes(query);
-        }),
-    [data?.products, query, visibleMonths]
+        .filter((row) => row.totalQuantityBase > 0),
+    [data?.products, visibleMonths]
   );
   const totals = useMemo(() => {
     const next: Record<string, number> = {};
@@ -172,27 +116,27 @@ export function CustomerDemandOrderSummary({
           {!embedded && (
             <DemandViewToggle mode={viewMode} onChange={onViewModeChange} />
           )}
+          {!embedded && (
+            <CustomerDemandSummarySearch
+              filters={filters}
+              onFiltersChange={onFiltersChange}
+              className="w-full min-w-[240px] sm:w-80"
+            />
+          )}
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-          <CustomerDemandExportMenu
-            filters={filters}
-            search={search}
-            canExport={canExport}
-          />
-          <MonthPicker
+          {!embedded && (
+            <CustomerDemandExportMenu
+              filters={summaryFilters}
+              canExport={canExport}
+              groupBy="product"
+            />
+          )}
+          <CustomerDemandMonthPicker
             months={availableMonths}
             selected={visibleMonths}
             onChange={setPickedMonths}
           />
-          <div className="relative min-w-[220px] flex-1 sm:w-64 sm:flex-none">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Tìm mã hoặc tên hàng"
-              className="w-full rounded-lg border bg-white py-1.5 pl-9 pr-3 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand-soft"
-            />
-          </div>
         </div>
       </div>
 
@@ -466,83 +410,4 @@ function getCustomersForMonths(
   }
 
   return [...customers.values()];
-}
-
-function MonthPicker({
-  months,
-  selected,
-  onChange,
-}: {
-  months: string[];
-  selected: string[];
-  onChange: (months: string[] | null) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const allSelected = months.length > 0 && selected.length === months.length;
-
-  useEffect(() => {
-    const handleOutside = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
-  }, []);
-
-  const label = allSelected
-    ? "Tất cả tháng"
-    : selected.length === 1
-      ? formatDemandMonth(selected[0])
-      : `${selected.length} tháng`;
-
-  const toggle = (month: string) => {
-    const next = selected.includes(month)
-      ? selected.filter((item) => item !== month)
-      : [...selected, month].sort();
-    onChange(next.length && next.length < months.length ? next : null);
-  };
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        className={`inline-flex min-w-36 items-center justify-between gap-2 rounded-lg border bg-white px-3 py-1.5 text-sm ${
-          open ? "border-brand ring-2 ring-brand-soft" : "hover:border-gray-400"
-        }`}>
-        <span className="truncate text-gray-800">{label}</span>
-        <ChevronDown
-          className={`h-4 w-4 shrink-0 text-gray-400 ${open ? "rotate-180" : ""}`}
-        />
-      </button>
-      {open && (
-        <div className="absolute right-0 z-30 mt-1 max-h-72 w-52 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1 shadow-lg">
-          <button
-            type="button"
-            onClick={() => onChange(null)}
-            className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">
-            Tất cả tháng
-            {allSelected && <Check className="h-3.5 w-3.5 text-brand" />}
-          </button>
-          {months.map((month) => {
-            const active = selected.includes(month);
-            return (
-              <button
-                key={month}
-                type="button"
-                onClick={() => toggle(month)}
-                className={`mt-0.5 flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm ${
-                  active ? "bg-brand-soft text-gray-900" : "text-gray-700 hover:bg-gray-50"
-                }`}>
-                {formatDemandMonth(month)}
-                {active && <Check className="h-3.5 w-3.5 text-brand" />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
 }
