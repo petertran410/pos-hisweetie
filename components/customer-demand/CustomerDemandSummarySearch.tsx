@@ -2,54 +2,43 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
-import type { CustomerDemandFilters } from "@/lib/types/customer-demand";
-
 interface Props {
-  filters: CustomerDemandFilters;
-  onFiltersChange: (filters: CustomerDemandFilters) => void;
+  value?: string;
+  onChange: (value: string | undefined) => void;
   className?: string;
 }
 
 export function CustomerDemandSummarySearch({
-  filters,
-  onFiltersChange,
+  value = "",
+  onChange,
   className = "",
 }: Props) {
-  const [query, setQuery] = useState(filters.search ?? "");
-  const filtersRef = useRef(filters);
-  const onFiltersChangeRef = useRef(onFiltersChange);
+  const [query, setQuery] = useState(value);
+  const onChangeRef = useRef(onChange);
+  const valueRef = useRef(value);
 
   useEffect(() => {
-    filtersRef.current = filters;
-  }, [filters]);
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
-    onFiltersChangeRef.current = onFiltersChange;
-  }, [onFiltersChange]);
+    valueRef.current = value;
+  }, [value]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      const current = filtersRef.current;
       const search = query.trim().slice(0, 200) || undefined;
-      if (current.search === search) return;
-      onFiltersChangeRef.current({
-        ...current,
-        search,
-        page: 1,
-      });
+      const current = valueRef.current.trim() || undefined;
+      if (current === search) return;
+      onChangeRef.current(search);
     }, 300);
     return () => clearTimeout(timer);
   }, [query]);
 
   const clear = () => {
     setQuery("");
-    const current = filtersRef.current;
-    if (!current.search) return;
-    onFiltersChangeRef.current({
-      ...current,
-      search: undefined,
-      page: 1,
-    });
+    if (!valueRef.current.trim()) return;
+    onChangeRef.current(undefined);
   };
 
   return (

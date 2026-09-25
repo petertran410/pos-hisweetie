@@ -25,6 +25,7 @@ import { CustomerDemandExportMenu } from "./CustomerDemandExportMenu";
 import { CustomerDemandSummarySearch } from "./CustomerDemandSummarySearch";
 import { DemandViewToggle, type DemandViewMode } from "./DemandViewToggle";
 import { CustomerDemandOrderSummary } from "./CustomerDemandOrderSummary";
+import { toDemandSummaryFilters } from "./demand-summary";
 import {
   DemandMonthChip,
   DemandStatusChip,
@@ -46,6 +47,10 @@ interface CustomerDemandMobileViewProps {
   canExport: boolean;
   viewMode: DemandViewMode;
   onViewModeChange: (mode: DemandViewMode) => void;
+  summarySearch?: string;
+  customerSummarySearch?: string;
+  onSummarySearchChange: (value: string | undefined) => void;
+  onCustomerSummarySearchChange: (value: string | undefined) => void;
 }
 
 export function CustomerDemandMobileView({
@@ -62,6 +67,10 @@ export function CustomerDemandMobileView({
   canExport,
   viewMode,
   onViewModeChange,
+  summarySearch,
+  customerSummarySearch,
+  onSummarySearchChange,
+  onCustomerSummarySearchChange,
 }: CustomerDemandMobileViewProps) {
   const { data, isLoading, isError } = useCustomerDemands(filters);
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -111,13 +120,31 @@ export function CustomerDemandMobileView({
             />
           ) : (
             <CustomerDemandSummarySearch
-              filters={filters}
-              onFiltersChange={onFiltersChange}
+              key={viewMode}
+              value={
+                viewMode === "customerSummary"
+                  ? customerSummarySearch
+                  : summarySearch
+              }
+              onChange={
+                viewMode === "customerSummary"
+                  ? onCustomerSummarySearchChange
+                  : onSummarySearchChange
+              }
               className="min-w-[280px] shrink-0"
             />
           )}
           <CustomerDemandExportMenu
-            filters={filters}
+            filters={
+              viewMode === "vouchers"
+                ? { ...filters, search: undefined }
+                : toDemandSummaryFilters(
+                    filters,
+                    viewMode === "customerSummary"
+                      ? customerSummarySearch
+                      : summarySearch
+                  )
+            }
             canExport={canExport}
             groupBy={viewMode === "customerSummary" ? "customer" : "product"}
           />
@@ -154,7 +181,8 @@ export function CustomerDemandMobileView({
       {viewMode === "summary" ? (
         <CustomerDemandOrderSummary
           filters={filters}
-          onFiltersChange={onFiltersChange}
+          search={summarySearch}
+          onSearchChange={onSummarySearchChange}
           viewMode={viewMode}
           onViewModeChange={onViewModeChange}
           canExport={canExport}
@@ -163,7 +191,8 @@ export function CustomerDemandMobileView({
       ) : viewMode === "customerSummary" ? (
         <CustomerDemandCustomerSummary
           filters={filters}
-          onFiltersChange={onFiltersChange}
+          search={customerSummarySearch}
+          onSearchChange={onCustomerSummarySearchChange}
           viewMode={viewMode}
           onViewModeChange={onViewModeChange}
           canExport={canExport}

@@ -18,7 +18,8 @@ import {
 
 interface CustomerDemandOrderSummaryProps {
   filters: CustomerDemandFilters;
-  onFiltersChange: (filters: CustomerDemandFilters) => void;
+  search?: string;
+  onSearchChange: (value: string | undefined) => void;
   viewMode: DemandViewMode;
   onViewModeChange: (mode: DemandViewMode) => void;
   embedded?: boolean;
@@ -27,7 +28,8 @@ interface CustomerDemandOrderSummaryProps {
 
 export function CustomerDemandOrderSummary({
   filters,
-  onFiltersChange,
+  search,
+  onSearchChange,
   viewMode,
   onViewModeChange,
   embedded = false,
@@ -48,8 +50,8 @@ export function CustomerDemandOrderSummary({
     }>;
   } | null>(null);
   const summaryFilters = useMemo(
-    () => toDemandSummaryFilters(filters),
-    [filters]
+    () => toDemandSummaryFilters(filters, search),
+    [filters, search]
   );
   const { data, isLoading, isError } = useCustomerDemandOrderSummary(
     summaryFilters
@@ -118,8 +120,8 @@ export function CustomerDemandOrderSummary({
           )}
           {!embedded && (
             <CustomerDemandSummarySearch
-              filters={filters}
-              onFiltersChange={onFiltersChange}
+              value={search}
+              onChange={onSearchChange}
               className="w-full min-w-[240px] sm:w-80"
             />
           )}

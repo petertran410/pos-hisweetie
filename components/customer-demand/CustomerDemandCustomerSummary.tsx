@@ -14,12 +14,14 @@ import { toDemandSummaryFilters } from "./demand-summary";
 import { useDemandSummaryMonths } from "./useDemandSummaryMonths";
 import { formatDemandQty } from "./DemandUi";
 
-const CUSTOMER_WEIGHT = 30;
-const PRODUCT_WEIGHT = 34;
+const CUSTOMER_WEIGHT = 26;
+const CODE_WEIGHT = 14;
+const PRODUCT_WEIGHT = 28;
 const MONTH_WEIGHT = 8;
 const TOTAL_WEIGHT = 9;
-const CUSTOMER_MIN_PX = 340;
-const PRODUCT_MIN_PX = 380;
+const CUSTOMER_MIN_PX = 300;
+const CODE_MIN_PX = 148;
+const PRODUCT_MIN_PX = 320;
 const MONTH_MIN_PX = 104;
 const TOTAL_MIN_PX = 112;
 
@@ -40,15 +42,21 @@ function formatSummaryMonth(value: string, months: string[]) {
 function summaryColumnLayout(monthCount: number) {
   const count = Math.max(monthCount, 1);
   const weight =
-    CUSTOMER_WEIGHT + PRODUCT_WEIGHT + count * MONTH_WEIGHT + TOTAL_WEIGHT;
+    CUSTOMER_WEIGHT +
+    CODE_WEIGHT +
+    PRODUCT_WEIGHT +
+    count * MONTH_WEIGHT +
+    TOTAL_WEIGHT;
   const share = (value: number) => `${(value / weight) * 100}%`;
   return {
     customer: share(CUSTOMER_WEIGHT),
+    code: share(CODE_WEIGHT),
     product: share(PRODUCT_WEIGHT),
     month: share(MONTH_WEIGHT),
     total: share(TOTAL_WEIGHT),
     minWidth:
       CUSTOMER_MIN_PX +
+      CODE_MIN_PX +
       PRODUCT_MIN_PX +
       count * MONTH_MIN_PX +
       TOTAL_MIN_PX,
@@ -60,7 +68,8 @@ type SummaryProduct = SummaryGroup["products"][number];
 
 interface Props {
   filters: CustomerDemandFilters;
-  onFiltersChange: (filters: CustomerDemandFilters) => void;
+  search?: string;
+  onSearchChange: (value: string | undefined) => void;
   viewMode: DemandViewMode;
   onViewModeChange: (mode: DemandViewMode) => void;
   embedded?: boolean;
@@ -69,15 +78,16 @@ interface Props {
 
 export function CustomerDemandCustomerSummary({
   filters,
-  onFiltersChange,
+  search,
+  onSearchChange,
   viewMode,
   onViewModeChange,
   embedded = false,
   canExport,
 }: Props) {
   const summaryFilters = useMemo(
-    () => toDemandSummaryFilters(filters),
-    [filters]
+    () => toDemandSummaryFilters(filters, search),
+    [filters, search]
   );
   const { data, isLoading, isError } =
     useCustomerDemandCustomerSummary(summaryFilters);
@@ -109,8 +119,8 @@ export function CustomerDemandCustomerSummary({
           )}
           {!embedded && (
             <CustomerDemandSummarySearch
-              filters={filters}
-              onFiltersChange={onFiltersChange}
+              value={search}
+              onChange={onSearchChange}
               className="w-full min-w-[240px] sm:w-80"
             />
           )}
@@ -169,6 +179,7 @@ function CustomerSummaryTable({
       style={{ minWidth: columns.minWidth }}>
       <colgroup>
         <col style={{ width: columns.customer }} />
+        <col style={{ width: columns.code }} />
         <col style={{ width: columns.product }} />
         {months.map((month) => (
           <col key={month} style={{ width: columns.month }} />
@@ -180,7 +191,10 @@ function CustomerSummaryTable({
           <th className="sticky left-0 z-30 border-b border-r border-gray-200 bg-gray-50 px-4 py-2.5 text-left text-xs font-semibold text-gray-600">
             Tên khách hàng
           </th>
-          <th className="border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-left text-xs font-semibold text-gray-600">
+          <th className="border-b border-l border-gray-200 bg-gray-50 px-3 py-2.5 text-left text-xs font-semibold text-gray-600">
+            Mã sản phẩm
+          </th>
+          <th className="border-b border-l border-gray-200 bg-gray-50 px-4 py-2.5 text-left text-xs font-semibold text-gray-600">
             Tên hàng hóa
           </th>
           {months.map((month) => (
@@ -210,6 +224,13 @@ function CustomerSummaryTable({
                   </div>
                 </td>
               )}
+              <td className="border-b border-l border-gray-200 px-3 py-2">
+                <div
+                  className="truncate font-mono text-xs text-gray-700"
+                  title={product.product.code}>
+                  {product.product.code}
+                </div>
+              </td>
               <ProductCell product={product} />
               {months.map((month) => (
                 <QuantityCell
@@ -268,6 +289,9 @@ function SummaryGrid({
     <table className="w-full min-w-[680px] text-sm">
       <thead className="bg-white">
         <tr>
+          <th className="w-[1%] whitespace-nowrap border-l border-gray-200 px-3 py-2 text-left text-xs font-semibold text-gray-600">
+            Mã sản phẩm
+          </th>
           <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">
             Tên hàng hóa
           </th>
@@ -288,7 +312,10 @@ function SummaryGrid({
           <tr
             key={product.product.id}
             className="border-t">
-            <td className="px-3 py-2.5">
+            <td className="whitespace-nowrap border-l border-gray-200 px-3 py-2.5 font-mono text-xs text-gray-700">
+              {product.product.code}
+            </td>
+            <td className="border-l border-gray-200 px-3 py-2.5">
               <div className="truncate text-gray-900" title={product.product.name}>
                 {product.product.name}
               </div>
@@ -314,7 +341,7 @@ function SummaryGrid({
 
 function ProductCell({ product }: { product: SummaryProduct }) {
   return (
-    <td className="border-b border-gray-200 bg-white px-4 py-2">
+    <td className="border-b border-l border-gray-200 bg-white px-4 py-2">
       <div
         className="truncate text-gray-900"
         title={`${product.product.code}${

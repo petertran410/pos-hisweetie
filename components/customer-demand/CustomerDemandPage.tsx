@@ -41,12 +41,20 @@ const VIEW_MODES = new Set<DemandViewMode>([
 type DemandPageSetup = {
   filters: CustomerDemandFilters;
   viewMode: DemandViewMode;
+  summarySearch?: string;
+  customerSummarySearch?: string;
 };
 
 const DEFAULT_SETUP: DemandPageSetup = {
   filters: DEFAULT_FILTERS,
   viewMode: "vouchers",
 };
+
+function cleanSearch(value: unknown) {
+  return typeof value === "string" && value.trim()
+    ? value.trim().slice(0, 200)
+    : undefined;
+}
 
 const SETUP_EVENT = "customer-demand-setup";
 let currentSetup = DEFAULT_SETUP;
@@ -58,6 +66,8 @@ function parseDemandSetup(raw: string | null): DemandPageSetup {
     const saved = JSON.parse(raw) as {
       filters?: Partial<CustomerDemandFilters>;
       viewMode?: DemandViewMode;
+      summarySearch?: string;
+      customerSummarySearch?: string;
     };
     const source = saved.filters ?? {};
     const month = (value: unknown) =>
@@ -81,10 +91,6 @@ function parseDemandSetup(raw: string | null): DemandPageSetup {
         status: STATUSES.has(String(source.status))
           ? (source.status as CustomerDemandFilters["status"])
           : undefined,
-        search:
-          typeof source.search === "string" && source.search.trim()
-            ? source.search.trim().slice(0, 200)
-            : undefined,
         sortBy: SORT_FIELDS.has(String(source.sortBy))
           ? (source.sortBy as CustomerDemandFilters["sortBy"])
           : "createdAt",
@@ -95,6 +101,8 @@ function parseDemandSetup(raw: string | null): DemandPageSetup {
       viewMode: VIEW_MODES.has(saved.viewMode as DemandViewMode)
         ? (saved.viewMode as DemandViewMode)
         : "vouchers",
+      summarySearch: cleanSearch(saved.summarySearch ?? source.search),
+      customerSummarySearch: cleanSearch(saved.customerSummarySearch),
     };
   } catch {
     return DEFAULT_SETUP;
@@ -147,7 +155,7 @@ export function CustomerDemandPage() {
     getDemandSetup,
     () => DEFAULT_SETUP
   );
-  const { filters, viewMode } = setup;
+  const { filters, viewMode, summarySearch, customerSummarySearch } = setup;
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [formMonthId, setFormMonthId] = useState<number | null>(null);
   const [copySource, setCopySource] = useState<CustomerDemand | null>(null);
@@ -197,6 +205,7 @@ export function CustomerDemandPage() {
       ...currentSetup,
       filters: {
         ...next,
+        search: undefined,
         sortBy: next.sortBy ?? "createdAt",
         sortOrder: next.sortOrder ?? "desc",
         page: next.page ?? 1,
@@ -206,6 +215,12 @@ export function CustomerDemandPage() {
   };
   const setViewMode = (next: DemandViewMode) => {
     writeDemandSetup({ ...getDemandSetup(), viewMode: next });
+  };
+  const setSummarySearch = (summarySearch?: string) => {
+    writeDemandSetup({ ...getDemandSetup(), summarySearch });
+  };
+  const setCustomerSummarySearch = (customerSummarySearch?: string) => {
+    writeDemandSetup({ ...getDemandSetup(), customerSummarySearch });
   };
   return (
     <PagePermissionGuard resource="customer_demand" action="view">
@@ -229,6 +244,10 @@ export function CustomerDemandPage() {
             canExport={canExport}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
+            summarySearch={summarySearch}
+            customerSummarySearch={customerSummarySearch}
+            onSummarySearchChange={setSummarySearch}
+            onCustomerSummarySearchChange={setCustomerSummarySearch}
           />
         </div>
       ) : (
@@ -242,7 +261,8 @@ export function CustomerDemandPage() {
           {viewMode === "summary" ? (
             <CustomerDemandOrderSummary
               filters={filters}
-              onFiltersChange={setFiltersStable}
+              search={summarySearch}
+              onSearchChange={setSummarySearch}
               viewMode={viewMode}
               onViewModeChange={setViewMode}
               canExport={canExport}
@@ -250,7 +270,8 @@ export function CustomerDemandPage() {
           ) : viewMode === "customerSummary" ? (
             <CustomerDemandCustomerSummary
               filters={filters}
-              onFiltersChange={setFiltersStable}
+              search={customerSummarySearch}
+              onSearchChange={setCustomerSummarySearch}
               viewMode={viewMode}
               onViewModeChange={setViewMode}
               canExport={canExport}
