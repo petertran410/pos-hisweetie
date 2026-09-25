@@ -116,8 +116,8 @@ export function NoteDropdown({
     <div className="relative" ref={dropdownRef}>
       <div
         onClick={toggleOpen}
-        className="text-xs lg:text-sm text-gray-500 cursor-pointer hover:text-gray-700 min-h-[18px] lg:min-h-[20px] flex items-center gap-1">
-        <span className="flex-1">{displayValue}</span>
+        className="w-fit max-w-full text-xs lg:text-sm text-gray-500 cursor-pointer hover:text-gray-700 min-h-[18px] lg:min-h-[20px]">
+        {displayValue}
       </div>
 
       {isOpen && (
