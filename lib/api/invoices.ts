@@ -59,6 +59,7 @@ export interface InvoicesResponse {
 export interface InvoicesTotalsResponse {
   count: number;
   totalAmount: number;
+  shippingFee: number;
   grandTotal: number;
   customerDebt: number;
   paidAmount: number;

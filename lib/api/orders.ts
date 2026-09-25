@@ -32,6 +32,7 @@ export const ordersApi = {
   ): Promise<{
     count: number;
     totalAmount: number;
+    shippingFee: number;
     grandTotal: number;
     customerDebt: number;
     paidAmount: number;

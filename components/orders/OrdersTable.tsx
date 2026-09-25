@@ -195,6 +195,13 @@ const DEFAULT_COLUMNS: ColumnConfig<Order>[] = [
     render: (o) => formatCurrency(Number(o.totalAmount)),
   },
   {
+    key: "shippingFee",
+    label: "Phí ship",
+    visible: false,
+    width: "120px",
+    render: (o) => formatCurrency(Number(o.shippingFee || 0)),
+  },
+  {
     key: "discount",
     label: "Giảm giá",
     visible: false,
@@ -469,6 +476,12 @@ export function OrdersTable({
             {formatCurrency(totals.totalAmount)}
           </span>
         );
+      case "shippingFee":
+        return (
+          <span className="font-semibold text-gray-900">
+            {formatCurrency(Number(totals.shippingFee || 0))}
+          </span>
+        );
       case "grandTotal":
         return (
           <span className="font-semibold text-gray-900">
@@ -502,6 +515,7 @@ export function OrdersTable({
   // Có ít nhất 1 cột tiền đang hiển thị thì mới render row tổng.
   const TOTAL_KEYS = new Set([
     "totalAmount",
+    "shippingFee",
     "grandTotal",
     "customerDebt",
     "customerPaid",
