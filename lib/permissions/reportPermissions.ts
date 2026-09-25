@@ -50,6 +50,7 @@ export const REPORT_VIEWTYPE_PERMISSION: Record<
     CustomerByProfit: "reports:customer_profit",
     CustomerDebt: "reports:customer_debt",
     CustomerByProduct: "reports:customer_product",
+    CustomerShipping: "reports:customer_shipping",
   },
   "cuoi-ngay": {
     Synthetic: "reports:eod_synthetic",

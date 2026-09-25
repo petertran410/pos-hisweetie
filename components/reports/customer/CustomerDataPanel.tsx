@@ -7,6 +7,7 @@ import {
   useCustomerPreview,
   useCustomerInvoices,
   useCustomerSaleInvoices,
+  useCustomerShippingInvoices,
   useCustomerProducts,
   useCustomerDebtCustomers,
   useCustomerDebtDocuments,
@@ -33,6 +34,7 @@ const VIEW_TITLE: Record<CustomerViewType, string> = {
   CustomerByProfit: "Lợi nhuận theo khách",
   CustomerDebt: "Công nợ theo khách",
   CustomerByProduct: "Hàng bán theo khách",
+  CustomerShipping: "Phí ship theo khách",
 };
 
 export function CustomerDataPanel({ filters, viewType }: Props) {
@@ -67,6 +69,7 @@ function CustomerSummaryPanel({
   const summary = data?.summary;
   const isProfit = viewType === "CustomerByProfit";
   const isSale = viewType === "CustomerBySale";
+  const isShipping = viewType === "CustomerShipping";
 
   const handleExportOverview = async () => {
     try {
@@ -80,9 +83,12 @@ function CustomerSummaryPanel({
   const handleExportDetail = async () => {
     try {
       // View "Bán hàng theo khách" xuất theo hóa đơn (khớp doanh thu thuần);
-      // các view còn lại giữ nguyên xuất theo dòng sản phẩm.
+      // view "Phí ship" xuất hóa đơn + phí ship; các view còn lại giữ nguyên
+      // xuất theo dòng sản phẩm.
       if (isSale) {
         await customerReportApi.exportSaleDetail(filters);
+      } else if (isShipping) {
+        await customerReportApi.exportShippingDetail(filters);
       } else {
         await customerReportApi.exportDetail(filters);
       }
@@ -93,6 +99,17 @@ function CustomerSummaryPanel({
   };
 
   if (drill) {
+    if (isShipping) {
+      return (
+        <CustomerShippingInvoiceDrilldown
+          filters={filters}
+          title={drill.title}
+          code={drill.code}
+          customerId={drill.customerId}
+          onBack={() => setDrill(null)}
+        />
+      );
+    }
     return isSale ? (
       <CustomerSaleInvoiceDrilldown
         filters={filters}
@@ -137,7 +154,22 @@ function CustomerSummaryPanel({
 
       {summary && rows.length > 0 && (
         <div className="px-4 py-2 bg-gray-50 border-b flex flex-wrap gap-x-8 gap-y-1 text-sm shrink-0">
-          {isProfit ? (
+          {isShipping ? (
+            <>
+              <div>
+                <span className="text-gray-500">Tiền hàng:</span>{" "}
+                <span className="font-semibold text-gray-900">
+                  {formatCurrency(summary.totalOrderAmount || 0)}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-500">Phí ship:</span>{" "}
+                <span className="font-semibold text-brand-dark">
+                  {formatCurrency(summary.totalShippingFee || 0)}
+                </span>
+              </div>
+            </>
+          ) : isProfit ? (
             <>
               <div>
                 <span className="text-gray-500">Doanh thu:</span>{" "}
@@ -218,7 +250,16 @@ function CustomerSummaryPanel({
                 <th className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
                   Khách hàng
                 </th>
-                {isProfit ? (
+                {isShipping ? (
+                  <>
+                    <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                      Tiền hàng
+                    </th>
+                    <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                      Phí ship
+                    </th>
+                  </>
+                ) : isProfit ? (
                   <>
                     <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
                       Doanh thu
@@ -266,7 +307,16 @@ function CustomerSummaryPanel({
                     {row.extra1 || ""}
                   </td>
                   <td className="px-3 py-2 text-gray-900">{row.subject}</td>
-                  {isProfit ? (
+                  {isShipping ? (
+                    <>
+                      <td className="px-3 py-2 text-right text-gray-700">
+                        {(row.orderAmount || 0).toLocaleString("vi-VN")}
+                      </td>
+                      <td className="px-3 py-2 text-right font-medium text-brand-dark">
+                        {(row.shippingFee || 0).toLocaleString("vi-VN")}
+                      </td>
+                    </>
+                  ) : isProfit ? (
                     <>
                       <td className="px-3 py-2 text-right text-gray-700">
                         {(row.revenue || 0).toLocaleString("vi-VN")}
@@ -791,6 +841,190 @@ function CustomerSaleInvoiceDrilldown({
                   </td>
                   <td className="px-3 py-2 text-right font-medium text-brand-dark">
                     {formatCurrency(row.netRevenue)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {totalPages > 1 && (
+        <div className="border-t px-4 py-2 flex items-center justify-between shrink-0">
+          <span className="text-sm text-gray-500">
+            Trang {page}/{totalPages}
+          </span>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setPage(Math.max(1, page - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 text-sm border rounded-lg disabled:opacity-50 hover:bg-gray-50">
+              {"\u2039"}
+            </button>
+            <button
+              onClick={() => setPage(Math.min(totalPages, page + 1))}
+              disabled={page === totalPages}
+              className="px-3 py-1 text-sm border rounded-lg disabled:opacity-50 hover:bg-gray-50">
+              {"\u203a"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Drilldown Lv2 (CustomerShipping): HÓA ĐƠN + phí ship của 1 KH ──
+function CustomerShippingInvoiceDrilldown({
+  filters,
+  title,
+  code,
+  customerId,
+  onBack,
+}: {
+  filters: CustomerReportFilters;
+  title: string;
+  code: string;
+  customerId?: number | null;
+  onBack: () => void;
+}) {
+  const [page, setPage] = useState(1);
+  const limit = filters.limit ?? 500;
+  const { canExport } = useReportAccess();
+
+  // Ưu tiên lọc theo customerId (exact) để tránh ILIKE nhầm KH có mã lồng nhau.
+  const drillFilters = {
+    ...filters,
+    ...(customerId != null ? { customerId } : { customerKeyword: code }),
+    page,
+    limit,
+  };
+  const { data, isLoading, isError, refetch } =
+    useCustomerShippingInvoices(drillFilters);
+
+  const rows = data?.data || [];
+  const total = data?.total || 0;
+  const totalPages = Math.ceil(total / limit) || 1;
+  const summary = data?.summary;
+
+  const handleExport = async () => {
+    try {
+      await customerReportApi.exportShippingDetail(drillFilters);
+      toast.success("Xuất file thành công");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Xuất file thất bại");
+    }
+  };
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
+      <div className="border-b px-4 py-2.5 flex items-center justify-between gap-3 shrink-0">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:text-brand hover:bg-gray-50 rounded-lg transition-colors">
+            <ChevronLeft className="w-4 h-4" />
+            Quay lại
+          </button>
+          <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
+            {title}
+          </h2>
+          {summary && (
+            <span className="text-sm text-gray-500">
+              • {summary.totalInvoices} hóa đơn
+            </span>
+          )}
+        </div>
+        {canExport("khach-hang") && (
+          <ExportMenu onExportOverview={handleExport} disabled={!summary} />
+        )}
+      </div>
+
+      {summary && (
+        <div className="px-4 py-2 bg-gray-50 border-b flex flex-wrap gap-x-8 gap-y-1 text-sm shrink-0">
+          <div>
+            <span className="text-gray-500">Tiền hàng:</span>{" "}
+            <span className="font-semibold text-gray-900">
+              {formatCurrency(summary.totalAmount)}
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-500">Phí ship:</span>{" "}
+            <span className="font-semibold text-brand-dark">
+              {formatCurrency(summary.totalShippingFee)}
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-500">Tổng sau giảm:</span>{" "}
+            <span className="font-semibold text-gray-900">
+              {formatCurrency(summary.totalGrandTotal)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-auto">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-40">
+            <Loader2 className="h-6 w-6 animate-spin text-brand" />
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center h-40 gap-2 text-sm text-gray-500">
+            <span>Không tải được dữ liệu</span>
+            <button
+              onClick={() => refetch()}
+              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50">
+              Thử lại
+            </button>
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
+            Không có dữ liệu
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-sky-100 sticky top-0 z-10">
+              <tr>
+                <th className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  Mã hóa đơn
+                </th>
+                <th className="px-3 py-2 text-left font-semibold text-gray-700 whitespace-nowrap">
+                  Thời gian
+                </th>
+                <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                  Tiền hàng
+                </th>
+                <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                  Chiết khấu HĐ
+                </th>
+                <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                  Phí ship
+                </th>
+                <th className="px-3 py-2 text-right font-semibold text-gray-700 whitespace-nowrap">
+                  Tổng sau giảm
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {rows.map((row) => (
+                <tr key={row.id} className="hover:bg-gray-50">
+                  <td className="px-3 py-2 font-medium text-brand-dark">
+                    <CodeLink entity="invoice" code={row.invoiceCode} />
+                  </td>
+                  <td className="px-3 py-2 text-gray-600">
+                    {formatDate(row.purchaseDate)}
+                  </td>
+                  <td className="px-3 py-2 text-right text-gray-700">
+                    {formatCurrency(row.totalAmount)}
+                  </td>
+                  <td className="px-3 py-2 text-right text-gray-600">
+                    {row.discount ? formatCurrency(row.discount) : "—"}
+                  </td>
+                  <td className="px-3 py-2 text-right font-medium text-brand-dark">
+                    {formatCurrency(row.shippingFee)}
+                  </td>
+                  <td className="px-3 py-2 text-right text-gray-700">
+                    {formatCurrency(row.grandTotal)}
                   </td>
                 </tr>
               ))}

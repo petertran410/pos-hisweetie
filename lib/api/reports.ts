@@ -37,6 +37,10 @@ export interface CustomerChartRow {
   rankStart?: number;
   rankEnd?: number;
   customerIds?: number[];
+  // View CustomerShipping — phí ship + tiền hàng theo KH
+  shippingFee?: number;
+  orderAmount?: number;
+  grandTotal?: number;
 }
 
 export interface CustomerSalesRow {
@@ -732,7 +736,8 @@ export type CustomerViewType =
   | "CustomerBySale"
   | "CustomerByProfit"
   | "CustomerDebt"
-  | "CustomerByProduct";
+  | "CustomerByProduct"
+  | "CustomerShipping";
 
 export interface CustomerReportFilters {
   viewType?: CustomerViewType;
@@ -774,6 +779,9 @@ export interface CustomerPreviewResponse {
     totalDebit?: number;
     totalCredit?: number;
     totalClosing?: number;
+    // View CustomerShipping — phí ship + tiền hàng
+    totalShippingFee?: number;
+    totalOrderAmount?: number;
   };
 }
 
@@ -802,6 +810,32 @@ export interface CustomerSaleInvoicesResponse {
     grossRevenue: number;
     returnAmount: number;
     netRevenue: number;
+  };
+}
+
+// Drilldown Lv2 cho view CustomerShipping — dòng chính là HÓA ĐƠN + phí ship
+export interface CustomerShippingInvoiceRow {
+  id: number;
+  invoiceCode: string;
+  purchaseDate: string;
+  customerName: string;
+  totalAmount: number;
+  discount: number;
+  shippingFee: number;
+  grandTotal: number;
+}
+
+export interface CustomerShippingInvoicesResponse {
+  data: CustomerShippingInvoiceRow[];
+  total: number;
+  page: number;
+  limit: number;
+  summary: {
+    totalInvoices: number;
+    totalAmount: number;
+    totalDiscount: number;
+    totalShippingFee: number;
+    totalGrandTotal: number;
   };
 }
 
@@ -944,6 +978,14 @@ export const customerReportApi = {
       serializeCustomerFilters(params),
     );
   },
+  getShippingInvoices: (
+    params: CustomerReportFilters,
+  ): Promise<CustomerShippingInvoicesResponse> => {
+    return apiClient.get(
+      "/reports/customer/shipping-invoices",
+      serializeCustomerFilters(params),
+    );
+  },
   getProducts: (
     params: CustomerReportFilters,
   ): Promise<CustomerProductsResponse> => {
@@ -991,6 +1033,18 @@ export const customerReportApi = {
       url,
       `chi-tiet-ban-hang-theo-khach_${Date.now()}.xlsx`,
     );
+  },
+  exportShippingDetail: (params: CustomerReportFilters) => {
+    const url = new URL(
+      `${API_URL}/reports/customer/shipping-invoices/export`,
+    );
+    const serialized = serializeCustomerFilters(params);
+    Object.entries(serialized).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        url.searchParams.append(key, String(value));
+      }
+    });
+    return downloadReportFile(url, `chi-tiet-phi-ship_${Date.now()}.xlsx`);
   },
   exportDebtDocuments: (params: CustomerReportFilters) => {
     const url = new URL(`${API_URL}/reports/customer/debt-documents/export`);

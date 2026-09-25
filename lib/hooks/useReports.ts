@@ -136,6 +136,20 @@ export function useCustomerSaleInvoices(filters: CustomerReportFilters) {
   });
 }
 
+/**
+ * Drilldown view "Phí ship theo khách": dòng chính là HÓA ĐƠN + phí ship.
+ */
+export function useCustomerShippingInvoices(filters: CustomerReportFilters) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasHydrated = useAuthStore((s) => s._hasHydrated);
+
+  return useQuery({
+    queryKey: ["reports", "customer-shipping-invoices", filters],
+    queryFn: () => customerReportApi.getShippingInvoices(filters),
+    enabled: hasHydrated && isAuthenticated,
+  });
+}
+
 export function useCustomerProducts(filters: CustomerReportFilters) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasHydrated = useAuthStore((s) => s._hasHydrated);

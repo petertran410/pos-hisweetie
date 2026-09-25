@@ -31,6 +31,7 @@ const VIEW_TITLE: Record<CustomerViewType, string> = {
   CustomerByProfit: "Top 20 khách hàng lợi nhuận cao nhất",
   CustomerDebt: "Top 20 khách hàng nợ nhiều nhất",
   CustomerByProduct: "Top 20 khách hàng theo tiền hàng",
+  CustomerShipping: "Top 20 khách hàng theo phí ship",
 };
 
 const KPI_LABEL: Record<CustomerViewType, string> = {
@@ -38,6 +39,7 @@ const KPI_LABEL: Record<CustomerViewType, string> = {
   CustomerByProfit: "Tổng lợi nhuận",
   CustomerDebt: "Tổng nợ cuối kỳ",
   CustomerByProduct: "Tổng tiền hàng",
+  CustomerShipping: "Tổng phí ship",
 };
 
 export function CustomerChartPanel({ filters, viewType }: Props) {
@@ -59,6 +61,7 @@ export function CustomerChartPanel({ filters, viewType }: Props) {
   const title = VIEW_TITLE[viewType];
   const kpiLabel = KPI_LABEL[viewType];
   const isDebt = viewType === "CustomerDebt";
+  const isShipping = viewType === "CustomerShipping";
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
@@ -68,7 +71,9 @@ export function CustomerChartPanel({ filters, viewType }: Props) {
         <p className="text-xs text-gray-500 mt-0.5">
           {isDebt
             ? "Tất cả chi nhánh · Nợ cuối kỳ"
-            : "Tất cả chi nhánh · Đã trừ trả hàng"}
+            : isShipping
+              ? "Tất cả chi nhánh · Phí ship hóa đơn"
+              : "Tất cả chi nhánh · Đã trừ trả hàng"}
         </p>
       </div>
 
@@ -207,7 +212,9 @@ function CustomerBarChart({
               ? "Lợi nhuận"
               : isDebt
                 ? "Nợ cuối kỳ"
-                : "Doanh thu"
+                : viewType === "CustomerShipping"
+                  ? "Phí ship"
+                  : "Doanh thu"
           }
           fill={isDebt ? DT_COLORS.gold : DT_COLORS.primary}
           radius={[0, 6, 6, 0]}

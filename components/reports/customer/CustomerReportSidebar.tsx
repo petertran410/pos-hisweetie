@@ -33,6 +33,7 @@ const VIEW_TYPES: { value: CustomerViewType; label: string }[] = [
   { value: "CustomerByProfit", label: "Lợi nhuận" },
   { value: "CustomerDebt", label: "Công nợ" },
   { value: "CustomerByProduct", label: "Hàng bán theo khách" },
+  { value: "CustomerShipping", label: "Phí ship" },
 ];
 
 const PRESET_GROUPS = [
