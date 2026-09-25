@@ -9,12 +9,14 @@ import { API_URL, getAuthHeaders } from "@/lib/config/api";
 interface Props {
   filters: CustomerDemandFilters;
   search?: string;
+  groupBy?: "product" | "customer";
   canExport: boolean;
 }
 
 export function CustomerDemandExportMenu({
   filters,
   search,
+  groupBy = "product",
   canExport,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -46,6 +48,9 @@ export function CustomerDemandExportMenu({
         }
       });
       if (search?.trim()) params.set("search", search.trim());
+      if (kind === "summary" && groupBy === "customer") {
+        params.set("groupBy", "customer");
+      }
 
       const response = await fetch(
         `${API_URL}/customer-demand/export/${kind}?${params.toString()}`,
@@ -99,7 +104,9 @@ export function CustomerDemandExportMenu({
             onClick={() => void exportFile("summary")}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50">
             <FileSpreadsheet className="h-4 w-4 text-brand" />
-            Tổng quan theo mã/tháng
+            {groupBy === "customer"
+              ? "Tổng quan theo khách/tháng"
+              : "Tổng quan theo mã/tháng"}
           </button>
           <button
             type="button"

@@ -1230,47 +1230,69 @@ export default function BanHangPage() {
               return true;
             });
 
-            // Ghép lại: mỗi dòng thường (kèm eligiblePromos) + dòng quà dưới nó.
+            // Ghép lại: các dòng thường cùng sản phẩm đứng liền nhau, rồi mới
+            // gắn quà phía dưới cả nhóm. Nếu gắn quà ngay sau từng dòng, bản copy
+            // của sản phẩm mua sẽ bị đẩy xuống sau dòng quà cuối.
             // Đóng dấu promoEnabledIds cho MỌI dòng X thuộc KM cộng dồn đã bật
             // → badge hiện đồng nhất trên mọi dòng + BE re-validate đúng khi lưu.
             const merged: CartItem[] = [];
             const allGifts = [...newGifts, ...preservedGifts];
-            for (const n of normals) {
-              // Dòng bục rách/cận date không hưởng KM: chỉ ẩn trạng thái hiển thị,
-              // nhưng giữ promoEnabledIds để khi quay về hàng thường có thể áp lại
-              // đúng CT trước đó. Dòng này đã bị loại khỏi promoNormals nên không
-              // được gửi evaluate, không tính ngưỡng và không sinh quà khi còn là
-              // damaged/near_expiry.
-              if ((n.conditionType || "normal") !== "normal") {
+            for (let i = 0; i < normals.length; ) {
+              const productId = normals[i].product?.id;
+              let runEnd = i + 1;
+              while (
+                runEnd < normals.length &&
+                productId != null &&
+                normals[runEnd].product?.id === productId
+              ) {
+                runEnd++;
+              }
+              const runRowIds = new Set<string>();
+              for (let k = i; k < runEnd; k++) {
+                const n = normals[k];
+                runRowIds.add(n.rowId);
+                // Dòng bục rách/cận date không hưởng KM: chỉ ẩn trạng thái hiển thị,
+                // nhưng giữ promoEnabledIds để khi quay về hàng thường có thể áp lại
+                // đúng CT trước đó. Dòng này đã bị loại khỏi promoNormals nên không
+                // được gửi evaluate, không tính ngưỡng và không sinh quà khi còn là
+                // damaged/near_expiry.
+                if ((n.conditionType || "normal") !== "normal") {
+                  merged.push({
+                    ...n,
+                    eligiblePromos: undefined,
+                  });
+                  continue;
+                }
+                const pid = Number(n.product?.id);
+                const cumIds = cumMatchByProduct.get(pid) || [];
+                const enabledSet = new Set(n.promoEnabledIds || []);
+                // Bỏ các cumId không còn bật (đã tắt ở tab) rồi thêm lại cumId đang bật.
+                for (const p of discoveryGiftPromos) {
+                  if (
+                    p.cumulative &&
+                    (p.matchedProductIds || []).includes(pid)
+                  ) {
+                    enabledSet.delete(p.promotionId);
+                  }
+                }
+                cumIds.forEach((id) => enabledSet.add(id));
                 merged.push({
                   ...n,
-                  eligiblePromos: undefined,
+                  promoEnabledIds: [...enabledSet],
+                  eligiblePromos: eligibleByRow[n.rowId],
+                  deductPromoStock: (eligibleByRow[n.rowId] || []).some(
+                    (promotion) =>
+                      promotion.deductPromoStock === true &&
+                      enabledSet.has(promotion.promotionId),
+                  ),
                 });
-                continue;
               }
-              const pid = Number(n.product?.id);
-              const cumIds = cumMatchByProduct.get(pid) || [];
-              const enabledSet = new Set(n.promoEnabledIds || []);
-              // Bỏ các cumId không còn bật (đã tắt ở tab) rồi thêm lại cumId đang bật.
-              for (const p of discoveryGiftPromos) {
-                if (p.cumulative && (p.matchedProductIds || []).includes(pid)) {
-                  enabledSet.delete(p.promotionId);
-                }
-              }
-              cumIds.forEach((id) => enabledSet.add(id));
-              merged.push({
-                ...n,
-                promoEnabledIds: [...enabledSet],
-                eligiblePromos: eligibleByRow[n.rowId],
-                deductPromoStock: (eligibleByRow[n.rowId] || []).some(
-                  (promotion) =>
-                    promotion.deductPromoStock === true &&
-                    enabledSet.has(promotion.promotionId),
-                ),
-              });
               allGifts
-                .filter((g) => g.triggerRowId === n.rowId)
+                .filter(
+                  (g) => g.triggerRowId != null && runRowIds.has(g.triggerRowId),
+                )
                 .forEach((g) => merged.push(g));
+              i = runEnd;
             }
             // Gift không gắn được trigger vẫn append cuối (tránh mất)
             allGifts

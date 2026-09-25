@@ -3,6 +3,7 @@ import type {
   CreateCustomerDemandRequest,
   CustomerDemand,
   CustomerDemandFilters,
+  CustomerDemandCustomerSummary,
   CustomerDemandImportPreview,
   CustomerDemandImportResult,
   CustomerDemandLarkSyncPreview,
@@ -36,6 +37,10 @@ export const customerDemandApi = {
   },
   orderSummary: (filters: CustomerDemandFilters = {}): Promise<CustomerDemandOrderSummary> =>
     apiClient.get(`${BASE}/order-summary`, filters),
+  customerSummary: (
+    filters: CustomerDemandFilters = {}
+  ): Promise<CustomerDemandCustomerSummary> =>
+    apiClient.get(`${BASE}/customer-summary`, filters),
   get: (id: number): Promise<CustomerDemand> => apiClient.get(`${BASE}/${id}`),
   create: (data: CreateCustomerDemandRequest): Promise<CustomerDemand> =>
     apiClient.post(BASE, data),

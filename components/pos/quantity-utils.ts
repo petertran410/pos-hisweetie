@@ -6,6 +6,12 @@ export interface QuantityProduct {
 }
 
 const MAX_QUANTITY_DECIMALS = 4;
+const MAX_DISPLAY_DECIMALS = 2;
+
+function roundToDisplayDecimals(value: number): number {
+  const factor = 10 ** MAX_DISPLAY_DECIMALS;
+  return Math.round((value + Number.EPSILON) * factor) / factor;
+}
 
 export function getConversionValue(
   product: QuantityProduct | null | undefined,
@@ -35,12 +41,14 @@ export function normalizeQuantityUnit(
   product: QuantityProduct | null | undefined,
   conversionValueSnapshot?: number | null,
 ): CartQuantityUnit {
+  void conversionValueSnapshot;
   return unit === "carton" && supportsCartonUnit(product) ? "carton" : "base";
 }
 
 export function formatQuantity(value: number): string {
-  return Number(value || 0).toLocaleString("vi-VN", {
-    maximumFractionDigits: 2,
+  return roundToDisplayDecimals(Number(value || 0)).toLocaleString("vi-VN", {
+    useGrouping: false,
+    maximumFractionDigits: MAX_DISPLAY_DECIMALS,
   });
 }
 
@@ -66,15 +74,42 @@ export function formatDisplayedQuantity(
 }
 
 export function parseQuantityInput(value: string): number | null {
-  const normalized = value
-    .replace(/,/g, ".")
-    .replace(/[^\d.]/g, "")
-    .replace(/(\..*)\./g, "$1");
+  const normalized = value.replace(/[^\d,]/g, "");
+  const commaIndex = normalized.indexOf(",");
+  const canonical =
+    commaIndex >= 0
+      ? `${normalized.slice(0, commaIndex)}.${normalized
+          .slice(commaIndex + 1)
+          .replace(/,/g, "")}`
+      : normalized;
 
-  if (!normalized || normalized === ".") return null;
+  if (!canonical || canonical === ".") return null;
 
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  const parsed = Number(canonical);
+  return Number.isFinite(parsed) && parsed > 0
+    ? roundToDisplayDecimals(parsed)
+    : null;
+}
+
+export function sanitizeQuantityInput(
+  value: string,
+  previousValue: string,
+): string {
+  if (value.includes(".")) return previousValue;
+
+  const normalized = value.replace(/[^\d,]/g, "");
+  const commaIndex = normalized.indexOf(",");
+  if (commaIndex < 0) return normalized;
+
+  const fraction = normalized.slice(commaIndex + 1).replace(/,/g, "");
+  if (fraction.length <= MAX_DISPLAY_DECIMALS) {
+    return `${normalized.slice(0, commaIndex)},${fraction}`;
+  }
+
+  const rounded = roundToDisplayDecimals(
+    Number(`${normalized.slice(0, commaIndex)}.${fraction}`),
+  );
+  return formatQuantity(rounded);
 }
 
 export function toBaseQuantity(
@@ -84,8 +119,11 @@ export function toBaseQuantity(
   conversionValueSnapshot?: number | null,
 ): number {
   const conversionValue = getConversionValue(product, conversionValueSnapshot);
+  const roundedDisplayQuantity = roundToDisplayDecimals(displayQuantity);
   const baseQuantity =
-    unit === "carton" ? displayQuantity * conversionValue : displayQuantity;
+    unit === "carton"
+      ? roundedDisplayQuantity * conversionValue
+      : roundedDisplayQuantity;
   const factor = 10 ** MAX_QUANTITY_DECIMALS;
   return Math.round(baseQuantity * factor) / factor;
 }

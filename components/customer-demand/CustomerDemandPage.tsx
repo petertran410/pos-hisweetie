@@ -15,6 +15,7 @@ import { CustomerDemandImportModal } from "./CustomerDemandImportModal";
 import { CustomerDemandLarkSyncModal } from "./CustomerDemandLarkSyncModal";
 import { CustomerDemandMobileView } from "./CustomerDemandMobileView";
 import { CustomerDemandOrderSummary } from "./CustomerDemandOrderSummary";
+import { CustomerDemandCustomerSummary } from "./CustomerDemandCustomerSummary";
 import type { DemandViewMode } from "./DemandViewToggle";
 import { CustomerDemandSidebar } from "./CustomerDemandSidebar";
 import { CustomerDemandTable } from "./CustomerDemandTable";
@@ -31,6 +32,11 @@ const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 const STATUSES = new Set(["DRAFT", "CONFIRMED", "CANCELLED"]);
 const SORT_FIELDS = new Set(["createdAt", "updatedAt", "id", "customerName"]);
 const LIMITS = new Set([10, 20, 50]);
+const VIEW_MODES = new Set<DemandViewMode>([
+  "vouchers",
+  "summary",
+  "customerSummary",
+]);
 
 type DemandPageSetup = {
   filters: CustomerDemandFilters;
@@ -75,6 +81,10 @@ function parseDemandSetup(raw: string | null): DemandPageSetup {
         status: STATUSES.has(String(source.status))
           ? (source.status as CustomerDemandFilters["status"])
           : undefined,
+        search:
+          typeof source.search === "string" && source.search.trim()
+            ? source.search.trim().slice(0, 200)
+            : undefined,
         sortBy: SORT_FIELDS.has(String(source.sortBy))
           ? (source.sortBy as CustomerDemandFilters["sortBy"])
           : "createdAt",
@@ -82,7 +92,9 @@ function parseDemandSetup(raw: string | null): DemandPageSetup {
         page: Number.isInteger(pageNumber) && pageNumber > 0 ? pageNumber : 1,
         limit,
       },
-      viewMode: saved.viewMode === "summary" ? "summary" : "vouchers",
+      viewMode: VIEW_MODES.has(saved.viewMode as DemandViewMode)
+        ? (saved.viewMode as DemandViewMode)
+        : "vouchers",
     };
   } catch {
     return DEFAULT_SETUP;
@@ -230,6 +242,15 @@ export function CustomerDemandPage() {
           {viewMode === "summary" ? (
             <CustomerDemandOrderSummary
               filters={filters}
+              onFiltersChange={setFiltersStable}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              canExport={canExport}
+            />
+          ) : viewMode === "customerSummary" ? (
+            <CustomerDemandCustomerSummary
+              filters={filters}
+              onFiltersChange={setFiltersStable}
               viewMode={viewMode}
               onViewModeChange={setViewMode}
               canExport={canExport}

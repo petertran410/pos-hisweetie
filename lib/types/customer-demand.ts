@@ -112,6 +112,31 @@ export interface CustomerDemandOrderSummary {
   totalQuantityBase: number;
 }
 
+export interface CustomerDemandCustomerSummary {
+  months: string[];
+  groups: Array<{
+    customer: {
+      id: number;
+      code: string | null;
+      name: string;
+    };
+    products: Array<{
+      product: {
+        id: number;
+        code: string;
+        name: string;
+        unit: string | null;
+      };
+      quantities: Record<string, number>;
+      totalQuantityBase: number;
+    }>;
+    totals: Record<string, number>;
+    totalQuantityBase: number;
+  }>;
+  totals: Record<string, number>;
+  totalQuantityBase: number;
+}
+
 export interface CustomerDemandFilters {
   customerId?: number;
   customerSearch?: string;
