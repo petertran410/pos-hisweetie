@@ -1,5 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { sepayApi, SepayTransactionsParams } from "../api/sepay";
+import {
+  sepayApi,
+  SepayTransactionsParams,
+} from "../api/sepay";
 import { toast } from "sonner";
 
 /** Đồng bộ toàn bộ lịch sử giao dịch Sepay về bảng riêng */
@@ -53,6 +56,59 @@ export function useAssignSepayCustomer() {
     onError: (error: unknown) => {
       toast.error(
         error instanceof Error ? error.message : "Gán khách hàng thất bại"
+      );
+    },
+  });
+}
+
+/** Danh sách đơn Phiếu tạm/Đã xác nhận để sale chọn trực tiếp. */
+export function useSepayOrderCandidates(
+  id: number,
+  params: { page?: number; limit?: number; search?: string },
+  enabled = true
+) {
+  return useQuery({
+    queryKey: ["sepay-order-candidates", id, params],
+    queryFn: () => sepayApi.getOrderCandidates(id, params),
+    enabled: enabled && id > 0,
+    placeholderData: (prev) => prev,
+  });
+}
+
+/** Sale gắn một đơn hàng; backend tự lấy khách từ đơn. */
+export function useAssignSepayOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { id: number; orderId: number }) =>
+      sepayApi.selectOrder(vars.id, vars.orderId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sepay-transactions"] });
+      qc.invalidateQueries({ queryKey: ["debt-tickets"] });
+      qc.invalidateQueries({ queryKey: ["debt-tracking"] });
+      toast.success("Đã gắn đơn hàng và khách hàng cho giao dịch");
+    },
+    onError: (error: unknown) => {
+      toast.error(
+        error instanceof Error ? error.message : "Gắn đơn hàng thất bại"
+      );
+    },
+  });
+}
+
+/** Bỏ đơn hàng đề xuất khi chưa có phiếu thu hiệu lực. */
+export function useUnassignSepayOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => sepayApi.unselectOrder(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sepay-transactions"] });
+      qc.invalidateQueries({ queryKey: ["debt-tickets"] });
+      qc.invalidateQueries({ queryKey: ["debt-tracking"] });
+      toast.success("Đã bỏ đơn hàng đề xuất");
+    },
+    onError: (error: unknown) => {
+      toast.error(
+        error instanceof Error ? error.message : "Bỏ đơn hàng thất bại"
       );
     },
   });
@@ -123,6 +179,7 @@ export function useConfirmSepayReceipt() {
         customerId: number;
         amount: number;
         note?: string;
+        orderId?: number;
         invoices?: { invoiceId: number; amount: number }[];
       }[];
     }) =>

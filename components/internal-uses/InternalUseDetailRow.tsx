@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useLayoutEffect, useRef } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { ExternalLink, Loader2, Printer } from "lucide-react";
+import { Copy, ExternalLink, Loader2, Printer } from "lucide-react";
 import {
   useCancelInternalUse,
   useCompleteInternalUse,
@@ -66,6 +66,7 @@ export function InternalUseDetailRow({
   const canViewCost = useCanViewInternalUseCost();
   // Chỉ người duyệt (có internal-use:complete) mới được duyệt/hoàn thành phiếu.
   const canComplete = usePermission("internal-use", "complete");
+  const canCreate = usePermission("internal-use", "create");
   const { data: internalUse, isLoading } = useInternalUse(internalUseId);
 
   const [searchCode, setSearchCode] = useState("");
@@ -144,6 +145,12 @@ export function InternalUseDetailRow({
 
   const handleOpenEdit = () => {
     router.push(`/san-pham/xuat-dung-noi-bo/${internalUseId}`);
+  };
+
+  const handleCopy = () => {
+    router.push(
+      `/san-pham/xuat-dung-noi-bo/new?copyInternalUseId=${internalUseId}`,
+    );
   };
 
   const handlePrint = async () => {
@@ -411,41 +418,55 @@ export function InternalUseDetailRow({
               )}
 
               {/* Footer */}
-              <div className="flex items-center justify-end pt-4 mt-4 border-t border-gray-200 gap-2">
-                <button
-                  onClick={handlePrint}
-                  title="In phiếu xuất dùng nội bộ"
-                  className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  In
-                </button>
-                {showCancelButton && (
+              <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200">
+                <div className="flex gap-2">
+                  {showCancelButton && (
+                    <button
+                      onClick={handleCancel}
+                      disabled={cancelInternalUse.isPending}
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-full hover:bg-red-700 transition-colors disabled:opacity-50"
+                    >
+                      Hủy
+                    </button>
+                  )}
+                  {canCreate && (
+                    <button
+                      onClick={handleCopy}
+                      title="Sao chép phiếu xuất dùng nội bộ"
+                      className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      Sao chép
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  {showCompleteButton && (
+                    <button
+                      onClick={handleComplete}
+                      disabled={completeInternalUse.isPending}
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-full hover:bg-green-700 transition-colors disabled:opacity-50"
+                    >
+                      {completeInternalUse.isPending ? "Đang duyệt..." : "Duyệt"}
+                    </button>
+                  )}
+                  {showOpenButton && (
+                    <button
+                      onClick={handleOpenEdit}
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-brand rounded-full hover:bg-brand-dark transition-colors"
+                    >
+                      Mở phiếu
+                    </button>
+                  )}
                   <button
-                    onClick={handleCancel}
-                    disabled={cancelInternalUse.isPending}
-                    className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-full hover:bg-red-700 transition-colors disabled:opacity-50"
+                    onClick={handlePrint}
+                    title="In phiếu xuất dùng nội bộ"
+                    className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5"
                   >
-                    Hủy
+                    <Printer className="w-3.5 h-3.5" />
+                    In
                   </button>
-                )}
-                {showCompleteButton && (
-                  <button
-                    onClick={handleComplete}
-                    disabled={completeInternalUse.isPending}
-                    className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-full hover:bg-green-700 transition-colors disabled:opacity-50"
-                  >
-                    {completeInternalUse.isPending ? "Đang duyệt..." : "Duyệt"}
-                  </button>
-                )}
-                {showOpenButton && (
-                  <button
-                    onClick={handleOpenEdit}
-                    className="px-3 py-1.5 text-sm font-medium text-white bg-brand rounded-full hover:bg-brand-dark transition-colors"
-                  >
-                    Mở phiếu
-                  </button>
-                )}
+                </div>
               </div>
             </div>
           </div>

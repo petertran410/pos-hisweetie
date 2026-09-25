@@ -59,10 +59,10 @@ export function SepayDebtViewModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 p-4 pt-12"
+      className="fixed inset-0 z-[100] flex items-center justify-center whitespace-normal bg-black/40 p-6"
       onMouseDown={onClose}>
       <div
-        className="w-full max-w-[84rem] bg-white rounded-xl shadow-2xl flex flex-col max-h-[88vh]"
+        className="w-full max-w-[84rem] bg-white rounded-xl shadow-2xl flex flex-col max-h-[88vh] overflow-hidden"
         onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div className="min-w-0">
@@ -99,7 +99,7 @@ export function SepayDebtViewModal({
           </div>
         )}
 
-        <div className="flex-1 overflow-auto px-5 py-4">
+        <div className="min-h-0 flex-1 overflow-auto px-5 py-4">
           {/* key theo customerId để reset phân trang khi đổi tab */}
           <CustomerDebtView key={active.id} customerId={active.id} />
         </div>

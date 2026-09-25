@@ -10,6 +10,7 @@ import { useCanViewInternalUseCost } from "./useCanViewInternalUseCost";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   ArrowLeft,
+  Copy,
   Loader2,
   Search,
   User,
@@ -18,6 +19,7 @@ import {
   Tag,
   ExternalLink,
 } from "lucide-react";
+import { usePermission } from "@/lib/hooks/usePermissions";
 import { toast } from "sonner";
 import Link from "next/link";
 import { CodeLink } from "../shared/CodeLink";
@@ -61,6 +63,7 @@ export function InternalUsesMobileDetailSheet({
   const { data: internalUse, isLoading } = useInternalUse(internalUseId);
   const cancelInternalUse = useCancelInternalUse();
   const canViewCost = useCanViewInternalUseCost();
+  const canCreate = usePermission("internal-use", "create");
 
   const [productSearch, setProductSearch] = useState("");
 
@@ -99,9 +102,16 @@ export function InternalUsesMobileDetailSheet({
     router.push(`/san-pham/xuat-dung-noi-bo/${internalUseId}`);
   };
 
+  const handleCopy = () => {
+    router.push(
+      `/san-pham/xuat-dung-noi-bo/new?copyInternalUseId=${internalUseId}`,
+    );
+  };
+
   const showCancelButton =
     internalUse?.status === 1 || internalUse?.status === 2;
   const showOpenButton = internalUse?.status === 1;
+  const showActionBar = showCancelButton || showOpenButton || canCreate;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white animate-in slide-in-from-right duration-200">
@@ -332,8 +342,18 @@ export function InternalUsesMobileDetailSheet({
       </div>
 
       {/* ── Action bar ── */}
-      {internalUse && (showCancelButton || showOpenButton) && (
+      {internalUse && showActionBar && (
         <div className="flex-shrink-0 border-t border-gray-100 bg-white px-4 py-3 flex items-center gap-2">
+          {canCreate && (
+            <button
+              onClick={handleCopy}
+              title="Sao chép phiếu xuất dùng nội bộ"
+              className={`${showOpenButton ? "flex-shrink-0" : "flex-1"} px-3.5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 active:scale-95 transition-all inline-flex items-center justify-center gap-1.5`}
+            >
+              <Copy className="w-4 h-4" />
+              Sao chép
+            </button>
+          )}
           {showCancelButton && (
             <button
               onClick={handleCancel}

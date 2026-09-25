@@ -13,7 +13,7 @@ import { usePermission } from "@/lib/hooks/usePermissions";
 import { useCanViewInternalUseCost } from "./useCanViewInternalUseCost";
 import { useBranchStore } from "@/lib/store/branch";
 import { useAuthStore } from "@/lib/store/auth";
-import type { InternalUse } from "@/lib/api/internalUses";
+import type { InternalUse, InternalUseDetail } from "@/lib/api/internalUses";
 import { productsApi, type Product } from "@/lib/api/products";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
@@ -29,6 +29,8 @@ import { formatMonthYear } from "@/components/ui/DatePickerInput";
 
 interface InternalUseFormProps {
   internalUse?: InternalUse | null;
+  /** Phiếu nguồn để tạo phiếu mới. Không được coi là phiếu đang sửa. */
+  copyFrom?: InternalUse | null;
   onClose?: () => void;
 }
 
@@ -67,8 +69,62 @@ const getConditionBadge = (item: ProductItem) => {
   return null;
 };
 
+function toCopiedProductItem(
+  detail: InternalUseDetail,
+  index: number,
+  options: { clearNearExpiryLot: boolean; cost?: number; onHand?: number },
+): ProductItem {
+  const quantity = Number(detail.quantity);
+  const cost = options.cost ?? Number(detail.cost);
+  const clearLot =
+    options.clearNearExpiryLot && detail.conditionType === "near_expiry";
+  return {
+    rowId: `copy-${detail.productId}-${index}`,
+    productId: detail.productId,
+    productCode: detail.productCode,
+    productName: detail.productName,
+    unit: detail.unit || "",
+    quantity,
+    cost,
+    value: quantity * cost,
+    onHand: options.onHand,
+    conditionType: detail.conditionType || "normal",
+    soldExpiryDate: clearLot
+      ? undefined
+      : detail.conditionType === "near_expiry"
+        ? (detail.soldExpiryDate ?? null)
+        : undefined,
+  };
+}
+
+async function buildCopiedProducts(
+  details: InternalUseDetail[],
+  branchId: number,
+): Promise<ProductItem[]> {
+  return Promise.all(
+    details.map(async (detail, index) => {
+      try {
+        const product = await productsApi.getProduct(detail.productId);
+        const inventory = product.inventories?.find(
+          (inv) => inv.branchId === branchId,
+        );
+        return toCopiedProductItem(detail, index, {
+          clearNearExpiryLot: true,
+          cost: inventory ? Number(inventory.cost) : Number(detail.cost),
+          onHand: inventory ? Number(inventory.onHand || 0) : undefined,
+        });
+      } catch {
+        return toCopiedProductItem(detail, index, {
+          clearNearExpiryLot: true,
+        });
+      }
+    }),
+  );
+}
+
 export function InternalUseForm({
   internalUse,
+  copyFrom,
   onClose,
 }: InternalUseFormProps) {
   const router = useRouter();
@@ -90,11 +146,13 @@ export function InternalUseForm({
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [code, setCode] = useState(internalUse?.code || "");
   const [purposeId, setPurposeId] = useState<number>(
-    internalUse?.purposeId || 0,
+    internalUse?.purposeId || copyFrom?.purposeId || 0,
   );
-  const [userId, setUserId] = useState<number>(internalUse?.userId || 0);
+  const [userId, setUserId] = useState<number>(
+    internalUse?.userId || copyFrom?.userId || 0,
+  );
   const [description, setDescription] = useState(
-    internalUse?.description || "",
+    internalUse?.description || copyFrom?.description || "",
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -146,6 +204,43 @@ export function InternalUseForm({
       setProducts(loaded);
     }
   }, [internalUse, branchId]);
+
+  // Sao chép chỉ chạy một lần cho mỗi phiếu nguồn. Đổi chi nhánh sau đó vẫn
+  // đi theo effect header hiện có, không nạp lại phiếu gốc.
+  const appliedCopyIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (internalUse || !copyFrom || !branchId) return;
+    if (appliedCopyIdRef.current === copyFrom.id) return;
+
+    const sameBranch = copyFrom.branchId === branchId;
+    if (sameBranch) {
+      appliedCopyIdRef.current = copyFrom.id;
+      setProducts(
+        (copyFrom.details || []).map((detail, index) =>
+          toCopiedProductItem(detail, index, { clearNearExpiryLot: false }),
+        ),
+      );
+      return;
+    }
+
+    let cancelled = false;
+    buildCopiedProducts(copyFrom.details || [], branchId).then(
+      (items) => {
+        if (cancelled) return;
+        appliedCopyIdRef.current = copyFrom.id;
+        setProducts(items);
+        if ((copyFrom.details?.length || 0) > 0) {
+          toast.info(
+            "Phiếu nguồn thuộc chi nhánh khác. Giá vốn và lô cận date được làm mới theo chi nhánh hiện tại.",
+          );
+        }
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [internalUse, copyFrom, branchId]);
 
   // Lấy tồn kho hiện tại cho các dòng của phiếu, kể cả phiếu đã được tạo trước đó.
   // Không dùng dữ liệu chi tiết phiếu vì API chi tiết chỉ lưu tồn tại thời điểm lập.
@@ -439,6 +534,11 @@ export function InternalUseForm({
             {internalUse && (
               <p className="text-sm text-gray-600 mt-1">
                 Mã phiếu: {internalUse.code}
+              </p>
+            )}
+            {!internalUse && copyFrom && (
+              <p className="text-sm text-gray-600 mt-1">
+                Sao chép từ {copyFrom.code}
               </p>
             )}
           </div>

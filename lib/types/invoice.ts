@@ -1,3 +1,23 @@
+import type { DebtRuleType } from "@/lib/api/debt-tracking";
+import type { CustomerAddress } from "@/lib/types/customer";
+
+export interface InvoiceCustomer {
+  id: number;
+  name: string;
+  code?: string | null;
+  contactNumber?: string | null;
+  phone?: string | null;
+  addresses?: CustomerAddress[] | null;
+  misaEmployeeName?: string | null;
+  misaEmployeeCode?: string | null;
+  taxCode?: string | null;
+  identificationNumber?: string | null;
+  invoiceBuyerName?: string | null;
+  invoiceAddress?: string | null;
+  debtPolicy?: { debtRuleType: DebtRuleType } | null;
+  [key: string]: unknown;
+}
+
 export interface Invoice {
   id: number;
   code: string;
@@ -24,7 +44,7 @@ export interface Invoice {
   updatedAt: string;
   orderId?: number | null;
   order?: { id: number; code: string } | null;
-  customer?: any;
+  customer?: InvoiceCustomer | null;
   branch?: any;
   soldBy?: any;
   creator?: any;

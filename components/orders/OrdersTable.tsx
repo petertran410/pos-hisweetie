@@ -2,7 +2,11 @@
 
 import { useState, useEffect, Fragment, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
-import { useOrders, useOrdersTotals, useExportOrders } from "@/lib/hooks/useOrders";
+import {
+  useOrders,
+  useOrdersTotals,
+  useExportOrders,
+} from "@/lib/hooks/useOrders";
 import { useBranchStore } from "@/lib/store/branch";
 import {
   Plus,
@@ -18,6 +22,7 @@ import {
   Loader2,
 } from "lucide-react";
 import type { Order } from "@/lib/types/order";
+import { getDebtRuleTypeLabel } from "@/lib/api/debt-tracking";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { CodeLink } from "../shared/CodeLink";
@@ -147,13 +152,13 @@ const DEFAULT_COLUMNS: ColumnConfig<Order>[] = [
     width: "160px",
     render: (o) => o.delivery?.wardName || "-",
   },
-  {
-    key: "deliveryPartner",
-    label: "Đối tác giao hàng",
-    visible: false,
-    width: "180px",
-    render: (o) => o.delivery?.partnerDelivery?.name || "-",
-  },
+  // {
+  //   key: "deliveryPartner",
+  //   label: "Đối tác giao hàng",
+  //   visible: false,
+  //   width: "180px",
+  //   render: (o) => o.delivery?.partnerDelivery?.name || "-",
+  // },
   {
     key: "receiver",
     label: "Người nhận",
@@ -168,13 +173,13 @@ const DEFAULT_COLUMNS: ColumnConfig<Order>[] = [
     width: "140px",
     render: (o) => o.soldBy?.name || o.creator?.name || "-",
   },
-  {
-    key: "salesChannel",
-    label: "Kênh bán",
-    visible: false,
-    width: "140px",
-    render: (o) => o.saleChannel?.name || "Khác",
-  },
+  // {
+  //   key: "salesChannel",
+  //   label: "Kênh bán",
+  //   visible: false,
+  //   width: "140px",
+  //   render: (o) => o.saleChannel?.name || "Khác",
+  // },
   {
     key: "notes",
     label: "Ghi chú",
@@ -244,22 +249,29 @@ const DEFAULT_COLUMNS: ColumnConfig<Order>[] = [
     },
   },
   {
-    key: "waitingDays",
-    label: "Số ngày chờ",
-    visible: false,
-    width: "110px",
-    render: (o) => {
-      if (!o.orderDate) return "-";
-      const diff = Math.ceil(
-        Math.abs(Date.now() - new Date(o.orderDate).getTime()) / 86400000
-      );
-      return (
-        <span className={diff > 7 ? "text-red-600 font-medium" : ""}>
-          {diff} ngày
-        </span>
-      );
-    },
+    key: "debtRuleType",
+    label: "Loại công nợ",
+    visible: true,
+    width: "210px",
+    render: (o) => getDebtRuleTypeLabel(o.customer?.debtPolicy?.debtRuleType),
   },
+  // {
+  //   key: "waitingDays",
+  //   label: "Số ngày chờ",
+  //   visible: false,
+  //   width: "110px",
+  //   render: (o) => {
+  //     if (!o.orderDate) return "-";
+  //     const diff = Math.ceil(
+  //       Math.abs(Date.now() - new Date(o.orderDate).getTime()) / 86400000
+  //     );
+  //     return (
+  //       <span className={diff > 7 ? "text-red-600 font-medium" : ""}>
+  //         {diff} ngày
+  //       </span>
+  //     );
+  //   },
+  // },
   {
     key: "status",
     label: "Trạng thái",
