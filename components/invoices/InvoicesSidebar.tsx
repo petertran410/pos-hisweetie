@@ -9,7 +9,7 @@ import { useSaleChannels } from "@/lib/hooks/useSaleChannels";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 import { useMisaEmployees } from "@/lib/hooks/useMisa";
 import { useBranchStore } from "@/lib/store/branch";
-import { ChevronDown, X, Check, AlertTriangle } from "lucide-react";
+import { ChevronDown, X, Check, AlertTriangle, PackageX } from "lucide-react";
 import { FilterMultiSelect } from "@/components/ui/filters";
 import {
   TimeRangeFilter,
@@ -518,6 +518,9 @@ export function InvoicesSidebar({
   const [priceWarning, setPriceWarning] = useState<boolean>(
     saved.current?.priceWarning || false
   );
+  const [orphanedPacking, setOrphanedPacking] = useState<boolean>(
+    saved.current?.orphanedPacking || false
+  );
 
   const customerRef = useRef<HTMLDivElement>(null);
 
@@ -539,6 +542,7 @@ export function InvoicesSidebar({
       misaEmployeeCodes,
       taxCodeStatus,
       priceWarning,
+      orphanedPacking,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [
@@ -557,6 +561,7 @@ export function InvoicesSidebar({
     misaEmployeeCodes,
     taxCodeStatus,
     priceWarning,
+    orphanedPacking,
   ]);
 
   // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh, tick lại chi nhánh đó.
@@ -632,6 +637,7 @@ export function InvoicesSidebar({
     if (showMisaEmployeeFilter && misaEmployeeCodes.length > 0) n++;
     if (showMisaEmployeeFilter && taxCodeStatus) n++;
     if (showPriceWarningFilter && priceWarning) n++;
+    if (showPriceWarningFilter && orphanedPacking) n++;
     return n;
   }, [
     selectedBranchIds,
@@ -652,6 +658,7 @@ export function InvoicesSidebar({
     showMisaEmployeeFilter,
     showPriceWarningFilter,
     priceWarning,
+    orphanedPacking,
   ]);
 
   // Debounce 300ms
@@ -703,6 +710,7 @@ export function InvoicesSidebar({
         f.taxCodeStatus = taxCodeStatus;
 
       if (showPriceWarningFilter && priceWarning) f.priceWarning = true;
+      if (showPriceWarningFilter && orphanedPacking) f.orphanedPacking = true;
 
       onFiltersChange(f);
     }, 300);
@@ -727,6 +735,7 @@ export function InvoicesSidebar({
     showMisaEmployeeFilter,
     showPriceWarningFilter,
     priceWarning,
+    orphanedPacking,
   ]);
 
   const clearAll = () => {
@@ -761,6 +770,7 @@ export function InvoicesSidebar({
     setMisaEmployeeCodes([]);
     setTaxCodeStatus("");
     setPriceWarning(false);
+    setOrphanedPacking(false);
     onFiltersChange({});
     localStorage.removeItem(STORAGE_KEY);
   };
@@ -812,6 +822,35 @@ export function InvoicesSidebar({
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
                     priceWarning ? "translate-x-4" : "translate-x-0.5"
+                  }`}
+                />
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrphanedPacking((current) => !current)}
+              className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg border text-sm transition-all select-none ${
+                orphanedPacking
+                  ? "border-red-300 bg-red-50"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}>
+              <span className="flex items-center gap-2 min-w-0">
+                <PackageX
+                  className={`w-4 h-4 flex-shrink-0 ${
+                    orphanedPacking ? "text-red-500" : "text-gray-400"
+                  }`}
+                />
+                <span className="text-left font-medium text-gray-700">
+                  Chỉ HĐ hủy còn giao hàng
+                </span>
+              </span>
+              <span
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${
+                  orphanedPacking ? "bg-red-400" : "bg-gray-200"
+                }`}>
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    orphanedPacking ? "translate-x-4" : "translate-x-0.5"
                   }`}
                 />
               </span>

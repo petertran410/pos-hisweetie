@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Montserrat, Be_Vietnam_Pro, JetBrains_Mono } from "next/font/google";
+import { Montserrat, Be_Vietnam_Pro } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "./providers";
 import { PageTitle } from "@/components/layout/PageTitle";
@@ -18,9 +19,19 @@ const beVietnam = Be_Vietnam_Pro({
   display: "swap",
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["500", "600"],
+const jetbrainsMono = localFont({
+  src: [
+    {
+      path: "../public/fonts/JetBrainsMono-Medium.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../public/fonts/JetBrainsMono-SemiBold.woff2",
+      weight: "600",
+      style: "normal",
+    },
+  ],
   variable: "--font-jetbrains",
   display: "swap",
 });
