@@ -45,6 +45,8 @@ export function useInvoicesForPacking(params?: {
   return useQuery({
     queryKey: ["invoices", "for-packing", params],
     queryFn: () => invoicesApi.getInvoicesForPacking(params),
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 }
 
