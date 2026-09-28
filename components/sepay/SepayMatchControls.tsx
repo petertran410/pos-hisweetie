@@ -389,7 +389,7 @@ function OrderPickerModal({
               Chọn đơn hàng để gắn khách
             </h3>
             <p className="text-xs text-gray-500 mt-0.5">
-              Chỉ hiển thị đơn ở trạng thái Phiếu tạm hoặc Đã xác nhận
+              Phiếu tạm hoặc Đã xác nhận · Khách Không công nợ
             </p>
           </div>
           <button
@@ -422,7 +422,7 @@ function OrderPickerModal({
             <div className="px-4 py-10 text-center text-gray-400 text-sm">
               {debounced
                 ? "Không tìm thấy đơn hàng phù hợp"
-                : "Không có đơn Phiếu tạm/Đã xác nhận"}
+                : "Không có đơn Phiếu tạm/Đã xác nhận của khách Không công nợ"}
             </div>
           ) : (
             <div className="flex flex-col divide-y">
