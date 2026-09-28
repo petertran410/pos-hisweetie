@@ -181,20 +181,6 @@ export function useUpdateOrder() {
   });
 }
 
-export function useDeleteOrder() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ordersApi.deleteOrder,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-      toast.success("Xóa đơn hàng thành công");
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Xóa đơn hàng thất bại");
-    },
-  });
-}
-
 export function useCancelOrder() {
   const queryClient = useQueryClient();
 
