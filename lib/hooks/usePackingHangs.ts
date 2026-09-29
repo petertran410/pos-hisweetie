@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../store/auth";
-import { API_URL, getAuthHeaders } from "../config/api";
+import { API_URL, apiClient, getAuthHeaders } from "../config/api";
 
 export function usePackingHangs(params?: any) {
   return useQuery({
@@ -42,17 +42,11 @@ export function usePackingHang(id: number) {
 export function useCreatePackingHang() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: any) => {
-      const res = await fetch(`${API_URL}/packing-hangs`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed to create packing hang");
-      return res.json();
-    },
+    mutationFn: (data: any) => apiClient.post("/packing-hangs", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["packing-hangs"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices", "for-packing"] });
+      queryClient.invalidateQueries({ queryKey: ["consignments-for-packing"] });
     },
   });
 }
@@ -60,15 +54,8 @@ export function useCreatePackingHang() {
 export function useUpdatePackingHang() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      const res = await fetch(`${API_URL}/packing-hangs/${id}`, {
-        method: "PUT",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed to update packing hang");
-      return res.json();
-    },
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
+      apiClient.put(`/packing-hangs/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["packing-hangs"] });
     },

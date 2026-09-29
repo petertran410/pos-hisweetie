@@ -85,7 +85,6 @@ export default function BaoDonPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
   const [formType, setFormType] = useState<FormType>(null);
-  const [formKey, setFormKey] = useState(0);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
   // Search ở header của bảng (desktop) — search server-side, debounce 300ms.
@@ -194,6 +193,9 @@ export default function BaoDonPage() {
     }
   };
 
+  const saveError = (error: unknown, fallback: string) =>
+    error instanceof Error && error.message ? error.message : fallback;
+
   const handleGiaoHangSubmit = async (formData: any) => {
     try {
       if (editingPackingSlip) {
@@ -205,16 +207,23 @@ export default function BaoDonPage() {
         setFormType(null);
         setEditingPackingSlip(null);
       } else {
-        await createPackingSlip.mutateAsync(formData);
-        toast.success("Tạo giao hàng thành công");
-        setFormKey((k) => k + 1);
+        const created = await createPackingSlip.mutateAsync(formData);
+        toast.success(
+          created?.code
+            ? `Tạo giao hàng thành công · ${created.code}`
+            : "Tạo giao hàng thành công",
+        );
       }
     } catch (error) {
       toast.error(
-        editingPackingSlip
-          ? "Cập nhật giao hàng thất bại"
-          : "Tạo giao hàng thất bại"
+        saveError(
+          error,
+          editingPackingSlip
+            ? "Cập nhật giao hàng thất bại"
+            : "Tạo giao hàng thất bại",
+        ),
       );
+      throw error;
     }
   };
 
@@ -229,16 +238,23 @@ export default function BaoDonPage() {
         setFormType(null);
         setEditingPackingHang(null);
       } else {
-        await createPackingHang.mutateAsync(formData);
-        toast.success("Tạo đóng hàng thành công");
-        setFormKey((k) => k + 1);
+        const created = await createPackingHang.mutateAsync(formData);
+        toast.success(
+          created?.code
+            ? `Tạo đóng hàng thành công · ${created.code}`
+            : "Tạo đóng hàng thành công",
+        );
       }
     } catch (error) {
       toast.error(
-        editingPackingHang
-          ? "Cập nhật đóng hàng thất bại"
-          : "Tạo đóng hàng thất bại"
+        saveError(
+          error,
+          editingPackingHang
+            ? "Cập nhật đóng hàng thất bại"
+            : "Tạo đóng hàng thất bại",
+        ),
       );
+      throw error;
     }
   };
 
@@ -253,16 +269,23 @@ export default function BaoDonPage() {
         setFormType(null);
         setEditingPackingLoading(null);
       } else {
-        await createPackingLoading.mutateAsync(formData);
-        toast.success("Tạo loading thành công");
-        setFormKey((k) => k + 1);
+        const created = await createPackingLoading.mutateAsync(formData);
+        toast.success(
+          created?.code
+            ? `Tạo loading thành công · ${created.code}`
+            : "Tạo loading thành công",
+        );
       }
     } catch (error) {
       toast.error(
-        editingPackingLoading
-          ? "Cập nhật loading thất bại"
-          : "Tạo loading thất bại"
+        saveError(
+          error,
+          editingPackingLoading
+            ? "Cập nhật loading thất bại"
+            : "Tạo loading thất bại",
+        ),
       );
+      throw error;
     }
   };
 
@@ -397,7 +420,6 @@ export default function BaoDonPage() {
 
           {formType === "giao-hang" && (
             <PackingSlipForm
-              key={formKey}
               packingSlip={editingPackingSlip || undefined}
               onClose={handleCloseForm}
               onSubmit={handleGiaoHangSubmit}
@@ -406,7 +428,6 @@ export default function BaoDonPage() {
 
           {formType === "dong-hang" && (
             <PackingHangForm
-              key={formKey}
               packingHang={editingPackingHang || undefined}
               onClose={handleCloseForm}
               onSubmit={handleDongHangSubmit}
@@ -415,7 +436,6 @@ export default function BaoDonPage() {
 
           {formType === "loading" && (
             <PackingLoadingForm
-              key={formKey}
               packingLoading={editingPackingLoading || undefined}
               onClose={handleCloseForm}
               onSubmit={handleLoadingSubmit}
@@ -443,7 +463,6 @@ export default function BaoDonPage() {
 
         {formType === "giao-hang" && (
           <PackingSlipForm
-            key={formKey}
             packingSlip={editingPackingSlip || undefined}
             onClose={handleCloseForm}
             onSubmit={handleGiaoHangSubmit}
@@ -453,7 +472,6 @@ export default function BaoDonPage() {
 
         {formType === "dong-hang" && (
           <PackingHangForm
-            key={formKey}
             packingHang={editingPackingHang || undefined}
             onClose={handleCloseForm}
             onSubmit={handleDongHangSubmit}
@@ -463,7 +481,6 @@ export default function BaoDonPage() {
 
         {formType === "loading" && (
           <PackingLoadingForm
-            key={formKey}
             packingLoading={editingPackingLoading || undefined}
             onClose={handleCloseForm}
             onSubmit={handleLoadingSubmit}

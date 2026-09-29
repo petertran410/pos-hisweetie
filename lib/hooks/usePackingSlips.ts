@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../store/auth";
-import { API_URL, getAuthHeaders } from "../config/api";
+import { API_URL, apiClient, getAuthHeaders } from "../config/api";
 
 export function usePackingSlips(params?: any) {
   return useQuery({
@@ -42,18 +42,12 @@ export function usePackingSlip(id: number) {
 export function useCreatePackingSlip() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: any) => {
-      const res = await fetch(`${API_URL}/packing-slips`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed to create packing slip");
-      return res.json();
-    },
+    mutationFn: (data: any) => apiClient.post("/packing-slips", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["packing-slips"] });
       queryClient.invalidateQueries({ queryKey: ["debt-tracking"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices", "for-packing"] });
+      queryClient.invalidateQueries({ queryKey: ["consignments-for-packing"] });
     },
   });
 }
@@ -61,15 +55,8 @@ export function useCreatePackingSlip() {
 export function useUpdatePackingSlip() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      const res = await fetch(`${API_URL}/packing-slips/${id}`, {
-        method: "PUT",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed to update packing slip");
-      return res.json();
-    },
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
+      apiClient.put(`/packing-slips/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["packing-slips"] });
       queryClient.invalidateQueries({ queryKey: ["debt-tracking"] });

@@ -37,7 +37,7 @@ interface PreselectedInvoiceLite {
 interface PackingSlipFormProps {
   packingSlip?: PackingSlip;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any) => void | Promise<void>;
   preselectedInvoiceIds?: number[];
   preselectedBranchId?: number | null;
   /** Thông tin hóa đơn chọn sẵn để hiển thị chip ngay, không phụ thuộc fetch lại */
@@ -267,17 +267,23 @@ export function PackingSlipForm({
     return () => clearTimeout(t);
   }, [invoiceSearch]);
 
-  const { data: invoicesData } = useInvoicesForPacking({
-    branchId: branchId || undefined,
-    pageSize: 100,
-    search: debouncedInvoiceSearch || undefined,
-  });
+  const { data: invoicesData } = useInvoicesForPacking(
+    {
+      branchId: branchId || undefined,
+      pageSize: 100,
+      search: debouncedInvoiceSearch || undefined,
+    },
+    docType === "invoice",
+  );
 
-  const { data: consignmentsData } = useConsignmentsForPacking({
-    branchId: branchId || undefined,
-    pageSize: 100,
-    search: debouncedInvoiceSearch || undefined,
-  });
+  const { data: consignmentsData } = useConsignmentsForPacking(
+    {
+      branchId: branchId || undefined,
+      pageSize: 100,
+      search: debouncedInvoiceSearch || undefined,
+    },
+    docType === "consignment",
+  );
 
   const availableInvoices =
     docType === "consignment"
@@ -397,8 +403,33 @@ export function PackingSlipForm({
     setInvoiceSearch("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const savingRef = useRef(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const resetForNextSlip = () => {
+    setSelectedInvoiceIds([]);
+    setSelectedInvoiceCache({});
+    setNumberOfPackages(0);
+    setCashAmount(0);
+    setNote("");
+    setHasFeeGuiBen(false);
+    setFeeGuiBen(0);
+    setHasFeeGrab(false);
+    setFeeGrab(0);
+    setHasCuocGuiHang(false);
+    setCuocGuiHang(0);
+    setHasCuocNhanHang(false);
+    setCuocNhanHang(0);
+    setExpensePayerId(null);
+    setExpenseFiles([]);
+    setImages([]);
+    setInvoiceSearch("");
+    setPayerSearch("");
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingRef.current) return;
 
     // Còn ảnh đang upload → chặn để không lưu phiếu thiếu ảnh.
     if (hasPendingImages) {
@@ -457,7 +488,17 @@ export function PackingSlipForm({
       imageUrls: images,
     };
 
-    onSubmit(data);
+    savingRef.current = true;
+    setIsSaving(true);
+    try {
+      await onSubmit(data);
+      if (!packingSlip) resetForNextSlip();
+    } catch {
+      // Trang cha đã hiện lỗi từ server.
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
+    }
   };
 
   const selectedInvoices = selectedInvoiceIds
@@ -1060,9 +1101,11 @@ export function PackingSlipForm({
             Hủy
           </button>
           <button
+            type="button"
             onClick={handleSubmit}
-            className="flex-1 sm:flex-none px-4 py-3 sm:py-2 text-base sm:text-sm bg-brand text-white rounded hover:bg-brand-dark">
-            {packingSlip ? "Cập nhật" : "Tạo mới"}
+            disabled={isSaving}
+            className="flex-1 sm:flex-none px-4 py-3 sm:py-2 text-base sm:text-sm bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed">
+            {isSaving ? "Đang lưu..." : packingSlip ? "Cập nhật" : "Tạo mới"}
           </button>
         </div>
       </div>
