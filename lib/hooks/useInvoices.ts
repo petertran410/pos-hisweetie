@@ -36,17 +36,20 @@ export function useInvoicesTotals(params?: any) {
   });
 }
 
-export function useInvoicesForPacking(params?: {
-  branchId?: number;
-  pageSize?: number;
-  search?: string;
-  excludeDelivered?: boolean;
-}) {
+export function useInvoicesForPacking(
+  params?: {
+    branchId?: number;
+    pageSize?: number;
+    search?: string;
+    excludeDelivered?: boolean;
+  },
+  enabled = true,
+) {
   return useQuery({
     queryKey: ["invoices", "for-packing", params],
     queryFn: () => invoicesApi.getInvoicesForPacking(params),
-    staleTime: 0,
-    refetchOnMount: "always",
+    enabled,
+    staleTime: 30_000,
   });
 }
 

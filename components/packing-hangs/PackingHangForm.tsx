@@ -17,7 +17,7 @@ import { toast } from "sonner";
 interface PackingHangFormProps {
   packingHang?: PackingHang;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any) => void | Promise<void>;
   preselectedInvoiceIds?: number[];
   preselectedBranchId?: number | null;
   enableDocumentQrScanner?: boolean;
@@ -157,18 +157,24 @@ export function PackingHangForm({
     return () => clearTimeout(t);
   }, [invoiceSearch]);
 
-  const { data: invoicesData } = useInvoicesForPacking({
-    branchId: branchId || undefined,
-    pageSize: 100,
-    search: debouncedInvoiceSearch || undefined,
-    excludeDelivered: true,
-  });
+  const { data: invoicesData } = useInvoicesForPacking(
+    {
+      branchId: branchId || undefined,
+      pageSize: 100,
+      search: debouncedInvoiceSearch || undefined,
+      excludeDelivered: true,
+    },
+    docType === "invoice",
+  );
 
-  const { data: consignmentsData } = useConsignmentsForPacking({
-    branchId: branchId || undefined,
-    pageSize: 100,
-    search: debouncedInvoiceSearch || undefined,
-  });
+  const { data: consignmentsData } = useConsignmentsForPacking(
+    {
+      branchId: branchId || undefined,
+      pageSize: 100,
+      search: debouncedInvoiceSearch || undefined,
+    },
+    docType === "consignment",
+  );
 
   const availableInvoices =
     docType === "consignment"
@@ -241,8 +247,21 @@ export function PackingHangForm({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const savingRef = useRef(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const resetForNextSlip = () => {
+    setSelectedInvoiceIds([]);
+    setSelectedInvoiceCache({});
+    setNumberOfPackages(0);
+    setNote("");
+    setImages([]);
+    setInvoiceSearch("");
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingRef.current) return;
 
     if (!branchId) {
       toast.error("Vui lòng chọn chi nhánh");
@@ -279,7 +298,17 @@ export function PackingHangForm({
       imageUrls: images,
     };
 
-    onSubmit(data);
+    savingRef.current = true;
+    setIsSaving(true);
+    try {
+      await onSubmit(data);
+      if (!packingHang) resetForNextSlip();
+    } catch {
+      // Trang cha đã hiện lỗi từ server.
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
+    }
   };
 
   const selectedInvoices = selectedInvoiceIds
@@ -605,8 +634,9 @@ export function PackingHangForm({
             </button>
             <button
               type="submit"
-              className="flex-1 sm:flex-none px-4 py-3 sm:py-2 text-base sm:text-sm bg-brand text-white rounded hover:bg-brand-dark">
-              {packingHang ? "Cập nhật" : "Tạo mới"}
+              disabled={isSaving}
+              className="flex-1 sm:flex-none px-4 py-3 sm:py-2 text-base sm:text-sm bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed">
+              {isSaving ? "Đang lưu..." : packingHang ? "Cập nhật" : "Tạo mới"}
             </button>
           </div>
         </form>

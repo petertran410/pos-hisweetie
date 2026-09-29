@@ -59,14 +59,19 @@ export function useUpdateConsignment() {
 }
 
 /** B2 — danh sách phiếu ký gửi đủ điều kiện xử lý kho (cho bao-don). */
-export function useConsignmentsForPacking(params?: {
-  branchId?: number;
-  pageSize?: number;
-  search?: string;
-}) {
+export function useConsignmentsForPacking(
+  params?: {
+    branchId?: number;
+    pageSize?: number;
+    search?: string;
+  },
+  enabled = true,
+) {
   return useQuery({
     queryKey: ["consignments-for-packing", params],
     queryFn: () => consignmentsApi.getForPacking(params),
+    enabled,
+    staleTime: 30_000,
   });
 }
 

@@ -24,6 +24,7 @@ import { DeliveryInfoCard } from "../shared/DeliveryInfoSection";
 import { CodeLink } from "../shared/CodeLink";
 import { LineTypeBadge, PromotionLineName } from "../shared/LineTypeBadge";
 import { useCan, useIsAdmin } from "@/lib/hooks/useCan";
+import { useInvoiceCashPackingLock } from "@/lib/hooks/useInvoiceCashPackingLock";
 import { findAddressFromDelivery } from "@/lib/utils/customer-address";
 import { formatMonthYear } from "@/components/ui/DatePickerInput";
 
@@ -75,6 +76,11 @@ export function InvoiceDetailRow({
 
   const hasPermReportDelivered = useCan("invoices", "report_delivered");
   const isAdmin = useIsAdmin();
+  const {
+    data: hasActiveCashPackingSlip = false,
+    isLoading: isCheckingCashPacking,
+    isError: cashPackingCheckFailed,
+  } = useInvoiceCashPackingLock(invoiceId);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -330,6 +336,9 @@ export function InvoiceDetailRow({
   // Có quyền Hủy thì được hủy mọi trạng thái chưa hủy.
   const canCancel = invoice.status !== INVOICE_STATUS.CANCELLED;
   const canProcess = invoice.status !== INVOICE_STATUS.CANCELLED;
+  const cashPackingLockApplies =
+    !isAdmin &&
+    (isCheckingCashPacking || cashPackingCheckFailed || hasActiveCashPackingSlip);
   const customerDebt = Math.max(0, Number(invoice.debtAmount || 0));
 
   // Nút "Đã Báo Đơn":
@@ -799,7 +808,9 @@ export function InvoiceDetailRow({
               {/* Action footer */}
               <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200">
                 <div className="flex gap-2">
-                  {canCancel && hasPermCancel && (
+                  {canCancel &&
+                    hasPermCancel &&
+                    !cashPackingLockApplies && (
                     <button
                       onClick={handleCancel}
                       disabled={isSaving}
@@ -816,7 +827,9 @@ export function InvoiceDetailRow({
                   </button>
                 </div>
                 <div className="flex gap-2">
-                  {canProcess && hasPermUpdate && (
+                  {canProcess &&
+                    hasPermUpdate &&
+                    !cashPackingLockApplies && (
                     <button
                       onClick={handleProcessInvoice}
                       disabled={isSaving}

@@ -2,10 +2,15 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useAllPacking } from "@/lib/hooks/useAllPacking";
+import {
+  usePackingDetail,
+  type PackingItemType,
+} from "@/lib/hooks/usePackingDetail";
 import { useBranchStore } from "@/lib/store/branch";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { formatCurrency } from "@/lib/utils";
-import { apiClient } from "@/lib/config/api";
+import { PackingDetailActions } from "./PackingDetailActions";
+import { PackingDetailContent } from "./PackingDetailContent";
 import {
   Search,
   Plus,
@@ -20,10 +25,7 @@ import {
   Truck,
   Boxes,
   Image as ImageIcon,
-  Pencil,
-  Trash2,
   ChevronDown,
-  Send,
 } from "lucide-react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -369,39 +371,15 @@ function PackingMobileDetailSheet({
   onResendLoadingLark?: () => void;
 }) {
   const [viewingImage, setViewingImage] = useState<string | null>(null);
-  const [detail, setDetail] = useState<any>(item);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    const hasImageUrls = item?.images?.some((img: any) => !!img.imageUrl);
-    const needsFetch =
-      !hasImageUrls && (item?.imageCount ?? item?.images?.length ?? 0) > 0;
-
-    if (needsFetch) {
-      setLoadingDetail(true);
-      const url =
-        item.type === "dong-hang"
-          ? `/packing-hangs/${item.id}`
-          : item.type === "loading"
-          ? `/packing-loadings/${item.id}`
-          : `/packing-slips/${item.id}`;
-      apiClient
-        .get(url)
-        .then((res) => {
-          if (active && res) setDetail((prev: any) => ({ ...prev, ...res }));
-        })
-        .catch(() => {})
-        .finally(() => {
-          if (active) setLoadingDetail(false);
-        });
-    } else {
-      setDetail(item);
-    }
-    return () => {
-      active = false;
-    };
-  }, [item]);
+  const typeKey = (item.type || "giao-hang") as PackingItemType;
+  const { data: detail, isFetching } = usePackingDetail(
+    typeKey,
+    item.id,
+    item,
+    true
+  );
+  const badge = TYPE_BADGE[typeKey];
+  const Icon = badge.icon;
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -409,12 +387,6 @@ function PackingMobileDetailSheet({
       document.body.style.overflow = "";
     };
   }, []);
-
-  const typeKey = item.type || "giao-hang";
-  const badge = TYPE_BADGE[typeKey];
-  const Icon = badge.icon;
-  const invoices = item.invoices || [];
-  const images = detail?.images || [];
 
   return (
     <>
@@ -450,210 +422,28 @@ function PackingMobileDetailSheet({
           </div>
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-            {/* Thông tin chung */}
-            <div className="bg-gray-50 rounded-2xl p-4 space-y-2.5">
-              <Row label="Chi nhánh" value={item.branch?.name} />
-              <Row label="Người tạo" value={item.creator?.name} />
-              <Row
-                label="Ngày tạo"
-                value={new Date(item.createdAt).toLocaleString("vi-VN")}
-              />
-              <Row label="Số kiện" value={item.numberOfPackages} />
-              {typeKey === "loading" && item.loadingBy?.name && (
-                <Row label="Người loading" value={item.loadingBy.name} />
-              )}
-              {item.note && <Row label="Ghi chú" value={item.note} />}
-            </div>
-
-            {/* Thanh toán & phí (chỉ giao-hang) */}
-            {typeKey === "giao-hang" && (
-              <div className="bg-gray-50 rounded-2xl p-4 space-y-2.5">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                  Thanh toán & phí
-                </p>
-                <Row
-                  label="Hình thức"
-                  value={
-                    item.paymentMethod === "cash"
-                      ? `Tiền mặt — ${formatCurrency(item.cashAmount)}đ`
-                      : item.paymentMethod === "transfer"
-                        ? "Chuyển khoản"
-                        : "—"
-                  }
-                />
-                {item.hasFeeGuiBen && (
-                  <Row
-                    label="Phí gửi bến"
-                    value={`${formatCurrency(item.feeGuiBen)}đ`}
-                  />
-                )}
-                {item.hasFeeGrab && (
-                  <Row
-                    label="Phí Grab"
-                    value={`${formatCurrency(item.feeGrab)}đ`}
-                  />
-                )}
-                {item.hasCuocGuiHang && (
-                  <Row
-                    label="Cước gửi hàng"
-                    value={`${formatCurrency(item.cuocGuiHang)}đ`}
-                  />
-                )}
-                {item.hasCuocNhanHang && (
-                  <Row
-                    label="Cước nhận hàng"
-                    value={`${formatCurrency(item.cuocNhanHang)}đ`}
-                  />
-                )}
-              </div>
-            )}
-
-            {/* Hóa đơn */}
-            {invoices.length > 0 && (
-              <div className="bg-gray-50 rounded-2xl p-4">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-                  Hóa đơn ({invoices.length})
-                </p>
-                <div className="space-y-2">
-                  {invoices.map((inv: any, idx: number) => (
-                    <div
-                      key={idx}
-                      className="bg-white rounded-xl p-3 border border-gray-100">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold text-brand text-sm">
-                          {inv.invoice?.code}
-                        </span>
-                        {/* {inv.invoice?.grandTotal != null && (
-                          <span className="text-sm font-bold text-gray-900">
-                            {formatCurrency(inv.invoice.grandTotal)}đ
-                          </span>
-                        )} */}
-                      </div>
-                      {inv.invoice?.customer?.name && (
-                        <p className="text-xs text-gray-500">
-                          {inv.invoice.customer.name}
-                          {inv.invoice.customer.contactNumber && (
-                            <span className="ml-2 text-gray-400">
-                              · {inv.invoice.customer.contactNumber}
-                            </span>
-                          )}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Hình ảnh */}
-            {(images.length > 0 || loadingDetail) && (
-              <div className="bg-gray-50 rounded-2xl p-4">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-                  Hình ảnh {images.length > 0 ? `(${images.length})` : ""}
-                </p>
-                {loadingDetail && images.length === 0 ? (
-                  <div className="flex items-center justify-center py-6 gap-2 text-gray-400 text-xs">
-                    <Loader2 className="w-4 h-4 animate-spin text-brand" />
-                    Đang tải hình ảnh...
-                  </div>
-                ) : (
-                <div className="grid grid-cols-3 gap-2">
-                  {images.map((img: any, idx: number) => (
-                    <button
-                      key={idx}
-                      onClick={() => setViewingImage(img.imageUrl)}
-                      className="aspect-square rounded-xl overflow-hidden bg-white border border-gray-200 active:scale-95 transition-transform">
-                      <img
-                        src={img.imageUrl}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-                )}
-              </div>
-            )}
-
-            <div className="h-2" />
+          <div className="flex-1 overflow-y-auto px-4 py-4">
+            <PackingDetailContent
+              item={item}
+              detail={detail}
+              isLoading={isFetching}
+              onImageClick={setViewingImage}
+              compact
+            />
           </div>
 
           {/* Footer */}
           <div className="px-4 pb-6 pt-3 border-t border-gray-100 flex-shrink-0 flex flex-col gap-2">
-            {item.cancelledAt ? (
-              <div className="w-full py-3 rounded-2xl bg-red-50 text-red-600 text-sm font-medium text-center">
-                Phiếu đã hủy
-                {item.cancelledBy?.name ? ` bởi ${item.cancelledBy.name}` : ""}
-                {" · "}
-                {new Date(item.cancelledAt).toLocaleString("vi-VN")}
-              </div>
-            ) : (
-              <>
-                {onResend && typeKey === "giao-hang" && (
-                  <button
-                    onClick={() => {
-                      if (confirm("Gửi lại tin nhắn Zalo cho báo đơn này?")) {
-                        onResend();
-                      }
-                    }}
-                    className="w-full py-3 border border-emerald-200 text-emerald-700 bg-emerald-50 rounded-2xl font-semibold text-sm hover:bg-emerald-100 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
-                    <Send className="w-4 h-4" />
-                    Gửi Zalo
-                  </button>
-                )}
-                {onResendLark && typeKey === "giao-hang" && (
-                  <button
-                    onClick={() => {
-                      if (
-                        confirm(
-                          "Đồng bộ lại phiếu chi của báo đơn này lên Lark?"
-                        )
-                      ) {
-                        onResendLark();
-                      }
-                    }}
-                    className="w-full py-3 border border-indigo-200 text-indigo-700 bg-indigo-50 rounded-2xl font-semibold text-sm hover:bg-indigo-100 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
-                    <Send className="w-4 h-4" />
-                    Gửi Lark
-                  </button>
-                )}
-                {onResendLoadingLark && typeKey === "loading" && (
-                  <button
-                    onClick={() => {
-                      if (
-                        confirm(
-                          "Gửi lại thông báo loading của phiếu này lên Lark?"
-                        )
-                      ) {
-                        onResendLoadingLark();
-                      }
-                    }}
-                    className="w-full py-3 border border-indigo-200 text-indigo-700 bg-indigo-50 rounded-2xl font-semibold text-sm hover:bg-indigo-100 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
-                    <Send className="w-4 h-4" />
-                    Gửi Lark
-                  </button>
-                )}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      if (confirm("Bạn có chắc chắn muốn hủy phiếu này?")) {
-                        onDelete();
-                      }
-                    }}
-                    className="flex-1 py-3 border border-red-200 text-red-600 rounded-2xl font-semibold text-sm hover:bg-red-50 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
-                    <Trash2 className="w-4 h-4" />
-                    Hủy phiếu
-                  </button>
-                  <button
-                    onClick={onEdit}
-                    className="flex-[2] py-3 bg-brand text-white rounded-2xl font-semibold text-sm hover:bg-brand-dark active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
-                    <Pencil className="w-4 h-4" />
-                    Sửa
-                  </button>
-                </div>
-              </>
-            )}
+            <PackingDetailActions
+              type={typeKey}
+              cancelledAt={detail?.cancelledAt ?? item.cancelledAt}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onResend={onResend}
+              onResendLark={onResendLark}
+              onResendLoadingLark={onResendLoadingLark}
+              mobile
+            />
           </div>
         </div>
       </div>
@@ -677,18 +467,6 @@ function PackingMobileDetailSheet({
         </div>
       )}
     </>
-  );
-}
-
-function Row({ label, value }: { label: string; value: any }) {
-  if (value == null || value === "") return null;
-  return (
-    <div className="flex items-start justify-between gap-3 text-sm">
-      <span className="text-gray-500 flex-shrink-0">{label}</span>
-      <span className="text-gray-900 font-medium text-right break-words">
-        {value}
-      </span>
-    </div>
   );
 }
 

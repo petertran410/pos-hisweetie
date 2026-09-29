@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PackingLoadingForm } from "@/components/packing-loadings/PackingLoadingForm";
 import { useCreatePackingLoading } from "@/lib/hooks/usePackingLoadings";
@@ -8,23 +7,29 @@ import { toast } from "sonner";
 
 export default function LoadingPage() {
   const router = useRouter();
-  const [formKey, setFormKey] = useState(0);
   const createPackingLoading = useCreatePackingLoading();
 
   const handleSubmit = async (formData: any) => {
     try {
-      await createPackingLoading.mutateAsync(formData);
-      toast.success("Tạo loading thành công");
-      setFormKey((k) => k + 1);
-    } catch {
-      toast.error("Tạo loading thất bại");
+      const created = await createPackingLoading.mutateAsync(formData);
+      toast.success(
+        created?.code
+          ? `Tạo loading thành công · ${created.code}`
+          : "Tạo loading thành công",
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error && error.message
+          ? error.message
+          : "Tạo loading thất bại",
+      );
+      throw error;
     }
   };
 
   return (
     <div className="min-h-screen">
       <PackingLoadingForm
-        key={formKey}
         onClose={() => router.push("/bao-don")}
         onSubmit={handleSubmit}
         enableDocumentQrScanner
