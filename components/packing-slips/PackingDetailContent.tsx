@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { ExternalLink, FileText, Image as ImageIcon, Loader2, X } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { CodeLink } from "@/components/shared/CodeLink";
@@ -281,24 +282,26 @@ export function PackingDetailContent({
         </div>
       )}
 
-      {viewingImage && (
-        <div
-          className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4"
-          onClick={() => setViewingImage(null)}>
-          <button
-            type="button"
-            onClick={() => setViewingImage(null)}
-            className="absolute top-4 right-4 text-white hover:text-gray-300">
-            <X className="w-8 h-8" />
-          </button>
-          <img
-            src={viewingImage}
-            alt=""
-            className="max-w-full max-h-[85vh] object-contain"
-            onClick={(event) => event.stopPropagation()}
-          />
-        </div>
-      )}
+      {viewingImage &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[80] bg-black/90 flex items-center justify-center p-4"
+            onClick={() => setViewingImage(null)}>
+            <button
+              type="button"
+              onClick={() => setViewingImage(null)}
+              className="absolute top-4 right-4 text-white hover:text-gray-300">
+              <X className="w-8 h-8" />
+            </button>
+            <img
+              src={viewingImage}
+              alt=""
+              className="max-w-full max-h-[85vh] object-contain"
+              onClick={(event) => event.stopPropagation()}
+            />
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

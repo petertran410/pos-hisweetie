@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingSlip } from "@/lib/types/packing-slip";
 import {
@@ -762,9 +763,10 @@ export function PackingSlipsTable({
         </div>
       )}
 
-      {viewingImage && (
+      {viewingImage &&
+        createPortal(
         <div
-          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/90 flex items-center justify-center z-[80] p-4"
           onClick={() => {
             setViewingImage(null);
             setViewingImagesList([]);
@@ -859,8 +861,9 @@ export function PackingSlipsTable({
               );
             })()}
           </div>
-        </div>
-      )}
+        </div>,
+          document.body
+        )}
     </div>
   );
 }
