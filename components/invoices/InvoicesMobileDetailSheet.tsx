@@ -22,7 +22,8 @@ import {
 import { toast } from "sonner";
 import { INVOICE_STATUS, INVOICE_STATUS_LABELS } from "@/lib/types/invoice";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { useCan } from "@/lib/hooks/useCan";
+import { useCan, useIsAdmin } from "@/lib/hooks/useCan";
+import { useInvoiceCashPackingLock } from "@/lib/hooks/useInvoiceCashPackingLock";
 import { printDeliverySlip, printEntity } from "@/lib/utils/print";
 import Swal from "sweetalert2";
 import { CodeLink } from "../shared/CodeLink";
@@ -106,6 +107,12 @@ export function InvoicesMobileDetailSheet({
   const hasPermCancel = useCan("invoices", "cancel");
   const hasPermUpdate = useCan("invoices", "update");
   const hasPermPrint = useCan("invoices", "print");
+  const isAdmin = useIsAdmin();
+  const {
+    data: hasActiveCashPackingSlip = false,
+    isLoading: isCheckingCashPacking,
+    isError: cashPackingCheckFailed,
+  } = useInvoiceCashPackingLock(invoiceId);
 
   // Sync state khi invoice load xong — giống OrdersMobileDetailSheet
   useEffect(() => {
@@ -145,9 +152,15 @@ export function InvoicesMobileDetailSheet({
   const isStatusEditable = !isFinalState;
 
   const canCancelInvoice = invoice?.status !== INVOICE_STATUS.CANCELLED;
+  const cashPackingLockApplies =
+    !isAdmin &&
+    (isCheckingCashPacking || cashPackingCheckFailed || hasActiveCashPackingSlip);
 
   const showProcessButton =
-    hasPermUpdate && !isSaving && invoice?.status !== INVOICE_STATUS.CANCELLED;
+    hasPermUpdate &&
+    !isSaving &&
+    invoice?.status !== INVOICE_STATUS.CANCELLED &&
+    !cashPackingLockApplies;
 
   // ─── Handlers — giống OrdersMobileDetailSheet pattern ────────────────────
   const handleCancelClick = async () => {
@@ -220,7 +233,7 @@ export function InvoicesMobileDetailSheet({
     try {
       setIsSaving(true);
       const updateData: any = { description };
-      if (isStatusEditable) {
+      if (isStatusEditable && !cashPackingLockApplies) {
         updateData.status = selectedStatus;
       }
       await updateInvoice.mutateAsync({ id: invoice.id, data: updateData });
@@ -392,7 +405,9 @@ export function InvoicesMobileDetailSheet({
                 {/* Trạng thái — dropdown inline nếu editable, giống OrdersMobileDetailSheet */}
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-400">Trạng thái</span>
-                  {isStatusEditable && hasPermUpdate ? (
+                  {isStatusEditable &&
+                  hasPermUpdate &&
+                  !cashPackingLockApplies ? (
                     <div className="relative" ref={statusDropdownRef}>
                       <button
                         onClick={() => setShowStatusDropdown((v) => !v)}
@@ -681,7 +696,9 @@ export function InvoicesMobileDetailSheet({
         {/* ── Action bar (sticky bottom) — giống OrdersMobileDetailSheet ── */}
         {invoice && (
           <div className="flex-shrink-0 border-t border-gray-100 bg-white px-4 py-3 flex items-center gap-2">
-            {canCancelInvoice && hasPermCancel && (
+            {canCancelInvoice &&
+              hasPermCancel &&
+              !cashPackingLockApplies && (
               <button
                 onClick={handleCancelClick}
                 disabled={isSaving}

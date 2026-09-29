@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import dynamic from "next/dynamic";
+import { Fragment, useState, useMemo } from "react";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingSlip } from "@/lib/types/packing-slip";
-import { X, Plus, FileText } from "lucide-react";
+import { ChevronDown, X, Plus, FileText } from "lucide-react";
 import { CodeLink } from "@/components/shared/CodeLink";
 import { ColumnToggle } from "../shared/ColumnToggle";
 import {
@@ -11,6 +12,12 @@ import {
   type ColumnConfig,
 } from "@/lib/hooks/useColumnVisibility";
 import { apiClient } from "@/lib/config/api";
+
+const PackingDetailRow = dynamic(
+  () =>
+    import("./PackingDetailRow").then((module) => module.PackingDetailRow),
+  { ssr: false }
+);
 
 interface PackingSlipsTableProps {
   packingSlips: (PackingSlip & { type?: string })[];
@@ -71,6 +78,9 @@ export function PackingSlipsTable({
     useState<PackingSlip | null>(null);
   const [showCreateDropdown, setShowCreateDropdown] = useState(false);
   const [viewingInvoices, setViewingInvoices] = useState<any>(null);
+  const [expandedPackingKey, setExpandedPackingKey] = useState<string | null>(
+    null
+  );
 
   const handleViewImages = async (slip: any) => {
     if (slip.images?.[0]?.imageUrl) {
@@ -346,6 +356,9 @@ export function PackingSlipsTable({
         slip.code.toLowerCase().includes(search.toLowerCase())
       );
 
+  const getPackingKey = (slip: PackingSlip & { type?: string }) =>
+    `${slip.type || "giao-hang"}-${slip.id}`;
+
   return (
     <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
       <div className="border-b p-4 flex items-center justify-between">
@@ -428,7 +441,7 @@ export function PackingSlipsTable({
                 </th>
               ))}
               <th className="px-6 py-3 text-center font-medium text-gray-700 whitespace-nowrap">
-                Thao tác
+                Chi tiết
               </th>
             </tr>
           </thead>
@@ -450,109 +463,81 @@ export function PackingSlipsTable({
                 </td>
               </tr>
             ) : (
-              filteredSlips.map((slip) => (
-                <tr
-                  key={slip.type ? `${slip.type}-${slip.id}` : slip.id}
-                  className="border-b hover:bg-gray-50">
-                  {visibleColumns.map((col) => (
-                    <td
-                      key={col.key}
-                      className={`px-6 py-3 text-md break-words ${
-                        col.key === "numberOfPackages" ||
-                        col.key === "images" ||
-                        col.key === "expenseFiles"
-                          ? "text-center"
-                          : col.key === "feeGuiBen" ||
-                              col.key === "feeGrab" ||
-                              col.key === "cuocGuiHang" ||
-                              col.key === "cuocNhanHang"
-                            ? "text-right"
-                            : "text-left"
+              filteredSlips.map((slip) => {
+                const packingKey = getPackingKey(slip);
+                const isExpanded = expandedPackingKey === packingKey;
+                return (
+                  <Fragment key={packingKey}>
+                    <tr
+                      className={`cursor-pointer transition-colors ${
+                        isExpanded
+                          ? "bg-brand-soft"
+                          : "border-b hover:bg-gray-50"
                       }`}
-                      style={{
-                        width: col.width,
-                        minWidth: col.width,
-                        maxWidth: col.width,
-                        wordWrap: "break-word",
-                        whiteSpace: "normal",
-                      }}>
-                      {col.render(slip)}
-                    </td>
-                  ))}
-                  <td className="px-6 py-3 text-md text-center whitespace-nowrap">
-                    {slip.cancelledAt ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                        Đã hủy
-                      </span>
-                    ) : (
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => onEditClick(slip)}
-                          className="px-3 py-1 text-sm text-brand hover:bg-brand-soft rounded">
-                          Sửa
-                        </button>
-                        {onResendClick && slip.type === "giao-hang" && (
-                          <button
-                            onClick={() => {
-                              if (
-                                confirm(
-                                  "Gửi lại tin nhắn Zalo cho báo đơn này?"
-                                )
-                              ) {
-                                onResendClick(slip.id);
-                              }
-                            }}
-                            className="px-3 py-1 text-sm text-emerald-600 hover:bg-emerald-50 rounded">
-                            Gửi Zalo
-                          </button>
-                        )}
-                        {onResendLarkClick && slip.type === "giao-hang" && (
-                          <button
-                            onClick={() => {
-                              if (
-                                confirm(
-                                  "Đồng bộ lại phiếu chi của báo đơn này lên Lark?"
-                                )
-                              ) {
-                                onResendLarkClick(slip.id);
-                              }
-                            }}
-                            className="px-3 py-1 text-sm text-indigo-600 hover:bg-indigo-50 rounded">
-                            Gửi Lark
-                          </button>
-                        )}
-                        {onResendLoadingLarkClick &&
-                          slip.type === "loading" && (
-                            <button
-                              onClick={() => {
-                                if (
-                                  confirm(
-                                    "Gửi lại thông báo loading của phiếu này lên Lark?"
-                                  )
-                                ) {
-                                  onResendLoadingLarkClick(slip.id);
-                                }
-                              }}
-                              className="px-3 py-1 text-sm text-indigo-600 hover:bg-indigo-50 rounded">
-                              Gửi Lark
-                            </button>
-                          )}
-                        <button
-                          onClick={() => {
-                            if (
-                              confirm("Bạn có chắc chắn muốn hủy phiếu này?")
-                            ) {
-                              onDeleteClick(slip);
-                            }
-                          }}
-                          className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded">
-                          Hủy phiếu
-                        </button>
-                      </div>
+                      onClick={() =>
+                        setExpandedPackingKey((current) =>
+                          current === packingKey ? null : packingKey
+                        )
+                      }>
+                      {visibleColumns.map((col) => (
+                        <td
+                          key={col.key}
+                          className={`px-6 py-3 text-md break-words ${
+                            col.key === "numberOfPackages" ||
+                            col.key === "images" ||
+                            col.key === "expenseFiles"
+                              ? "text-center"
+                              : col.key === "feeGuiBen" ||
+                                  col.key === "feeGrab" ||
+                                  col.key === "cuocGuiHang" ||
+                                  col.key === "cuocNhanHang"
+                                ? "text-right"
+                                : "text-left"
+                          }`}
+                          style={{
+                            width: col.width,
+                            minWidth: col.width,
+                            maxWidth: col.width,
+                            wordWrap: "break-word",
+                            whiteSpace: "normal",
+                          }}>
+                          {col.render(slip)}
+                        </td>
+                      ))}
+                      <td className="px-6 py-3 text-md text-center whitespace-nowrap">
+                        <ChevronDown
+                          className={`w-4 h-4 mx-auto text-gray-400 transition-transform ${
+                            isExpanded ? "rotate-180" : ""
+                          }`}
+                        />
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <PackingDetailRow
+                        item={slip}
+                        colSpan={visibleColumns.length + 1}
+                        onEdit={() => onEditClick(slip)}
+                        onDelete={() => onDeleteClick(slip)}
+                        onResend={
+                          onResendClick && slip.type === "giao-hang"
+                            ? () => onResendClick(slip.id)
+                            : undefined
+                        }
+                        onResendLark={
+                          onResendLarkClick && slip.type === "giao-hang"
+                            ? () => onResendLarkClick(slip.id)
+                            : undefined
+                        }
+                        onResendLoadingLark={
+                          onResendLoadingLarkClick && slip.type === "loading"
+                            ? () => onResendLoadingLarkClick(slip.id)
+                            : undefined
+                        }
+                      />
                     )}
-                  </td>
-                </tr>
-              ))
+                  </Fragment>
+                );
+              })
             )}
           </tbody>
         </table>
