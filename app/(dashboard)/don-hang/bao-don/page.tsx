@@ -372,13 +372,8 @@ export default function BaoDonPage() {
       {/* ── Desktop (md+) ── */}
       {mounted && !isMobile && (
         <div
-          className="flex flex-col h-full border-t overflow-y-auto"
-        style={{ borderColor: "var(--dt-border)" }}>
-        {/* Tổng quan giao hàng hôm nay */}
-        {/* <div className="px-4 pt-4">
-          <DeliveryOverview />
-        </div> */}
-        <div className="flex flex-1 min-h-[600px]">
+          className="flex h-full border-t"
+          style={{ borderColor: "var(--dt-border)" }}>
           <PackingSlipsSidebar onFiltersChange={handleFiltersChange} />
           <PackingSlipsTable
             packingSlips={data?.data || []}
@@ -426,7 +421,6 @@ export default function BaoDonPage() {
               onSubmit={handleLoadingSubmit}
             />
           )}
-        </div>
         </div>
       )}
 

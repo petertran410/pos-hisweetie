@@ -1,10 +1,19 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Fragment, useState, useMemo } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingSlip } from "@/lib/types/packing-slip";
-import { ChevronDown, X, Plus, FileText } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  FileText,
+  Plus,
+  X,
+} from "lucide-react";
 import { CodeLink } from "@/components/shared/CodeLink";
 import { ColumnToggle } from "../shared/ColumnToggle";
 import {
@@ -40,9 +49,19 @@ interface PackingSlipsTableProps {
   onSearchChange?: (value: string) => void;
 }
 
-interface PackingSlipsTableProps {
-  onCreatePackingHangClick: () => void;
-  onCreatePackingLoadingClick: () => void;
+function columnAlign(key: string) {
+  if (key === "numberOfPackages" || key === "images" || key === "expenseFiles") {
+    return "text-center";
+  }
+  if (
+    key === "feeGuiBen" ||
+    key === "feeGrab" ||
+    key === "cuocGuiHang" ||
+    key === "cuocNhanHang"
+  ) {
+    return "text-right";
+  }
+  return "text-left";
 }
 
 export function PackingSlipsTable({
@@ -81,6 +100,21 @@ export function PackingSlipsTable({
   const [expandedPackingKey, setExpandedPackingKey] = useState<string | null>(
     null
   );
+  const createMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showCreateDropdown) return;
+    const handler = (event: MouseEvent) => {
+      if (
+        createMenuRef.current &&
+        !createMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowCreateDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showCreateDropdown]);
 
   const handleViewImages = async (slip: any) => {
     if (slip.images?.[0]?.imageUrl) {
@@ -145,7 +179,7 @@ export function PackingSlipsTable({
 
         return (
           <span
-            className={`px-2 py-1 rounded text-xs font-medium ${
+            className={`px-2 py-0.5 rounded-full text-xs font-medium ${
               slip.type === "giao-hang"
                 ? "bg-green-100 text-green-800"
                 : slip.type === "dong-hang"
@@ -358,57 +392,62 @@ export function PackingSlipsTable({
 
   const getPackingKey = (slip: PackingSlip & { type?: string }) =>
     `${slip.type || "giao-hang"}-${slip.id}`;
+  const totalPages = Math.ceil(total / limit) || 1;
+  const colSpan = visibleColumns.length + 1;
 
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto bg-white w-[60%] mt-4 mr-4 mb-4 border rounded-xl">
-      <div className="border-b p-4 flex items-center justify-between">
-        <div className="flex items-center gap-4 w-[500px]">
-          <h2 className="text-xl font-semibold w-[150px]">Báo đơn</h2>
+    <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
+      <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
+            Báo đơn
+          </h2>
           <input
             type="text"
             placeholder="Tìm theo mã báo đơn, ghi chú..."
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-md focus:outline-none focus:ring-2 focus:ring-brand"
+            className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="relative">
+        <div className="flex items-center gap-2 shrink-0">
+          <div ref={createMenuRef} className="relative">
             <button
-              onMouseEnter={() => setShowCreateDropdown(true)}
-              onMouseLeave={() => setShowCreateDropdown(false)}
-              className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark text-md flex items-center gap-2">
+              type="button"
+              onClick={() => setShowCreateDropdown((open) => !open)}
+              className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium flex items-center gap-1.5">
               <Plus className="w-4 h-4" />
               Tạo báo đơn
+              <ChevronDown className="w-4 h-4" />
             </button>
             {showCreateDropdown && (
-              <div
-                onMouseEnter={() => setShowCreateDropdown(true)}
-                onMouseLeave={() => setShowCreateDropdown(false)}
-                className="absolute top-full left-0 bg-white border rounded-lg shadow-lg z-50 min-w-[150px]">
+              <div className="absolute right-0 top-full mt-1 z-30 w-40 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
                 <button
+                  type="button"
                   onClick={() => {
                     onCreatePackingHangClick();
                     setShowCreateDropdown(false);
                   }}
-                  className="w-full px-4 py-2 text-left text-md hover:bg-gray-50 first:rounded-t-lg">
+                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors">
                   Đóng hàng
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     onCreatePackingLoadingClick();
                     setShowCreateDropdown(false);
                   }}
-                  className="w-full px-4 py-2 text-left text-md hover:bg-gray-50">
+                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors border-t border-gray-100">
                   Loading
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     onCreateClick();
                     setShowCreateDropdown(false);
                   }}
-                  className="w-full px-4 py-2 text-left text-md hover:bg-gray-50 last:rounded-b-lg">
+                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-soft transition-colors border-t border-gray-100">
                   Giao hàng
                 </button>
               </div>
@@ -418,48 +457,35 @@ export function PackingSlipsTable({
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
-        <table className="w-full text-md">
+      <div className="flex-1 overflow-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
+        <table className="w-full text-sm">
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               {visibleColumns.map((col) => (
                 <th
                   key={col.key}
-                  className={`px-6 py-3 font-medium text-gray-700 whitespace-nowrap ${
-                    col.key === "numberOfPackages" ||
-                    col.key === "images" ||
-                    col.key === "expenseFiles"
-                      ? "text-center"
-                      : col.key === "feeGuiBen" ||
-                          col.key === "feeGrab" ||
-                          col.key === "cuocGuiHang" ||
-                          col.key === "cuocNhanHang"
-                        ? "text-right"
-                        : "text-left"
-                  }`}>
+                  className={`px-4 py-2.5 font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide ${columnAlign(col.key)}`}
+                  style={{ width: col.width, minWidth: col.width }}>
                   {col.label}
                 </th>
               ))}
-              <th className="px-6 py-3 text-center font-medium text-gray-700 whitespace-nowrap">
-                Chi tiết
-              </th>
+              <th className="px-4 py-2.5 w-8" />
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td
-                  colSpan={visibleColumns.length + 1}
-                  className="px-6 py-8 text-center text-gray-500">
-                  Đang tải...
+                <td colSpan={colSpan} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-2 text-gray-400">
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-brand border-t-transparent" />
+                    <span className="text-xs">Đang tải...</span>
+                  </div>
                 </td>
               </tr>
             ) : filteredSlips.length === 0 ? (
               <tr>
-                <td
-                  colSpan={visibleColumns.length + 1}
-                  className="px-6 py-8 text-center text-gray-500">
-                  Không có báo đơn nào
+                <td colSpan={colSpan} className="py-20 text-center text-gray-400">
+                  <div className="text-sm">Không có báo đơn nào</div>
                 </td>
               </tr>
             ) : (
@@ -479,20 +505,13 @@ export function PackingSlipsTable({
                           current === packingKey ? null : packingKey
                         )
                       }>
-                      {visibleColumns.map((col) => (
+                      {visibleColumns.map((col, index) => (
                         <td
                           key={col.key}
-                          className={`px-6 py-3 text-md break-words ${
-                            col.key === "numberOfPackages" ||
-                            col.key === "images" ||
-                            col.key === "expenseFiles"
-                              ? "text-center"
-                              : col.key === "feeGuiBen" ||
-                                  col.key === "feeGrab" ||
-                                  col.key === "cuocGuiHang" ||
-                                  col.key === "cuocNhanHang"
-                                ? "text-right"
-                                : "text-left"
+                          className={`px-4 py-2.5 break-words ${columnAlign(col.key)} ${
+                            isExpanded
+                              ? `border-t-2 border-brand${index === 0 ? " border-l-2" : ""}`
+                              : ""
                           }`}
                           style={{
                             width: col.width,
@@ -504,9 +523,12 @@ export function PackingSlipsTable({
                           {col.render(slip)}
                         </td>
                       ))}
-                      <td className="px-6 py-3 text-md text-center whitespace-nowrap">
+                      <td
+                        className={`px-4 py-2.5 w-8 ${
+                          isExpanded ? "border-t-2 border-r-2 border-brand" : ""
+                        }`}>
                         <ChevronDown
-                          className={`w-4 h-4 mx-auto text-gray-400 transition-transform ${
+                          className={`w-4 h-4 text-gray-400 transition-transform ${
                             isExpanded ? "rotate-180" : ""
                           }`}
                         />
@@ -515,7 +537,7 @@ export function PackingSlipsTable({
                     {isExpanded && (
                       <PackingDetailRow
                         item={slip}
-                        colSpan={visibleColumns.length + 1}
+                        colSpan={colSpan}
                         onEdit={() => onEditClick(slip)}
                         onDelete={() => onDeleteClick(slip)}
                         onResend={
@@ -543,43 +565,81 @@ export function PackingSlipsTable({
         </table>
       </div>
 
-      <div className="border-t p-4 flex items-center justify-between bg-white">
+      <div className="border-t px-4 py-2.5 flex items-center justify-between bg-white shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-md text-gray-600">
-            Hiển thị {(page - 1) * limit + 1} - {Math.min(page * limit, total)}{" "}
-            / {total} báo đơn
-          </span>
+          <span className="text-xs text-gray-500">Hiển thị</span>
           <select
             value={limit}
             onChange={(e) => {
               onLimitChange(Number(e.target.value));
               onPageChange(1);
             }}
-            className="border rounded px-2 py-1 text-md">
-            <option value={15}>15</option>
-            <option value={30}>30</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
+            className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand bg-white">
+            {[15, 30, 50, 100].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
           </select>
+          <span className="text-xs text-gray-500">/ trang</span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button
+            type="button"
+            onClick={() => onPageChange(1)}
+            disabled={page === 1}
+            className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+            <ChevronsLeft className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
             onClick={() => onPageChange(Math.max(1, page - 1))}
             disabled={page === 1}
-            className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
-            ←
+            className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+            <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-md">
-            Trang {page} / {Math.ceil(total / limit) || 1}
-          </span>
+
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            const p = Math.min(
+              Math.max(page - 2 + i, i + 1),
+              totalPages - (Math.min(5, totalPages) - 1 - i)
+            );
+            return (
+              <button
+                key={p}
+                type="button"
+                onClick={() => onPageChange(p)}
+                className={`w-7 h-7 text-xs rounded border font-medium transition-colors ${
+                  p === page
+                    ? "bg-brand text-white border-brand"
+                    : "hover:bg-gray-50 text-gray-600 border-gray-200"
+                }`}>
+                {p}
+              </button>
+            );
+          })}
+
           <button
-            onClick={() => onPageChange(page + 1)}
-            disabled={page >= Math.ceil(total / limit)}
-            className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">
-            →
+            type="button"
+            onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+            disabled={page >= totalPages}
+            className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onPageChange(totalPages)}
+            disabled={page >= totalPages}
+            className="p-1 border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+            <ChevronsRight className="w-4 h-4" />
           </button>
         </div>
+
+        <span className="text-xs text-gray-400">
+          Trang {page}/{totalPages}
+          {total > 0 ? ` · ${total.toLocaleString("vi-VN")} báo đơn` : ""}
+        </span>
       </div>
 
       {viewingInvoices && (
