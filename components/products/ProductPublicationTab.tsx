@@ -71,7 +71,7 @@ export function ProductPublicationTab({
                 document.originalName ||
                 document.url.split("/").pop() ||
                 `Tài liệu ${index + 1}`;
-              const viewUrl = `${API_URL}/products/${product.id}/documents/${document.id}/view`;
+              const viewUrl = `${API_URL}/products/${product.id}/documents/${document.id}/view/${encodeURIComponent(name)}`;
 
               return (
                 <li
