@@ -2,7 +2,7 @@
 
 import { FileText, Link2 } from "lucide-react";
 import type { Product } from "@/lib/api/products";
-import { API_URL } from "@/lib/config/api";
+import { repairUploadedFilename } from "@/lib/utils/uploaded-filename";
 
 interface ProductPublicationTabProps {
   product: Product;
@@ -67,19 +67,18 @@ export function ProductPublicationTab({
         {documents.length > 0 ? (
           <ul className="space-y-2">
             {documents.map((document, index) => {
-              const name =
+              const name = repairUploadedFilename(
                 document.originalName ||
-                document.url.split("/").pop() ||
-                `Tài liệu ${index + 1}`;
-              const viewUrl = `${API_URL}/products/${product.id}/documents/${document.id}/view/${encodeURIComponent(name)}`;
-
+                  document.url.split("/").pop() ||
+                  `Tài liệu ${index + 1}`
+              );
               return (
                 <li
                   key={document.id || `${document.url}-${index}`}
                   className="flex min-w-0 items-center gap-2 text-sm">
                   <FileText className="h-4 w-4 shrink-0 text-gray-400" />
                   <a
-                    href={viewUrl}
+                    href={document.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="min-w-0 break-all text-brand hover:underline"
