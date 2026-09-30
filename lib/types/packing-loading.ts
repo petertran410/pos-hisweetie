@@ -1,4 +1,6 @@
-export interface PackingLoading {
+import type { ColdCargoWarning } from "./cold-cargo-warning";
+
+export interface PackingLoading extends ColdCargoWarning {
   id: number;
   code: string;
   branchId: number;

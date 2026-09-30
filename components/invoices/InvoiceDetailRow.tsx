@@ -23,6 +23,10 @@ import Link from "next/link";
 import { DeliveryInfoCard } from "../shared/DeliveryInfoSection";
 import { CodeLink } from "../shared/CodeLink";
 import { LineTypeBadge, PromotionLineName } from "../shared/LineTypeBadge";
+import {
+  ColdCargoBadge,
+  ColdCargoSummary,
+} from "../shared/ColdCargoBadge";
 import { useCan, useIsAdmin } from "@/lib/hooks/useCan";
 import { useInvoiceCashPackingLock } from "@/lib/hooks/useInvoiceCashPackingLock";
 import { findAddressFromDelivery } from "@/lib/utils/customer-address";
@@ -540,6 +544,10 @@ export function InvoiceDetailRow({
                         Danh sách sản phẩm
                       </h4>
                     </div>
+                    <ColdCargoSummary
+                      items={invoice.details || []}
+                      className="mb-3"
+                    />
                     <div className="border border-gray-200 rounded-lg overflow-hidden">
                       <table className="w-full">
                         <thead>
@@ -629,6 +637,9 @@ export function InvoiceDetailRow({
                                       <p className="text-sm font-medium text-gray-900">
                                         {item.product?.name || item.productName}
                                       </p>
+                                      {item.product?.cargoType === "COLD" && (
+                                        <ColdCargoBadge />
+                                      )}
                                       <LineTypeBadge item={item} />
                                     </div>
                                     <PromotionLineName item={item} />

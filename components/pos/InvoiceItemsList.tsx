@@ -42,6 +42,7 @@ import { ProductInventoryModal } from "./ProductInventoryModal";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { ProductInventoryMobileSheet } from "./ProductInventoryMobileSheet";
 import { CodeLink } from "../shared/CodeLink";
+import { ColdCargoBadge, ColdCargoSummary } from "../shared/ColdCargoBadge";
 import { CartPromotionSummary } from "../promotions/CartPromotionSummary";
 import { UnitPicker } from "./UnitPicker";
 import {
@@ -456,6 +457,7 @@ export function InvoiceItemsList({
   return (
     <div className={className ?? "w-[60%] bg-white flex flex-col"}>
       <div className="flex-1 p-3 overflow-y-auto">
+        <ColdCargoSummary items={cartItems} className="mb-3" />
         <div className="space-y-2">
           {productLineGroups.map((group) => {
             const hasStockWarning = group.some((line) => getStockWarning(line));
@@ -487,6 +489,9 @@ export function InvoiceItemsList({
                       <span className="text-sm lg:text-base font-semibold text-gray-900">
                         {item.product.name}
                       </span>
+                      {item.product?.cargoType === "COLD" && (
+                        <ColdCargoBadge />
+                      )}
                       {(() => {
                         const label = getConditionLabel(item.conditionType);
                         if (!label) return null;

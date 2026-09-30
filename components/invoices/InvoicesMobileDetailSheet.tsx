@@ -28,6 +28,10 @@ import { printDeliverySlip, printEntity } from "@/lib/utils/print";
 import Swal from "sweetalert2";
 import { CodeLink } from "../shared/CodeLink";
 import { LineTypeBadge, PromotionLineName } from "../shared/LineTypeBadge";
+import {
+  ColdCargoBadge,
+  ColdCargoSummary,
+} from "../shared/ColdCargoBadge";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const getInvoiceStatusBadgeColor = (status: number) => {
@@ -495,6 +499,10 @@ export function InvoicesMobileDetailSheet({
               {/* ── Danh sách sản phẩm — giống OrdersMobileDetailSheet ── */}
               {invoice.details && invoice.details.length > 0 && (
                 <div>
+                  <ColdCargoSummary
+                    items={invoice.details}
+                    className="mb-3"
+                  />
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2.5">
                     Danh sách sản phẩm ({invoice.details.length})
                   </p>
@@ -534,6 +542,9 @@ export function InvoicesMobileDetailSheet({
                             <p className="text-sm text-gray-900 leading-tight">
                               {detail.productName || detail.product?.name}
                             </p>
+                            {detail.product?.cargoType === "COLD" && (
+                              <ColdCargoBadge />
+                            )}
                             <LineTypeBadge item={detail} />
                           </div>
                           <PromotionLineName item={detail} />

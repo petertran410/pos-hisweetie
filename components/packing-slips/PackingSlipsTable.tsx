@@ -13,6 +13,7 @@ import {
   ChevronsRight,
   FileText,
   Plus,
+  Snowflake,
   X,
 } from "lucide-react";
 import { CodeLink } from "@/components/shared/CodeLink";
@@ -51,7 +52,12 @@ interface PackingSlipsTableProps {
 }
 
 function columnAlign(key: string) {
-  if (key === "numberOfPackages" || key === "images" || key === "expenseFiles") {
+  if (
+    key === "numberOfPackages" ||
+    key === "images" ||
+    key === "expenseFiles" ||
+    key === "coldWarning"
+  ) {
     return "text-center";
   }
   if (
@@ -268,6 +274,23 @@ export function PackingSlipsTable({
           )
         ) : (
           "-"
+        ),
+    },
+    {
+      key: "coldWarning",
+      label: "Cảnh báo",
+      visible: true,
+      width: "145px",
+      render: (slip) =>
+        slip.hasColdItems ? (
+          <span
+            className="inline-flex items-center gap-1 font-semibold text-red-600"
+            title={`${slip.coldItemCount || 0} mặt hàng lạnh`}>
+            <Snowflake className="h-4 w-4 shrink-0" />
+            Hàng lạnh
+          </span>
+        ) : (
+          <span className="text-gray-400">-</span>
         ),
     },
     {

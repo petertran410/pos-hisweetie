@@ -2,10 +2,18 @@
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { ExternalLink, FileText, Image as ImageIcon, Loader2, X } from "lucide-react";
+import {
+  ExternalLink,
+  FileText,
+  Image as ImageIcon,
+  Loader2,
+  Snowflake,
+  X,
+} from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { CodeLink } from "@/components/shared/CodeLink";
 import type { PackingItemType } from "@/lib/hooks/usePackingDetail";
+import type { ColdCargoItem } from "@/lib/types/cold-cargo-warning";
 
 interface PackingDetailContentProps {
   item: any;
@@ -70,6 +78,12 @@ export function PackingDetailContent({
   const expenseFiles = (data.expenseFiles || []).filter(
     (file: any) => file?.fileUrl
   );
+  const coldItems = Array.isArray(data.coldItems) ? data.coldItems : [];
+  const hasColdItems = Boolean(
+    data.hasColdItems || item?.hasColdItems || coldItems.length > 0
+  );
+  const coldItemCount =
+    Number(data.coldItemCount ?? item?.coldItemCount ?? coldItems.length) || 0;
   const imageCount = Number(data.imageCount ?? item?.imageCount ?? images.length) || 0;
   const showImageLoading = isLoading && images.length === 0 && imageCount > 0;
   const gridClass = compact
@@ -125,6 +139,35 @@ export function PackingDetailContent({
             </Field>
             <Field label="Người chi:">{textOrDash(data.expensePayer?.name)}</Field>
           </div>
+        </div>
+      )}
+
+      {hasColdItems && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-red-700">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <Snowflake className="h-4 w-4 shrink-0" />
+            <span>
+              Hàng lạnh
+              {coldItemCount > 0 ? ` · ${coldItemCount} mặt hàng` : ""}
+            </span>
+          </div>
+          {coldItems.length > 0 && (
+            <div className="mt-2 space-y-1 text-xs">
+              {coldItems.map((coldItem: ColdCargoItem, index: number) => (
+                <div
+                  key={`${coldItem.invoiceId}-${coldItem.productId ?? index}`}
+                  className="flex flex-wrap gap-x-1">
+                  <span className="font-medium">
+                    {coldItem.productCode || "-"}
+                  </span>
+                  <span>{coldItem.productName || "Sản phẩm"}</span>
+                  <span className="text-red-500">
+                    ({coldItem.invoiceCode || "Hóa đơn"})
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

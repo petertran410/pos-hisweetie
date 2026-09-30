@@ -22,6 +22,7 @@ import {
   ChevronRight,
   Check,
   Package,
+  Snowflake,
   Truck,
   Boxes,
   Image as ImageIcon,
@@ -121,6 +122,18 @@ function PackingMobileCard({
 
       {/* Dashed divider */}
       <div className="border-t border-dashed border-gray-200 mb-3" />
+
+      {item.hasColdItems && (
+        <div className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-red-600">
+          <Snowflake className="h-3.5 w-3.5 shrink-0" />
+          <span>
+            Hàng lạnh
+            {Number(item.coldItemCount) > 0
+              ? ` · ${item.coldItemCount} mặt hàng`
+              : ""}
+          </span>
+        </div>
+      )}
 
       {/* Row 4: footer — số kiện + hóa đơn + ảnh + tiền (nếu có) */}
       <div className="flex items-end justify-between gap-3">
