@@ -48,6 +48,9 @@ const TITLE_MAP: Array<{ prefix: string; title: string }> = [
   { prefix: "/khach-hang", title: "Khách hàng" },
 
   // Tài chính
+  { prefix: "/tai-chinh/tai-chinh-noi-bo", title: "Tài chính nội bộ" },
+  { prefix: "/tai-chinh/approval-tuan", title: "Approval tuần" },
+  { prefix: "/tai-chinh/xe-co", title: "Xăng dầu & chăm sóc xe" },
   { prefix: "/tai-chinh/so-quy", title: "Sổ quỹ" },
   { prefix: "/tai-chinh/bien-dong-so-du", title: "Biến động số dư" },
   // Sổ quỹ (route cũ — redirect sang /tai-chinh/so-quy)

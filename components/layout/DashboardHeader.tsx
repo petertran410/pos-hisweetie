@@ -128,6 +128,9 @@ export function DashboardHeader() {
   const financeSubmenu = useMemo(
     () => [
       { label: "Sổ quỹ", href: "/tai-chinh/so-quy" },
+      { label: "Tài chính nội bộ", href: "/tai-chinh/tai-chinh-noi-bo" },
+      { label: "Approval tuần", href: "/tai-chinh/approval-tuan" },
+      { label: "Xăng dầu & chăm sóc xe", href: "/tai-chinh/xe-co" },
       { label: "Biến động số dư", href: "/tai-chinh/bien-dong-so-du" },
     ],
     []

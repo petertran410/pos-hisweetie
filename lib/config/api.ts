@@ -169,12 +169,20 @@ export const apiClient = {
     return res.json();
   },
 
-  post: async <T = any>(endpoint: string, data?: any): Promise<T> => {
-    const res = await fetchWithTimeout(`${API_URL}${endpoint}`, {
-      method: "POST",
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-    });
+  post: async <T = any>(
+    endpoint: string,
+    data?: any,
+    timeoutMs?: number,
+  ): Promise<T> => {
+    const res = await fetchWithTimeout(
+      `${API_URL}${endpoint}`,
+      {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data),
+      },
+      timeoutMs,
+    );
 
     if (!res.ok) {
       await handleApiError(res);
