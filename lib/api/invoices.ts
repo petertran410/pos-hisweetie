@@ -1,7 +1,8 @@
 import { apiClient } from "@/lib/config/api";
 import type { InvoiceCustomer } from "@/lib/types/invoice";
+import type { ColdCargoWarning } from "@/lib/types/cold-cargo-warning";
 
-export interface Invoice {
+export interface Invoice extends ColdCargoWarning {
   id: number;
   code: string;
   customerId?: number;

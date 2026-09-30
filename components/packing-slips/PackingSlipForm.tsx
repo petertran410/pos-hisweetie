@@ -26,12 +26,17 @@ import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingSlip } from "@/lib/types/packing-slip";
 import { toast } from "sonner";
+import { ColdCargoSelectionWarning } from "@/components/shared/ColdCargoBadge";
+import type { ColdCargoItem } from "@/lib/types/cold-cargo-warning";
 
 interface PreselectedInvoiceLite {
   id: number;
   code: string;
   grandTotal: number;
   customer?: { id: number; name: string } | null;
+  hasColdItems?: boolean;
+  coldItemCount?: number;
+  coldItems?: ColdCargoItem[];
 }
 
 interface PackingSlipFormProps {
@@ -98,6 +103,9 @@ export function PackingSlipForm({
     code: string;
     grandTotal: number;
     customer?: { id: number; name: string } | null;
+    hasColdItems?: boolean;
+    coldItemCount?: number;
+    coldItems?: ColdCargoItem[];
   };
   const [selectedInvoiceCache, setSelectedInvoiceCache] = useState<
     Record<number, InvoiceLite>
@@ -121,6 +129,9 @@ export function PackingSlipForm({
           code: inv.code,
           grandTotal: inv.grandTotal,
           customer: inv.customer ?? null,
+          hasColdItems: inv.hasColdItems,
+          coldItemCount: inv.coldItemCount,
+          coldItems: inv.coldItems,
         };
       }
     });
@@ -249,6 +260,9 @@ export function PackingSlipForm({
     branchId: number;
     purchaseDate?: string | null;
     customer?: { id: number; name: string } | null;
+    hasColdItems?: boolean;
+    coldItemCount?: number;
+    coldItems?: ColdCargoItem[];
   }) => {
     setSelectedInvoiceCache((prev) => ({ ...prev, [document.id]: document }));
     setSelectedInvoiceIds((prev) => [...prev, document.id]);
@@ -311,6 +325,9 @@ export function PackingSlipForm({
           code: inv.code,
           grandTotal: inv.grandTotal,
           customer: inv.customer ?? null,
+          hasColdItems: inv.hasColdItems,
+          coldItemCount: inv.coldItemCount,
+          coldItems: inv.coldItems,
         };
       }
     }
@@ -395,6 +412,9 @@ export function PackingSlipForm({
             code: inv.code,
             grandTotal: inv.grandTotal,
             customer: inv.customer ?? null,
+            hasColdItems: inv.hasColdItems,
+            coldItemCount: inv.coldItemCount,
+            coldItems: inv.coldItems,
           },
         }));
       }
@@ -671,6 +691,11 @@ export function PackingSlipForm({
                 </div>
               )}
             </div>
+
+            <ColdCargoSelectionWarning
+              invoices={selectedInvoices}
+              fallbackItems={packingSlip?.coldItems || []}
+            />
 
             <div>
               <label className="block text-sm font-medium mb-2">

@@ -13,6 +13,8 @@ import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingHang } from "@/lib/types/packing-hang";
 import { toast } from "sonner";
+import { ColdCargoSelectionWarning } from "@/components/shared/ColdCargoBadge";
+import type { ColdCargoItem } from "@/lib/types/cold-cargo-warning";
 
 interface PackingHangFormProps {
   packingHang?: PackingHang;
@@ -75,6 +77,9 @@ export function PackingHangForm({
     branchId?: number | null;
     purchaseDate?: string | null;
     customer?: { id: number; name: string } | null;
+    hasColdItems?: boolean;
+    coldItemCount?: number;
+    coldItems?: ColdCargoItem[];
   };
   const [selectedInvoiceCache, setSelectedInvoiceCache] = useState<
     Record<number, InvoiceLite>
@@ -138,6 +143,9 @@ export function PackingHangForm({
     branchId: number;
     purchaseDate?: string | null;
     customer?: { id: number; name: string } | null;
+    hasColdItems?: boolean;
+    coldItemCount?: number;
+    coldItems?: ColdCargoItem[];
   }) => {
     const cached: InvoiceLite = { ...document };
     setSelectedInvoiceCache((prev) => ({ ...prev, [document.id]: cached }));
@@ -221,6 +229,9 @@ export function PackingHangForm({
           branchId: invoice.branchId ?? null,
           purchaseDate: (invoice as any).purchaseDate ?? null,
           customer: invoice.customer ?? null,
+          hasColdItems: invoice.hasColdItems,
+          coldItemCount: invoice.coldItemCount,
+          coldItems: invoice.coldItems,
         };
         if (selectedInvoiceIds.length === 0) {
           setBranchId(invoice.branchId || 0);
@@ -497,6 +508,11 @@ export function PackingHangForm({
                 </div>
               )}
             </div>
+
+            <ColdCargoSelectionWarning
+              invoices={selectedInvoices}
+              fallbackItems={packingHang?.coldItems || []}
+            />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
