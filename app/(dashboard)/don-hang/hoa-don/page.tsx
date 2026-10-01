@@ -206,6 +206,7 @@ export default function HoaDonPage() {
             onFiltersChange={handleFiltersChange}
             splitTimeFilters
             showPriceWarningFilter
+            showColdCargoFilter
           />
           <InvoicesTable
             key={`desktop-${codeParam ?? "all"}`}

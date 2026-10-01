@@ -21,6 +21,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   AlertTriangle,
+  Snowflake,
 } from "lucide-react";
 import { CodeLink } from "../shared/CodeLink";
 import {
@@ -138,6 +139,7 @@ const countActiveFilters = (f: any): number => {
   if (Array.isArray(f.createdByIds) && f.createdByIds.length > 0) n++;
   if (Array.isArray(f.soldByIds) && f.soldByIds.length > 0) n++;
   if (f.paymentMethod) n++;
+  if (f.hasColdItems) n++;
   if (f._purchasePreset || f.fromPurchaseDate || f.toPurchaseDate) n++;
   if (f._createdPreset || f.fromCreatedDate || f.toCreatedDate) n++;
   return n;
@@ -262,6 +264,9 @@ function InvoicesMobileFilterSheet({
   const [paymentMethod, setPaymentMethod] = useState<string>(
     filters.paymentMethod || ""
   );
+  const [hasColdItems, setHasColdItems] = useState<boolean>(
+    Boolean(filters.hasColdItems)
+  );
   const [bankAccountIds, setBankAccountIds] = useState<string[]>(
     (filters.bankAccountIds ?? []).map(String)
   );
@@ -333,6 +338,7 @@ function InvoicesMobileFilterSheet({
       if (paymentMethod === "transfer" && bankAccountIds.length > 0)
         f.bankAccountIds = bankAccountIds.map(Number);
     }
+    if (hasColdItems) f.hasColdItems = true;
 
     // Thời gian mua hàng → fromPurchaseDate/toPurchaseDate
     if (
@@ -387,6 +393,7 @@ function InvoicesMobileFilterSheet({
     setCreatedByIds([]);
     setSoldByIds([]);
     setPaymentMethod("");
+    setHasColdItems(false);
     setBankAccountIds([]);
     setCustomerIds([]);
     setCustomerLabel("");
@@ -431,6 +438,7 @@ function InvoicesMobileFilterSheet({
     createdByIds.length > 0,
     soldByIds.length > 0,
     !!paymentMethod,
+    hasColdItems,
     purchaseDateMode === "custom"
       ? !!(purchaseFromDate || purchaseToDate)
       : purchasePreset !== "all_time",
@@ -458,6 +466,40 @@ function InvoicesMobileFilterSheet({
           values={statusIds}
           onChange={setStatusIds}
         />
+      </FilterSection>
+
+      <FilterSection
+        label="Loại hàng"
+        summary={hasColdItems ? "Hàng lạnh" : undefined}>
+        <button
+          type="button"
+          onClick={() => setHasColdItems((current) => !current)}
+          className={`flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+            hasColdItems
+              ? "border-red-300 bg-red-50"
+              : "border-gray-200 hover:bg-gray-50"
+          }`}>
+          <span className="flex min-w-0 items-center gap-2">
+            <Snowflake
+              className={`h-4 w-4 shrink-0 ${
+                hasColdItems ? "text-red-500" : "text-gray-400"
+              }`}
+            />
+            <span className="text-sm font-medium text-gray-700">
+              Chỉ hóa đơn hàng lạnh
+            </span>
+          </span>
+          <span
+            className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
+              hasColdItems ? "bg-red-400" : "bg-gray-200"
+            }`}>
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                hasColdItems ? "translate-x-4" : "translate-x-0.5"
+              }`}
+            />
+          </span>
+        </button>
       </FilterSection>
 
       {/* Thời gian mua hàng */}
