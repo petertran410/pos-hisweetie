@@ -129,6 +129,8 @@ export function DashboardHeader() {
     () => [
       { label: "Sổ quỹ", href: "/tai-chinh/so-quy" },
       { label: "Tài chính nội bộ", href: "/tai-chinh/tai-chinh-noi-bo" },
+      { label: "Tiền mặt kho", href: "/tai-chinh/tien-mat-kho" },
+      { label: "Phiếu chi kho", href: "/tai-chinh/phieu-chi-kho" },
       { label: "Approval tuần", href: "/tai-chinh/approval-tuan" },
       { label: "Xăng dầu & chăm sóc xe", href: "/tai-chinh/xe-co" },
       { label: "Biến động số dư", href: "/tai-chinh/bien-dong-so-du" },

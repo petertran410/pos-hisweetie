@@ -68,6 +68,12 @@ export interface InternalFinanceEntry {
     code: string;
     status: string;
     approvalRequestId: number | null;
+    approvalRequest?: {
+      id: number;
+      status: string;
+      instanceCode: string | null;
+      currentNode: string | null;
+    } | null;
   } | null;
   cashFlow?: { id: number; code: string; status: number } | null;
   attachments: InternalFinanceAttachment[];
@@ -98,11 +104,95 @@ export interface InternalFinanceQuery {
   limit?: number;
 }
 
-export interface InternalFinanceResponse {
-  data: InternalFinanceEntry[];
+export interface InternalFinanceResponse<T = InternalFinanceEntry> {
+  data: T[];
   total: number;
   page: number;
   limit: number;
+}
+
+export interface WarehouseCustomer {
+  id: number;
+  code?: string | null;
+  name: string;
+}
+
+export interface WarehouseCashFlowRef {
+  id: number;
+  code: string;
+  customerId?: number | null;
+  amount?: number;
+}
+
+export interface WarehouseAllocatableInvoice {
+  id: number;
+  code: string;
+  customerId?: number | null;
+  debtAmount?: number | string;
+  purchaseDate?: string;
+}
+
+export interface WarehouseReceipt extends InternalFinanceEntry {
+  sourceSnapshot?: (Record<string, unknown> & {
+    receiptKind?: "CUSTOMER" | "WAREHOUSE_SALE";
+    note?: string;
+  }) | null;
+  customers?: WarehouseCustomer[];
+  note?: string;
+  postedCashFlows?: WarehouseCashFlowRef[];
+  allocatableInvoices?: WarehouseAllocatableInvoice[];
+  invoiceLinks: Array<{
+    invoice: {
+      id: number;
+      code: string;
+      customerId?: number | null;
+      debtAmount?: number | string;
+      grandTotal?: number | string;
+      purchaseDate?: string;
+      customer?: WarehouseCustomer | null;
+    };
+  }>;
+}
+
+export interface WarehouseReceiptQuery {
+  branchIds?: number[];
+  fromDate?: string;
+  toDate?: string;
+  receiptStatus?: "OPEN" | "POSTED" | "CANCELLED" | "";
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface WarehouseExpenseQuery {
+  branchId?: number;
+  category?: string;
+  status?: string;
+  cashIssued?: "ISSUED" | "NOT_ISSUED" | "";
+  fromDate?: string;
+  toDate?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface WarehouseExpenseInput {
+  branchId: number;
+  amount: number;
+  occurredAt: string;
+  description: string;
+  attachments?: InternalFinanceAttachment[];
+}
+
+export interface WarehouseReceiptInput {
+  branchId?: number;
+  amount?: number;
+  occurredAt?: string;
+  description?: string;
+  note?: string;
+  receiptKind?: "CUSTOMER" | "WAREHOUSE_SALE";
+  customers?: Array<{ customerId: number; invoiceIds?: number[] }>;
+  attachments?: InternalFinanceAttachment[];
 }
 
 export interface InternalFinanceSummary {
@@ -242,6 +332,96 @@ export const internalFinanceApi = {
     cashIssued: boolean,
   ): Promise<InternalFinanceEntry> =>
     apiClient.patch(`/internal-finance/${id}/cash-issued`, { cashIssued }),
+
+  warehouseReceipts: (
+    params?: WarehouseReceiptQuery,
+  ): Promise<InternalFinanceResponse<WarehouseReceipt>> =>
+    apiClient.get("/internal-finance/warehouse-receipts", params),
+
+  warehouseReceipt: (id: number): Promise<WarehouseReceipt> =>
+    apiClient.get(`/internal-finance/warehouse-receipts/${id}`),
+
+  warehouseExpenses: (
+    params?: WarehouseExpenseQuery,
+  ): Promise<InternalFinanceResponse<InternalFinanceEntry>> =>
+    apiClient.get("/internal-finance/warehouse-expenses", params),
+
+  createWarehouseExpense: (
+    payload: WarehouseExpenseInput,
+  ): Promise<InternalFinanceEntry> =>
+    apiClient.post("/internal-finance/warehouse-expenses/manual", payload),
+
+  updateWarehouseExpense: (
+    id: number,
+    payload: Partial<Omit<WarehouseExpenseInput, "branchId">>,
+  ): Promise<InternalFinanceEntry> =>
+    apiClient.patch(`/internal-finance/warehouse-expenses/${id}`, payload),
+
+  warehouseExpenseBatches: (
+    params?: InternalFinanceQuery,
+  ): Promise<WeeklyBatch[]> =>
+    apiClient.get("/internal-finance/warehouse-expenses/weekly-batches", params),
+
+  warehouseExpenseBatch: (
+    id: number,
+  ): Promise<WeeklyBatch & { entries: InternalFinanceEntry[] }> =>
+    apiClient.get(`/internal-finance/warehouse-expenses/weekly-batches/${id}`),
+
+  prepareWarehouseExpenseBatch: (payload: {
+    branchId: number;
+    weekStart: string;
+    weekEnd: string;
+  }): Promise<WeeklyBatch> =>
+    apiClient.post(
+      "/internal-finance/warehouse-expenses/weekly-batches/prepare",
+      payload,
+    ),
+
+  createWarehouseExpenseApproval: (
+    id: number,
+    payload?: { detailUrl?: string; viewUrl?: string },
+  ): Promise<unknown> =>
+    apiClient.post(
+      `/internal-finance/warehouse-expenses/weekly-batches/${id}/create-approval`,
+      payload,
+    ),
+
+  markWarehouseExpenseIssued: (
+    id: number,
+    cashIssued: boolean,
+  ): Promise<InternalFinanceEntry> =>
+    apiClient.patch(`/internal-finance/warehouse-expenses/${id}/mark-issued`, {
+      cashIssued,
+    }),
+
+  createWarehouseReceipt: (
+    payload: WarehouseReceiptInput,
+  ): Promise<WarehouseReceipt> =>
+    apiClient.post("/internal-finance/warehouse-receipts", payload),
+
+  updateWarehouseReceipt: (
+    id: number,
+    payload: Partial<WarehouseReceiptInput>,
+  ): Promise<WarehouseReceipt> =>
+    apiClient.patch(`/internal-finance/warehouse-receipts/${id}`, payload),
+
+  postWarehouseReceipt: (
+    id: number,
+    payload: {
+      allocations: Array<{
+        customerId: number;
+        amount: number;
+        invoices: Array<{ invoiceId: number; amount: number }>;
+      }>;
+    },
+  ): Promise<WarehouseReceipt> =>
+    apiClient.post(`/internal-finance/warehouse-receipts/${id}/post`, payload),
+
+  cancelWarehouseReceipt: (
+    id: number,
+    payload: { cancelCashFlows: boolean },
+  ): Promise<WarehouseReceipt> =>
+    apiClient.put(`/internal-finance/warehouse-receipts/${id}/cancel`, payload),
 
   postEntry: (id: number): Promise<unknown> =>
     apiClient.post(`/internal-finance/${id}/post`),

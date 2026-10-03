@@ -191,7 +191,10 @@ export function useDeleteCustomer() {
   });
 }
 
-export function useSearchCustomers(search?: string) {
+export function useSearchCustomers(
+  search?: string,
+  options?: { enabled?: boolean },
+) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const hasHydrated = useAuthStore((state) => state._hasHydrated);
 
@@ -205,7 +208,10 @@ export function useSearchCustomers(search?: string) {
       }>("/customers/search", params);
       return response;
     },
-    enabled: hasHydrated && isAuthenticated,
+    enabled:
+      (options?.enabled ?? true) &&
+      hasHydrated &&
+      isAuthenticated,
   });
 }
 

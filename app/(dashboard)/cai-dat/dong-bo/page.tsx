@@ -152,6 +152,42 @@ export default function SyncSettingsPage() {
       APPROVAL_VP: "Approval tuần văn phòng",
     })[source] || source;
 
+  type WarehouseCashImportResult = {
+    dryRun: boolean;
+    fetched: number;
+    created: number;
+    updated: number;
+    skipped: number;
+    otherBranch: number;
+    unmatchedCustomers: string[];
+  };
+
+  const importWarehouseCash = useMutation({
+    mutationFn: (dryRun: boolean) =>
+      apiClient.post<WarehouseCashImportResult>(
+        "/internal-finance/warehouse-receipts/lark-import",
+        { dryRun },
+        15 * 60 * 1000,
+      ),
+  });
+
+  const handlePreviewWarehouseCash = () => {
+    importWarehouseCash.mutate(true);
+  };
+
+  const handleCommitWarehouseCash = async () => {
+    const result = await Swal.fire({
+      title: "Nhập lịch sử tiền mặt kho vào POS?",
+      text: "Chỉ tạo phiếu tiền mặt của Kho Hà Nội và Kho Sài Gòn. Không tạo phiếu thu sổ quỹ và không ghi ngược sang Lark.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Nhập vào POS",
+      cancelButtonText: "Hủy",
+      confirmButtonColor: "#0f766e",
+    });
+    if (result.isConfirmed) importWarehouseCash.mutate(false);
+  };
+
   const handlePreviewLarkFinance = () => {
     importLarkFinance.mutate(true);
   };
@@ -589,6 +625,70 @@ export default function SyncSettingsPage() {
                   )}
                 </button>
               </div>
+            </div>
+          </PermissionGate>
+
+          <PermissionGate resource="cash_flows" action="create">
+            <div className="rounded-lg border bg-white p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-100">
+                    <Landmark className="h-6 w-6 text-teal-700" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold">Nhập lịch sử tiền mặt kho</h2>
+                    <p className="max-w-2xl text-sm text-gray-500">
+                      Lấy phiếu thu tiền mặt của Kho Hà Nội và Kho Sài Gòn. Mỗi phiếu
+                      nhận mã TCNB-THU. Không tạo phiếu thu sổ quỹ.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePreviewWarehouseCash}
+                    disabled={importWarehouseCash.isPending}
+                    className="inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    {importWarehouseCash.isPending && (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    )}
+                    Kiểm tra dữ liệu
+                  </button>
+                  {importWarehouseCash.data?.dryRun && (
+                    <button
+                      type="button"
+                      onClick={handleCommitWarehouseCash}
+                      disabled={importWarehouseCash.isPending}
+                      className="inline-flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-50">
+                      <RefreshCw className="h-4 w-4" />
+                      Nhập vào POS
+                    </button>
+                  )}
+                </div>
+              </div>
+              {importWarehouseCash.data && (
+                <div className="mt-4 grid gap-3 text-sm text-gray-700 sm:grid-cols-4">
+                  <div>Đọc: {importWarehouseCash.data.fetched}</div>
+                  <div>Tạo: {importWarehouseCash.data.created}</div>
+                  <div>Cập nhật: {importWarehouseCash.data.updated}</div>
+                  <div>Bỏ qua: {importWarehouseCash.data.skipped}</div>
+                  {importWarehouseCash.data.otherBranch > 0 && (
+                    <div className="sm:col-span-4 text-gray-500">
+                      {importWarehouseCash.data.otherBranch} dòng không thuộc hai kho.
+                    </div>
+                  )}
+                  {importWarehouseCash.data.unmatchedCustomers.length > 0 && (
+                    <div className="sm:col-span-4 text-gray-500">
+                      Chưa khớp khách: {importWarehouseCash.data.unmatchedCustomers.join(", ")}
+                    </div>
+                  )}
+                </div>
+              )}
+              {importWarehouseCash.isError && (
+                <p className="mt-4 text-sm text-red-700">
+                  Không đọc được dữ liệu tiền mặt kho.
+                </p>
+              )}
             </div>
           </PermissionGate>
 

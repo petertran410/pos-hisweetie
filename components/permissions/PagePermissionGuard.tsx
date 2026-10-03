@@ -6,18 +6,29 @@ import { ShieldOff } from "lucide-react";
 import Link from "next/link";
 
 interface PagePermissionGuardProps {
-  resource: string;
-  action: string;
+  resource?: string;
+  action?: string;
+  permissions?: Array<{ resource: string; action: string }>;
   children: React.ReactNode;
 }
 
 export function PagePermissionGuard({
   resource,
   action,
+  permissions,
   children,
 }: PagePermissionGuardProps) {
-  const { _hasHydrated, isProfileSynced, isAuthenticated } = useAuthStore();
-  const hasPermission = usePermission(resource, action);
+  const { _hasHydrated, isProfileSynced, isAuthenticated, user } =
+    useAuthStore();
+  const singlePermission = usePermission(resource || "", action || "");
+  const hasPermission = permissions?.length
+    ? Boolean(user?.roles?.includes("Super Admin")) ||
+      permissions.some((permission) =>
+        user?.permissions?.includes(
+          `${permission.resource}:${permission.action}`,
+        ),
+      )
+    : singlePermission;
 
   // Hiện loading khi:
   // - Chưa rehydrate localStorage xong, HOẶC
@@ -56,7 +67,15 @@ export function PagePermissionGuard({
             </Link>
           </div>
           <p className="text-xs text-gray-400 mt-4">
-            Quyền cần thiết: {resource}:{action}
+            Quyền cần thiết:{" "}
+            {permissions?.length
+              ? permissions
+                  .map(
+                    (permission) =>
+                      `${permission.resource}:${permission.action}`,
+                  )
+                  .join(" hoặc ")
+              : `${resource}:${action}`}
           </p>
         </div>
       </div>

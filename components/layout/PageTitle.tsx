@@ -34,7 +34,11 @@ const TITLE_MAP: Array<{ prefix: string; title: string }> = [
   { prefix: "/san-pham/xuat-huy", title: "Xuất hủy" },
   { prefix: "/san-pham/xuat-dung-noi-bo", title: "Xuất dùng nội bộ" },
   { prefix: "/san-pham/nha-cung-cap", title: "Nhà cung cấp" },
-  { prefix: "/san-pham/dat-hang-nhap-chi-tiet", title: "Đặt hàng nhập chi tiết" },
+  { prefix: "/san-pham/nha-may", title: "Nhà máy" },
+  {
+    prefix: "/san-pham/dat-hang-nhap-chi-tiet",
+    title: "Đặt hàng nhập chi tiết",
+  },
   { prefix: "/san-pham/dat-hang-nhap", title: "Đặt hàng nhập" },
   { prefix: "/san-pham/nhap-hang", title: "Nhập hàng" },
   { prefix: "/san-pham/ghep-xe", title: "Ghép xe" },
@@ -49,6 +53,8 @@ const TITLE_MAP: Array<{ prefix: string; title: string }> = [
 
   // Tài chính
   { prefix: "/tai-chinh/tai-chinh-noi-bo", title: "Tài chính nội bộ" },
+  { prefix: "/tai-chinh/tien-mat-kho", title: "Tiền mặt kho" },
+  { prefix: "/tai-chinh/phieu-chi-kho", title: "Phiếu chi kho" },
   { prefix: "/tai-chinh/approval-tuan", title: "Approval tuần" },
   { prefix: "/tai-chinh/xe-co", title: "Xăng dầu & chăm sóc xe" },
   { prefix: "/tai-chinh/so-quy", title: "Sổ quỹ" },

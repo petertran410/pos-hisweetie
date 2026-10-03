@@ -16,10 +16,11 @@ import { useState } from "react";
 import { useAuthStore } from "../store/auth";
 import { useBranchStore } from "../store/branch";
 
-export function useInvoices(params?: any) {
+export function useInvoices(params?: any, enabled = true) {
   return useQuery({
     queryKey: ["invoices", params],
     queryFn: () => invoicesApi.getInvoices(params),
+    enabled,
     placeholderData: keepPreviousData,
   });
 }
