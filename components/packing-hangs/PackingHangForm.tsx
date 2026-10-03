@@ -77,6 +77,7 @@ export function PackingHangForm({
     branchId?: number | null;
     purchaseDate?: string | null;
     customer?: { id: number; name: string } | null;
+    packingCount?: number;
     hasColdItems?: boolean;
     coldItemCount?: number;
     coldItems?: ColdCargoItem[];
@@ -171,6 +172,7 @@ export function PackingHangForm({
       pageSize: 100,
       search: debouncedInvoiceSearch || undefined,
       excludeDelivered: true,
+      packingType: "dong-hang",
     },
     docType === "invoice",
   );
@@ -229,6 +231,7 @@ export function PackingHangForm({
           branchId: invoice.branchId ?? null,
           purchaseDate: (invoice as any).purchaseDate ?? null,
           customer: invoice.customer ?? null,
+          packingCount: invoice.packingCount,
           hasColdItems: invoice.hasColdItems,
           coldItemCount: invoice.coldItemCount,
           coldItems: invoice.coldItems,
@@ -496,6 +499,11 @@ export function PackingHangForm({
                             <div className="text-xs text-gray-500 truncate">
                               {invoice.customer?.name}
                             </div>
+                            {typeof invoice.packingCount === "number" && (
+                              <div className="text-xs text-gray-400">
+                                Đã đóng hàng {invoice.packingCount} lần
+                              </div>
+                            )}
                           </div>
                         </label>
                       ))}

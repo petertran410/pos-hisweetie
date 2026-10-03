@@ -268,6 +268,7 @@ export const invoicesApi = {
     pageSize?: number;
     search?: string;
     excludeDelivered?: boolean;
+    packingType?: "giao-hang" | "dong-hang" | "loading";
   }): Promise<{ data: Invoice[]; total: number; page: number; limit: number }> => {
     return apiClient.get("/invoices/for-packing", params);
   },

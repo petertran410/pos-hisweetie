@@ -103,6 +103,7 @@ export function PackingSlipForm({
     code: string;
     grandTotal: number;
     customer?: { id: number; name: string } | null;
+    packingCount?: number;
     hasColdItems?: boolean;
     coldItemCount?: number;
     coldItems?: ColdCargoItem[];
@@ -286,6 +287,7 @@ export function PackingSlipForm({
       branchId: branchId || undefined,
       pageSize: 100,
       search: debouncedInvoiceSearch || undefined,
+      packingType: "giao-hang",
     },
     docType === "invoice",
   );
@@ -325,6 +327,7 @@ export function PackingSlipForm({
           code: inv.code,
           grandTotal: inv.grandTotal,
           customer: inv.customer ?? null,
+          packingCount: inv.packingCount,
           hasColdItems: inv.hasColdItems,
           coldItemCount: inv.coldItemCount,
           coldItems: inv.coldItems,
@@ -412,6 +415,7 @@ export function PackingSlipForm({
             code: inv.code,
             grandTotal: inv.grandTotal,
             customer: inv.customer ?? null,
+            packingCount: inv.packingCount,
             hasColdItems: inv.hasColdItems,
             coldItemCount: inv.coldItemCount,
             coldItems: inv.coldItems,
@@ -679,6 +683,11 @@ export function PackingSlipForm({
                             <div className="text-xs text-gray-500 truncate">
                               {invoice.customer?.name}
                             </div>
+                            {typeof invoice.packingCount === "number" && (
+                              <div className="text-xs text-gray-400">
+                                Đã giao hàng {invoice.packingCount} lần
+                              </div>
+                            )}
                           </div>
                         </label>
                       ))}

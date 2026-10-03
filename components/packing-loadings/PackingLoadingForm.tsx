@@ -82,6 +82,7 @@ export function PackingLoadingForm({
     branchId?: number | null;
     purchaseDate?: string | null;
     customer?: { id: number; name: string } | null;
+    packingCount?: number;
     hasColdItems?: boolean;
     coldItemCount?: number;
     coldItems?: ColdCargoItem[];
@@ -179,6 +180,7 @@ export function PackingLoadingForm({
       pageSize: 100,
       search: debouncedInvoiceSearch || undefined,
       excludeDelivered: true,
+      packingType: "loading",
     },
     docType === "invoice",
   );
@@ -251,6 +253,7 @@ export function PackingLoadingForm({
           branchId: invoice.branchId ?? null,
           purchaseDate: (invoice as any).purchaseDate ?? null,
           customer: invoice.customer ?? null,
+          packingCount: invoice.packingCount,
           hasColdItems: invoice.hasColdItems,
           coldItemCount: invoice.coldItemCount,
           coldItems: invoice.coldItems,
@@ -573,6 +576,11 @@ export function PackingLoadingForm({
                             <div className="text-xs text-gray-500 truncate">
                               {invoice.customer?.name}
                             </div>
+                            {typeof invoice.packingCount === "number" && (
+                              <div className="text-xs text-gray-400">
+                                Đã loading {invoice.packingCount} lần
+                              </div>
+                            )}
                           </div>
                         </label>
                       ))}

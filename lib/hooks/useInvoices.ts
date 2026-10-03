@@ -42,6 +42,7 @@ export function useInvoicesForPacking(
     pageSize?: number;
     search?: string;
     excludeDelivered?: boolean;
+    packingType?: "giao-hang" | "dong-hang" | "loading";
   },
   enabled = true,
 ) {
