@@ -23,6 +23,14 @@ export interface MisaDictionarySyncResult {
   };
 }
 
+export interface MisaStockSyncResult {
+  success: boolean;
+  message: string;
+  data?: {
+    stocks: number;
+  };
+}
+
 export interface MisaEmployee {
   id: string;
   code: string;
@@ -78,6 +86,10 @@ export const misaApi = {
   /** Đồng bộ toàn bộ danh mục Misa về database */
   syncDictionary: (): Promise<MisaDictionarySyncResult> => {
     return apiClient.post(`/misa/dictionary/sync`);
+  },
+  /** Đồng bộ riêng danh sách kho Misa về database */
+  syncStocks: (): Promise<MisaStockSyncResult> => {
+    return apiClient.post(`/misa/stocks/sync`);
   },
   /** Đẩy hàng loạt hóa đơn lên Misa theo danh sách mã */
   createVouchersBulk: (
