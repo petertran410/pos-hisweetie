@@ -76,6 +76,7 @@ export interface InternalFinanceEntry {
     } | null;
   } | null;
   cashFlow?: { id: number; code: string; status: number } | null;
+  fundTransaction?: { id: number; code: string; status: string } | null;
   attachments: InternalFinanceAttachment[];
   invoiceLinks: Array<{
     invoice: { id: number; code: string };

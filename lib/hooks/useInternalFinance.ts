@@ -154,6 +154,7 @@ function invalidateInternalFinance(queryClient: ReturnType<typeof useQueryClient
   queryClient.invalidateQueries({ queryKey: ["internal-finance"] });
   queryClient.invalidateQueries({ queryKey: ["warehouse-receipts"] });
   queryClient.invalidateQueries({ queryKey: ["warehouse-expenses"] });
+  queryClient.invalidateQueries({ queryKey: ["internal-fund"] });
   queryClient.invalidateQueries({ queryKey: ["cashflows"] });
   queryClient.invalidateQueries({ queryKey: ["approval-requests"] });
   queryClient.invalidateQueries({ queryKey: ["invoices"] });

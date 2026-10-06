@@ -55,6 +55,7 @@ const TITLE_MAP: Array<{ prefix: string; title: string }> = [
   { prefix: "/tai-chinh/tai-chinh-noi-bo", title: "Tài chính nội bộ" },
   { prefix: "/tai-chinh/tien-mat-kho", title: "Tiền mặt kho" },
   { prefix: "/tai-chinh/phieu-chi-kho", title: "Phiếu chi kho" },
+  { prefix: "/tai-chinh/quy-noi-bo", title: "Quỹ nội bộ" },
   { prefix: "/tai-chinh/approval-tuan", title: "Approval tuần" },
   { prefix: "/tai-chinh/xe-co", title: "Xăng dầu & chăm sóc xe" },
   { prefix: "/tai-chinh/so-quy", title: "Sổ quỹ" },

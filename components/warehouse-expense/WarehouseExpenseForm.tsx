@@ -58,7 +58,8 @@ export function WarehouseExpenseForm({
         if (![1, 4, 6, 7].includes(branch.id)) return false;
         if (user?.roles?.includes("Super Admin")) return true;
         const action = `warehouse_expense:create_${scopeForBranch(branch.id)}`;
-        return user?.permissions?.includes(action);
+        return user?.permissions?.includes(action) ||
+          user?.permissions?.includes(`internal_fund:create_expense_${scopeForBranch(branch.id)}`);
       }),
     [branchData, user],
   );
@@ -121,7 +122,7 @@ export function WarehouseExpenseForm({
           id: expense.id,
           payload: {
             amount: parsedAmount,
-            occurredAt: `${occurredAt}T00:00:00.000Z`,
+            occurredAt: `${occurredAt}T00:00:00+07:00`,
             description: description.trim(),
             ...(attachments.length ? { attachments: attachmentsPayload } : {}),
           },
@@ -133,7 +134,7 @@ export function WarehouseExpenseForm({
     const payload: WarehouseExpenseInput = {
       branchId: selectedBranchId,
       amount: parsedAmount,
-      occurredAt: `${occurredAt}T00:00:00.000Z`,
+      occurredAt: `${occurredAt}T00:00:00+07:00`,
       description: description.trim(),
       attachments: attachmentsPayload,
     };

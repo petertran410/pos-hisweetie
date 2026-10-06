@@ -207,9 +207,10 @@ export function WarehouseExpenseTable({
                     )}
                   </td>
                   <td className="px-4 py-2.5">
-                    {row.cashFlow?.code ? (
-                      <div className="font-mono text-xs text-green-700">
-                        {row.cashFlow.code}
+                    {row.fundTransaction?.code ? (
+                      <div className={`font-mono text-xs ${row.fundTransaction.status === "CANCELLED" ? "text-red-600" : "text-green-700"}`}>
+                        {row.fundTransaction.code}
+                        {row.fundTransaction.status === "CANCELLED" && <span className="mt-1 block font-sans">Đã hủy giao dịch quỹ</span>}
                       </div>
                     ) : row.cashIssued ? (
                       <span className="text-xs font-medium text-green-700">Đã chi</span>

@@ -5,22 +5,24 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-  Search,
   Send,
   WalletCards,
 } from "lucide-react";
 import Swal from "sweetalert2";
-import { InternalFinanceDateField } from "@/components/internal-finance/InternalFinanceDateField";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { WarehouseCashAttachmentsModal } from "@/components/warehouse-cash/WarehouseCashAttachmentsModal";
 import { WarehouseExpenseApprovalModal } from "@/components/warehouse-expense/WarehouseExpenseApprovalModal";
 import { WarehouseExpenseForm } from "@/components/warehouse-expense/WarehouseExpenseForm";
 import { WarehouseExpenseTable } from "@/components/warehouse-expense/WarehouseExpenseTable";
+import {
+  loadWarehouseExpenseFilters,
+  WarehouseExpenseSidebar,
+  type WarehouseExpenseSidebarFilters,
+} from "@/components/warehouse-expense/WarehouseExpenseSidebar";
 import type {
   InternalFinanceEntry,
   WarehouseExpenseQuery,
 } from "@/lib/api/internal-finance";
-import { useBranches } from "@/lib/hooks/useBranches";
 import {
   useMarkWarehouseExpenseIssued,
   useWarehouseExpenses,
@@ -34,58 +36,15 @@ const PAGE_SIZE = 50;
 const scopeForBranch = (branchId: number) =>
   branchId === 6 ? "hn" : branchId === 1 ? "sg" : "vp";
 
-function asBranches(payload: unknown) {
-  if (Array.isArray(payload)) {
-    return payload as Array<{
-      id: number;
-      name: string;
-      isActive?: boolean;
-    }>;
-  }
-  if (
-    payload &&
-    typeof payload === "object" &&
-    Array.isArray((payload as { data?: unknown }).data)
-  ) {
-    return (
-      payload as {
-        data: Array<{ id: number; name: string; isActive?: boolean }>;
-      }
-    ).data;
-  }
-  return [];
-}
-
 function WarehouseExpenseScreen() {
   const { user } = useAuthStore();
   const selectedBranch = useBranchStore((state) => state.selectedBranch);
-  const setSelectedBranch = useBranchStore((state) => state.setSelectedBranch);
-  const { data: branchData } = useBranches();
-  const branches = useMemo(
-    () =>
-      asBranches(branchData).filter((branch) => {
-        if (![1, 4, 6, 7].includes(branch.id)) return false;
-        if (branch.isActive === false) return false;
-        if (user?.roles?.includes("Super Admin")) return true;
-        return user?.permissions?.includes(
-          `warehouse_expense:view_${scopeForBranch(branch.id)}`,
-        );
-      }),
-    [branchData, user],
+  const [filters, setFilters] = useState<WarehouseExpenseSidebarFilters>(() =>
+    loadWarehouseExpenseFilters(selectedBranch?.id),
   );
-  const branchId =
-    branches.find((branch) => branch.id === selectedBranch?.id)?.id ||
-    branches[0]?.id ||
-    6;
+  const branchId = filters.branchId || selectedBranch?.id || 6;
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [category, setCategory] = useState("");
-  const [status, setStatus] = useState("");
-  const [cashIssued, setCashIssued] = useState<"ISSUED" | "NOT_ISSUED" | "">(
-    "",
-  );
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
   const [page, setPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [editingExpense, setEditingExpense] =
@@ -103,34 +62,31 @@ function WarehouseExpenseScreen() {
 
   const canAction = (action: string, targetBranchId = branchId) => {
     if (user?.roles?.includes("Super Admin")) return true;
+    const fundAction = action === "create" ? "create_expense" : action === "update" ? "adjust" :
+      action === "prepare" || action === "submit" ? "submit_approval" : action;
     return Boolean(
       user?.permissions?.includes(
         `warehouse_expense:${action}_${scopeForBranch(targetBranchId)}`,
-      ),
+      ) || user?.permissions?.includes(`internal_fund:${fundAction}_${scopeForBranch(targetBranchId)}`),
     );
   };
 
   const query = useMemo<WarehouseExpenseQuery>(
     () => ({
-      branchId,
-      category: category || undefined,
-      status: status || undefined,
-      cashIssued: cashIssued || undefined,
-      fromDate: fromDate || undefined,
-      toDate: toDate || undefined,
+      branchId: filters.branchId,
+      category: filters.category,
+      status: filters.status,
+      cashIssued: filters.cashIssued,
+      fromDate: filters.fromDate,
+      toDate: filters.toDate,
       search: debouncedSearch || undefined,
       page,
       limit: PAGE_SIZE,
     }),
     [
-      branchId,
-      cashIssued,
-      category,
       debouncedSearch,
-      fromDate,
+      filters,
       page,
-      status,
-      toDate,
     ],
   );
   const expenses = useWarehouseExpenses(query);
@@ -139,31 +95,17 @@ function WarehouseExpenseScreen() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const pageAmount = rows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
 
-  const resetFilters = () => {
-    setSearch("");
-    setCategory("");
-    setStatus("");
-    setCashIssued("");
-    setFromDate("");
-    setToDate("");
-    setPage(1);
-  };
-
-  const handleBranchChange = (nextBranchId: number) => {
-    const nextBranch = branches.find((branch) => branch.id === nextBranchId);
-    if (nextBranch) {
-      setSelectedBranch({
-        ...nextBranch,
-        isActive: nextBranch.isActive !== false,
-      });
-    }
+  const handleFiltersChange = (
+    patch: Partial<WarehouseExpenseSidebarFilters>,
+  ) => {
+    setFilters((current) => ({ ...current, ...patch }));
     setPage(1);
   };
 
   const handleMarkIssued = async (row: InternalFinanceEntry) => {
     const result = await Swal.fire({
       title: "Xác nhận đã chi?",
-      text: "Hệ thống sẽ tạo giao dịch chi tiền mặt trong sổ quỹ kho.",
+      text: "Xác nhận khoản chi và ghi vào quỹ nội bộ.",
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Xác nhận Đã chi",
@@ -184,22 +126,35 @@ function WarehouseExpenseScreen() {
         { resource: "warehouse_expense", action: "view_hn" },
         { resource: "warehouse_expense", action: "view_sg" },
         { resource: "warehouse_expense", action: "view_vp" },
+        { resource: "internal_fund", action: "view_hn" },
+        { resource: "internal_fund", action: "view_sg" },
+        { resource: "internal_fund", action: "view_vp" },
       ]}>
-      <div className="flex h-full min-h-0 flex-col overflow-hidden border-t bg-gray-50">
-        <div className="shrink-0 border-b bg-white px-5 py-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
+      <div className="flex h-full min-h-0 overflow-hidden border-t bg-gray-50">
+        <WarehouseExpenseSidebar
+          filters={filters}
+          onChange={handleFiltersChange}
+        />
+        <main className="m-4 mb-4 ml-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-white shadow-sm">
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b px-4 py-2.5">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex min-w-0 items-center gap-2">
               <WalletCards className="h-5 w-5 text-brand" />
-              <div>
-                <h1 className="text-base font-semibold text-gray-900">
+              <h1 className="whitespace-nowrap text-base font-semibold text-gray-900">
                   Phiếu chi kho
-                </h1>
-                <p className="text-xs text-gray-500">
-                  Tổng hợp chi phí theo tuần, gửi Lark và xác nhận chi tiền mặt.
-                </p>
-              </div>
+              </h1>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <input
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+              placeholder="Tìm mã khoản chi, nội dung, mã báo đơn..."
+              className="h-9 w-64 rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+            />
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
               {canAction("create") && (
                 <button
                   type="button"
@@ -220,106 +175,7 @@ function WarehouseExpenseScreen() {
               )}
             </div>
           </div>
-        </div>
-
-        <div className="shrink-0 border-b bg-white px-5 py-3">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-            <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-gray-600">
-              Chi nhánh
-              <select
-                value={branchId}
-                onChange={(event) =>
-                  handleBranchChange(Number(event.target.value))
-                }
-                className="dt-select h-10 w-full">
-                {branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-gray-600">
-              Khoản mục
-              <select
-                value={category}
-                onChange={(event) => {
-                  setCategory(event.target.value);
-                  setPage(1);
-                }}
-                className="dt-select h-10 w-full">
-                <option value="">Tất cả khoản mục</option>
-                <option value="DELIVERY_FEE">Chi phí giao hàng</option>
-                <option value="FUEL">Xăng dầu</option>
-                <option value="VEHICLE_CARE">Chăm sóc xe</option>
-                <option value="OTHER_EXPENSE">Chi phí khác</option>
-              </select>
-            </label>
-            <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-gray-600">
-              Trạng thái
-              <select
-                value={status}
-                onChange={(event) => {
-                  setStatus(event.target.value);
-                  setPage(1);
-                }}
-                className="dt-select h-10 w-full">
-                <option value="">Tất cả trạng thái</option>
-                <option value="PENDING_ACCOUNTANT">Chờ kế toán</option>
-                <option value="READY_FOR_WEEKLY_APPROVAL">Sẵn sàng tổng hợp</option>
-                <option value="IN_WEEKLY_APPROVAL">Đang duyệt</option>
-                <option value="APPROVED">Đã duyệt</option>
-                <option value="POSTED">Đã ghi sổ</option>
-                <option value="REJECTED">Từ chối</option>
-              </select>
-            </label>
-            <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-gray-600">
-              Tiền chi
-              <select
-                value={cashIssued}
-                onChange={(event) => {
-                  setCashIssued(
-                    event.target.value as "ISSUED" | "NOT_ISSUED" | "",
-                  );
-                  setPage(1);
-                }}
-                className="dt-select h-10 w-full">
-                <option value="">Tất cả</option>
-                <option value="NOT_ISSUED">Chưa chi</option>
-                <option value="ISSUED">Đã chi</option>
-              </select>
-            </label>
-            <InternalFinanceDateField
-              label="Từ ngày"
-              value={fromDate}
-              onChange={(value) => {
-                setFromDate(value || "");
-                setPage(1);
-              }}
-            />
-            <InternalFinanceDateField
-              label="Đến ngày"
-              value={toDate}
-              onChange={(value) => {
-                setToDate(value || "");
-                setPage(1);
-              }}
-            />
-          </div>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            <div className="relative min-w-[260px] max-w-md flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                value={search}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setPage(1);
-                }}
-                placeholder="Tìm mã khoản chi, nội dung, mã báo đơn..."
-                className="dt-input h-10 w-full pl-9"
-              />
-            </div>
-            <div className="flex items-center gap-4 text-sm">
+        <div className="flex shrink-0 items-center justify-end gap-4 border-b px-4 py-2 text-sm">
               <span className="text-gray-500">
                 Số dòng: <strong className="text-gray-900">{total}</strong>
               </span>
@@ -331,15 +187,13 @@ function WarehouseExpenseScreen() {
               </span>
               <button
                 type="button"
-                onClick={resetFilters}
+                onClick={() => setSearch("")}
                 className="text-sm font-medium text-brand hover:underline">
-                Xóa lọc
+                Xóa tìm kiếm
               </button>
-            </div>
-          </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-b-xl border-x border-b bg-white">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {expenses.isError ? (
             <div className="flex flex-1 items-center justify-center text-sm text-red-600">
               {expenses.error instanceof Error
@@ -389,6 +243,7 @@ function WarehouseExpenseScreen() {
             </div>
           </div>
         </div>
+        </main>
       </div>
 
       {showForm && (
