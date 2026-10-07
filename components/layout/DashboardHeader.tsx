@@ -83,6 +83,10 @@ export function DashboardHeader() {
             label: "Xuất dùng nội bộ",
             href: "/san-pham/xuat-dung-noi-bo",
           },
+          {
+            label: "Trả hàng xuất dùng nội bộ",
+            href: "/san-pham/tra-hang-xuat-dung-noi-bo",
+          },
         ],
       },
       {

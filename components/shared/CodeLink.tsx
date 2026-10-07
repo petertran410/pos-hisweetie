@@ -27,6 +27,7 @@ export type CodeEntity =
   | "stock-condition-transfer"
   | "destruction"
   | "internal-use"
+  | "internal-use-return"
   | "production"
   | "packing-slip"
   | "debt-offset"
@@ -53,6 +54,7 @@ const ROUTES: Record<CodeEntity, string> = {
   "stock-condition-transfer": "/san-pham/chuyen-loai-ton",
   destruction: "/san-pham/xuat-huy",
   "internal-use": "/san-pham/xuat-dung-noi-bo",
+  "internal-use-return": "/san-pham/tra-hang-xuat-dung-noi-bo",
   production: "/san-pham/san-xuat",
   "packing-slip": "/don-hang/bao-don",
   "debt-offset": "/don-hang/can-tru-cong-no",
