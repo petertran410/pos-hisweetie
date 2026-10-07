@@ -9,6 +9,7 @@ import { Editor } from "@tinymce/tinymce-react";
 import { PrintPreviewPane } from "./PrintPreviewPane";
 import { VariableTokenModal } from "./VariableTokenModal";
 import { replaceTokensWithDummy } from "./dummy-data";
+import { addPrintSerialNumberColumn } from "@/lib/utils/print";
 
 interface Props {
   template: any;
@@ -71,7 +72,10 @@ export function PrintTemplateEditorModal({
     });
   };
 
-  const previewHtml = replaceTokensWithDummy(content, templateFor, itemKeys);
+  const previewHtml = addPrintSerialNumberColumn(
+    replaceTokensWithDummy(content, templateFor, itemKeys),
+    templateFor
+  );
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

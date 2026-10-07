@@ -1,5 +1,148 @@
 import { printTemplatesApi } from "@/lib/api/print-templates";
 
+const ITEM_TABLE_HEADER_GROUPS = [
+  ["san pham", "ten hang", "hang hoa", "ma hang"],
+  ["don gia"],
+  ["so luong", "sl"],
+  ["don vi", "dvt"],
+  ["thanh tien"],
+];
+function normalizePrintText(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getDirectCells(row: HTMLTableRowElement): HTMLTableCellElement[] {
+  return Array.from(row.children).filter(
+    (child): child is HTMLTableCellElement =>
+      child instanceof HTMLTableCellElement &&
+      (child.tagName === "TD" || child.tagName === "TH")
+  );
+}
+
+function createSerialCell(
+  document: Document,
+  sourceCell: HTMLTableCellElement,
+  value: string
+): HTMLTableCellElement {
+  const serialCell = document.createElement(
+    sourceCell.tagName.toLowerCase()
+  ) as HTMLTableCellElement;
+  serialCell.textContent = value;
+  serialCell.removeAttribute("width");
+  serialCell.style.cssText =
+    "width:1%;min-width:0;max-width:1%;padding-left:4px;padding-right:4px;" +
+    "text-align:center;white-space:nowrap;";
+  return serialCell;
+}
+
+function addSerialColumnDefinition(
+  document: Document,
+  table: HTMLTableElement
+): void {
+  let colGroup = Array.from(table.children).find(
+    (child): child is HTMLElement =>
+      child.tagName.toLowerCase() === "colgroup"
+  );
+
+  if (!colGroup) {
+    colGroup = document.createElement("colgroup");
+    table.insertBefore(colGroup, table.firstChild);
+  }
+
+  const serialColumn = document.createElement("col");
+  serialColumn.setAttribute("width", "1%");
+  serialColumn.style.width = "1%";
+  serialColumn.style.minWidth = "0";
+  colGroup.insertBefore(serialColumn, colGroup.firstChild);
+}
+
+/**
+ * The item table is stored as an editable HTML template, so the serial-number
+ * column is added after the backend has rendered the template. This keeps
+ * existing saved templates working without changing their stored content.
+ */
+export function addPrintSerialNumberColumn(
+  content: string,
+  templateFor: string
+): string {
+  if (
+    !content ||
+    (templateFor !== "order" && templateFor !== "invoice") ||
+    typeof DOMParser === "undefined"
+  ) {
+    return content;
+  }
+
+  const document = new DOMParser().parseFromString(
+    `<div id="print-root">${content}</div>`,
+    "text/html"
+  );
+  const root = document.querySelector("#print-root");
+  if (!root) return content;
+
+  const tables = Array.from(root.querySelectorAll("table"));
+  for (const table of tables) {
+    const rows = Array.from(table.querySelectorAll("tr")).filter(
+      (row) => row.closest("table") === table
+    ) as HTMLTableRowElement[];
+
+    const headerRow = rows.find((row) => {
+      const cells = getDirectCells(row);
+      if (cells.length < 3) return false;
+
+      const headerText = normalizePrintText(row.textContent || "");
+      const matchedGroups = ITEM_TABLE_HEADER_GROUPS.filter((group) =>
+        group.some((header) => headerText.includes(header))
+      ).length;
+
+      return matchedGroups >= 3;
+    });
+
+    if (!headerRow) continue;
+
+    const headerCells = getDirectCells(headerRow);
+    const hasSerialNumber = headerCells.some((cell) =>
+      normalizePrintText(cell.textContent || "").includes("stt")
+    );
+    if (hasSerialNumber) return root.innerHTML;
+
+    addSerialColumnDefinition(document, table);
+
+    const headerCell = createSerialCell(
+      document,
+      headerCells[0],
+      "STT"
+    );
+    headerRow.insertBefore(headerCell, headerRow.firstChild);
+
+    let serialNumber = 1;
+    const headerIndex = rows.indexOf(headerRow);
+    for (const row of rows.slice(headerIndex + 1)) {
+      const cells = getDirectCells(row);
+      const hasColspan = cells.some((cell) => cell.hasAttribute("colspan"));
+      if (!cells.length || hasColspan || cells.length !== headerCells.length) {
+        continue;
+      }
+
+      const serialCell = createSerialCell(
+        document,
+        cells[0],
+        String(serialNumber++)
+      );
+      row.insertBefore(serialCell, row.firstChild);
+    }
+
+    return root.innerHTML;
+  }
+
+  return content;
+}
+
 export function buildPrintDocumentHtml(content: string): string {
   return `<!DOCTYPE html>
 <html>
@@ -85,7 +228,11 @@ export async function printEntity(
   }
 
   doc.open();
-  doc.write(buildPrintDocumentHtml(preview.content));
+  doc.write(
+    buildPrintDocumentHtml(
+      addPrintSerialNumberColumn(preview.content, templateFor)
+    )
+  );
   doc.close();
 
   // Đợi render xong rồi in, resolve sau khi print dialog đóng
