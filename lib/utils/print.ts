@@ -36,7 +36,7 @@ function createSerialCell(
   serialCell.removeAttribute("width");
   serialCell.style.cssText =
     "width:1%;min-width:0;max-width:1%;padding-left:4px;padding-right:4px;" +
-    "text-align:center;white-space:nowrap;";
+    "text-align:center;white-space:nowrap;font-size:10px;";
   return serialCell;
 }
 
@@ -45,8 +45,7 @@ function addSerialColumnDefinition(
   table: HTMLTableElement
 ): void {
   let colGroup = Array.from(table.children).find(
-    (child): child is HTMLElement =>
-      child.tagName.toLowerCase() === "colgroup"
+    (child): child is HTMLElement => child.tagName.toLowerCase() === "colgroup"
   );
 
   if (!colGroup) {
@@ -113,11 +112,7 @@ export function addPrintSerialNumberColumn(
 
     addSerialColumnDefinition(document, table);
 
-    const headerCell = createSerialCell(
-      document,
-      headerCells[0],
-      "STT"
-    );
+    const headerCell = createSerialCell(document, headerCells[0], "STT");
     headerRow.insertBefore(headerCell, headerRow.firstChild);
 
     let serialNumber = 1;
@@ -274,7 +269,11 @@ export function queuePrintAfterRedirect(
   if (typeof window === "undefined") return;
   sessionStorage.setItem(
     PENDING_PRINT_KEY,
-    JSON.stringify({ templateFor, entityId, followUpDelivery: options?.followUpDelivery ?? false })
+    JSON.stringify({
+      templateFor,
+      entityId,
+      followUpDelivery: options?.followUpDelivery ?? false,
+    })
   );
 }
 
