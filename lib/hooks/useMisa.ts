@@ -32,7 +32,7 @@ export function useCreateVoucher() {
     }) => misaApi.createVoucher(vars.invoiceCode, vars.buyerOverride, vars.force),
     onSuccess: (res) => {
       if (res.success) {
-        toast.success(res.message || "Đẩy hóa đơn lên Misa thành công");
+        toast.success("Đã gửi hóa đơn vào hàng đợi Misa");
       } else {
         toast.error(res.message || "Đẩy hóa đơn lên Misa thất bại");
       }
@@ -94,10 +94,12 @@ export function useCreateVouchersBulk() {
     }) => misaApi.createVouchersBulk(vars.invoiceCodes, vars.buyerOverrides),
     onSuccess: (res) => {
       if (res.failedCount === 0) {
-        toast.success(res.message || "Đẩy hàng loạt thành công");
+        toast.success(
+          `Đã gửi ${res.successCount}/${res.total} hóa đơn vào hàng đợi Misa`
+        );
       } else if (res.successCount > 0) {
         toast.success(
-          `Đẩy thành công ${res.successCount}/${res.total} hóa đơn, ${res.failedCount} thất bại`
+          `Đã gửi ${res.successCount}/${res.total} hóa đơn vào hàng đợi Misa, ${res.failedCount} thất bại`
         );
       } else {
         toast.error(`Tất cả ${res.total} hóa đơn đẩy thất bại`);

@@ -36,6 +36,8 @@ const TX_LABELS: Record<string, string> = {
   CONSIGNMENT_RETURN_IN: "Hoàn ký gửi",
   CONSIGNMENT_RETURN_CANCEL: "Hủy hoàn ký gửi",
   INTERNAL_USE: "Xuất dùng nội bộ",
+  INTERNAL_USE_RETURN_IN: "Nhập lại từ xuất dùng nội bộ",
+  INTERNAL_USE_RETURN_CANCEL: "Hủy nhập lại từ xuất dùng nội bộ",
 };
 
 const formatMoney = (v: number | null | undefined) =>

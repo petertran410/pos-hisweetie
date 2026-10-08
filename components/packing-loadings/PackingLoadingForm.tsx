@@ -14,6 +14,8 @@ import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
 import type { PackingLoading } from "@/lib/types/packing-loading";
 import { toast } from "sonner";
+import { ColdCargoSelectionWarning } from "@/components/shared/ColdCargoBadge";
+import type { ColdCargoItem } from "@/lib/types/cold-cargo-warning";
 
 interface PackingLoadingFormProps {
   packingLoading?: PackingLoading;
@@ -80,6 +82,10 @@ export function PackingLoadingForm({
     branchId?: number | null;
     purchaseDate?: string | null;
     customer?: { id: number; name: string } | null;
+    packingCount?: number;
+    hasColdItems?: boolean;
+    coldItemCount?: number;
+    coldItems?: ColdCargoItem[];
   };
   const [selectedInvoiceCache, setSelectedInvoiceCache] = useState<
     Record<number, InvoiceLite>
@@ -144,6 +150,9 @@ export function PackingLoadingForm({
     branchId: number;
     purchaseDate?: string | null;
     customer?: { id: number; name: string } | null;
+    hasColdItems?: boolean;
+    coldItemCount?: number;
+    coldItems?: ColdCargoItem[];
   }) => {
     setSelectedInvoiceCache((prev) => ({ ...prev, [document.id]: document }));
     setSelectedInvoiceIds((prev) => [...prev, document.id]);
@@ -171,6 +180,7 @@ export function PackingLoadingForm({
       pageSize: 100,
       search: debouncedInvoiceSearch || undefined,
       excludeDelivered: true,
+      packingType: "loading",
     },
     docType === "invoice",
   );
@@ -243,6 +253,10 @@ export function PackingLoadingForm({
           branchId: invoice.branchId ?? null,
           purchaseDate: (invoice as any).purchaseDate ?? null,
           customer: invoice.customer ?? null,
+          packingCount: invoice.packingCount,
+          hasColdItems: invoice.hasColdItems,
+          coldItemCount: invoice.coldItemCount,
+          coldItems: invoice.coldItems,
         };
         if (selectedInvoiceIds.length === 0) {
           setBranchId(invoice.branchId || 0);
@@ -562,6 +576,11 @@ export function PackingLoadingForm({
                             <div className="text-xs text-gray-500 truncate">
                               {invoice.customer?.name}
                             </div>
+                            {typeof invoice.packingCount === "number" && (
+                              <div className="text-xs text-gray-400">
+                                Đã loading {invoice.packingCount} lần
+                              </div>
+                            )}
                           </div>
                         </label>
                       ))}
@@ -574,6 +593,11 @@ export function PackingLoadingForm({
                 </div>
               )}
             </div>
+
+            <ColdCargoSelectionWarning
+              invoices={selectedInvoices}
+              fallbackItems={packingLoading?.coldItems || []}
+            />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>

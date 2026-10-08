@@ -44,6 +44,7 @@ import { ProductInventoryModal } from "./ProductInventoryModal";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { ProductInventoryMobileSheet } from "./ProductInventoryMobileSheet";
 import { UnitPicker } from "./UnitPicker";
+import { ColdCargoBadge, ColdCargoSummary } from "../shared/ColdCargoBadge";
 import {
   getItemOnHand as getItemOnHandHelper,
   getPromoStockWarning,
@@ -458,6 +459,9 @@ export function OrderItemsList({
   return (
     <div className={className ?? "w-[60%] bg-white flex flex-col"}>
       <div className="flex-1 p-3 overflow-y-auto">
+        {documentType !== "consignment" && (
+          <ColdCargoSummary items={cartItems} className="mb-3" />
+        )}
         <div className="space-y-2">
           {productLineGroups.map((group) => {
             const hasStockWarning = group.some((line) => getStockWarning(line));
@@ -493,6 +497,10 @@ export function OrderItemsList({
                             <span className="text-sm lg:text-base font-semibold text-gray-900">
                               {item.product.name}
                             </span>
+                            {documentType !== "consignment" &&
+                              item.product?.cargoType === "COLD" && (
+                                <ColdCargoBadge />
+                              )}
                             {(() => {
                               const label = getConditionLabel(
                                 item.conditionType
@@ -729,6 +737,61 @@ export function OrderItemsList({
                                     </button>
                                   );
                                 })()}
+                              {item.eligiblePromos
+                                ?.filter(
+                                  (p) =>
+                                    p.cumulative &&
+                                    enabledCumulativePromoIds?.includes(
+                                      p.promotionId
+                                    )
+                                )
+                                .map((promotion) => {
+                                  const applied = (
+                                    item.promoEnabledIds || []
+                                  ).includes(promotion.promotionId);
+                                  const colorCls = applied
+                                    ? "text-pink-600 group-hover:text-gray-400"
+                                    : "text-gray-400 group-hover:text-pink-600";
+                                  return (
+                                    <button
+                                      key={`cumulative-${promotion.promotionId}`}
+                                      onClick={() => {
+                                        const enabled = new Set(
+                                          item.promoEnabledIds || []
+                                        );
+                                        const excluded = new Set(
+                                          item.promoExcludedIds || []
+                                        );
+                                        if (applied) {
+                                          enabled.delete(promotion.promotionId);
+                                          excluded.add(promotion.promotionId);
+                                        } else {
+                                          enabled.add(promotion.promotionId);
+                                          excluded.delete(promotion.promotionId);
+                                        }
+                                        onUpdateItem(item.rowId, {
+                                          promoEnabledIds: [...enabled],
+                                          promoExcludedIds: [...excluded],
+                                        });
+                                      }}
+                                      className={`group flex items-center gap-1 px-1.5 py-1 rounded transition-colors ${
+                                        applied
+                                          ? "bg-pink-100 hover:bg-gray-100"
+                                          : "bg-gray-100 hover:bg-pink-100"
+                                      }`}
+                                      title={
+                                        applied
+                                          ? `Bỏ ${promotion.code} khỏi dòng này`
+                                          : `Áp dụng ${promotion.code} cho dòng này`
+                                      }>
+                                      <Gift className={`w-4 h-4 ${colorCls}`} />
+                                      <span
+                                        className={`text-xs font-medium ${colorCls}`}>
+                                        {promotion.code}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
                               <button
                                 onClick={() => onRemoveItem(item.rowId)}
                                 className="p-1 hover:bg-red-50 rounded transition-colors">

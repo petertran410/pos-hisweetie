@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, Camera, ChevronDown, ChevronUp, Printer } from "lucide-react";
 import {
   useReturnOrder,
@@ -21,7 +21,7 @@ import Swal from "sweetalert2";
 interface ConfirmStockModalProps {
   returnOrderId: number;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any) => Promise<void> | void;
 }
 
 interface ConfirmItem {
@@ -56,6 +56,8 @@ export function ConfirmStockModal({
   const canCancel = useCan("return_orders", "cancel");
   const isAdmin = useIsAdmin();
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [confirmItems, setConfirmItems] = useState<ConfirmItem[]>([]);
   const [note, setNote] = useState("");
   const [stockImages, setStockImages] = useState<
@@ -346,13 +348,29 @@ export function ConfirmStockModal({
   };
 
   const handleSaveDraft = async () => {
-    const data = await buildSubmitData(true);
-    onSubmit(data);
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+    try {
+      const data = await buildSubmitData(true);
+      await onSubmit(data);
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   const handleComplete = async () => {
-    const data = await buildSubmitData(false);
-    onSubmit(data);
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+    try {
+      const data = await buildSubmitData(false);
+      await onSubmit(data);
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = async () => {
@@ -755,13 +773,15 @@ export function ConfirmStockModal({
             </button>
             <button
               onClick={handleSaveDraft}
-              className="px-4 py-2 border border-orange-400 text-orange-600 rounded-lg text-sm hover:bg-orange-50">
-              Lưu phiếu tạm
+              disabled={isSubmitting}
+              className="px-4 py-2 border border-orange-400 text-orange-600 rounded-lg text-sm hover:bg-orange-50 disabled:opacity-50">
+              {isSubmitting ? "Đang xử lý..." : "Lưu phiếu tạm"}
             </button>
             <button
               onClick={handleComplete}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
-              Xác nhận nhập hàng trả
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-50">
+              {isSubmitting ? "Đang xử lý..." : "Xác nhận nhập hàng trả"}
             </button>
           </div>
         </div>

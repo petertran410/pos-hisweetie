@@ -13,6 +13,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   internal_use: "Xuất dùng nội bộ",
   "internal-use": "Xuất dùng nội bộ",
   "internal-use-purpose": "Mục đích xuất dùng nội bộ",
+  "internal-use-returns": "Trả hàng xuất dùng nội bộ",
   orders: "Đơn hàng",
   consignments: "Ký gửi",
   consignment_returns: "Hoàn ký gửi",

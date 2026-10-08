@@ -52,9 +52,29 @@ export interface Invoice {
   details?: InvoiceDetail[];
   payments?: any[];
   delivery?: any;
+  packingHangs?: InvoicePackingCreatorLink[];
+  packingLoadings?: InvoicePackingCreatorLink[];
+  packingSlips?: InvoicePackingCreatorLink[];
   paymentNotes?: PaymentNote[];
   /** Backend tính theo batch ID của trang hiện tại (bảng giá 2/3). */
   hasPriceBookWarning?: boolean;
+  /** Số phiếu cùng loại từng có liên kết với hóa đơn. */
+  packingCount?: number;
+}
+
+export interface InvoicePackingCreatorLink {
+  id: number;
+  createdAt?: string;
+  packingHang?: InvoicePackingCreatorParent | null;
+  packingLoading?: InvoicePackingCreatorParent | null;
+  packingSlip?: InvoicePackingCreatorParent | null;
+}
+
+export interface InvoicePackingCreatorParent {
+  creator?: {
+    id: number;
+    name: string;
+  } | null;
 }
 
 export interface PaymentNote {

@@ -4,7 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Printer, Loader2 } from "lucide-react";
 import { printTemplatesApi } from "@/lib/api/print-templates";
-import { buildPrintDocumentHtml } from "@/lib/utils/print";
+import {
+  addPrintSerialNumberColumn,
+  buildPrintDocumentHtml,
+} from "@/lib/utils/print";
 
 interface MobilePrintPreviewModalProps {
   templateFor: string;
@@ -61,7 +64,11 @@ export function MobilePrintPreviewModal({
 
         if (!cancelled) {
           // Build full HTML string → gán vào srcDoc, browser tự load
-          setSrcDoc(buildPrintDocumentHtml(preview.content));
+          setSrcDoc(
+            buildPrintDocumentHtml(
+              addPrintSerialNumberColumn(preview.content, templateFor)
+            )
+          );
         }
       } catch (e: any) {
         if (!cancelled) setError(e?.message || "Không thể tải mẫu in");

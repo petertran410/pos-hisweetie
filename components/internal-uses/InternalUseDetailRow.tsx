@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useLayoutEffect, useRef } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { Copy, ExternalLink, Loader2, Printer } from "lucide-react";
+import { Copy, ExternalLink, Loader2, PackageCheck, Printer } from "lucide-react";
 import {
   useCancelInternalUse,
   useCompleteInternalUse,
@@ -67,6 +67,7 @@ export function InternalUseDetailRow({
   // Chỉ người duyệt (có internal-use:complete) mới được duyệt/hoàn thành phiếu.
   const canComplete = usePermission("internal-use", "complete");
   const canCreate = usePermission("internal-use", "create");
+  const canCreateReturn = usePermission("internal-use-returns", "create");
   const { data: internalUse, isLoading } = useInternalUse(internalUseId);
 
   const [searchCode, setSearchCode] = useState("");
@@ -159,6 +160,12 @@ export function InternalUseDetailRow({
     } catch (e: any) {
       toast.error(e?.message || "In thất bại");
     }
+  };
+
+  const handleReturn = () => {
+    router.push(
+      `/san-pham/tra-hang-xuat-dung-noi-bo?internalUseId=${internalUseId}`,
+    );
   };
 
   if (isLoading) {
@@ -441,6 +448,16 @@ export function InternalUseDetailRow({
                   )}
                 </div>
                 <div className="flex gap-2">
+                  {internalUse.status === 2 && canCreateReturn && (
+                    <button
+                      onClick={handleReturn}
+                      title="Trả hàng xuất dùng nội bộ"
+                      className="flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100"
+                    >
+                      <PackageCheck className="h-3.5 w-3.5" />
+                      Trả hàng
+                    </button>
+                  )}
                   {showCompleteButton && (
                     <button
                       onClick={handleComplete}

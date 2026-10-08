@@ -1,4 +1,6 @@
-export interface PackingSlip {
+import type { ColdCargoWarning } from "./cold-cargo-warning";
+
+export interface PackingSlip extends ColdCargoWarning {
   id: number;
   code: string;
   branchId: number;

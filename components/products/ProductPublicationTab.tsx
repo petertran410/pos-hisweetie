@@ -2,6 +2,7 @@
 
 import { FileText, Link2 } from "lucide-react";
 import type { Product } from "@/lib/api/products";
+import { repairUploadedFilename } from "@/lib/utils/uploaded-filename";
 
 interface ProductPublicationTabProps {
   product: Product;
@@ -66,11 +67,11 @@ export function ProductPublicationTab({
         {documents.length > 0 ? (
           <ul className="space-y-2">
             {documents.map((document, index) => {
-              const name =
+              const name = repairUploadedFilename(
                 document.originalName ||
-                document.url.split("/").pop() ||
-                `Tài liệu ${index + 1}`;
-
+                  document.url.split("/").pop() ||
+                  `Tài liệu ${index + 1}`
+              );
               return (
                 <li
                   key={document.id || `${document.url}-${index}`}

@@ -95,6 +95,9 @@ export interface CartItem {
   // Dòng SP thường: các promotionId được thu ngân bật áp dụng (opt-in).
   // KM chỉ sinh dòng quà khi promotionId nằm trong danh sách này.
   promoEnabledIds?: number[];
+  // Dòng SP thường: các KM cộng dồn bị thu ngân loại riêng khỏi dòng này.
+  // Dùng để phân biệt "chưa được effect xử lý" với "user chủ động bỏ".
+  promoExcludedIds?: number[];
   // Dòng SP thường: các CT (id+tên+mã) đang khớp dòng này (để hiện icon 🎁 / badge mã KM)
   eligiblePromos?: {
     promotionId: number;
@@ -708,6 +711,7 @@ export default function BanHangPage() {
         price: Number(it.price),
         discount: Number(it.discount) || 0,
         enabled: it.promoEnabledIds || [],
+        excluded: it.promoExcludedIds || [],
         giftChoice: it.rowId, // placeholder để chữ ký đổi khi cần
       })),
       // lựa chọn quà hiện tại
@@ -788,14 +792,20 @@ export default function BanHangPage() {
             enabledCumIds.add(it.promotionId);
           }
         }
-        const cumMatchByProduct = new Map<number, number[]>(); // productId -> [promoId]
+        const cumMatchByRow = new Map<string, number[]>(); // rowId -> [promoId]
         for (const p of discoveryRes.eligiblePromotions) {
           if (!isGiftType(p) || !p.cumulative) continue;
           if (!enabledCumIds.has(p.promotionId)) continue;
-          for (const pid of p.matchedProductIds || []) {
-            const arr = cumMatchByProduct.get(pid) || [];
+          for (const item of normalItems) {
+            if (
+              !(p.matchedProductIds || []).includes(Number(item.product.id)) ||
+              (item.promoExcludedIds || []).includes(p.promotionId)
+            ) {
+              continue;
+            }
+            const arr = cumMatchByRow.get(item.rowId) || [];
             arr.push(p.promotionId);
-            cumMatchByProduct.set(pid, arr);
+            cumMatchByRow.set(item.rowId, arr);
           }
         }
 
@@ -807,7 +817,9 @@ export default function BanHangPage() {
           items: normalItems.map((it) => {
             const pid = Number(it.product.id);
             const merged = new Set(it.promoEnabledIds || []);
-            (cumMatchByProduct.get(pid) || []).forEach((id) => merged.add(id));
+            (cumMatchByRow.get(it.rowId) || []).forEach((id) =>
+              merged.add(id),
+            );
             return {
               productId: pid,
               quantity: Number(it.quantity),
@@ -1264,9 +1276,11 @@ export default function BanHangPage() {
                   continue;
                 }
                 const pid = Number(n.product?.id);
-                const cumIds = cumMatchByProduct.get(pid) || [];
+                const excludedCumIds = new Set(n.promoExcludedIds || []);
+                const cumIds = cumMatchByRow.get(n.rowId) || [];
                 const enabledSet = new Set(n.promoEnabledIds || []);
-                // Bỏ các cumId không còn bật (đã tắt ở tab) rồi thêm lại cumId đang bật.
+                // Đồng bộ KM cộng dồn theo từng dòng: dòng bị loại riêng không
+                // được tự động thêm lại dù chương trình vẫn đang bật ở cấp tab.
                 for (const p of discoveryGiftPromos) {
                   if (
                     p.cumulative &&
@@ -1279,6 +1293,7 @@ export default function BanHangPage() {
                 merged.push({
                   ...n,
                   promoEnabledIds: [...enabledSet],
+                  promoExcludedIds: [...excludedCumIds],
                   eligiblePromos: eligibleByRow[n.rowId],
                   deductPromoStock: (eligibleByRow[n.rowId] || []).some(
                     (promotion) =>
@@ -1307,11 +1322,52 @@ export default function BanHangPage() {
           }),
         );
 
-        // Lưu tiến độ tích lũy (từ discovery — không phụ thuộc opt-in) để render
-        // khối "Khuyến mãi của đơn hàng".
+        // Lưu tiến độ để render khối "Khuyến mãi của đơn hàng".
+        // CT cộng dồn đã bật phải dùng tiến độ từ appliedRes, vì discovery
+        // vẫn tính cả dòng mà người dùng đã loại riêng khỏi CT.
+        const appliedProgressById = new Map(
+          (appliedRes.progress || []).map((progress) => [
+            progress.promotionId,
+            progress,
+          ]),
+        );
+        const displayedProgress = (discoveryRes.progress || []).map(
+          (progress) => {
+            if (
+              !progress.stackable ||
+              !enabledCumIds.has(progress.promotionId)
+            ) {
+              return progress;
+            }
+            const appliedProgress = appliedProgressById.get(
+              progress.promotionId,
+            );
+            if (appliedProgress) return appliedProgress;
+
+            const enabledMatchedProductIds = [
+              ...new Set(
+                normalItems
+                  .filter((item) =>
+                    (cumMatchByRow.get(item.rowId) || []).includes(
+                      progress.promotionId,
+                    ),
+                  )
+                  .map((item) => Number(item.product.id)),
+              ),
+            ];
+            return {
+              ...progress,
+              matchedProductIds: enabledMatchedProductIds,
+              currentQuantity: 0,
+              completedTimes: 0,
+              remainingToNextReward: progress.requiredQuantity,
+              earnedRewardQuantity: 0,
+            };
+          },
+        );
         setPromoProgressByTab((prev) => ({
           ...prev,
-          [tabId]: discoveryRes.progress || [],
+          [tabId]: displayedProgress,
         }));
       } catch (e) {
         // Lỗi đánh giá KM không nên chặn bán hàng
@@ -2573,8 +2629,9 @@ export default function BanHangPage() {
   const togglePromotionCumulative = (
     promotionId: number,
     enabled: boolean,
-    _matchedProductIds: number[],
+    matchedProductIds: number[],
   ) => {
+    const matchedSet = new Set(matchedProductIds);
     setTabs((prevTabs) =>
       prevTabs.map((tab) => {
         if (tab.id !== activeTabId) return tab;
@@ -2592,8 +2649,31 @@ export default function BanHangPage() {
         // Tắt CT → xoá luôn phân bổ quà cộng dồn của CT đó.
         const nextSel = { ...(tab.cumulativeGiftSelections || {}) };
         if (!enabled) delete nextSel[promotionId];
+        const nextCartItems = tab.cartItems.map((item) => {
+          if (
+            item.isPromoGift ||
+            (item.conditionType || "normal") !== "normal" ||
+            !matchedSet.has(Number(item.product?.id))
+          ) {
+            return item;
+          }
+          const nextEnabled = new Set(item.promoEnabledIds || []);
+          const nextExcluded = new Set(item.promoExcludedIds || []);
+          if (enabled) {
+            nextEnabled.add(promotionId);
+            nextExcluded.delete(promotionId);
+          } else {
+            nextEnabled.delete(promotionId);
+          }
+          return {
+            ...item,
+            promoEnabledIds: [...nextEnabled],
+            promoExcludedIds: [...nextExcluded],
+          };
+        });
         return {
           ...tab,
+          cartItems: nextCartItems,
           enabledCumulativePromoIds: [...cur],
           disabledCumulativePromoIds: [...disabled],
           cumulativeGiftSelections: nextSel,

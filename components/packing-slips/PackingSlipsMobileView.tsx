@@ -22,6 +22,7 @@ import {
   ChevronRight,
   Check,
   Package,
+  Snowflake,
   Truck,
   Boxes,
   Image as ImageIcon,
@@ -70,6 +71,11 @@ function PackingMobileCard({
   const Icon = badge.icon;
   const invoices = item.invoices || [];
   const imageCount = item.imageCount ?? item.images?.length ?? 0;
+  const documentCodes = invoices
+    .map((inv: any) => inv.invoice?.code || inv.consignment?.code)
+    .filter(Boolean);
+  const isCompactDocumentList =
+    typeKey === "dong-hang" || typeKey === "loading";
   const customerNames = invoices
     .map((inv: any) => inv.invoice?.customer?.name)
     .filter(Boolean);
@@ -122,6 +128,18 @@ function PackingMobileCard({
       {/* Dashed divider */}
       <div className="border-t border-dashed border-gray-200 mb-3" />
 
+      {item.hasColdItems && (
+        <div className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-red-600">
+          <Snowflake className="h-3.5 w-3.5 shrink-0" />
+          <span>
+            Hàng lạnh
+            {Number(item.coldItemCount) > 0
+              ? ` · ${item.coldItemCount} mặt hàng`
+              : ""}
+          </span>
+        </div>
+      )}
+
       {/* Row 4: footer — số kiện + hóa đơn + ảnh + tiền (nếu có) */}
       <div className="flex items-end justify-between gap-3">
         <div className="space-y-1">
@@ -131,11 +149,33 @@ function PackingMobileCard({
               {item.numberOfPackages} kiện
             </span>
           </div>
-          {invoices.length > 0 && (
+          {documentCodes.length > 0 ? (
+            isCompactDocumentList ? (
+              <div className="max-w-[240px] max-h-24 overflow-y-auto overscroll-contain pr-1">
+                <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                  {documentCodes.map((code: string, index: number) => (
+                    <span
+                      key={`${code}-${index}`}
+                      className="min-w-0 truncate rounded-md bg-gray-50 px-1.5 py-0.5 text-[11px] leading-4 text-gray-600">
+                      {code}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="max-w-[240px] space-y-0.5 text-xs text-gray-500">
+                {documentCodes.map((code: string, index: number) => (
+                  <div key={`${code}-${index}`} className="truncate">
+                    {code}
+                  </div>
+                ))}
+              </div>
+            )
+          ) : invoices.length > 0 ? (
             <div className="text-xs text-gray-500">
               {invoices.length} hóa đơn
             </div>
-          )}
+          ) : null}
           {imageCount > 0 && (
             <div className="flex items-center gap-1 text-xs text-gray-500">
               <ImageIcon className="w-3.5 h-3.5" />

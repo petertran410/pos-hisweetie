@@ -30,7 +30,10 @@ import {
   AlertTriangle,
   PackageCheck,
 } from "lucide-react";
-import type { Invoice } from "@/lib/types/invoice";
+import type {
+  Invoice,
+  InvoicePackingCreatorLink,
+} from "@/lib/types/invoice";
 import { getDebtRuleTypeLabel } from "@/lib/api/debt-tracking";
 import { formatCurrency } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
@@ -98,6 +101,28 @@ const STATUS_TEXT: Record<number, string> = {
 
 const formatDateTime = (d?: string) =>
   d ? new Date(d).toLocaleString("vi-VN") : "-";
+
+const renderPackingCreators = (
+  links: InvoicePackingCreatorLink[] | undefined,
+  type: "packingHang" | "packingLoading" | "packingSlip"
+) => {
+  const names =
+    links
+      ?.map((link) => link[type]?.creator?.name)
+      .filter((name): name is string => Boolean(name)) || [];
+
+  if (names.length === 0) return "-";
+
+  return (
+    <div className="space-y-0.5">
+      {names.map((name, index) => (
+        <div key={`${name}-${index}`} className="whitespace-nowrap">
+          {name}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const DEFAULT_COLUMNS: ColumnConfig<Invoice>[] = [
   {
@@ -228,6 +253,28 @@ const DEFAULT_COLUMNS: ColumnConfig<Invoice>[] = [
     visible: false,
     width: "140px",
     render: (inv) => inv.creator?.name || "-",
+  },
+  {
+    key: "packingHangCreator",
+    label: "Người đóng hàng",
+    visible: true,
+    width: "160px",
+    render: (inv) => renderPackingCreators(inv.packingHangs, "packingHang"),
+  },
+  {
+    key: "packingLoadingCreator",
+    label: "Người loading",
+    visible: true,
+    width: "160px",
+    render: (inv) =>
+      renderPackingCreators(inv.packingLoadings, "packingLoading"),
+  },
+  {
+    key: "packingSlipCreator",
+    label: "Người giao hàng",
+    visible: true,
+    width: "160px",
+    render: (inv) => renderPackingCreators(inv.packingSlips, "packingSlip"),
   },
   // {
   //   key: "saleChannel",
@@ -1339,39 +1386,41 @@ export function InvoicesTable({
             </button>
             {/* </PermissionGate> */}
 
-            <div ref={exportRef} className="relative">
-              <button
-                onClick={() => setShowExportDropdown((p) => !p)}
-                disabled={isExportingOverview || isExportingDetail}
-                className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 disabled:opacity-50">
-                {isExportingOverview || isExportingDetail ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Download className="w-4 h-4" />
+            <PermissionGate resource="invoices" action="export">
+              <div ref={exportRef} className="relative">
+                <button
+                  onClick={() => setShowExportDropdown((p) => !p)}
+                  disabled={isExportingOverview || isExportingDetail}
+                  className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 disabled:opacity-50">
+                  {isExportingOverview || isExportingDetail ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  Xuất file
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${showExportDropdown ? "rotate-180" : ""}`}
+                  />
+                </button>
+                {showExportDropdown && (
+                  <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 w-44 overflow-hidden">
+                    <button
+                      onClick={handleExportOverview}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">
+                      Tổng quan
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowExportDropdown(false);
+                        setShowExportDetailModal(true);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-100">
+                      Chi tiết (chọn cột)
+                    </button>
+                  </div>
                 )}
-                Xuất file
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform ${showExportDropdown ? "rotate-180" : ""}`}
-                />
-              </button>
-              {showExportDropdown && (
-                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 w-44 overflow-hidden">
-                  <button
-                    onClick={handleExportOverview}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">
-                    Tổng quan
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowExportDropdown(false);
-                      setShowExportDetailModal(true);
-                    }}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-t border-gray-100">
-                    Chi tiết (chọn cột)
-                  </button>
-                </div>
-              )}
-            </div>
+              </div>
+            </PermissionGate>
 
             <ColumnToggle
               columns={columns.filter((c) => c.key !== "discount")}

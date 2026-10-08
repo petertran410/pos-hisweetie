@@ -30,14 +30,33 @@ interface InternalUsesSidebarProps {
 }
 
 const STATUS_OPTIONS = [
-  { value: 1, label: "Phiếu tạm", color: "bg-gray-100 text-gray-700" },
-  { value: 2, label: "Hoàn thành", color: "bg-green-100 text-green-700" },
-  { value: 3, label: "Đã hủy", color: "bg-red-100 text-red-700" },
+  {
+    value: 1,
+    label: "Phiếu tạm",
+    color: "bg-gray-100 text-gray-700",
+    dot: "bg-gray-400",
+  },
+  {
+    value: 2,
+    label: "Hoàn thành",
+    color: "bg-green-100 text-green-700",
+    dot: "bg-green-500",
+  },
+  {
+    value: 3,
+    label: "Đã hủy",
+    color: "bg-red-100 text-red-700",
+    dot: "bg-red-400",
+  },
 ];
 
 const PRESET_GROUPS = [
   {
-    label: "Hôm nay / Hôm qua",
+    label: "Tất cả",
+    options: [{ value: "all_time", label: "Toàn thời gian" }],
+  },
+  {
+    label: "Theo ngày",
     options: [
       { value: "today", label: "Hôm nay" },
       { value: "yesterday", label: "Hôm qua" },
@@ -48,6 +67,7 @@ const PRESET_GROUPS = [
     options: [
       { value: "this_week", label: "Tuần này" },
       { value: "last_week", label: "Tuần trước" },
+      { value: "last_7_days", label: "7 ngày qua" },
     ],
   },
   {
@@ -55,13 +75,21 @@ const PRESET_GROUPS = [
     options: [
       { value: "this_month", label: "Tháng này" },
       { value: "last_month", label: "Tháng trước" },
+      { value: "last_30_days", label: "30 ngày qua" },
     ],
   },
   {
-    label: "Khác",
+    label: "Theo quý",
     options: [
-      { value: "last_7_days", label: "7 ngày qua" },
-      { value: "last_30_days", label: "30 ngày qua" },
+      { value: "this_quarter", label: "Quý này" },
+      { value: "last_quarter", label: "Quý trước" },
+    ],
+  },
+  {
+    label: "Theo năm",
+    options: [
+      { value: "this_year", label: "Năm nay" },
+      { value: "last_year", label: "Năm trước" },
     ],
   },
 ];
@@ -118,6 +146,31 @@ const getDateRangeFromPreset = (preset: string) => {
       };
     case "last_30_days":
       return { from: new Date(today.getTime() - 30 * 86400000), to: now };
+    case "this_quarter": {
+      const quarter = Math.floor(now.getMonth() / 3);
+      return {
+        from: new Date(now.getFullYear(), quarter * 3, 1),
+        to: now,
+      };
+    }
+    case "last_quarter": {
+      const quarter = Math.floor(now.getMonth() / 3);
+      const year = quarter === 0 ? now.getFullYear() - 1 : now.getFullYear();
+      const lastQuarter = quarter === 0 ? 3 : quarter - 1;
+      return {
+        from: new Date(year, lastQuarter * 3, 1),
+        to: new Date(year, lastQuarter * 3 + 3, 0, 23, 59, 59, 999),
+      };
+    }
+    case "this_year":
+      return { from: new Date(now.getFullYear(), 0, 1), to: now };
+    case "last_year":
+      return {
+        from: new Date(now.getFullYear() - 1, 0, 1),
+        to: new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999),
+      };
+    case "all_time":
+      return null;
     default:
       return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
   }
@@ -153,37 +206,35 @@ function PresetPanel({
 
   if (!anchorRect) return null;
   const r = normalizeRectForFixed(anchorRect);
-  const top = r.bottom + 6;
-  const left = Math.max(8, r.right - 320);
+  const top = r.top;
+  const left = r.right + 8;
 
   return createPortal(
     <div
       ref={panelRef}
-      style={{ position: "fixed", top, left, width: 320, zIndex: 1000 }}
-      className="bg-white border border-gray-200 rounded-xl shadow-2xl p-3 space-y-2">
+      style={{ position: "fixed", top, left, zIndex: 1000 }}
+      className="bg-white border border-gray-200 rounded-2xl shadow-2xl p-4 flex gap-5 animate-in fade-in zoom-in-95 duration-150">
       {groups.map((g) => (
-        <div key={g.label}>
-          <div className="text-[11px] font-semibold text-gray-400 uppercase mb-1.5 px-1">
+        <div key={g.label} className="flex flex-col gap-1.5 min-w-[88px]">
+          <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">
             {g.label}
           </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            {g.options.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => {
-                  onSelect(opt.value);
-                  onClose();
-                }}
-                className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors text-left ${
-                  selected === opt.value
-                    ? "bg-brand text-white border-brand font-medium shadow-sm"
-                    : "border-gray-200 text-gray-700 hover:border-brand hover:bg-brand-soft"
-                }`}>
-                {opt.label}
-              </button>
-            ))}
-          </div>
+          {g.options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onSelect(opt.value);
+                onClose();
+              }}
+              className={`px-3 py-1.5 rounded-full text-sm border transition-all whitespace-nowrap text-left ${
+                selected === opt.value
+                  ? "bg-brand text-white border-brand font-medium shadow-sm"
+                  : "border-gray-200 text-gray-700 hover:border-brand hover:bg-brand-soft"
+              }`}>
+              {opt.label}
+            </button>
+          ))}
         </div>
       ))}
     </div>,
@@ -463,21 +514,47 @@ export function InternalUsesSidebar({
   );
 
   const canManagePurpose = usePermission("internal-use-purpose", "manage");
+  const STORAGE_KEY = "internal-uses-sidebar-filters";
+  const getSavedFilters = () => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  };
+  const saved = useRef(getSavedFilters());
   const [showPurposeForm, setShowPurposeForm] = useState(false);
   const [editingPurpose, setEditingPurpose] =
     useState<InternalUsePurpose | null>(null);
 
   const [branchIds, setBranchIds] = useState<number[]>(() =>
-    selectedBranch ? [selectedBranch.id] : []
+    (() => {
+      const savedIds = saved.current?.selectedBranchIds;
+      if (Array.isArray(savedIds)) {
+        // Giữ nguyên lựa chọn nhiều chi nhánh hoặc tất cả chi nhánh.
+        if (savedIds.length >= 2 || savedIds.length === 0) return savedIds;
+      }
+      // Một chi nhánh luôn bám theo chi nhánh đang chọn trên header.
+      if (selectedBranch) return [selectedBranch.id];
+      return Array.isArray(savedIds) ? savedIds : [];
+    })()
   );
-  const [statusList, setStatusList] = useState<number[]>([1, 2]);
-  const [creatorId, setCreatorId] = useState("");
-  const [userId, setUserId] = useState("");
-  const [purposeId, setPurposeId] = useState("");
-  const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
-  const [selectedPreset, setSelectedPreset] = useState("this_month");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [statusList, setStatusList] = useState<number[]>(
+    saved.current?.statusList || [1, 2]
+  );
+  const [creatorId, setCreatorId] = useState(saved.current?.creatorId || "");
+  const [userId, setUserId] = useState(saved.current?.userId || "");
+  const [purposeId, setPurposeId] = useState(saved.current?.purposeId || "");
+  const [dateMode, setDateMode] = useState<"preset" | "custom">(
+    saved.current?.dateMode || "preset"
+  );
+  const [selectedPreset, setSelectedPreset] = useState(
+    saved.current?.selectedPreset || "all_time"
+  );
+  const [fromDate, setFromDate] = useState(saved.current?.fromDate || "");
+  const [toDate, setToDate] = useState(saved.current?.toDate || "");
 
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showPresetPanel, setShowPresetPanel] = useState(false);
@@ -504,6 +581,38 @@ export function InternalUsesSidebar({
   const lastSyncedBranchIdRef = useRef<number | null>(
     selectedBranch?.id ?? null
   );
+
+  // Persist filter state giống OrdersSidebar để rời trang/quay lại vẫn giữ
+  // đúng bộ lọc người dùng đã chọn.
+  useEffect(() => {
+    const state = {
+      selectedBranchIds: branchIds,
+      statusList,
+      creatorId,
+      userId,
+      purposeId,
+      dateMode,
+      selectedPreset,
+      fromDate,
+      toDate,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }, [
+    branchIds,
+    statusList,
+    creatorId,
+    userId,
+    purposeId,
+    dateMode,
+    selectedPreset,
+    fromDate,
+    toDate,
+  ]);
+
+  // Khi đổi branch trên DashboardHeader:
+  // - Bỏ qua lần mount đầu để không ghi đè state đã restore.
+  // - Nếu đang lọc nhiều branch hoặc tất cả branch thì giữ nguyên.
+  // - Nếu đang bám một branch thì chuyển theo branch mới trên header.
   useEffect(() => {
     const cur = selectedBranch?.id ?? null;
     if (isFirstBranchSyncRef.current) {
@@ -537,8 +646,10 @@ export function InternalUsesSidebar({
               }
             : getDateRangeFromPreset("this_month");
 
-      f.fromDate = range.from.toISOString();
-      f.toDate = range.to.toISOString();
+      if (range) {
+        f.fromDate = range.from.toISOString();
+        f.toDate = range.to.toISOString();
+      }
 
       onFiltersChange(f);
     }, 300);
@@ -575,9 +686,10 @@ export function InternalUsesSidebar({
     setUserId("");
     setPurposeId("");
     setDateMode("preset");
-    setSelectedPreset("this_month");
+    setSelectedPreset("all_time");
     setFromDate("");
     setToDate("");
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   const toggleStatus = (s: number) =>
@@ -621,29 +733,59 @@ export function InternalUsesSidebar({
 
         {/* ── Trạng thái ── */}
         <div>
-          <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+          <label className="text-sm font-medium text-gray-700 mb-2 block">
             Trạng thái
           </label>
           <div ref={statusDropRef} className="relative">
-            <button
-              type="button"
+            <div
+              role="button"
+              tabIndex={0}
               onClick={() => setShowStatusDropdown((o) => !o)}
-              className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
-                statusList.length > 0
-                  ? "border-brand bg-brand-soft text-gray-800"
-                  : "border-gray-200 text-gray-400"
-              } ${showStatusDropdown ? "ring-2 ring-brand-soft border-brand" : "hover:border-gray-300"}`}>
-              <span className="truncate">
-                {statusList.length > 0
-                  ? STATUS_OPTIONS.filter((o) => statusList.includes(o.value))
-                      .map((o) => o.label)
-                      .join(", ")
-                  : "Tất cả trạng thái"}
-              </span>
-              <ChevronDown
-                className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${showStatusDropdown ? "rotate-180" : ""}`}
-              />
-            </button>
+              onKeyDown={(event) =>
+                event.key === "Enter" &&
+                setShowStatusDropdown((o) => !o)
+              }
+              className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
+                showStatusDropdown
+                  ? "border-brand ring-2 ring-brand-soft"
+                  : "hover:border-gray-400"
+              } bg-white`}>
+              <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                {statusList.length > 0 ? (
+                  STATUS_OPTIONS.filter((option) =>
+                    statusList.includes(option.value)
+                  ).map((option) => (
+                    <span
+                      key={option.value}
+                      className={`text-xs font-medium px-2 py-0.5 rounded-full truncate ${option.color}`}>
+                      {option.label}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-gray-400 text-sm">
+                    Tất cả trạng thái
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {statusList.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setStatusList([]);
+                    }}
+                    className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+                <ChevronDown
+                  className={`w-4 h-4 text-gray-400 transition-transform ${
+                    showStatusDropdown ? "rotate-180" : ""
+                  }`}
+                />
+              </div>
+            </div>
             {showStatusDropdown && (
               <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
                 {STATUS_OPTIONS.map((opt) => (
@@ -658,6 +800,7 @@ export function InternalUsesSidebar({
                       readOnly
                       className="rounded"
                     />
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${opt.dot}`} />
                     <span
                       className={`px-2 py-0.5 rounded-full text-xs font-medium ${opt.color}`}>
                       {opt.label}
@@ -671,9 +814,11 @@ export function InternalUsesSidebar({
 
         {/* ── Thời gian ── */}
         <div>
-          <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium text-gray-700">
             Thời gian
-          </label>
+            </label>
+          </div>
           <div className="space-y-1.5">
             <div
               ref={presetRowRef}
@@ -694,17 +839,24 @@ export function InternalUsesSidebar({
                   ? "border-brand bg-brand-soft"
                   : "border-gray-200 hover:border-gray-300"
               }`}>
-              <input
-                type="radio"
-                readOnly
-                checked={dateMode === "preset"}
-                className="accent-brand flex-shrink-0"
-              />
-              <span
-                className={`text-sm truncate flex-1 ${dateMode === "preset" ? "text-brand-dark font-medium" : "text-gray-500"}`}>
-                {dateMode === "preset" ? presetLabel : "Chọn nhanh"}
+              <div
+                className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  dateMode === "preset"
+                    ? "border-brand"
+                    : "border-gray-300"
+                }`}>
+                {dateMode === "preset" && (
+                  <div className="w-1 h-1 rounded-full bg-brand" />
+                )}
+              </div>
+              <span className="text-sm text-gray-700 flex-1 font-medium">
+                {presetLabel}
               </span>
-              <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+              <ChevronRight
+                className={`w-4 h-4 transition-colors flex-shrink-0 ${
+                  showPresetPanel ? "text-brand" : "text-gray-400"
+                }`}
+              />
             </div>
 
             <div
@@ -717,16 +869,20 @@ export function InternalUsesSidebar({
                   ? "border-brand bg-brand-soft"
                   : "border-gray-200 hover:border-gray-300"
               }`}>
-              <input
-                type="radio"
-                readOnly
-                checked={dateMode === "custom"}
-                className="accent-brand flex-shrink-0"
-              />
-              <span
-                className={`text-sm ${dateMode === "custom" ? "text-brand-dark font-medium" : "text-gray-500"}`}>
+              <div
+                className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  dateMode === "custom"
+                    ? "border-brand"
+                    : "border-gray-300"
+                }`}>
+                {dateMode === "custom" && (
+                  <div className="w-1 h-1 rounded-full bg-brand" />
+                )}
+              </div>
+              <span className="text-sm text-gray-700 flex-1">
                 Tùy chỉnh
               </span>
+              <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
             </div>
 
             {dateMode === "custom" && (
@@ -744,7 +900,7 @@ export function InternalUsesSidebar({
                       <button
                         type="button"
                         onClick={() => setOpenCal(isOpen ? null : field)}
-                        className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
+                        className={`w-full flex items-center justify-between px-2 py-1 border rounded-lg text-sm transition-all ${
                           val
                             ? "border-brand bg-brand-soft text-gray-800"
                             : "border-gray-200 text-gray-400"

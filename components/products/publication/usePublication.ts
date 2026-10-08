@@ -9,6 +9,7 @@ import {
   TrackAsiaPrediction,
 } from "@/lib/api/trackasia";
 import type { Product } from "@/lib/api/products";
+import { repairUploadedFilename } from "@/lib/utils/uploaded-filename";
 
 /**
  * Chuẩn hóa tên địa giới để so khớp: hạ chữ thường, lược tiền tố hành chính.
@@ -95,7 +96,9 @@ export function usePublication(product?: Product) {
       setDocuments(
         product.documents.map((doc) => ({
           url: doc.url,
-          name: doc.originalName || doc.url.split("/").pop() || "Tài liệu",
+          name: repairUploadedFilename(
+            doc.originalName || doc.url.split("/").pop() || "Tài liệu"
+          ),
           size: doc.size,
           mimetype: doc.mimetype,
         }))
@@ -334,6 +337,10 @@ export function usePublication(product?: Product) {
   > => {
     const formData = new FormData();
     files.forEach((file) => formData.append("files", file));
+    formData.append(
+      "originalNames",
+      JSON.stringify(files.map((file) => file.name))
+    );
 
     const token = useAuthStore.getState().token;
     const res = await fetch(
@@ -361,7 +368,7 @@ export function usePublication(product?: Product) {
     }
     return (result.items || []).map((it: any) => ({
       url: it.url,
-      originalName: it.originalname,
+      originalName: repairUploadedFilename(it.originalname || ""),
       mimetype: it.mimetype,
       size: it.size,
     }));
