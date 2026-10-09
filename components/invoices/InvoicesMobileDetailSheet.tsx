@@ -15,6 +15,7 @@ import {
   Copy,
   Loader2,
   MapPin,
+  PackageCheck,
   Printer,
   Tag,
   User,
@@ -24,7 +25,11 @@ import { INVOICE_STATUS, INVOICE_STATUS_LABELS } from "@/lib/types/invoice";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useCan, useIsAdmin } from "@/lib/hooks/useCan";
 import { useInvoiceCashPackingLock } from "@/lib/hooks/useInvoiceCashPackingLock";
-import { printDeliverySlip, printEntity } from "@/lib/utils/print";
+import {
+  printDeliverySlip,
+  printEntity,
+  printWarehouseExport,
+} from "@/lib/utils/print";
 import Swal from "sweetalert2";
 import { CodeLink } from "../shared/CodeLink";
 import { LineTypeBadge, PromotionLineName } from "../shared/LineTypeBadge";
@@ -270,6 +275,15 @@ export function InvoicesMobileDetailSheet({
       await printDeliverySlip("invoice", invoice.id);
     } catch (e: any) {
       toast.error(e?.message || "In phiếu giao hàng thất bại");
+    }
+  };
+
+  const handlePrintWarehouseExport = async () => {
+    if (!invoice) return;
+    try {
+      await printWarehouseExport(invoice.id);
+    } catch (e: any) {
+      toast.error(e?.message || "In phiếu xuất kho thất bại");
     }
   };
 
@@ -736,6 +750,15 @@ export function InvoicesMobileDetailSheet({
                 ) : (
                   "Lưu"
                 )}
+              </button>
+            )}
+
+            {hasPermPrint && invoice?.status !== INVOICE_STATUS.CANCELLED && (
+              <button
+                onClick={handlePrintWarehouseExport}
+                title="In phiếu xuất kho"
+                className="p-2.5 text-gray-500 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 active:scale-95 transition-all flex-shrink-0">
+                <PackageCheck className="w-4 h-4" />
               </button>
             )}
 

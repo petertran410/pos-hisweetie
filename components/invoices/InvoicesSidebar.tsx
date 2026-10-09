@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useCustomers } from "@/lib/hooks/useCustomers";
+import { useCustomerGroups } from "@/lib/hooks/useCustomerGroups";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useSaleChannels } from "@/lib/hooks/useSaleChannels";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
@@ -428,6 +429,7 @@ export function InvoicesSidebar({
   );
   const { data: customersData } = useCustomers({ pageSize: 1000 });
   const { data: users } = useUsersForFilter();
+  const { data: customerGroups } = useCustomerGroups();
   const { data: saleChannels } = useSaleChannels();
   const { data: bankAccounts } = useBankAccountsForPayment();
   const { data: misaEmployees } = useMisaEmployees(showMisaEmployeeFilter);
@@ -461,6 +463,9 @@ export function InvoicesSidebar({
     return Array.isArray(savedIds) ? savedIds : [];
   });
   const [customerId, setCustomerId] = useState(saved.current?.customerId || "");
+  const [customerGroupIds, setCustomerGroupIds] = useState<string[]>(
+    saved.current?.customerGroupIds || []
+  );
   const [customerSearch, setCustomerSearch] = useState("");
   const [showCustomerDrop, setShowCustomerDrop] = useState(false);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(() => {
@@ -560,6 +565,7 @@ export function InvoicesSidebar({
     const state = {
       selectedBranchIds,
       customerId,
+      customerGroupIds,
       selectedStatuses,
       selectedDeliveryStatus,
       createdRange,
@@ -580,6 +586,7 @@ export function InvoicesSidebar({
   }, [
     selectedBranchIds,
     customerId,
+    customerGroupIds,
     selectedStatuses,
     selectedDeliveryStatus,
     createdRange,
@@ -644,6 +651,7 @@ export function InvoicesSidebar({
     let n = 0;
     if (selectedBranchIds.length > 0) n++;
     if (customerId) n++;
+    if (customerGroupIds.length > 0) n++;
     if (selectedStatuses.length > 0) n++;
     if (selectedDeliveryStatus) n++;
     if (
@@ -676,6 +684,7 @@ export function InvoicesSidebar({
   }, [
     selectedBranchIds,
     customerId,
+    customerGroupIds,
     selectedStatuses,
     selectedDeliveryStatus,
     createdRange,
@@ -708,6 +717,8 @@ export function InvoicesSidebar({
       const f: any = {};
       if (selectedBranchIds.length > 0) f.branchIds = selectedBranchIds;
       if (customerId) f.customerIds = [parseInt(customerId)];
+      if (customerGroupIds.length > 0)
+        f.customerGroupIds = customerGroupIds.map(Number);
       if (selectedStatuses.length > 0)
         f.statusIds = selectedStatuses.map(Number);
       if (selectedDeliveryStatus) f.deliveryStatus = selectedDeliveryStatus;
@@ -760,6 +771,7 @@ export function InvoicesSidebar({
   }, [
     selectedBranchIds,
     customerId,
+    customerGroupIds,
     selectedStatuses,
     selectedDeliveryStatus,
     createdRange,
@@ -785,6 +797,7 @@ export function InvoicesSidebar({
   const clearAll = () => {
     setSelectedBranchIds(selectedBranch ? [selectedBranch.id] : []);
     setCustomerId("");
+    setCustomerGroupIds([]);
     setCustomerSearch("");
     setSelectedStatuses(DEFAULT_STATUSES);
     setSelectedDeliveryStatus("");
@@ -1194,6 +1207,27 @@ export function InvoicesSidebar({
               )}
             </div>
           )}
+        </div>
+
+        <div className="border-t border-gray-100" />
+
+        {/* ── Nhóm khách hàng ── */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Nhóm khách hàng
+          </label>
+          <FilterMultiSelect
+            options={
+              customerGroups?.data?.map((g) => ({
+                value: String(g.id),
+                label: g.name,
+              })) ?? []
+            }
+            values={customerGroupIds}
+            placeholder="Tất cả"
+            searchPlaceholder="Tìm theo tên nhóm..."
+            onChange={setCustomerGroupIds}
+          />
         </div>
 
         <div className="border-t border-gray-100" />

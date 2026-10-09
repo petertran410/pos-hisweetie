@@ -71,6 +71,7 @@ export interface InvoicePackingCreatorLink {
 }
 
 export interface InvoicePackingCreatorParent {
+  createdAt?: string;
   creator?: {
     id: number;
     name: string;

@@ -106,18 +106,24 @@ const renderPackingCreators = (
   links: InvoicePackingCreatorLink[] | undefined,
   type: "packingHang" | "packingLoading" | "packingSlip"
 ) => {
-  const names =
+  const items =
     links
-      ?.map((link) => link[type]?.creator?.name)
-      .filter((name): name is string => Boolean(name)) || [];
+      ?.map((link) => ({
+        name: link[type]?.creator?.name,
+        createdAt: link[type]?.createdAt ?? link.createdAt,
+      }))
+      .filter((item) => Boolean(item.name)) || [];
 
-  if (names.length === 0) return "-";
+  if (items.length === 0) return "-";
 
   return (
-    <div className="space-y-0.5">
-      {names.map((name, index) => (
-        <div key={`${name}-${index}`} className="whitespace-nowrap">
-          {name}
+    <div className="space-y-1">
+      {items.map((item, index) => (
+        <div key={`${item.name}-${index}`} className="whitespace-nowrap">
+          <div>{item.name}</div>
+          <div className="text-xs text-gray-400">
+            {formatDateTime(item.createdAt)}
+          </div>
         </div>
       ))}
     </div>
