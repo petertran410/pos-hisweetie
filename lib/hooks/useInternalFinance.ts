@@ -150,7 +150,9 @@ export function useMarkWarehouseExpenseIssued() {
   });
 }
 
-function invalidateInternalFinance(queryClient: ReturnType<typeof useQueryClient>) {
+export function invalidateInternalFinance(
+  queryClient: ReturnType<typeof useQueryClient>,
+) {
   queryClient.invalidateQueries({ queryKey: ["internal-finance"] });
   queryClient.invalidateQueries({ queryKey: ["warehouse-receipts"] });
   queryClient.invalidateQueries({ queryKey: ["warehouse-expenses"] });
@@ -158,6 +160,38 @@ function invalidateInternalFinance(queryClient: ReturnType<typeof useQueryClient
   queryClient.invalidateQueries({ queryKey: ["cashflows"] });
   queryClient.invalidateQueries({ queryKey: ["approval-requests"] });
   queryClient.invalidateQueries({ queryKey: ["invoices"] });
+}
+
+export function useLarkImportStatus(enabled = true) {
+  return useQuery({
+    queryKey: ["internal-finance", "lark-import", "status"],
+    queryFn: () => internalFinanceApi.larkImportStatus(),
+    enabled,
+    refetchInterval: (query) =>
+      query.state.data?.running ? 3000 : false,
+    refetchIntervalInBackground: true,
+  });
+}
+
+export function useStartLarkImport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { dryRun: boolean; sources?: string[] }) =>
+      internalFinanceApi.startLarkImport(payload),
+    onSuccess: (data) => {
+      queryClient.setQueryData(
+        ["internal-finance", "lark-import", "status"],
+        data,
+      );
+      toast.success(
+        data.dryRun
+          ? "Đang kiểm tra dữ liệu Lark..."
+          : "Đang đồng bộ dữ liệu Lark...",
+      );
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, "Không bắt đầu được đồng bộ Lark")),
+  });
 }
 
 export function useCreateManualReceipt() {

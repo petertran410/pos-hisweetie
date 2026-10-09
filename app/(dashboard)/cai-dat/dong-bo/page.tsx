@@ -6,6 +6,7 @@ import { apiClient } from "@/lib/config/api";
 import { RefreshCw, XCircle, Loader2, Database, ShieldCheck, Users, Package, AlertTriangle, Landmark } from "lucide-react";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
+import { LarkFinanceSyncCard } from "@/components/internal-finance/LarkFinanceSyncCard";
 import { useSyncMisaDictionary } from "@/lib/hooks/useMisa";
 import { useSyncSepayTransactions } from "@/lib/hooks/useSepay";
 import Swal from "sweetalert2";
@@ -113,45 +114,6 @@ export default function SyncSettingsPage() {
   const syncMisaDictionary = useSyncMisaDictionary();
   const syncSepayTransactions = useSyncSepayTransactions();
 
-  type LarkFinanceImportResult = {
-    dryRun: boolean;
-    tables: Array<{
-      source: string;
-      tableName: string | null;
-      fetched: number;
-      created: number;
-      updated: number;
-      skipped: number;
-      attachmentsDownloaded: number;
-      attachmentsFailed: number;
-      error?: string;
-      sampleErrors: string[];
-    }>;
-  };
-
-  const importLarkFinance = useMutation({
-    mutationFn: (dryRun: boolean) =>
-      apiClient.post<LarkFinanceImportResult>(
-        "/internal-finance/lark-import",
-        { dryRun },
-        15 * 60 * 1000,
-      ),
-  });
-
-  const importSourceLabel = (source: string) =>
-    ({
-      EXPENSE_HN: "Chi Kho Hà Nội",
-      EXPENSE_SG: "Chi Kho Sài Gòn",
-      EXPENSE_VP: "Chi văn phòng",
-      RECEIPT: "Phiếu thu",
-      SALARY_ADVANCE: "Tạm ứng lương",
-      FUEL: "Xăng dầu",
-      VEHICLE_CARE: "Chăm sóc xe",
-      APPROVAL_HN: "Approval tuần Kho Hà Nội",
-      APPROVAL_SG: "Approval tuần Kho Sài Gòn",
-      APPROVAL_VP: "Approval tuần văn phòng",
-    })[source] || source;
-
   type WarehouseCashImportResult = {
     dryRun: boolean;
     fetched: number;
@@ -186,25 +148,6 @@ export default function SyncSettingsPage() {
       confirmButtonColor: "#0f766e",
     });
     if (result.isConfirmed) importWarehouseCash.mutate(false);
-  };
-
-  const handlePreviewLarkFinance = () => {
-    importLarkFinance.mutate(true);
-  };
-
-  const handleCommitLarkFinance = async () => {
-    const result = await Swal.fire({
-      title: "Nhập dữ liệu lịch sử vào POS?",
-      text: "Chỉ tạo dữ liệu Tài chính nội bộ và Approval tuần. Không tạo CashFlow phiếu chi và không ghi ngược vào Lark.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Nhập vào POS",
-      cancelButtonText: "Hủy",
-      confirmButtonColor: "#0f766e",
-    });
-    if (result.isConfirmed) {
-      importLarkFinance.mutate(false);
-    }
   };
 
   // Đồng bộ khách hàng đang hoạt động lên Lark
@@ -321,7 +264,7 @@ export default function SyncSettingsPage() {
         <div className="p-6 border-b bg-white">
           <h1 className="text-2xl font-bold">Đồng bộ dữ liệu</h1>
           <p className="text-sm text-gray-600 mt-1">
-            Quản lý đồng bộ dữ liệu từ Sepay và Misa
+            Quản lý đồng bộ dữ liệu từ Lark, Sepay và Misa
           </p>
         </div>
 
@@ -693,93 +636,7 @@ export default function SyncSettingsPage() {
           </PermissionGate>
 
           <PermissionGate resource="cash_flows" action="create">
-            <div className="rounded-lg border bg-white p-6">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-100">
-                    <Landmark className="h-6 w-6 text-teal-700" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold">
-                      Nhập lịch sử Tài chính nội bộ
-                    </h2>
-                    <p className="max-w-2xl text-sm text-gray-500">
-                      Kiểm tra trước dữ liệu phiếu chi, phiếu thu, xe và Approval
-                      tuần. Mã POS sẽ được tạo theo dạng TCNB-*. Không tạo
-                      CashFlow cho phiếu chi và không ghi ngược vào Lark.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handlePreviewLarkFinance}
-                    disabled={importLarkFinance.isPending}
-                    className="inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
-                    {importLarkFinance.isPending && (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    )}
-                    Kiểm tra dữ liệu
-                  </button>
-                  {importLarkFinance.data?.dryRun && (
-                    <button
-                      type="button"
-                      onClick={handleCommitLarkFinance}
-                      disabled={importLarkFinance.isPending}
-                      className="inline-flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-50">
-                      <RefreshCw className="h-4 w-4" />
-                      Nhập vào POS
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {importLarkFinance.data?.tables && (
-                <div className="mt-4 overflow-x-auto rounded-lg border">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
-                      <tr>
-                        <th className="px-3 py-2">Nguồn</th>
-                        <th className="px-3 py-2 text-right">Đọc</th>
-                        <th className="px-3 py-2 text-right">Tạo</th>
-                        <th className="px-3 py-2 text-right">Cập nhật</th>
-                        <th className="px-3 py-2 text-right">Bỏ qua</th>
-                        <th className="px-3 py-2">Kết quả</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {importLarkFinance.data.tables.map((table) => (
-                        <tr key={`${table.source}-${table.tableName}`}>
-                          <td className="px-3 py-2 font-medium text-gray-800">
-                            {importSourceLabel(table.source)}
-                          </td>
-                          <td className="px-3 py-2 text-right">{table.fetched}</td>
-                          <td className="px-3 py-2 text-right">{table.created}</td>
-                          <td className="px-3 py-2 text-right">{table.updated}</td>
-                          <td className="px-3 py-2 text-right">{table.skipped}</td>
-                          <td className="px-3 py-2 text-xs text-gray-500">
-                            {table.error ||
-                              (table.sampleErrors.length
-                                ? table.sampleErrors.slice(0, 2).join(" · ")
-                                : "Đã kiểm tra")}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {importLarkFinance.isError && (
-                <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
-                  <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
-                  <p className="text-sm text-red-700">
-                    Không thể đọc dữ liệu Lark. Vui lòng kiểm tra cấu hình bot và thử
-                    lại.
-                  </p>
-                </div>
-              )}
-            </div>
+            <LarkFinanceSyncCard />
           </PermissionGate>
 
           {/* Misa Dictionary Sync Section */}

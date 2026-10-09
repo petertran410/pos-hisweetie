@@ -226,6 +226,53 @@ export interface WeeklyBatch {
   entries?: InternalFinanceEntry[];
 }
 
+export type LarkImportJobPhase =
+  | "IDLE"
+  | "QUEUED"
+  | "DATA"
+  | "TRANSACTIONS"
+  | "ATTACHMENTS"
+  | "COMPLETED"
+  | "FAILED";
+
+export interface LarkImportTableResult {
+  source: string;
+  tableId: string | null;
+  tableName: string | null;
+  fetched: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  pendingAttachments: number;
+  unmatchedInvoices: string[];
+  error?: string;
+}
+
+export interface LarkImportJobStatus {
+  runId: string | null;
+  running: boolean;
+  dryRun: boolean;
+  phase: LarkImportJobPhase;
+  sources: string[];
+  startedAt: string | null;
+  finishedAt: string | null;
+  fetched: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  fundTransactions: number;
+  attachmentsTotal: number;
+  attachmentsDownloaded: number;
+  attachmentsFailed: number;
+  error: string | null;
+  result: {
+    dryRun: boolean;
+    tables: LarkImportTableResult[];
+    attachments: { total: number; downloaded: number; failed: number };
+    fundTransactions: number;
+  } | null;
+}
+
 export const internalFinanceApi = {
   list: (params?: InternalFinanceQuery): Promise<InternalFinanceResponse> =>
     apiClient.get("/internal-finance", params),
@@ -432,4 +479,13 @@ export const internalFinanceApi = {
     attachments: InternalFinanceAttachment[],
   ): Promise<InternalFinanceEntry> =>
     apiClient.post(`/internal-finance/${id}/attachments`, { attachments }),
+
+  startLarkImport: (payload: {
+    dryRun: boolean;
+    sources?: string[];
+  }): Promise<LarkImportJobStatus> =>
+    apiClient.post("/internal-finance/lark-import", payload),
+
+  larkImportStatus: (): Promise<LarkImportJobStatus> =>
+    apiClient.get("/internal-finance/lark-import/status"),
 };
