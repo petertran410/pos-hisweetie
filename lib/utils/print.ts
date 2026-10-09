@@ -138,14 +138,17 @@ export function addPrintSerialNumberColumn(
   return content;
 }
 
-export function buildPrintDocumentHtml(content: string): string {
+export function buildPrintDocumentHtml(
+  content: string,
+  pageSize?: string
+): string {
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
   <title></title>
   <style>
-    @page { margin: 8mm; }
+    @page { ${pageSize ? `size: ${pageSize}; ` : ""}margin: 8mm; }
     html, body {
       width: 100%;
       max-width: 100%;
@@ -390,6 +393,60 @@ export async function printConsignmentReturn(returnId: number): Promise<void> {
 
   doc.open();
   doc.write(buildPrintDocumentHtml(preview.content));
+  doc.close();
+
+  const cleanup = () =>
+    setTimeout(() => iframe.parentNode?.removeChild(iframe), 100);
+  iframe.onload = () => {
+    const win = iframe.contentWindow;
+    if (!win) {
+      cleanup();
+      return;
+    }
+    win.focus();
+    win.print();
+    cleanup();
+  };
+}
+
+/**
+ * In phiếu xuất kho theo hóa đơn thực tế (templateFor 'warehouse_export').
+ * Khổ giấy lấy theo mẫu in (mặc định A4 dọc) — chọn "Lưu dưới dạng PDF" trong
+ * hộp thoại in để xuất PDF.
+ */
+export async function printWarehouseExport(invoiceId: number): Promise<void> {
+  const templates = await printTemplatesApi.getAll({
+    templateFor: "warehouse_export",
+    isActive: true,
+  });
+
+  if (!templates?.length) {
+    throw new Error("Chưa có mẫu in phiếu xuất kho");
+  }
+
+  const template = templates.find((t: any) => t.isDefault) || templates[0];
+  const preview = await printTemplatesApi.renderPreview(template.id, invoiceId);
+
+  if (!preview?.content) {
+    throw new Error("Không render được nội dung in");
+  }
+
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText =
+    "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument;
+  if (!doc) {
+    document.body.removeChild(iframe);
+    throw new Error("Không tạo được iframe in");
+  }
+
+  const pageSize = `${template.paperSize || "A4"} ${
+    template.orientation || "portrait"
+  }`;
+  doc.open();
+  doc.write(buildPrintDocumentHtml(preview.content, pageSize));
   doc.close();
 
   const cleanup = () =>

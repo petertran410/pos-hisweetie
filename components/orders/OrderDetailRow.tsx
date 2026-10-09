@@ -16,7 +16,8 @@ import {
   MapPin,
   Printer,
 } from "lucide-react";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
+import { styleDetailExportSheet } from "@/lib/utils/detail-export-style";
 import { toast } from "sonner";
 import {
   ORDER_STATUS,
@@ -314,6 +315,13 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
           if (cell && typeof cell.v === "number") cell.z = "#,##0";
         }
       }
+
+      styleDetailExportSheet(
+        ws,
+        header.length,
+        itemRows.length + 2,
+        summaryRows.length
+      );
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "ChiTietDatHang");

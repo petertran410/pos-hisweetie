@@ -15,7 +15,8 @@ import {
   MapPin,
   Printer,
 } from "lucide-react";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
+import { styleDetailExportSheet } from "@/lib/utils/detail-export-style";
 import { toast } from "sonner";
 import {
   INVOICE_STATUS,
@@ -26,7 +27,11 @@ import Swal from "sweetalert2";
 import { InvoicePackingSlipsTab } from "./InvoicePackingSlipsTab";
 import { InvoicePaymentsTab } from "./InvoicePaymentsTab";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { printDeliverySlip, printEntity } from "@/lib/utils/print";
+import {
+  printDeliverySlip,
+  printEntity,
+  printWarehouseExport,
+} from "@/lib/utils/print";
 import Link from "next/link";
 import { DeliveryInfoCard } from "../shared/DeliveryInfoSection";
 import { CodeLink } from "../shared/CodeLink";
@@ -231,6 +236,15 @@ export function InvoiceDetailRow({
       await printDeliverySlip("invoice", invoice.id);
     } catch (e: any) {
       toast.error(e?.message || "In phiếu giao hàng thất bại");
+    }
+  };
+
+  const handlePrintWarehouseExport = async () => {
+    if (!invoice) return;
+    try {
+      await printWarehouseExport(invoice.id);
+    } catch (e: any) {
+      toast.error(e?.message || "In phiếu xuất kho thất bại");
     }
   };
 
@@ -464,6 +478,13 @@ export function InvoiceDetailRow({
           if (cell && typeof cell.v === "number") cell.z = "#,##0";
         }
       }
+
+      styleDetailExportSheet(
+        ws,
+        header.length,
+        itemRows.length + 2,
+        summaryRows.length
+      );
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "ChiTietHoaDon");
@@ -966,6 +987,16 @@ export function InvoiceDetailRow({
                     hidden={hideCompleteButton}
                     className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     Kết thúc
+                  </button>
+                  <button
+                    onClick={handlePrintWarehouseExport}
+                    hidden={
+                      !hasPermPrint ||
+                      invoice.status === INVOICE_STATUS.CANCELLED
+                    }
+                    className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5 disabled:opacity-50">
+                    <Printer className="w-3.5 h-3.5" />
+                    In phiếu xuất kho
                   </button>
                   <button
                     onClick={handlePrint}
