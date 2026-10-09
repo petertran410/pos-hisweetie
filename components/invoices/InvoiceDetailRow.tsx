@@ -7,7 +7,15 @@ import {
   useInvoice,
   useUpdateInvoice,
 } from "@/lib/hooks/useInvoices";
-import { Copy, ExternalLink, Loader2, MapPin, Printer } from "lucide-react";
+import {
+  Copy,
+  ExternalLink,
+  FileSpreadsheet,
+  Loader2,
+  MapPin,
+  Printer,
+} from "lucide-react";
+import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import {
   INVOICE_STATUS,
@@ -77,6 +85,7 @@ export function InvoiceDetailRow({
   const hasPermCancel = useCan("invoices", "cancel");
   const hasPermUpdate = useCan("invoices", "update");
   const hasPermPrint = useCan("invoices", "print");
+  const hasPermExport = useCan("invoices", "export");
 
   const hasPermReportDelivered = useCan("invoices", "report_delivered");
   const isAdmin = useIsAdmin();
@@ -378,6 +387,98 @@ export function InvoiceDetailRow({
     }
   };
 
+  const returnOrderAmount = Number((invoice as any).returnOrderAmount) || 0;
+  const remainingAmount = Number(invoice.grandTotal) - returnOrderAmount;
+  const remainingDebt = Math.max(
+    0,
+    returnOrderAmount > 0
+      ? remainingAmount - Number(invoice.paidAmount)
+      : customerDebt
+  );
+
+  const handleExportFile = () => {
+    try {
+      const header = [
+        "Mã hàng",
+        "Tên hàng",
+        "Đơn vị tính",
+        "Số lượng",
+        "Đơn giá",
+        "Giảm giá %",
+        "Giảm giá",
+        "Giá bán",
+        "Thành tiền",
+      ];
+
+      const itemRows = (invoice.details ?? []).map((item: InvoiceDetail) => [
+        item.product?.code ?? item.productCode ?? "",
+        item.product?.name ?? item.productName ?? "",
+        item.product?.unit ?? "",
+        Number(item.quantity) || 0,
+        Number(item.price) || 0,
+        Number(item.discountRatio ?? 0) || 0,
+        Number(item.discount ?? 0) || 0,
+        Number(item.price) - Number(item.discount || 0),
+        Number(item.totalPrice) || 0,
+      ]);
+
+      // Dòng tổng kết: label ở cột áp chót (index 7), giá trị ở cột cuối (index 8).
+      const blank = ["", "", "", "", "", "", ""];
+      const summaryRows = [
+        [
+          ...blank,
+          `Tổng tiền hàng (${invoice.details?.length ?? 0})`,
+          Number(invoice.totalAmount) || 0,
+        ],
+        [...blank, "Giảm giá", Number(invoice.discount) || 0],
+        ...(shippingFee > 0 ? [[...blank, "Phí ship", shippingFee]] : []),
+        [...blank, "Tổng cộng", Number(invoice.grandTotal) || 0],
+        [...blank, "Trả hàng", returnOrderAmount],
+        [...blank, "Còn lại", remainingAmount],
+        [...blank, "Khách đã trả", Number(invoice.paidAmount) || 0],
+        [...blank, "Khách còn nợ", remainingDebt],
+      ];
+
+      // Dòng trống ngăn cách danh sách hàng với phần tổng kết.
+      const aoa = [header, ...itemRows, [], ...summaryRows];
+
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws["!cols"] = [
+        { wch: 12 }, // Mã hàng
+        { wch: 45 }, // Tên hàng
+        { wch: 12 }, // Đơn vị tính
+        { wch: 10 }, // Số lượng
+        { wch: 12 }, // Đơn giá
+        { wch: 10 }, // Giảm giá %
+        { wch: 12 }, // Giảm giá
+        { wch: 20 }, // Giá bán
+        { wch: 14 }, // Thành tiền
+      ];
+
+      // Number format cho các cột tiền/số lượng.
+      const range = XLSX.utils.decode_range(ws["!ref"] as string);
+      const moneyCols = [3, 4, 5, 6, 7, 8];
+      for (let r = 1; r <= range.e.r; r++) {
+        for (const c of moneyCols) {
+          const cell = ws[XLSX.utils.encode_cell({ r, c })];
+          if (cell && typeof cell.v === "number") cell.z = "#,##0";
+        }
+      }
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "ChiTietHoaDon");
+
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(
+        now.getDate()
+      )}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+      XLSX.writeFile(wb, `ChiTietHoaDon_${invoice.code}_${stamp}.xlsx`);
+    } catch (e: any) {
+      toast.error(e?.message || "Xuất file thất bại");
+    }
+  };
+
   return (
     <tr>
       <td
@@ -581,7 +682,6 @@ export function InvoiceDetailRow({
                         <tbody className="bg-white divide-y divide-gray-200">
                           {invoice.details?.map(
                             (item: InvoiceDetail, index: number) => {
-                              console.log(item);
                               return (
                                 <tr
                                   key={index}
@@ -790,17 +890,7 @@ export function InvoiceDetailRow({
                             Khách còn nợ:
                           </span>
                           <span className="text-lg font-bold text-red-600">
-                            {formatCurrency(
-                              Math.max(
-                                0,
-                                Number((invoice as any).returnOrderAmount || 0) >
-                                  0
-                                  ? Number(invoice.grandTotal) -
-                                      Number((invoice as any).returnOrderAmount) -
-                                      Number(invoice.paidAmount)
-                                  : customerDebt
-                              )
-                            )}
+                            {formatCurrency(remainingDebt)}
                           </span>
                         </div>
                       </div>
@@ -835,6 +925,13 @@ export function InvoiceDetailRow({
                     className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5 disabled:opacity-50">
                     <Copy className="w-3.5 h-3.5" />
                     Sao chép
+                  </button>
+                  <button
+                    onClick={handleExportFile}
+                    hidden={!hasPermExport}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5 disabled:opacity-50">
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    Xuất file
                   </button>
                 </div>
                 <div className="flex gap-2">

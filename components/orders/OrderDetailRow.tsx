@@ -289,7 +289,8 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
         [...blank, "Khách cần trả", Number(order.debtAmount) || 0],
       ];
 
-      const aoa = [header, ...itemRows, ...summaryRows];
+      // Dòng trống ngăn cách danh sách hàng với phần tổng kết.
+      const aoa = [header, ...itemRows, [], ...summaryRows];
 
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       ws["!cols"] = [
