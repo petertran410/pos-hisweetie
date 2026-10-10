@@ -35,6 +35,12 @@ const STOCK_OPTIONS = [
   { value: "outstock", label: "Hết hàng" },
 ];
 
+const CONDITION_OPTIONS = [
+  { value: "damaged", label: "Có hàng bục rách" },
+  { value: "nearExpiry", label: "Có hàng cận date" },
+  { value: "any", label: "Bục rách hoặc cận date" },
+];
+
 const DIRECT_SALE_OPTIONS = [
   { value: "yes", label: "Có" },
   { value: "no", label: "Không" },
@@ -93,6 +99,8 @@ function ProductMobileCard({
     (inv) => inv.branchId === branchId
   );
   const stock = inventory ? inventory.onHand : 0;
+  const damaged = Number(inventory?.damagedQuantity || 0);
+  const nearExpiry = Number(inventory?.nearExpiryQuantity || 0);
   const cost = inventory ? Number(inventory.cost) : 0;
   const basePrice = Number(product.basePrice);
 
@@ -145,6 +153,16 @@ function ProductMobileCard({
             {product.parentName && (
               <span className="text-[11px] text-gray-400 truncate">
                 {product.parentName}
+              </span>
+            )}
+            {damaged > 0 && (
+              <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-red-50 text-red-600">
+                Bục rách: {damaged.toLocaleString()}
+              </span>
+            )}
+            {nearExpiry > 0 && (
+              <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-orange-50 text-orange-600">
+                Cận date: {nearExpiry.toLocaleString()}
               </span>
             )}
           </div>
@@ -229,6 +247,9 @@ function ProductsMobileFilterSheet({
   const [localStockStatus, setLocalStockStatus] = useState<string>(
     filters.stockStatus || ""
   );
+  const [localConditionStatus, setLocalConditionStatus] = useState<string>(
+    filters.conditionStatus || ""
+  );
   const [localTradeMarkId, setLocalTradeMarkId] = useState<string>(
     filters.tradeMarkId ? String(filters.tradeMarkId) : ""
   );
@@ -288,6 +309,7 @@ function ProductsMobileFilterSheet({
     if (localMiddleName) f.middleName = localMiddleName;
     if (localChildName) f.childName = localChildName;
     if (localStockStatus) f.stockStatus = localStockStatus;
+    if (localConditionStatus) f.conditionStatus = localConditionStatus;
     if (localTradeMarkId) f.tradeMarkId = Number(localTradeMarkId);
     if (localDirectSale === "yes") f.isDirectSale = true;
     if (localDirectSale === "no") f.isDirectSale = false;
@@ -300,6 +322,7 @@ function ProductsMobileFilterSheet({
     setLocalMiddleName("");
     setLocalChildName("");
     setLocalStockStatus("");
+    setLocalConditionStatus("");
     setLocalTradeMarkId("");
     setLocalDirectSale("");
   };
@@ -310,6 +333,7 @@ function ProductsMobileFilterSheet({
       localMiddleName,
       localChildName,
       localStockStatus,
+      localConditionStatus,
       localTradeMarkId,
       localDirectSale,
     ].filter(Boolean).length + (localTypes.length > 0 ? 1 : 0);
@@ -500,6 +524,33 @@ function ProductsMobileFilterSheet({
             </div>
           </div>
 
+          {/* Tình trạng tồn */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2.5">
+              Tình trạng tồn
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {CONDITION_OPTIONS.map((opt) => {
+                const isActive = localConditionStatus === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() =>
+                      setLocalConditionStatus(isActive ? "" : opt.value)
+                    }
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-all ${
+                      isActive
+                        ? "bg-brand text-white border-brand"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-brand"
+                    }`}>
+                    {isActive && <Check className="w-3.5 h-3.5" />}
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Thương hiệu */}
           {trademarkOptions.length > 0 && (
             <div>
@@ -636,6 +687,7 @@ export function ProductsMobileView({
       filters.middleName,
       filters.childName,
       filters.stockStatus,
+      filters.conditionStatus,
       filters.tradeMarkId,
       filters.isDirectSale !== undefined ? "yes" : "",
     ].filter(Boolean).length +

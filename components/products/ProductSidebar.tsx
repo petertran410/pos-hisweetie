@@ -204,6 +204,12 @@ const STOCK_OPTIONS = [
   { value: "outstock", label: "Hết hàng" },
 ];
 
+const CONDITION_OPTIONS = [
+  { value: "damaged", label: "Có hàng bục rách" },
+  { value: "nearExpiry", label: "Có hàng cận date" },
+  { value: "any", label: "Bục rách hoặc cận date" },
+];
+
 const PRODUCT_TYPE_OPTIONS = [
   { value: "2", label: "Hàng hóa" },
   { value: "3", label: "Dịch vụ" },
@@ -240,6 +246,7 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
   const [middleNames, setMiddleNames] = useState<string[]>([]);
   const [childNames, setChildNames] = useState<string[]>([]);
   const [stockStatus, setStockStatus] = useState("");
+  const [conditionStatus, setConditionStatus] = useState("");
   const [tradeMarkIds, setTradeMarkIds] = useState<string[]>([]);
   const [directSale, setDirectSale] = useState("");
   const [cargoType, setCargoType] = useState<"" | "COLD" | "NORMAL">("");
@@ -293,8 +300,9 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
     (dateMode === "custom" && !!(fromDate && toDate));
 
   const activeFilterCount =
-    [selectedStatus, stockStatus, directSale, cargoType].filter(Boolean)
-      .length +
+    [selectedStatus, stockStatus, conditionStatus, directSale, cargoType].filter(
+      Boolean
+    ).length +
     (selectedTypes.length > 0 ? 1 : 0) +
     (parentNames.length > 0 ? 1 : 0) +
     (middleNames.length > 0 ? 1 : 0) +
@@ -312,6 +320,7 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
       if (middleNames.length > 0) f.middleNames = middleNames;
       if (childNames.length > 0) f.childNames = childNames;
       if (stockStatus) f.stockStatus = stockStatus;
+      if (conditionStatus) f.conditionStatus = conditionStatus;
       if (tradeMarkIds.length > 0) f.tradeMarkIds = tradeMarkIds.map(Number);
       if (directSale === "yes") f.isDirectSale = true;
       if (directSale === "no") f.isDirectSale = false;
@@ -343,6 +352,7 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
     middleNames,
     childNames,
     stockStatus,
+    conditionStatus,
     tradeMarkIds,
     directSale,
     cargoType,
@@ -373,6 +383,7 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
     setMiddleNames([]);
     setChildNames([]);
     setStockStatus("");
+    setConditionStatus("");
     setTradeMarkIds([]);
     setDirectSale("");
     setCargoType("");
@@ -626,6 +637,18 @@ export function ProductsSidebar({ onFiltersChange }: ProductsSidebarProps) {
             value={stockStatus}
             placeholder="Tất cả"
             onChange={setStockStatus}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Tình trạng tồn
+          </label>
+          <SimpleDropdown
+            options={CONDITION_OPTIONS}
+            value={conditionStatus}
+            placeholder="Tất cả"
+            onChange={setConditionStatus}
           />
         </div>
 
