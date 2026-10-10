@@ -4,7 +4,9 @@ import { FormEvent, useMemo, useState } from "react";
 import { Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { InternalFinanceDateField } from "@/components/internal-finance/InternalFinanceDateField";
+import { FilterSearchableSelect } from "@/components/ui/filters";
 import type {
+  InternalFinanceAttachment,
   InternalFinanceEntry,
   WarehouseExpenseInput,
 } from "@/lib/api/internal-finance";
@@ -13,16 +15,22 @@ import {
   useCreateWarehouseExpense,
   useUpdateWarehouseExpense,
 } from "@/lib/hooks/useInternalFinance";
-import {
-  uploadPackingSlipExpenseFiles,
-  type UploadedExpenseFile,
-} from "@/lib/hooks/usePackingSlips";
+import { uploadPackingSlipExpenseFiles } from "@/lib/hooks/usePackingSlips";
+import { useUsersForFilter } from "@/lib/hooks/useUsers";
+import { toDateInput, vnDateKey, vnDayIso } from "@/lib/internal-finance/dates";
+import { WAREHOUSE_EXPENSE_ITEMS } from "@/lib/internal-finance/vehicle-constants";
 import { useAuthStore } from "@/lib/store/auth";
+import { formatCurrency } from "@/lib/utils";
 
-const toDateInput = (value: Date) => {
-  const offset = value.getTimezoneOffset() * 60_000;
-  return new Date(value.getTime() - offset).toISOString().slice(0, 10);
+const parseNumber = (value: string) => {
+  const parsed = Number(value.replace(/[^\d.]/g, ""));
+  return value.trim() && Number.isFinite(parsed) ? parsed : null;
 };
+
+const numberText = (value: number | string | null | undefined) =>
+  value === null || value === undefined || value === ""
+    ? ""
+    : String(Number(value));
 
 const scopeForBranch = (branchId: number) =>
   branchId === 6 ? "hn" : branchId === 1 ? "sg" : "vp";
@@ -74,18 +82,53 @@ export function WarehouseExpenseForm({
     expense ? String(Math.round(Number(expense.amount))) : "",
   );
   const [occurredAt, setOccurredAt] = useState(
-    expense ? toDateInput(new Date(expense.occurredAt)) : toDateInput(new Date()),
+    expense ? vnDateKey(expense.occurredAt) : toDateInput(new Date()),
   );
   const [description, setDescription] = useState(expense?.description || "");
-  const [attachments, setAttachments] = useState<UploadedExpenseFile[]>([]);
+  const [expenseItem, setExpenseItem] = useState(expense?.expenseItem || "");
+  const [quantity, setQuantity] = useState(numberText(expense?.quantity));
+  const [unitPrice, setUnitPrice] = useState(numberText(expense?.unitPrice));
+  const [note, setNote] = useState(expense?.note || "");
+  const [payerId, setPayerId] = useState(
+    String(expense?.payerId ?? user?.id ?? ""),
+  );
+  // Backend thay toàn bộ danh sách chứng từ khi sửa, nên nạp sẵn file cũ.
+  const [attachments, setAttachments] = useState<InternalFinanceAttachment[]>(
+    () =>
+      (expense?.attachments || []).map((file) => ({
+        fileUrl: file.fileUrl,
+        fileName: file.fileName,
+        fileType: file.fileType,
+        fileSize: file.fileSize,
+        kind: file.kind || "EVIDENCE",
+      })),
+  );
   const [uploading, setUploading] = useState(false);
+  const { data: users } = useUsersForFilter();
+  const userOptions = useMemo(
+    () =>
+      (users || []).map((item) => ({
+        value: String(item.id),
+        label: item.name,
+      })),
+    [users],
+  );
+  const parsedQuantity = parseNumber(quantity);
+  const parsedUnitPrice = parseNumber(unitPrice);
+  const lineTotal =
+    parsedQuantity !== null && parsedUnitPrice !== null
+      ? Math.round(parsedQuantity * parsedUnitPrice * 100) / 100
+      : null;
 
   const handleUpload = async (files: FileList | null) => {
     if (!files?.length) return;
     setUploading(true);
     try {
       const result = await uploadPackingSlipExpenseFiles(Array.from(files));
-      setAttachments((current) => [...current, ...result.files]);
+      setAttachments((current) => [
+        ...current,
+        ...result.files.map((file) => ({ ...file, kind: "EVIDENCE" })),
+      ]);
       if (result.errors.length) {
         toast.error(`Có ${result.errors.length} file không upload được`);
       }
@@ -100,43 +143,39 @@ export function WarehouseExpenseForm({
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const parsedAmount = Number(amount.replace(/[^\d.-]/g, ""));
-    if (
-      !Number.isFinite(parsedAmount) ||
-      parsedAmount <= 0 ||
-      !description.trim()
-    ) {
+    if ((parsedQuantity === null) !== (parsedUnitPrice === null)) {
+      toast.error("Cần nhập cả số lượng và đơn giá, hoặc bỏ trống cả hai");
+      return;
+    }
+    const parsedAmount = lineTotal ?? parseNumber(amount);
+    if (!parsedAmount || parsedAmount <= 0 || !description.trim()) {
       toast.error("Cần nhập số tiền và nội dung khoản chi");
       return;
     }
-    const attachmentsPayload = attachments.map((file) => ({
-        fileUrl: file.fileUrl,
-        fileName: file.fileName,
-        fileType: file.fileType,
-        fileSize: file.fileSize,
-        kind: "EVIDENCE",
-    }));
+    const fields = {
+      // Có Số lượng × Đơn giá thì backend tự tính thành tiền.
+      amount: lineTotal === null ? parsedAmount : undefined,
+      quantity: parsedQuantity,
+      unitPrice: parsedUnitPrice,
+      occurredAt: vnDayIso(occurredAt),
+      description: description.trim(),
+      expenseItem: expenseItem || undefined,
+      payerId: payerId ? Number(payerId) : undefined,
+      attachments,
+    };
     if (expense) {
       updateExpense.mutate(
-        {
-          id: expense.id,
-          payload: {
-            amount: parsedAmount,
-            occurredAt: `${occurredAt}T00:00:00+07:00`,
-            description: description.trim(),
-            ...(attachments.length ? { attachments: attachmentsPayload } : {}),
-          },
-        },
+        { id: expense.id, payload: { ...fields, note: note.trim() } },
         { onSuccess: onClose },
       );
       return;
     }
     const payload: WarehouseExpenseInput = {
+      ...fields,
       branchId: selectedBranchId,
-      amount: parsedAmount,
-      occurredAt: `${occurredAt}T00:00:00+07:00`,
-      description: description.trim(),
-      attachments: attachmentsPayload,
+      quantity: parsedQuantity ?? undefined,
+      unitPrice: parsedUnitPrice ?? undefined,
+      note: note.trim() || undefined,
     };
     createExpense.mutate(payload, { onSuccess: onClose });
   };
@@ -177,13 +216,52 @@ export function WarehouseExpenseForm({
               ))}
             </select>
           </label>
+          <label className="flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600 sm:col-span-2">
+            Khoản mục
+            <select
+              value={expenseItem}
+              onChange={(event) => setExpenseItem(event.target.value)}
+              className="dt-select h-10 w-full">
+              <option value="">Chọn khoản mục</option>
+              {expenseItem &&
+                !(WAREHOUSE_EXPENSE_ITEMS as readonly string[]).includes(
+                  expenseItem,
+                ) && <option value={expenseItem}>{expenseItem}</option>}
+              {WAREHOUSE_EXPENSE_ITEMS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600">
-            Số tiền
+            Số lượng
             <input
               inputMode="decimal"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
+              value={quantity}
+              onChange={(event) => setQuantity(event.target.value)}
               className="dt-input h-10 w-full"
+              placeholder="Không bắt buộc"
+            />
+          </label>
+          <label className="flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600">
+            Đơn giá
+            <input
+              inputMode="decimal"
+              value={unitPrice}
+              onChange={(event) => setUnitPrice(event.target.value)}
+              className="dt-input h-10 w-full"
+              placeholder="Không bắt buộc"
+            />
+          </label>
+          <label className="flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600">
+            {lineTotal === null ? "Số tiền" : "Thành tiền"}
+            <input
+              inputMode="decimal"
+              value={lineTotal === null ? amount : formatCurrency(lineTotal)}
+              onChange={(event) => setAmount(event.target.value)}
+              readOnly={lineTotal !== null}
+              className="dt-input h-10 w-full read-only:bg-gray-50"
               placeholder="0"
               required
             />
@@ -198,11 +276,31 @@ export function WarehouseExpenseForm({
             <textarea
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              rows={4}
+              rows={3}
               className="dt-input w-full"
               required
             />
           </label>
+          <label className="flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600 sm:col-span-2">
+            Ghi chú
+            <input
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              className="dt-input h-10 w-full"
+            />
+          </label>
+          <div className="flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600 sm:col-span-2">
+            Người chi
+            <FilterSearchableSelect
+              options={userOptions}
+              value={payerId}
+              onChange={setPayerId}
+              placeholder="Chọn người chi"
+              searchPlaceholder="Tìm nhân viên..."
+              allowDeselect={false}
+              showClearOption={false}
+            />
+          </div>
           <div className="sm:col-span-2">
             <div className="mb-1.5 text-xs font-medium text-gray-600">
               Chứng từ
@@ -224,8 +322,23 @@ export function WarehouseExpenseForm({
             {attachments.length > 0 && (
               <div className="mt-2 space-y-1 text-xs text-gray-600">
                 {attachments.map((file) => (
-                  <div key={file.fileUrl} className="truncate">
-                    {file.fileName || file.fileUrl}
+                  <div
+                    key={file.fileUrl}
+                    className="flex items-center justify-between gap-2">
+                    <span className="truncate">
+                      {file.fileName || file.fileUrl}
+                    </span>
+                    <button
+                      type="button"
+                      title="Bỏ file"
+                      onClick={() =>
+                        setAttachments((current) =>
+                          current.filter((item) => item.fileUrl !== file.fileUrl),
+                        )
+                      }
+                      className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-red-600">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -241,9 +354,11 @@ export function WarehouseExpenseForm({
           </button>
           <button
             type="submit"
-            disabled={createExpense.isPending || uploading}
+            disabled={
+              createExpense.isPending || updateExpense.isPending || uploading
+            }
             className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
-            {createExpense.isPending && (
+            {(createExpense.isPending || updateExpense.isPending) && (
               <Loader2 className="h-4 w-4 animate-spin" />
             )}
               {expense ? "Lưu thay đổi" : "Tạo khoản chi"}

@@ -76,7 +76,8 @@ export function WarehouseExpenseTable({
               ["Ngày chi", "110px"],
               ["Nguồn", "170px"],
               ["Nội dung", "250px"],
-              ["Khoản mục", "170px"],
+              ["Khoản mục", "200px"],
+              ["Người chi", "150px"],
               ["Số tiền", "130px"],
               ["Chứng từ", "90px"],
               ["Batch Approval", "160px"],
@@ -98,7 +99,7 @@ export function WarehouseExpenseTable({
         <tbody>
           {isLoading ? (
             <tr>
-              <td colSpan={10} className="py-20 text-center">
+              <td colSpan={11} className="py-20 text-center">
                 <div className="inline-flex items-center gap-2 text-gray-400">
                   <Loader2 className="h-5 w-5 animate-spin" />
                   Đang tải...
@@ -107,7 +108,7 @@ export function WarehouseExpenseTable({
             </tr>
           ) : rows.length === 0 ? (
             <tr>
-              <td colSpan={10} className="py-20 text-center text-gray-400">
+              <td colSpan={11} className="py-20 text-center text-gray-400">
                 Không có khoản chi phù hợp
               </td>
             </tr>
@@ -115,6 +116,14 @@ export function WarehouseExpenseTable({
             rows.map((row) => {
               const approvalStatus = row.weeklyBatch?.approvalRequest?.status;
               const snapshot = row.sourceSnapshot || {};
+              const vehicleName =
+                row.vehicle?.label ||
+                row.vehicleName ||
+                (snapshot.vehicle ? String(snapshot.vehicle) : "");
+              const groupLabel =
+                SUBCATEGORY_LABELS[row.subCategory || ""] ||
+                CATEGORY_LABELS[row.category] ||
+                row.category;
               const showIssue = canMarkIssued(row);
               return (
                 <tr key={row.id} className="border-b transition-colors hover:bg-gray-50">
@@ -133,19 +142,19 @@ export function WarehouseExpenseTable({
                         className="font-mono text-xs text-brand hover:underline">
                         {row.packingSlip.code}
                       </Link>
-                    ) : snapshot.vehicle ? (
-                      ["FUEL", "VEHICLE_CARE"].includes(row.sourceType) ? (
+                    ) : vehicleName ? (
+                      ["FUEL", "VEHICLE_CARE"].includes(row.category) ? (
                         <Link
                           href="/tai-chinh/xe-co"
                           className="block truncate text-xs text-brand hover:underline"
-                          title={String(snapshot.vehicle)}>
-                          {String(snapshot.vehicle)}
+                          title={vehicleName}>
+                          {vehicleName}
                         </Link>
                       ) : (
                         <div
                           className="truncate text-xs text-gray-500"
-                          title={String(snapshot.vehicle)}>
-                          {String(snapshot.vehicle)}
+                          title={vehicleName}>
+                          {vehicleName}
                         </div>
                       )
                     ) : null}
@@ -154,13 +163,30 @@ export function WarehouseExpenseTable({
                     <div className="max-w-[280px] break-words text-gray-900">
                       {row.description || "-"}
                     </div>
+                    {row.quantity != null && row.unitPrice != null && (
+                      <div className="mt-0.5 text-xs text-gray-500">
+                        {formatCurrency(row.quantity)} ×{" "}
+                        {formatCurrency(row.unitPrice)}
+                      </div>
+                    )}
+                    {row.note && (
+                      <div className="mt-0.5 max-w-[280px] break-words text-xs text-gray-500">
+                        Ghi chú: {row.note}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-2.5">
-                    <div className="text-gray-900">
-                      {SUBCATEGORY_LABELS[row.subCategory || ""] ||
-                        CATEGORY_LABELS[row.category] ||
-                        row.category}
+                    <div className="max-w-[220px] break-words text-gray-900">
+                      {row.expenseItem || groupLabel}
                     </div>
+                    {row.expenseItem && (
+                      <div className="mt-0.5 text-xs text-gray-500">
+                        {groupLabel}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {row.payer?.name || <span className="text-gray-400">-</span>}
                   </td>
                   <td className="px-4 py-2.5 text-right font-semibold text-red-600">
                     {formatCurrency(row.amount)}

@@ -27,6 +27,7 @@ import {
   useMarkWarehouseExpenseIssued,
   useWarehouseExpenses,
 } from "@/lib/hooks/useInternalFinance";
+import { isExpenseOpenForEdit } from "@/lib/internal-finance/vehicle-constants";
 import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
@@ -77,6 +78,8 @@ function WarehouseExpenseScreen() {
       category: filters.category,
       status: filters.status,
       cashIssued: filters.cashIssued,
+      payerId: filters.payerId,
+      expenseItem: filters.expenseItem,
       fromDate: filters.fromDate,
       toDate: filters.toDate,
       search: debouncedSearch || undefined,
@@ -150,7 +153,7 @@ function WarehouseExpenseScreen() {
                 setSearch(event.target.value);
                 setPage(1);
               }}
-              placeholder="Tìm mã khoản chi, nội dung, mã báo đơn..."
+              placeholder="Tìm mã, nội dung, ghi chú, xe, mã báo đơn..."
               className="h-9 w-64 rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </div>
@@ -210,7 +213,11 @@ function WarehouseExpenseScreen() {
                 row.weeklyBatch?.status === "APPROVED" &&
                 !row.cashIssued
               }
-              canEdit={(row) => canAction("update", row.branchId)}
+              canEdit={(row) =>
+                row.sourceType === "MANUAL_EXPENSE" &&
+                isExpenseOpenForEdit(row) &&
+                canAction("update", row.branchId)
+              }
               markingId={markingId}
               onOpenAttachments={setAttachmentRow}
               onEdit={setEditingExpense}

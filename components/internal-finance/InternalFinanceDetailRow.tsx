@@ -275,6 +275,28 @@ export function InternalFinanceDetailRow({
                     }
                   />
                   <InfoField label="Nội dung:" value={row.description || "-"} />
+                  {row.direction === "EXPENSE" && (
+                    <>
+                      <InfoField
+                        label="Khoản mục:"
+                        value={row.expenseItem || "-"}
+                      />
+                      <InfoField
+                        label="Người chi:"
+                        value={row.payer?.name || "-"}
+                      />
+                      {row.quantity != null && row.unitPrice != null && (
+                        <InfoField
+                          label="Số lượng × Đơn giá:"
+                          value={`${formatCurrency(row.quantity)} × ${formatCurrency(row.unitPrice)}`}
+                        />
+                      )}
+                      {row.vehicle && (
+                        <InfoField label="Xe:" value={row.vehicle.label} />
+                      )}
+                      {row.note && <InfoField label="Ghi chú:" value={row.note} />}
+                    </>
+                  )}
                 </div>
               </div>
 

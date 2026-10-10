@@ -103,7 +103,12 @@ export const ROUTE_PERMISSIONS: Record<
     { resource: "internal_fund", action: "view_vp" },
   ],
   "/tai-chinh/approval-tuan": { resource: "cash_flows", action: "view" },
-  "/tai-chinh/xe-co": { resource: "cash_flows", action: "view" },
+  "/tai-chinh/xe-co": [
+    { resource: "vehicles", action: "view_hn" },
+    { resource: "vehicles", action: "view_sg" },
+    { resource: "vehicles", action: "create_hn" },
+    { resource: "vehicles", action: "create_sg" },
+  ],
   "/tai-chinh/bien-dong-so-du": { resource: "sepay", action: "view" },
   "/ban-hang": [
     { resource: "orders", action: "create" },
@@ -378,7 +383,12 @@ key: "transfer-planning",
         key: "vehicle-finance",
         label: "Xăng dầu & chăm sóc xe",
         href: "/tai-chinh/xe-co",
-        permission: { resource: "cash_flows", action: "view" },
+        permission: [
+          { resource: "vehicles", action: "view_hn" },
+          { resource: "vehicles", action: "view_sg" },
+          { resource: "vehicles", action: "create_hn" },
+          { resource: "vehicles", action: "create_sg" },
+        ],
       },
       {
         key: "sepay-transactions",

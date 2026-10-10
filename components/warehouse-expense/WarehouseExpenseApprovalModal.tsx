@@ -221,7 +221,13 @@ export function WarehouseExpenseApprovalModal({
                         {entry.description || entry.code}
                       </span>
                       <span className="block truncate text-xs text-gray-500">
-                        {entry.code}
+                        {[
+                          entry.code,
+                          entry.expenseItem,
+                          entry.payer?.name && `Người chi: ${entry.payer.name}`,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </span>
                     </span>
                     <span className="shrink-0 text-sm font-semibold text-red-600">

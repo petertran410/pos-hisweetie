@@ -7,6 +7,7 @@ import { RefreshCw, XCircle, Loader2, Database, ShieldCheck, Users, Package, Ale
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { LarkFinanceSyncCard } from "@/components/internal-finance/LarkFinanceSyncCard";
+import { ExpenseMetadataBackfillCard } from "@/components/internal-finance/ExpenseMetadataBackfillCard";
 import { useSyncMisaDictionary } from "@/lib/hooks/useMisa";
 import { useSyncSepayTransactions } from "@/lib/hooks/useSepay";
 import Swal from "sweetalert2";
@@ -637,6 +638,10 @@ export default function SyncSettingsPage() {
 
           <PermissionGate resource="cash_flows" action="create">
             <LarkFinanceSyncCard />
+          </PermissionGate>
+
+          <PermissionGate resource="cash_flows" action="update">
+            <ExpenseMetadataBackfillCard />
           </PermissionGate>
 
           {/* Misa Dictionary Sync Section */}

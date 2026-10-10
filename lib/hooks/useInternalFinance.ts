@@ -3,6 +3,8 @@ import { toast } from "sonner";
 import {
   internalFinanceApi,
   type InternalFinanceQuery,
+  type VehicleEntryQuery,
+  type VehicleEntryUpdateInput,
   type WarehouseExpenseInput,
   type WarehouseExpenseQuery,
   type WarehouseReceiptInput,
@@ -156,6 +158,8 @@ export function invalidateInternalFinance(
   queryClient.invalidateQueries({ queryKey: ["internal-finance"] });
   queryClient.invalidateQueries({ queryKey: ["warehouse-receipts"] });
   queryClient.invalidateQueries({ queryKey: ["warehouse-expenses"] });
+  queryClient.invalidateQueries({ queryKey: ["vehicle-entries"] });
+  queryClient.invalidateQueries({ queryKey: ["vehicles"] });
   queryClient.invalidateQueries({ queryKey: ["internal-fund"] });
   queryClient.invalidateQueries({ queryKey: ["cashflows"] });
   queryClient.invalidateQueries({ queryKey: ["approval-requests"] });
@@ -243,6 +247,60 @@ export function useCreateVehicleCareEntry() {
     },
     onError: (error) =>
       toast.error(errorMessage(error, "Tạo phiếu chăm sóc xe thất bại")),
+  });
+}
+
+export function useVehicleEntries(params: VehicleEntryQuery, enabled = true) {
+  return useQuery({
+    queryKey: ["vehicle-entries", params],
+    queryFn: () => internalFinanceApi.vehicleEntries(params),
+    placeholderData: (previous) => previous,
+    enabled,
+  });
+}
+
+export function useUpdateVehicleEntry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: VehicleEntryUpdateInput;
+    }) => internalFinanceApi.updateVehicleEntry(id, payload),
+    onSuccess: () => {
+      invalidateInternalFinance(queryClient);
+      toast.success("Đã cập nhật phiếu xe");
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, "Cập nhật phiếu xe thất bại")),
+  });
+}
+
+export function useCancelVehicleEntry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => internalFinanceApi.cancelVehicleEntry(id),
+    onSuccess: () => {
+      invalidateInternalFinance(queryClient);
+      toast.success("Đã hủy phiếu xe");
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, "Hủy phiếu xe thất bại")),
+  });
+}
+
+export function useBackfillExpenseMetadata() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dryRun: boolean) =>
+      internalFinanceApi.backfillExpenseMetadata(dryRun),
+    onSuccess: (report) => {
+      if (!report.dryRun) invalidateInternalFinance(queryClient);
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, "Bổ sung dữ liệu phiếu chi thất bại")),
   });
 }
 

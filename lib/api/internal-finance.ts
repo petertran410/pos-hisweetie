@@ -61,6 +61,22 @@ export interface InternalFinanceEntry {
   vehicleUnitPrice?: number | string | null;
   vehicleLocation?: string | null;
   vehicleAnomalyStatus?: string | null;
+  vehicleId?: number | null;
+  vehicle?: {
+    id: number;
+    label: string;
+    plate: string;
+    driver?: { id: number; name: string } | null;
+  } | null;
+  vehicleDueAt?: string | null;
+  vehicleServiceTypes?: string[];
+  payerId?: number | null;
+  payer?: { id: number; name: string } | null;
+  creator?: { id: number; name: string } | null;
+  expenseItem?: string | null;
+  quantity?: number | string | null;
+  unitPrice?: number | string | null;
+  note?: string | null;
   packingSlip?: { id: number; code: string } | null;
   customer?: { id: number; code: string | null; name: string } | null;
   weeklyBatch?: {
@@ -170,6 +186,9 @@ export interface WarehouseExpenseQuery {
   category?: string;
   status?: string;
   cashIssued?: "ISSUED" | "NOT_ISSUED" | "";
+  payerId?: number;
+  expenseItem?: string;
+  vehicleId?: number;
   fromDate?: string;
   toDate?: string;
   search?: string;
@@ -179,10 +198,107 @@ export interface WarehouseExpenseQuery {
 
 export interface WarehouseExpenseInput {
   branchId: number;
-  amount: number;
+  /** Bỏ trống khi nhập Số lượng × Đơn giá, backend tự tính. */
+  amount?: number;
   occurredAt: string;
   description: string;
+  expenseItem?: string;
+  quantity?: number | null;
+  unitPrice?: number | null;
+  note?: string;
+  payerId?: number;
   attachments?: InternalFinanceAttachment[];
+}
+
+export type VehicleEntryKind = "FUEL" | "VEHICLE_CARE";
+
+export interface FuelMetrics {
+  prevOdo: number | null;
+  nextOdo: number | null;
+  kmInPeriod: number | null;
+  prevAmount: number | null;
+  nextLiters: number | null;
+  costPerKm: number | null;
+  litersPer100Km: number | null;
+  normMin: number | null;
+  normMax: number | null;
+  consumptionCheck: "NORMAL" | "ABNORMAL" | null;
+  costCheck: "NORMAL" | "ABNORMAL" | null;
+}
+
+export type VehicleEntry = InternalFinanceEntry & {
+  metrics?: FuelMetrics | null;
+};
+
+export interface VehicleEntryQuery {
+  branchId?: number;
+  category: VehicleEntryKind;
+  vehicleId?: number;
+  serviceType?: string;
+  check?: "NORMAL" | "ABNORMAL";
+  status?: string;
+  fromDate?: string;
+  toDate?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface FuelEntryInput {
+  branchId: number;
+  vehicleId: number;
+  occurredAt: string;
+  location?: string;
+  amount: number;
+  unitPrice?: number;
+  liters?: number;
+  odo?: number;
+  payerId?: number;
+  note?: string;
+  attachments?: InternalFinanceAttachment[];
+}
+
+export interface VehicleCareEntryInput {
+  branchId: number;
+  vehicleId: number;
+  serviceTypes: string[];
+  occurredAt: string;
+  location?: string;
+  amount: number;
+  odo?: number;
+  dueAt?: string;
+  payerId?: number;
+  note?: string;
+  attachments?: InternalFinanceAttachment[];
+}
+
+export interface VehicleEntryUpdateInput {
+  vehicleId?: number;
+  serviceTypes?: string[];
+  occurredAt?: string;
+  location?: string;
+  amount?: number;
+  unitPrice?: number | null;
+  liters?: number | null;
+  odo?: number | null;
+  dueAt?: string | null;
+  payerId?: number;
+  note?: string;
+  attachments?: InternalFinanceAttachment[];
+}
+
+export interface ExpenseMetadataBackfillReport {
+  dryRun: boolean;
+  payerFromPackingSlip: number;
+  payerFromCreator: number;
+  expenseItemDefaults: number;
+  vehicleLinked: number;
+  serviceTypesFilled: number;
+  unmatchedVehicles: Array<{ label: string; count: number }>;
+  duplicateVehicleExpenses: {
+    count: number;
+    sample: Array<Record<string, unknown>>;
+  };
 }
 
 export interface WarehouseReceiptInput {
@@ -303,36 +419,32 @@ export const internalFinanceApi = {
   }): Promise<InternalFinanceEntry> =>
     apiClient.post("/internal-finance/expenses/manual", payload),
 
-  createFuel: (payload: {
-    branchId: number;
-    vehicle: string;
-    occurredAt: string;
-    location?: string;
-    amount: number;
-    unitPrice?: number;
-    liters?: number;
-    odo?: number;
-    consumptionLimit?: number;
-    anomalyNote?: string;
-    description?: string;
-    attachments?: InternalFinanceAttachment[];
-  }): Promise<InternalFinanceEntry> =>
+  createFuel: (payload: FuelEntryInput): Promise<VehicleEntry> =>
     apiClient.post("/internal-finance/vehicle/fuel", payload),
 
-  createVehicleCare: (payload: {
-    branchId: number;
-    vehicle: string;
-    serviceType: string;
-    location?: string;
-    occurredAt: string;
-    amount: number;
-    odo?: number;
-    dueAt?: string;
-    anomalyNote?: string;
-    description?: string;
-    attachments?: InternalFinanceAttachment[];
-  }): Promise<InternalFinanceEntry> =>
+  createVehicleCare: (payload: VehicleCareEntryInput): Promise<VehicleEntry> =>
     apiClient.post("/internal-finance/vehicle-care", payload),
+
+  vehicleEntries: (
+    params: VehicleEntryQuery,
+  ): Promise<InternalFinanceResponse<VehicleEntry>> =>
+    apiClient.get("/internal-finance/vehicle-entries", params),
+
+  updateVehicleEntry: (
+    id: number,
+    payload: VehicleEntryUpdateInput,
+  ): Promise<VehicleEntry> =>
+    apiClient.patch(`/internal-finance/vehicle-entries/${id}`, payload),
+
+  cancelVehicleEntry: (id: number): Promise<VehicleEntry> =>
+    apiClient.put(`/internal-finance/vehicle-entries/${id}/cancel`),
+
+  backfillExpenseMetadata: (
+    dryRun: boolean,
+  ): Promise<ExpenseMetadataBackfillReport> =>
+    apiClient.post("/internal-finance/maintenance/backfill-expense-metadata", {
+      dryRun,
+    }),
 
   review: (
     id: number,

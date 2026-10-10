@@ -254,7 +254,13 @@ export function InternalFinanceWeeklyPanel({
                         {entry.code}
                       </span>
                       <span className="block truncate text-xs text-gray-500">
-                        {entry.description || "Khoản chi nội bộ"}
+                        {[
+                          entry.description || "Khoản chi nội bộ",
+                          entry.expenseItem,
+                          entry.payer?.name && `Người chi: ${entry.payer.name}`,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </span>
                     </span>
                     <span className="shrink-0 text-sm font-semibold text-red-600">

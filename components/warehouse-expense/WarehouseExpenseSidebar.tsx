@@ -2,8 +2,11 @@
 
 import { useEffect, useMemo } from "react";
 import { InternalFinanceDateField } from "@/components/internal-finance/InternalFinanceDateField";
+import { FilterSearchableSelect } from "@/components/ui/filters";
 import { useBranches } from "@/lib/hooks/useBranches";
+import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import type { WarehouseExpenseQuery } from "@/lib/api/internal-finance";
+import { WAREHOUSE_EXPENSE_ITEMS } from "@/lib/internal-finance/vehicle-constants";
 import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
 
@@ -28,7 +31,14 @@ const STATUS_OPTIONS = [
 
 export type WarehouseExpenseSidebarFilters = Pick<
   WarehouseExpenseQuery,
-  "branchId" | "category" | "status" | "cashIssued" | "fromDate" | "toDate"
+  | "branchId"
+  | "category"
+  | "status"
+  | "cashIssued"
+  | "payerId"
+  | "expenseItem"
+  | "fromDate"
+  | "toDate"
 >;
 
 function readSavedState(): Partial<WarehouseExpenseSidebarFilters> {
@@ -59,6 +69,8 @@ export function loadWarehouseExpenseFilters(
     category: saved.category || undefined,
     status: saved.status || undefined,
     cashIssued: saved.cashIssued || undefined,
+    payerId: Number(saved.payerId) || undefined,
+    expenseItem: saved.expenseItem || undefined,
     fromDate: saved.fromDate || undefined,
     toDate: saved.toDate || undefined,
   };
@@ -72,8 +84,17 @@ export function WarehouseExpenseSidebar({
   onChange: (patch: Partial<WarehouseExpenseSidebarFilters>) => void;
 }) {
   const { data: branchData } = useBranches();
+  const { data: users } = useUsersForFilter();
   const { user } = useAuthStore();
   const { selectedBranch } = useBranchStore();
+  const userOptions = useMemo(
+    () =>
+      (users || []).map((item) => ({
+        value: String(item.id),
+        label: item.name,
+      })),
+    [users],
+  );
   const branches = useMemo(() => {
     const payload = branchData as
       | { data?: Array<{ id: number; name: string; isActive?: boolean }> }
@@ -102,6 +123,8 @@ export function WarehouseExpenseSidebar({
         category: filters.category || "",
         status: filters.status || "",
         cashIssued: filters.cashIssued || "",
+        payerId: filters.payerId || "",
+        expenseItem: filters.expenseItem || "",
         fromDate: filters.fromDate || "",
         toDate: filters.toDate || "",
       }),
@@ -111,6 +134,8 @@ export function WarehouseExpenseSidebar({
     filters.category,
     filters.status,
     filters.cashIssued,
+    filters.payerId,
+    filters.expenseItem,
     filters.fromDate,
     filters.toDate,
   ]);
@@ -127,6 +152,8 @@ export function WarehouseExpenseSidebar({
     filters.category,
     filters.status,
     filters.cashIssued,
+    filters.payerId,
+    filters.expenseItem,
     filters.fromDate || filters.toDate,
   ].filter(Boolean).length;
 
@@ -140,6 +167,8 @@ export function WarehouseExpenseSidebar({
       category: undefined,
       status: undefined,
       cashIssued: undefined,
+      payerId: undefined,
+      expenseItem: undefined,
       fromDate: undefined,
       toDate: undefined,
     });
@@ -186,7 +215,7 @@ export function WarehouseExpenseSidebar({
 
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-700">
-            Khoản mục
+            Nhóm chi phí
           </label>
           <select
             value={filters.category || ""}
@@ -194,13 +223,47 @@ export function WarehouseExpenseSidebar({
               onChange({ category: event.target.value || undefined })
             }
             className="dt-select h-10 w-full">
-            <option value="">Tất cả khoản mục</option>
+            <option value="">Tất cả nhóm</option>
             {CATEGORY_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            Khoản mục
+          </label>
+          <select
+            value={filters.expenseItem || ""}
+            onChange={(event) =>
+              onChange({ expenseItem: event.target.value || undefined })
+            }
+            className="dt-select h-10 w-full">
+            <option value="">Tất cả khoản mục</option>
+            {WAREHOUSE_EXPENSE_ITEMS.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            Người chi
+          </label>
+          <FilterSearchableSelect
+            options={userOptions}
+            value={filters.payerId ? String(filters.payerId) : ""}
+            onChange={(value) =>
+              onChange({ payerId: value ? Number(value) : undefined })
+            }
+            placeholder="Tất cả"
+            searchPlaceholder="Tìm nhân viên..."
+          />
         </div>
 
         <div>
