@@ -333,7 +333,7 @@ export function InternalUseDetailRow({
                         {canViewCost && (
                           <>
                             <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
-                              Giá vốn
+                              Đơn giá
                             </th>
                             <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
                               Giá trị xuất

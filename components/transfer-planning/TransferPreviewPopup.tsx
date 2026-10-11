@@ -3,6 +3,7 @@
 import React from "react";
 import { X, Loader2 } from "lucide-react";
 import { useTransfer } from "@/lib/hooks/useTransfers";
+import { useCan } from "@/lib/hooks/useCan";
 
 const STATUS_COLOR: Record<number, string> = {
   1: "bg-gray-100 text-gray-700",
@@ -34,6 +35,7 @@ export function TransferPreviewPopup({
   onClose,
 }: TransferPreviewPopupProps) {
   const { data: transfer, isLoading, isError } = useTransfer(transferId);
+  const canViewPrice = useCan("transfers", "view_cost_price");
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
@@ -123,12 +125,16 @@ export function TransferPreviewPopup({
                     {formatDateTime(transfer.transferredDate)}
                   </span>
                 </div>
-                <div className="flex flex-col gap-0.5">
-                  <label className="text-xs text-gray-500">Giá trị chuyển</label>
-                  <span className="text-gray-900 font-medium">
-                    {formatMoney(transfer.totalTransfer || 0)}
-                  </span>
-                </div>
+                {canViewPrice && (
+                  <div className="flex flex-col gap-0.5">
+                    <label className="text-xs text-gray-500">
+                      Giá trị chuyển
+                    </label>
+                    <span className="text-gray-900 font-medium">
+                      {formatMoney(transfer.totalTransfer || 0)}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Ghi chú */}
@@ -157,9 +163,11 @@ export function TransferPreviewPopup({
                       <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">
                         SL
                       </th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                        Thành tiền
-                      </th>
+                      {canViewPrice && (
+                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                          Thành tiền
+                        </th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
@@ -175,18 +183,20 @@ export function TransferPreviewPopup({
                           <td className="px-3 py-2 text-right text-gray-900">
                             {Number(detail.sendQuantity).toLocaleString()}
                           </td>
-                          <td className="px-3 py-2 text-right font-medium text-gray-900">
-                            {formatMoney(
-                              Number(detail.sendQuantity) *
-                                Number(detail.sendPrice)
-                            )}
-                          </td>
+                          {canViewPrice && (
+                            <td className="px-3 py-2 text-right font-medium text-gray-900">
+                              {formatMoney(
+                                Number(detail.sendQuantity) *
+                                  Number(detail.sendPrice)
+                              )}
+                            </td>
+                          )}
                         </tr>
                       ))
                     ) : (
                       <tr>
                         <td
-                          colSpan={4}
+                          colSpan={canViewPrice ? 4 : 3}
                           className="px-3 py-6 text-center text-gray-400 text-sm">
                           Không có sản phẩm
                         </td>
@@ -201,9 +211,11 @@ export function TransferPreviewPopup({
                           className="px-3 py-2 text-xs font-semibold text-gray-600">
                           Tổng ({transfer.details.length} mặt hàng)
                         </td>
-                        <td className="px-3 py-2 text-sm font-semibold text-right text-gray-900">
-                          {formatMoney(transfer.totalTransfer || 0)}
-                        </td>
+                        {canViewPrice && (
+                          <td className="px-3 py-2 text-sm font-semibold text-right text-gray-900">
+                            {formatMoney(transfer.totalTransfer || 0)}
+                          </td>
+                        )}
                       </tr>
                     </tfoot>
                   )}

@@ -46,6 +46,7 @@ export function TransferDetailRow({
   const canUpdate = useCan("transfers", "update");
   const canCreate = useCan("transfers", "create");
   const canPrint = useCan("transfers", "print");
+  const canViewPrice = useCan("transfers", "view_cost_price");
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = async () => {
@@ -208,21 +209,27 @@ export function TransferDetailRow({
                   </span>
                 </div>
 
-                <div className="flex flex-col gap-1 mb-3 border-b pb-2">
-                  <label className="text-xs text-gray-500">
-                    Giá trị chuyển
-                  </label>
-                  <span className="text-sm font-medium text-gray-900">
-                    {formatMoney(transfer.totalTransfer || 0)}
-                  </span>
-                </div>
+                {canViewPrice && (
+                  <>
+                    <div className="flex flex-col gap-1 mb-3 border-b pb-2">
+                      <label className="text-xs text-gray-500">
+                        Giá trị chuyển
+                      </label>
+                      <span className="text-sm font-medium text-gray-900">
+                        {formatMoney(transfer.totalTransfer || 0)}
+                      </span>
+                    </div>
 
-                <div className="flex flex-col gap-1 mb-3 border-b pb-2">
-                  <label className="text-xs text-gray-500">Giá trị nhận</label>
-                  <span className="text-sm font-medium text-gray-900">
-                    {formatMoney(transfer.totalReceive || 0)}
-                  </span>
-                </div>
+                    <div className="flex flex-col gap-1 mb-3 border-b pb-2">
+                      <label className="text-xs text-gray-500">
+                        Giá trị nhận
+                      </label>
+                      <span className="text-sm font-medium text-gray-900">
+                        {formatMoney(transfer.totalReceive || 0)}
+                      </span>
+                    </div>
+                  </>
+                )}
 
                 {transfer.noteBySource && (
                   <div className="flex flex-col gap-1 mb-3 border-b pb-2 col-span-3">
@@ -264,12 +271,16 @@ export function TransferDetailRow({
                       <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
                         SL nhận
                       </th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                        Đơn giá
-                      </th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                        Thành tiền
-                      </th>
+                      {canViewPrice && (
+                        <>
+                          <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                            Đơn giá
+                          </th>
+                          <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                            Thành tiền
+                          </th>
+                        </>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
@@ -297,21 +308,25 @@ export function TransferDetailRow({
                               ? Number(detail.receivedQuantity).toLocaleString()
                               : 0}
                           </td>
-                          <td className="px-3 py-2 text-sm text-right text-gray-900">
-                            {formatMoney(detail.sendPrice)}
-                          </td>
-                          <td className="px-3 py-2 text-sm text-right font-medium text-gray-900">
-                            {formatMoney(
-                              Number(detail.sendQuantity) *
-                                Number(detail.sendPrice)
-                            )}
-                          </td>
+                          {canViewPrice && (
+                            <>
+                              <td className="px-3 py-2 text-sm text-right text-gray-900">
+                                {formatMoney(detail.sendPrice)}
+                              </td>
+                              <td className="px-3 py-2 text-sm text-right font-medium text-gray-900">
+                                {formatMoney(
+                                  Number(detail.sendQuantity) *
+                                    Number(detail.sendPrice)
+                                )}
+                              </td>
+                            </>
+                          )}
                         </tr>
                       ))
                     ) : (
                       <tr>
                         <td
-                          colSpan={6}
+                          colSpan={canViewPrice ? 6 : 4}
                           className="px-3 py-6 text-center text-gray-400 text-sm">
                           Không có sản phẩm
                         </td>
@@ -327,10 +342,14 @@ export function TransferDetailRow({
                           className="px-3 py-2 text-sm font-semibold text-gray-700">
                           Tổng ({transfer.details.length} mặt hàng)
                         </td>
-                        <td className="px-3 py-2" />
-                        <td className="px-3 py-2 text-sm font-semibold text-right text-gray-900">
-                          {formatMoney(transfer.totalTransfer || 0)}
-                        </td>
+                        {canViewPrice && (
+                          <>
+                            <td className="px-3 py-2" />
+                            <td className="px-3 py-2 text-sm font-semibold text-right text-gray-900">
+                              {formatMoney(transfer.totalTransfer || 0)}
+                            </td>
+                          </>
+                        )}
                       </tr>
                     </tfoot>
                   )}

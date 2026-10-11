@@ -215,6 +215,17 @@ export function ProductionDetailRow({
                     </span>
                   </div>
 
+                  {production.formulaName && (
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                      <label className="block text-md font-medium text-gray-500 mb-1.5">
+                        Công thức:
+                      </label>
+                      <span className="block text-sm text-gray-800">
+                        {production.formulaName}
+                      </span>
+                    </div>
+                  )}
+
                   <div className="flex flex-col gap-2 mb-2 border-b pb-1">
                     <label className="block text-md font-medium text-gray-500 mb-1.5">
                       Ngày tạo:

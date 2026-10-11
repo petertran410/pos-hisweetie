@@ -149,6 +149,7 @@ export function ProductDetailRow({
   >("info");
   const [isEditing, setIsEditing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedFormulaId, setSelectedFormulaId] = useState<number>();
   const [supplierOrdersBranch, setSupplierOrdersBranch] = useState<{
     id: number;
     name: string;
@@ -279,7 +280,15 @@ export function ProductDetailRow({
     return cost * quantity;
   };
 
-  const components = product.comboComponents || [];
+  // Hàng sản xuất nhiều công thức: xem thành phần theo công thức đang chọn.
+  const formulas = product.type === 4 ? product.formulas ?? [] : [];
+  const selectedFormula =
+    formulas.find((f) => f.id === selectedFormulaId) ??
+    formulas.find((f) => f.isDefault) ??
+    formulas[0];
+  const components = selectedFormula
+    ? selectedFormula.components
+    : product.comboComponents || [];
   const totalCompPages = Math.ceil(components.length / itemsPerPage);
   const currentComponents = components.slice(
     (currentPage - 1) * itemsPerPage,
@@ -508,6 +517,27 @@ export function ProductDetailRow({
                       <h4 className="text-sm font-semibold text-gray-700 mb-2">
                         Hàng thành phần ({components.length})
                       </h4>
+                      {formulas.length > 1 && (
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {formulas.map((f) => (
+                            <button
+                              key={f.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedFormulaId(f.id);
+                                setCurrentPage(1);
+                              }}
+                              className={`px-3 py-1 rounded-full border text-xs ${
+                                f.id === selectedFormula?.id
+                                  ? "border-brand bg-brand-soft text-brand font-medium"
+                                  : "border-gray-300 text-gray-600 hover:bg-gray-50"
+                              }`}>
+                              {f.name}
+                              {f.isDefault && " (mặc định)"}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       <div className="border border-gray-200 rounded-lg overflow-hidden">
                         <table className="w-full">
                           <thead className="bg-gray-50">

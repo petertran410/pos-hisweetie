@@ -8,6 +8,7 @@ export interface SavedProductionComponent {
   formulaGrams: number;
   actualGrams: number;
   unitsDeducted: number;
+  inputMode?: string | null;
 }
 
 export interface Production {
@@ -28,6 +29,8 @@ export interface Production {
   createdByName: string;
   autoDeductComponents: boolean;
   manufacturedDate?: string;
+  formulaId?: number | null;
+  formulaName?: string | null;
   createdAt: string;
   updatedAt: string;
   components?: SavedProductionComponent[];
@@ -60,6 +63,7 @@ export interface CreateProductionData {
   manufacturedDate?: string;
   autoDeductComponents?: boolean;
   components?: ProductionComponentData[];
+  formulaId?: number;
 }
 
 export const productionsApi = {

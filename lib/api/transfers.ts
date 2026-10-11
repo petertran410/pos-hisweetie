@@ -60,7 +60,8 @@ export interface CreateTransferData {
     productId: number;
     sendQuantity: number;
     receivedQuantity?: number;
-    price: number;
+    // Bỏ trống → backend lấy giá vốn tại chi nhánh chuyển.
+    price?: number;
   }[];
 }
 

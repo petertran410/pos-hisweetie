@@ -107,6 +107,7 @@ export function ProductMobileDetailSheet({
   const [activeTab, setActiveTab] = useState<
     "info" | "description" | "inventory"
   >("info");
+  const [selectedFormulaId, setSelectedFormulaId] = useState<number>();
   const [supplierOrdersBranch, setSupplierOrdersBranch] = useState<{
     id: number;
     name: string;
@@ -136,7 +137,15 @@ export function ProductMobileDetailSheet({
     .filter(Boolean)
     .join(" > ");
 
-  const components = product?.comboComponents || [];
+  // Hàng sản xuất nhiều công thức: xem thành phần theo công thức đang chọn.
+  const formulas = product?.type === 4 ? product.formulas ?? [] : [];
+  const selectedFormula =
+    formulas.find((f) => f.id === selectedFormulaId) ??
+    formulas.find((f) => f.isDefault) ??
+    formulas[0];
+  const components = selectedFormula
+    ? selectedFormula.components
+    : product?.comboComponents || [];
 
   const TABS = [
     { key: "info", label: "Thông tin" },
@@ -326,6 +335,24 @@ export function ProductMobileDetailSheet({
                         <p className="text-sm font-semibold text-gray-700 mb-2">
                           Hàng thành phần ({components.length})
                         </p>
+                        {formulas.length > 1 && (
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            {formulas.map((f) => (
+                              <button
+                                key={f.id}
+                                type="button"
+                                onClick={() => setSelectedFormulaId(f.id)}
+                                className={`px-3 py-1 rounded-full border text-xs ${
+                                  f.id === selectedFormula?.id
+                                    ? "border-brand bg-brand-soft text-brand font-medium"
+                                    : "border-gray-300 text-gray-600"
+                                }`}>
+                                {f.name}
+                                {f.isDefault && " (mặc định)"}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                         <div className="space-y-2">
                           {components.map((comp, index) => {
                             const cp = comp.componentProduct;

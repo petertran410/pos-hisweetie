@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { Edit2, Plus, Search } from "lucide-react";
 import { NoteTemplate } from "@/lib/api/note-templates";
+import { useDropdownPosition } from "@/components/shared/useDropdownPosition";
 
 interface NoteDropdownProps {
   value: string;
@@ -15,6 +17,12 @@ interface NoteDropdownProps {
    * Không ảnh hưởng tới việc xem / tìm / chọn ghi chú của người dùng.
    */
   canManageTemplates?: boolean;
+  /**
+   * Render panel qua portal (position: fixed) để không bị container
+   * overflow (vd bảng hàng hóa overflow-x-auto) cắt. Mặc định false →
+   * giữ nguyên hành vi cũ ở POS.
+   */
+  portal?: boolean;
 }
 
 const useAutoResizeTextarea = () => {
@@ -42,18 +50,23 @@ export function NoteDropdown({
   onCreateTemplate,
   onEditTemplate,
   canManageTemplates = false,
+  portal = false,
 }: NoteDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const pos = useDropdownPosition(portal && isOpen, triggerRef, 384);
   const { textareaRef, adjustHeight } = useAutoResizeTextarea();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
+        !dropdownRef.current.contains(event.target as Node) &&
+        !panelRef.current?.contains(event.target as Node)
       ) {
         setIsOpen(false);
       }
@@ -112,16 +125,36 @@ export function NoteDropdown({
 
   const displayValue = value || "Nhấn để thêm ghi chú...";
 
+  const renderPanel = (node: React.ReactNode) =>
+    portal ? createPortal(node, document.body) : node;
+
   return (
     <div className="relative" ref={dropdownRef}>
       <div
+        ref={triggerRef}
         onClick={toggleOpen}
         className="w-fit max-w-full text-xs lg:text-sm text-gray-500 cursor-pointer hover:text-gray-700 min-h-[18px] lg:min-h-[20px]">
         {displayValue}
       </div>
 
-      {isOpen && (
-        <div className="absolute z-50 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg max-h-96 overflow-y-auto">
+      {isOpen && (!portal || pos) && renderPanel(
+        <div
+          ref={panelRef}
+          className={
+            portal
+              ? "fixed z-[10000] w-80 bg-white border border-gray-200 rounded-lg shadow-lg overflow-y-auto"
+              : "absolute z-50 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg max-h-96 overflow-y-auto"
+          }
+          style={
+            portal && pos
+              ? {
+                  left: pos.left,
+                  maxHeight: pos.maxHeight,
+                  top: pos.top,
+                  ...(pos.dropUp ? { transform: "translateY(-100%)" } : {}),
+                }
+              : undefined
+          }>
           {canManageTemplates && (
             <>
               <div className="p-2">

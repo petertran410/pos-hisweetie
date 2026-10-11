@@ -283,6 +283,8 @@ export function ProductionForm({
 }: ProductionFormProps) {
   const [code, setCode] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  // Công thức thành phần đã chọn (undefined → công thức mặc định).
+  const [selectedFormulaId, setSelectedFormulaId] = useState<number>();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showProductSearch, setShowProductSearch] = useState(false);
@@ -349,6 +351,15 @@ export function ProductionForm({
       p.code.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const formulas = selectedProduct?.formulas ?? [];
+  const selectedFormula =
+    formulas.find((f) => f.id === selectedFormulaId) ??
+    formulas.find((f) => f.isDefault) ??
+    formulas[0];
+  // Sản phẩm chưa có công thức (dữ liệu cũ) → dùng comboComponents.
+  const formulaComponents =
+    selectedFormula?.components ?? selectedProduct?.comboComponents ?? [];
+
   const initializedFromSavedRef = useRef(false);
 
   useEffect(() => {
@@ -359,6 +370,7 @@ export function ProductionForm({
       setDestinationBranchId(production.destinationBranchId);
       setNote(production.note || "");
       setAutoDeductComponents(production.autoDeductComponents);
+      setSelectedFormulaId(production.formulaId ?? undefined);
       if (production.manufacturedDate) {
         const d = new Date(production.manufacturedDate);
         setManufacturedDate(d);
@@ -392,16 +404,16 @@ export function ProductionForm({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Reset actualGrams về công thức khi đổi sản phẩm hoặc số lượng
+  // Reset actualGrams về công thức khi đổi sản phẩm, công thức hoặc số lượng
   useEffect(() => {
-    if (!selectedProduct?.comboComponents) return;
+    if (!selectedProduct) return;
 
     const hasSaved =
       freshProduction?.components && freshProduction.components.length > 0;
     const useSaved = hasSaved && !initializedFromSavedRef.current;
 
     const defaults: { [id: number]: number } = {};
-    selectedProduct.comboComponents.forEach((comp) => {
+    formulaComponents.forEach((comp) => {
       if (useSaved) {
         const savedComp = freshProduction!.components!.find(
           (c) => c.componentProductId === comp.componentProductId
@@ -416,12 +428,12 @@ export function ProductionForm({
 
     if (useSaved) initializedFromSavedRef.current = true;
     setActualGrams(defaults);
-  }, [selectedProduct, quantity, freshProduction]);
+  }, [selectedProduct, selectedFormula?.id, quantity, freshProduction]);
 
   const calculateComponentRequirements = () => {
-    if (!selectedProduct || !selectedProduct.comboComponents) return [];
+    if (!selectedProduct) return [];
 
-    return selectedProduct.comboComponents.map((comp) => {
+    return formulaComponents.map((comp) => {
       const componentProduct = comp.componentProduct;
 
       // ─── PIECE / CARTON MODE ──────────────────────────────────────
@@ -553,6 +565,7 @@ export function ProductionForm({
       manufacturedDate: mfDate.toISOString(),
       autoDeductComponents: Boolean(autoDeductComponents),
       components, // ← thêm
+      formulaId: selectedFormula?.id,
     };
 
     if (production) {
@@ -697,6 +710,7 @@ export function ProductionForm({
                           type="button"
                           onClick={() => {
                             setSelectedProduct(product);
+                            setSelectedFormulaId(undefined);
                             setSearchQuery("");
                             setShowProductSearch(false);
                           }}
@@ -705,6 +719,33 @@ export function ProductionForm({
                         </button>
                       ))
                     )}
+                  </div>
+                )}
+
+                {selectedProduct && formulas.length > 1 && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <label className="text-sm font-medium whitespace-nowrap">
+                      Công thức
+                    </label>
+                    <select
+                      value={selectedFormula?.id ?? ""}
+                      onChange={(e) =>
+                        setSelectedFormulaId(Number(e.target.value))
+                      }
+                      disabled={isFormDisabled}
+                      className="text-sm flex-1 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100 disabled:cursor-not-allowed">
+                      {formulas.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.name}
+                          {f.isDefault ? " (mặc định)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {selectedProduct && formulas.length === 1 && (
+                  <div className="mt-1 text-xs text-gray-500">
+                    Công thức: {formulas[0].name}
                   </div>
                 )}
               </div>

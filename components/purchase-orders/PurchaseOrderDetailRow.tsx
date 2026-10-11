@@ -611,6 +611,11 @@ export function PurchaseOrderDetailRow({
                                   </td>
                                   <td className="px-3 py-2 text-sm text-gray-800">
                                     {item.productName}
+                                    {item.description && (
+                                      <p className="text-sm text-gray-500 mt-1 italic">
+                                        {item.description}
+                                      </p>
+                                    )}
                                   </td>
                                   <td className="px-3 py-2 text-center text-sm text-gray-700">
                                     {Number(item.quantity)}

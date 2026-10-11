@@ -22,6 +22,10 @@ import {
   useColumnVisibility,
   type ColumnConfig,
 } from "@/lib/hooks/useColumnVisibility";
+import { useCan } from "@/lib/hooks/useCan";
+
+// Cột giá trị — chỉ hiện khi có quyền transfers:view_cost_price.
+const PRICE_COLUMN_KEYS = ["totalTransfer", "totalReceiveValue"];
 
 interface TransferTableProps {
   filters: TransferQueryParams;
@@ -201,9 +205,22 @@ export function TransferTable({ filters }: TransferTableProps) {
   // Ưu tiên search từ deep-link (?Code=) qua filters.search; nếu không thì dùng ô tìm nội bộ.
   const effectiveSearch = (filters as any)?.search || debouncedSearch || undefined;
 
-  const { columns, visibleColumns, toggleColumn } = useColumnVisibility(
+  const canViewPrice = useCan("transfers", "view_cost_price");
+  const { columns, toggleColumn } = useColumnVisibility(
     "transferTableColumns",
     DEFAULT_COLUMNS
+  );
+  // Lọc theo quyền ở bước render (giống InternalUsesTable).
+  const permissionAwareColumns = useMemo(
+    () =>
+      canViewPrice
+        ? columns
+        : columns.filter((c) => !PRICE_COLUMN_KEYS.includes(c.key)),
+    [columns, canViewPrice]
+  );
+  const visibleColumns = useMemo(
+    () => permissionAwareColumns.filter((c) => c.visible),
+    [permissionAwareColumns]
   );
 
   const { exportToFile, exportDetailToFile, isExporting } =
@@ -324,7 +341,10 @@ export function TransferTable({ filters }: TransferTableProps) {
                 )}
               </div>
             </PermissionGate>
-            <ColumnToggle columns={columns} onToggle={toggleColumn} />
+            <ColumnToggle
+              columns={permissionAwareColumns}
+              onToggle={toggleColumn}
+            />
           </div>
         </div>
 

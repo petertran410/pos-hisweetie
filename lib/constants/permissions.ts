@@ -173,6 +173,21 @@ export const CATEGORY_ICONS: Record<string, string> = {
   "Cấu hình": "🔧",
 };
 
+// Nhãn quyền riêng theo resource, ưu tiên hơn ACTION_LABELS (dùng chung).
+const RESOURCE_ACTION_LABELS: Record<string, string> = {
+  "transfers:view_cost_price": "Xem giá",
+  "internal-use:view_cost_price": "Xem giá",
+};
+
+/** Nhãn action, có xét nhãn riêng theo resource (RESOURCE_ACTION_LABELS). */
+export function getActionLabel(resource: string, action: string): string {
+  return (
+    RESOURCE_ACTION_LABELS[`${resource}:${action}`] ||
+    ACTION_LABELS[action] ||
+    action
+  );
+}
+
 export function getPermissionLabel(resource: string, action: string): string {
   // Báo cáo: action đã là nhãn đầy đủ (vd "Bán hàng - Lợi nhuận") nên trả
   // thẳng, không ghép thêm "Báo cáo" để tránh lặp chữ.
@@ -180,7 +195,7 @@ export function getPermissionLabel(resource: string, action: string): string {
     return ACTION_LABELS[action] || action;
   }
   const resourceLabel = RESOURCE_LABELS[resource] || resource;
-  const actionLabel = ACTION_LABELS[action] || action;
+  const actionLabel = getActionLabel(resource, action);
   return `${actionLabel} ${resourceLabel}`;
 }
 
@@ -366,7 +381,7 @@ export function getPermLeafLabel(resource: string, action: string): string {
   if (resource === "reports") {
     return REPORT_LEAF_LABELS[action] || ACTION_LABELS[action] || action;
   }
-  return ACTION_LABELS[action] || action;
+  return getActionLabel(resource, action);
 }
 
 /**

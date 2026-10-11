@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
-import type { Product } from "@/lib/api/products";
+import type { Product, ProductComponent } from "@/lib/api/products";
 import {
   useCreateProduct,
   useUpdateProduct,
@@ -29,6 +29,29 @@ interface ManufacturingComponent {
   componentProduct?: Product;
   quantity: number;
 }
+
+type InputMode = "gram" | "quantity" | "piece" | "carton";
+
+// Một công thức thành phần. Công thức đang mở được sửa qua state
+// components / quantityInputs / inputModes; chuyển tab thì lưu lại vào đây.
+interface FormulaDraft {
+  key: string;
+  id?: number;
+  name: string;
+  isDefault: boolean;
+  components: ManufacturingComponent[];
+  quantityInputs: { [key: number]: string };
+  inputModes: { [componentProductId: number]: InputMode };
+}
+
+const emptyFormula = (key: string, name: string, isDefault: boolean) => ({
+  key,
+  name,
+  isDefault,
+  components: [],
+  quantityInputs: {},
+  inputModes: {},
+});
 
 interface ImageItem {
   url?: string;
@@ -75,6 +98,11 @@ export function ManufacturingProductForm({
   const [inputModes, setInputModes] = useState<{
     [componentProductId: number]: "gram" | "quantity" | "piece" | "carton";
   }>({});
+  const [formulas, setFormulas] = useState<FormulaDraft[]>([
+    emptyFormula("new-0", "Công thức 1", true),
+  ]);
+  const [activeFormulaKey, setActiveFormulaKey] = useState("new-0");
+  const formulaKeySeq = useRef(1);
 
   const getWeightInGrams = (comp: ManufacturingComponent): number => {
     const w = comp.componentProduct?.weight
@@ -305,61 +333,153 @@ export function ManufacturingProductForm({
     }
   }, [components, selectedBranch?.id]);
 
+  // Dựng state bảng thành phần (components + ô nhập + mode) từ dữ liệu đã lưu.
+  const buildFormulaState = (savedComponents: ProductComponent[]) => {
+    const loadedComponents = savedComponents.map((comp) => ({
+      id: comp.id,
+      componentProductId: comp.componentProductId,
+      componentProduct: comp.componentProduct,
+      quantity: Number(comp.quantity),
+    }));
+
+    const initialInputs: { [key: number]: string } = {};
+    const initialModes: {
+      [key: number]: "gram" | "quantity" | "piece" | "carton";
+    } = {};
+
+    loadedComponents.forEach((comp) => {
+      const savedMode =
+        (savedComponents.find(
+          (c) => c.componentProductId === comp.componentProductId
+        )?.inputMode as "gram" | "quantity" | "piece" | "carton") ??
+        (comp.componentProduct?.isPieceUnit ? "piece" : "gram");
+
+      // ← THÊM: override về "piece" nếu sản phẩm isPieceUnit hoặc không có weight
+      // (KHÔNG override "carton" — thùng cố ý weight=0 nhưng quy đổi theo 1/N)
+      const wg = getWeightInGrams(comp);
+      const effectiveMode: "gram" | "quantity" | "piece" | "carton" =
+        (savedMode === "quantity" || savedMode === "gram") &&
+        (comp.componentProduct?.isPieceUnit === true || wg === 0)
+          ? "piece"
+          : savedMode;
+
+      initialModes[comp.componentProductId] = effectiveMode; // ← dùng effectiveMode thay savedMode
+
+      if (effectiveMode === "carton") {
+        // quantity lưu = 1/N → khôi phục sức chứa N để hiển thị
+        const capacity = comp.quantity > 0 ? 1 / comp.quantity : 0;
+        initialInputs[comp.componentProductId] = Math.round(capacity).toString();
+      } else if (effectiveMode === "quantity") {
+        const displayCount = wg > 0 ? comp.quantity / wg : comp.quantity;
+        initialInputs[comp.componentProductId] = displayCount
+          .toFixed(4)
+          .replace(/\.?0+$/, "");
+      } else {
+        initialInputs[comp.componentProductId] = comp.quantity.toString();
+      }
+    });
+
+    return {
+      components: loadedComponents,
+      quantityInputs: initialInputs,
+      inputModes: initialModes,
+    };
+  };
+
   useEffect(() => {
-    if (product?.comboComponents && !hasLoadedFromProduct.current) {
+    if (
+      (product?.formulas?.length || product?.comboComponents) &&
+      !hasLoadedFromProduct.current
+    ) {
       hasLoadedFromProduct.current = true;
       justLoadedFromProduct.current = true;
       costManuallyEdited.current = true;
 
-      const loadedComponents = product.comboComponents.map((comp) => ({
-        id: comp.id,
-        componentProductId: comp.componentProductId,
-        componentProduct: comp.componentProduct,
-        quantity: Number(comp.quantity),
-      }));
-      setComponents(loadedComponents);
-
-      const initialInputs: { [key: number]: string } = {};
-      const initialModes: {
-        [key: number]: "gram" | "quantity" | "piece" | "carton";
-      } = {};
-
-      loadedComponents.forEach((comp) => {
-        const savedMode =
-          (product.comboComponents!.find(
-            (c) => c.componentProductId === comp.componentProductId
-          )?.inputMode as "gram" | "quantity" | "piece" | "carton") ??
-          (comp.componentProduct?.isPieceUnit ? "piece" : "gram");
-
-        // ← THÊM: override về "piece" nếu sản phẩm isPieceUnit hoặc không có weight
-        // (KHÔNG override "carton" — thùng cố ý weight=0 nhưng quy đổi theo 1/N)
-        const wg = getWeightInGrams(comp);
-        const effectiveMode: "gram" | "quantity" | "piece" | "carton" =
-          (savedMode === "quantity" || savedMode === "gram") &&
-          (comp.componentProduct?.isPieceUnit === true || wg === 0)
-            ? "piece"
-            : savedMode;
-
-        initialModes[comp.componentProductId] = effectiveMode; // ← dùng effectiveMode thay savedMode
-
-        if (effectiveMode === "carton") {
-          // quantity lưu = 1/N → khôi phục sức chứa N để hiển thị
-          const capacity = comp.quantity > 0 ? 1 / comp.quantity : 0;
-          initialInputs[comp.componentProductId] = Math.round(capacity).toString();
-        } else if (effectiveMode === "quantity") {
-          const displayCount = wg > 0 ? comp.quantity / wg : comp.quantity;
-          initialInputs[comp.componentProductId] = displayCount
-            .toFixed(4)
-            .replace(/\.?0+$/, "");
-        } else {
-          initialInputs[comp.componentProductId] = comp.quantity.toString();
-        }
-      });
-
-      setQuantityInputs(initialInputs);
-      setInputModes(initialModes);
+      // Sản phẩm chưa có công thức (dữ liệu cũ) → coi comboComponents là
+      // công thức mặc định.
+      const drafts: FormulaDraft[] = product.formulas?.length
+        ? product.formulas.map((f) => ({
+            key: `id-${f.id}`,
+            id: f.id,
+            name: f.name,
+            isDefault: f.isDefault,
+            ...buildFormulaState(f.components),
+          }))
+        : [
+            {
+              ...emptyFormula("new-0", "Công thức 1", true),
+              ...buildFormulaState(product.comboComponents ?? []),
+            },
+          ];
+      const active = drafts.find((f) => f.isDefault) ?? drafts[0];
+      setFormulas(drafts);
+      setActiveFormulaKey(active.key);
+      setComponents(active.components);
+      setQuantityInputs(active.quantityInputs);
+      setInputModes(active.inputModes);
     }
   }, [product]);
+
+  // Danh sách công thức với công thức đang mở được cập nhật theo bảng hiện tại.
+  const syncedFormulas = (): FormulaDraft[] =>
+    formulas.map((f) =>
+      f.key === activeFormulaKey
+        ? { ...f, components, quantityInputs, inputModes }
+        : f
+    );
+
+  const openFormula = (draft: FormulaDraft) => {
+    setActiveFormulaKey(draft.key);
+    setComponents(draft.components);
+    setQuantityInputs(draft.quantityInputs);
+    setInputModes(draft.inputModes);
+    setCurrentPage(1);
+    setSearchQuery("");
+  };
+
+  const switchFormula = (key: string) => {
+    if (key === activeFormulaKey) return;
+    const synced = syncedFormulas();
+    setFormulas(synced);
+    openFormula(synced.find((f) => f.key === key)!);
+  };
+
+  const addFormula = (copyCurrent: boolean) => {
+    const synced = syncedFormulas();
+    const names = new Set(synced.map((f) => f.name.trim().toLowerCase()));
+    let n = synced.length + 1;
+    while (names.has(`công thức ${n}`)) n++;
+    const draft: FormulaDraft = {
+      ...emptyFormula(`new-${formulaKeySeq.current++}`, `Công thức ${n}`, false),
+      ...(copyCurrent
+        ? {
+            components: components.map((c) => ({ ...c, id: undefined })),
+            quantityInputs: { ...quantityInputs },
+            inputModes: { ...inputModes },
+          }
+        : {}),
+    };
+    setFormulas([...synced, draft]);
+    openFormula(draft);
+  };
+
+  const renameFormula = (key: string, name: string) => {
+    setFormulas((prev) => prev.map((f) => (f.key === key ? { ...f, name } : f)));
+  };
+
+  const setDefaultFormula = (key: string) => {
+    setFormulas((prev) => prev.map((f) => ({ ...f, isDefault: f.key === key })));
+  };
+
+  const deleteFormula = (key: string) => {
+    if (formulas.length <= 1) return;
+    const target = formulas.find((f) => f.key === key);
+    if (!target || !confirm(`Xóa "${target.name}"?`)) return;
+    const remaining = syncedFormulas().filter((f) => f.key !== key);
+    if (target.isDefault) remaining[0] = { ...remaining[0], isDefault: true };
+    setFormulas(remaining);
+    if (key === activeFormulaKey) openFormula(remaining[0]);
+  };
 
   useEffect(() => {
     if (product?.images) {
@@ -449,7 +569,8 @@ export function ManufacturingProductForm({
   };
 
   const calculateComponentCostByQuantity = (
-    comp: ManufacturingComponent
+    comp: ManufacturingComponent,
+    modes: { [componentProductId: number]: InputMode } = inputModes
   ): number => {
     const componentProduct = comp.componentProduct;
     if (!componentProduct) return 0;
@@ -458,7 +579,7 @@ export function ManufacturingProductForm({
       (inv) => inv.branchId === selectedBranch?.id
     );
     const cost = inventory ? Number(inventory.cost) : 0;
-    const mode = inputModes[comp.componentProductId] ?? "gram";
+    const mode = modes[comp.componentProductId] ?? "gram";
 
     // Piece / Carton mode: cost = giá vốn/đơn-vị × quantity.
     // Carton: quantity = 1/N → mỗi thành phẩm gánh giá-thùng/N.
@@ -477,10 +598,17 @@ export function ManufacturingProductForm({
     return (cost / weightInGrams) * comp.quantity;
   };
 
+  const calculateFormulaCost = (draft: FormulaDraft) =>
+    draft.components.reduce(
+      (sum, comp) =>
+        sum + calculateComponentCostByQuantity(comp, draft.inputModes),
+      0
+    );
+
+  // Giá vốn sản phẩm tính theo công thức mặc định.
   const calculateTotalPurchasePrice = () => {
-    return components.reduce((sum, comp) => {
-      return sum + calculateComponentCostByQuantity(comp);
-    }, 0);
+    const synced = syncedFormulas();
+    return calculateFormulaCost(synced.find((f) => f.isDefault) ?? synced[0]);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -508,10 +636,21 @@ export function ManufacturingProductForm({
   };
 
   const onSubmit = async (data: any) => {
-    if (components.length === 0) {
+    const allFormulas = syncedFormulas();
+    const emptyFormulaDraft = allFormulas.find((f) => f.components.length === 0);
+    if (emptyFormulaDraft) {
       toast.error("Hàng thành phần thiếu", {
-        description: "Vui lòng thêm ít nhất một hàng thành phần.",
+        description: `"${emptyFormulaDraft.name}" chưa có hàng thành phần.`,
       });
+      switchFormula(emptyFormulaDraft.key);
+      return;
+    }
+    const formulaNames = allFormulas.map((f) => f.name.trim().toLowerCase());
+    if (
+      formulaNames.some((n) => !n) ||
+      new Set(formulaNames).size !== formulaNames.length
+    ) {
+      toast.error("Tên công thức không được trống hoặc trùng nhau");
       return;
     }
 
@@ -578,10 +717,15 @@ export function ManufacturingProductForm({
           1,
           Math.floor(Number(data.conversionValue) || 1)
         ),
-        components: components.map((comp) => ({
-          componentProductId: comp.componentProductId,
-          quantity: comp.quantity,
-          inputMode: inputModes[comp.componentProductId] ?? "gram",
+        formulas: allFormulas.map((f) => ({
+          id: f.id,
+          name: f.name.trim(),
+          isDefault: f.isDefault,
+          components: f.components.map((comp) => ({
+            componentProductId: comp.componentProductId,
+            quantity: comp.quantity,
+            inputMode: f.inputModes[comp.componentProductId] ?? "gram",
+          })),
         })),
       });
 
@@ -756,6 +900,84 @@ export function ManufacturingProductForm({
                   </span>
                 )}
               </div>
+
+              {/* Công thức: mỗi tab là 1 bộ thành phần riêng */}
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                {formulas.map((f) => (
+                  <button
+                    key={f.key}
+                    type="button"
+                    onClick={() => switchFormula(f.key)}
+                    className={`px-3 py-1.5 rounded-full border text-sm ${
+                      f.key === activeFormulaKey
+                        ? "border-brand bg-brand-soft text-brand font-medium"
+                        : "border-gray-300 text-gray-600 hover:bg-gray-50"
+                    }`}>
+                    {f.name || "(chưa đặt tên)"}
+                    {f.isDefault && (
+                      <span className="ml-1.5 text-[11px] px-1.5 py-0.5 rounded bg-brand text-white">
+                        Mặc định
+                      </span>
+                    )}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => addFormula(false)}
+                  className="px-3 py-1.5 rounded-full border border-dashed border-gray-300 text-sm text-gray-600 hover:bg-gray-50">
+                  + Thêm công thức
+                </button>
+                {components.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => addFormula(true)}
+                    className="px-3 py-1.5 rounded-full border border-dashed border-gray-300 text-sm text-gray-600 hover:bg-gray-50">
+                    Sao chép công thức này
+                  </button>
+                )}
+              </div>
+              {(() => {
+                const active = formulas.find((f) => f.key === activeFormulaKey);
+                if (!active) return null;
+                return (
+                  <div className="flex flex-wrap items-center gap-3 mb-4 text-sm">
+                    <label className="text-gray-600">Tên công thức</label>
+                    <input
+                      type="text"
+                      value={active.name}
+                      onChange={(e) => renameFormula(active.key, e.target.value)}
+                      className="border rounded px-2 py-1 w-56"
+                    />
+                    {!active.isDefault && (
+                      <button
+                        type="button"
+                        onClick={() => setDefaultFormula(active.key)}
+                        className="text-brand hover:underline">
+                        Đặt làm mặc định
+                      </button>
+                    )}
+                    {formulas.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => deleteFormula(active.key)}
+                        className="text-red-500 hover:underline">
+                        Xóa công thức
+                      </button>
+                    )}
+                    {canViewCostPrice && !active.isDefault && (
+                      <span className="text-gray-500">
+                        Giá vốn theo công thức này:{" "}
+                        {calculateFormulaCost({
+                          ...active,
+                          components,
+                          inputModes,
+                        }).toLocaleString("vi-VN")}{" "}
+                        đ
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div className="relative mb-4">
                 <input
@@ -1080,7 +1302,7 @@ export function ManufacturingProductForm({
                       placeholder="0"
                     />
                     <p className="text-xs text-gray-400 mt-1">
-                      Tự động tính:{" "}
+                      Tự động tính (công thức mặc định):{" "}
                       {calculateTotalPurchasePrice().toLocaleString("vi-VN")} đ
                     </p>
                   </div>

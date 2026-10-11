@@ -23,6 +23,7 @@ import type { Transfer } from "@/lib/api/transfers";
 import { productsApi, type Product } from "@/lib/api/products";
 import { toast } from "sonner";
 import { formatCurrency, parseNumberInput } from "@/lib/utils";
+import { useCan } from "@/lib/hooks/useCan";
 
 // Làm tròn về `digits` số thập phân, tránh sai số dấu phẩy động (vd 0.1+0.2).
 // Mirror pattern PurchaseOrderForm / OrderSupplierForm — SL tối đa 2 chữ số
@@ -108,6 +109,9 @@ interface ProductItem {
   sendQuantity: number;
   receivedQuantity: number;
   price: number;
+  // true = đơn giá mặc định (chưa sửa tay) → khi lưu không gửi price, backend
+  // lấy giá vốn tại chi nhánh chuyển (kể cả khi user không có quyền xem giá vốn).
+  defaultPrice?: boolean;
   fromInventory: number;
   toInventory: number;
   note?: string;
@@ -248,6 +252,9 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
   const isReceived = !copyMode && transfer?.status === 3;
   const isReadOnly = isCancelled || isReceived;
   const canEditProducts = isSender && isDraft && !isCancelled;
+  // Thiếu quyền xem giá → ẩn đơn giá/thành tiền; đơn giá vẫn mặc định = giá
+  // vốn chi nhánh chuyển do backend điền khi lưu.
+  const canViewPrice = useCan("transfers", "view_cost_price");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -324,7 +331,8 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                     ? Number(detail.receivedQuantity) ||
                       Number(detail.sendQuantity)
                     : 0,
-                  price: Number(detail.sendPrice),
+                  price: Number(detail.sendPrice ?? 0),
+                  defaultPrice: detail.sendPrice == null,
                   fromInventory: Number(fromInventory?.onHand || 0),
                   toInventory: Number(toInventory?.onHand || 0),
                 };
@@ -344,7 +352,8 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                     ? Number(detail.receivedQuantity) ||
                       Number(detail.sendQuantity)
                     : 0,
-                  price: Number(detail.sendPrice),
+                  price: Number(detail.sendPrice ?? 0),
+                  defaultPrice: detail.sendPrice == null,
                   fromInventory: 0,
                   toInventory: 0,
                 };
@@ -397,6 +406,10 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
 
               return {
                 ...item,
+                // Đổi chi nhánh chuyển → đơn giá mặc định theo giá vốn mới.
+                ...(item.defaultPrice && {
+                  price: Number(fromInventory?.cost || 0),
+                }),
                 fromInventory: Number(fromInventory?.onHand || 0),
                 toInventory: Number(toInventory?.onHand || 0),
               };
@@ -466,6 +479,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
       unit: product.unit,
       sendQuantity: 1,
       price: Number(fromInventory?.cost || 0),
+      defaultPrice: true,
       fromInventory: Number(fromInventory?.onHand || 0),
       toInventory: Number(toInventory?.onHand || 0),
       receivedQuantity: 0,
@@ -587,7 +601,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
         // sendQuantity, DB lưu receivedQuantity = sendQuantity làm phép tính
         // "Đang chuyển" ở planning-summary triệt tiêu về 0 (bug TRF002449).
         receivedQuantity: isReceiver ? p.receivedQuantity : 0,
-        price: p.price,
+        price: p.defaultPrice ? undefined : p.price,
       })),
     };
 
@@ -644,7 +658,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
         productId: p.productId,
         sendQuantity: p.sendQuantity,
         receivedQuantity: isReceiver ? p.receivedQuantity : 0,
-        price: p.price,
+        price: p.defaultPrice ? undefined : p.price,
       })),
     };
 
@@ -792,15 +806,17 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                                     ).toLocaleString()}
                                   </span>
                                 </span>
-                                <span>
-                                  Giá:{" "}
-                                  <span className="font-medium text-brand">
-                                    {Number(
-                                      fromInv?.cost ?? 0
-                                    ).toLocaleString()}{" "}
-                                    đ
+                                {canViewPrice && (
+                                  <span>
+                                    Giá:{" "}
+                                    <span className="font-medium text-brand">
+                                      {Number(
+                                        fromInv?.cost ?? 0
+                                      ).toLocaleString()}{" "}
+                                      đ
+                                    </span>
                                   </span>
-                                </span>
+                                )}
                               </div>
                             </div>
                             <Plus className="w-4 h-4 text-brand flex-shrink-0" />
@@ -843,17 +859,21 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                             SL nhận
                           </th>
                         )}
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          {isReceiver ? "Đơn giá chuyển" : "Đơn giá"}
-                        </th>
-                        {isReceiver && (
+                        {canViewPrice && (
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            {isReceiver ? "Đơn giá chuyển" : "Đơn giá"}
+                          </th>
+                        )}
+                        {canViewPrice && isReceiver && (
                           <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
                             Đơn giá nhận
                           </th>
                         )}
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          {isReceiver ? "Thành tiền chuyển" : "Thành tiền"}
-                        </th>
+                        {canViewPrice && (
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            {isReceiver ? "Thành tiền chuyển" : "Thành tiền"}
+                          </th>
+                        )}
                         {canEditProducts && <th className="px-4 py-3 w-10" />}
                       </tr>
                     </thead>
@@ -985,40 +1005,51 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                             </td>
                           )}
 
-                          <td className="px-4 py-3 text-right text-sm text-gray-700">
-                            {canEditProducts ? (
-                              <input
-                                type="text"
-                                inputMode="numeric"
-                                value={formatCurrency(item.price)}
-                                placeholder="0"
-                                onChange={(e) => {
-                                  const price = parseNumberInput(
-                                    e.target.value
-                                  );
-                                  setProducts((prev) => {
-                                    const updated = [...prev];
-                                    updated[index].price = price;
-                                    return updated;
-                                  });
-                                }}
-                                disabled={isReadOnly}
-                                className="w-28 border rounded-lg px-2 py-1 text-right text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-                              />
-                            ) : (
-                              <span>{formatCurrency(item.price)} đ</span>
-                            )}
-                          </td>
+                          {canViewPrice && (
+                            <td className="px-4 py-3 text-right text-sm text-gray-700">
+                              {canEditProducts ? (
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={
+                                    item.defaultPrice && !item.price
+                                      ? ""
+                                      : formatCurrency(item.price)
+                                  }
+                                  placeholder={
+                                    item.defaultPrice ? "Giá vốn" : "0"
+                                  }
+                                  onChange={(e) => {
+                                    const price = parseNumberInput(
+                                      e.target.value
+                                    );
+                                    setProducts((prev) => {
+                                      const updated = [...prev];
+                                      updated[index].price = price;
+                                      updated[index].defaultPrice = false;
+                                      return updated;
+                                    });
+                                  }}
+                                  disabled={isReadOnly}
+                                  className="w-28 border rounded-lg px-2 py-1 text-right text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                />
+                              ) : (
+                                <span>{formatCurrency(item.price)} đ</span>
+                              )}
+                            </td>
+                          )}
 
-                          {isReceiver && (
+                          {canViewPrice && isReceiver && (
                             <td className="px-4 py-3 text-right text-sm text-gray-700">
                               {formatCurrency(item.price)} đ
                             </td>
                           )}
 
-                          <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
-                            {formatCurrency(item.sendQuantity * item.price)} đ
-                          </td>
+                          {canViewPrice && (
+                            <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
+                              {formatCurrency(item.sendQuantity * item.price)} đ
+                            </td>
+                          )}
 
                           {canEditProducts && (
                             <td className="px-4 py-3 text-center">

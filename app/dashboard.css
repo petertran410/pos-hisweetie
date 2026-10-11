@@ -581,6 +581,24 @@
   box-shadow: var(--dt-sh-card);
 }
 
+/* select chọn mốc thời gian nằm inline trong phụ đề card */
+.dt-m-subsel {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--dt-primary);
+  font-weight: 600;
+}
+/* select trong suốt phủ lên nhãn — giữ picker native, nhãn co theo nội dung */
+.dt-m-subsel select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
 /* branch bars */
 .dt-m-brow {
   padding: 11px 0;
