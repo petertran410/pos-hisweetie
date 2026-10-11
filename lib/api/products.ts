@@ -40,6 +40,7 @@ export interface ProductQueryParams {
   cargoType?: "COLD" | "NORMAL";
   tradeMarkIds?: number[];
   stockStatus?: string;
+  conditionStatus?: "damaged" | "nearExpiry" | "any";
   priceBookId?: number;
   onlyInPriceBook?: boolean;
   orderBy?: string;
