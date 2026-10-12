@@ -18,8 +18,10 @@ import {
   PackageCheck,
   Printer,
   Tag,
+  Ticket,
   User,
 } from "lucide-react";
+import { ShippingLabelA6Modal } from "./ShippingLabelA6Modal";
 import { toast } from "sonner";
 import { INVOICE_STATUS, INVOICE_STATUS_LABELS } from "@/lib/types/invoice";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -110,6 +112,7 @@ export function InvoicesMobileDetailSheet({
   );
   const [description, setDescription] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [showLabelA6, setShowLabelA6] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -762,6 +765,15 @@ export function InvoicesMobileDetailSheet({
               </button>
             )}
 
+            {hasPermPrint && invoice?.status !== INVOICE_STATUS.CANCELLED && (
+              <button
+                onClick={() => setShowLabelA6(true)}
+                title="In tem A6"
+                className="p-2.5 text-gray-500 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 active:scale-95 transition-all flex-shrink-0">
+                <Ticket className="w-4 h-4" />
+              </button>
+            )}
+
             {hasPermPrint && (
               <button
                 onClick={handlePrint}
@@ -779,6 +791,12 @@ export function InvoicesMobileDetailSheet({
           </div>
         )}
       </div>
+      {showLabelA6 && invoice && (
+        <ShippingLabelA6Modal
+          invoice={invoice}
+          onClose={() => setShowLabelA6(false)}
+        />
+      )}
     </>
   );
 }
