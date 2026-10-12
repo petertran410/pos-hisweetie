@@ -462,6 +462,7 @@ const EXPORT_DETAIL_COLUMNS = [
   { key: "description", label: "Ghi chú" },
   { key: "totalAmount", label: "Tổng tiền hàng" },
   { key: "discount", label: "Giảm giá HĐ" },
+  { key: "shippingFee", label: "Phí ship" },
   { key: "grandTotal", label: "Khách cần trả" },
   { key: "paidAmount", label: "Khách đã trả" },
   { key: "cashPayment", label: "Tiền mặt" },

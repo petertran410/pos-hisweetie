@@ -26,6 +26,7 @@ import {
 import Swal from "sweetalert2";
 import { InvoicePackingSlipsTab } from "./InvoicePackingSlipsTab";
 import { InvoicePaymentsTab } from "./InvoicePaymentsTab";
+import { ShippingLabelA6Modal } from "./ShippingLabelA6Modal";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   printDeliverySlip,
@@ -83,6 +84,7 @@ export function InvoiceDetailRow({
   const cancelInvoice = useCancelInvoice();
   const [isSaving, setIsSaving] = useState(false);
   const [description, setDescription] = useState("");
+  const [showLabelA6, setShowLabelA6] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "info" | "deliveries" | "payments"
   >("info");
@@ -625,6 +627,14 @@ export function InvoiceDetailRow({
                         {invoice.branch?.name || "-"}
                       </span>
                     </div>
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                      <label className="block text-sm text-gray-500">
+                        Phí ship:
+                      </label>
+                      <span className="block text-sm text-gray-900">
+                        {formatCurrency(shippingFee)}
+                      </span>
+                    </div>
                     {/* <div className="flex items-center gap-2">
                       <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
                         Kênh bán:
@@ -806,6 +816,16 @@ export function InvoiceDetailRow({
                           )}
                         </tbody>
                       </table>
+                      {shippingFee > 0 && (
+                        <div className="flex items-center justify-between px-[10px] py-2.5 bg-red-50 border-t-2 border-red-300">
+                          <span className="text-base font-bold text-red-600">
+                            Phí ship:
+                          </span>
+                          <span className="text-base font-bold text-red-600">
+                            {formatCurrency(shippingFee)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -999,6 +1019,16 @@ export function InvoiceDetailRow({
                     In phiếu xuất kho
                   </button>
                   <button
+                    onClick={() => setShowLabelA6(true)}
+                    hidden={
+                      !hasPermPrint ||
+                      invoice.status === INVOICE_STATUS.CANCELLED
+                    }
+                    className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5 disabled:opacity-50">
+                    <Printer className="w-3.5 h-3.5" />
+                    In tem A6
+                  </button>
+                  <button
                     onClick={handlePrint}
                     hidden={!hasPermPrint}
                     className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors flex items-center gap-1.5 disabled:opacity-50">
@@ -1010,6 +1040,12 @@ export function InvoiceDetailRow({
             </div>
           </div>
         </div>
+        {showLabelA6 && (
+          <ShippingLabelA6Modal
+            invoice={invoice}
+            onClose={() => setShowLabelA6(false)}
+          />
+        )}
       </td>
     </tr>
   );
