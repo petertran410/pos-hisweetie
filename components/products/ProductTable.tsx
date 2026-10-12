@@ -88,6 +88,17 @@ interface ProductColumnCtx {
   onOpenConsignment: (product: Product) => void;
 }
 
+// Số lượng bục rách / cận date theo chi nhánh đang chọn (không chọn → cộng tất cả).
+const sumConditionQty = (
+  product: Product,
+  field: "damagedQuantity" | "nearExpiryQuantity"
+) => {
+  const selectedBranchId = useBranchStore.getState().selectedBranch?.id;
+  return (product.inventories ?? [])
+    .filter((inv) => !selectedBranchId || inv.branchId === selectedBranchId)
+    .reduce((sum, inv) => sum + Number(inv[field] || 0), 0);
+};
+
 const DEFAULT_COLUMNS: ColumnConfig<Product, ProductColumnCtx>[] = [
   {
     key: "image",
@@ -210,6 +221,38 @@ const DEFAULT_COLUMNS: ColumnConfig<Product, ProductColumnCtx>[] = [
           0
         ) || 0;
       return totalStock.toLocaleString();
+    },
+  },
+  {
+    key: "damaged",
+    label: "Bục rách",
+    visible: true,
+    width: "100px",
+    render: (product) => {
+      const qty = sumConditionQty(product, "damagedQuantity");
+      return qty > 0 ? (
+        <span className="text-red-600 font-medium">
+          {qty.toLocaleString()}
+        </span>
+      ) : (
+        "-"
+      );
+    },
+  },
+  {
+    key: "nearExpiry",
+    label: "Cận date",
+    visible: true,
+    width: "100px",
+    render: (product) => {
+      const qty = sumConditionQty(product, "nearExpiryQuantity");
+      return qty > 0 ? (
+        <span className="text-orange-600 font-medium">
+          {qty.toLocaleString()}
+        </span>
+      ) : (
+        "-"
+      );
     },
   },
   // {

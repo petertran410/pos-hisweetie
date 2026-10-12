@@ -10,6 +10,8 @@ import {
   type RangeKey,
   type PeriodKey,
   type TopMetric,
+  PERIOD_LABEL,
+  BRANCH_PERIODS,
   type TaskRow,
 } from "@/lib/api/dashboard";
 import { money, vi, deltaPct, BRANCH_PALETTE } from "@/lib/dashboard/format";
@@ -50,7 +52,8 @@ const RANGE_SUB: Record<RangeKey, string> = {
   month: "Theo tuần · tháng này",
 };
 
-// Map khoảng thời gian chung (RangeKey) sang PeriodKey cho So sánh chi nhánh.
+// Map khoảng thời gian chung (RangeKey) sang PeriodKey — mốc mặc định của
+// So sánh chi nhánh khi đổi bộ lọc chung.
 const RANGE_TO_PERIOD: Record<RangeKey, PeriodKey> = {
   today: "today",
   yesterday: "yesterday",
@@ -228,6 +231,9 @@ export function DashboardMobileView() {
   const [range, setRange] = useState<RangeKey>("today");
   const [branchId, setBranchId] = useState<number | undefined>(undefined);
   const [branchMetric, setBranchMetric] = useState<"rev" | "profit">("rev");
+  const [branchPeriod, setBranchPeriod] = useState<PeriodKey>(
+    RANGE_TO_PERIOD["today"]
+  );
   const [topProductMetric, setTopProductMetric] = useState<TopMetric>("rev");
   const [taskTab, setTaskTab] = useState<TaskType>("orders");
   const [branchSheet, setBranchSheet] = useState(false);
@@ -249,9 +255,8 @@ export function DashboardMobileView() {
     queryFn: () => dashboardApi.getRevenueTrend(range, branchId),
   });
   const branchCmp = useQuery({
-    queryKey: ["dash-branchcmp-m", range, branchMetric],
-    queryFn: () =>
-      dashboardApi.getBranchComparison(RANGE_TO_PERIOD[range], branchMetric),
+    queryKey: ["dash-branchcmp-m", branchPeriod, branchMetric],
+    queryFn: () => dashboardApi.getBranchComparison(branchPeriod, branchMetric),
   });
   const tasks = useQuery({
     queryKey: ["dash-tasks-m", taskTab, branchId],
@@ -390,7 +395,10 @@ export function DashboardMobileView() {
             key={r.key}
             className="dt-m-pill"
             data-on={range === r.key}
-            onClick={() => setRange(r.key)}>
+            onClick={() => {
+              setRange(r.key);
+              setBranchPeriod(RANGE_TO_PERIOD[r.key]);
+            }}>
             {r.label}
           </button>
         ))}
@@ -466,7 +474,22 @@ export function DashboardMobileView() {
               <h3>So sánh chi nhánh</h3>
               <div className="sub">
                 {branchMetric === "profit" ? "Lợi nhuận" : "Doanh thu"} ·{" "}
-                {RANGES.find((r) => r.key === range)?.word}
+                <span className="dt-m-subsel">
+                  {PERIOD_LABEL[branchPeriod]}
+                  <ChevronDown className="w-3 h-3" />
+                  <select
+                    aria-label="Thời gian so sánh chi nhánh"
+                    value={branchPeriod}
+                    onChange={(e) =>
+                      setBranchPeriod(e.target.value as PeriodKey)
+                    }>
+                    {BRANCH_PERIODS.map((p) => (
+                      <option key={p} value={p}>
+                        {PERIOD_LABEL[p]}
+                      </option>
+                    ))}
+                  </select>
+                </span>
               </div>
             </div>
             {canSeeProfit && (

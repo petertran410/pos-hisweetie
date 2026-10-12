@@ -662,7 +662,7 @@ export function InternalUseForm({
                       {canViewCost && (
                         <>
                           <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                            Giá vốn
+                            Đơn giá
                           </th>
                           <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
                             Giá trị xuất
@@ -920,7 +920,7 @@ export function InternalUseForm({
                       <>
                         <div className="flex-1">
                           <label className="block text-xs text-gray-500 mb-1">
-                            Giá vốn
+                            Đơn giá
                           </label>
                           <input
                             type="number"

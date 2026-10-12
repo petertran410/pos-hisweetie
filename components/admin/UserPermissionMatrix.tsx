@@ -6,9 +6,9 @@ import { permissionsApi } from "@/lib/api/permissions";
 import { Check, Search } from "lucide-react";
 import {
   RESOURCE_LABELS,
-  ACTION_LABELS,
   CATEGORY_ICONS,
   getPermissionLabel,
+  getActionLabel,
 } from "@/lib/constants/permissions";
 
 interface UserPermissionMatrixProps {
@@ -216,7 +216,7 @@ export function UserPermissionMatrix({
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="text-sm font-medium text-gray-900">
-                                    {ACTION_LABELS[perm.action] || perm.action}
+                                    {getActionLabel(perm.resource, perm.action)}
                                   </div>
                                 </div>
                               </button>

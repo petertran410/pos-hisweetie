@@ -37,6 +37,7 @@ import {
 import type { ReferencePriceInfo } from "@/lib/api/factory-products";
 import { checkMoq } from "@/lib/utils/moq-check";
 import { FactoryLineSelect } from "./FactoryLineSelect";
+import { ItemNoteField } from "@/components/shared/ItemNoteField";
 import type { MoqProductInfo, MoqSpec } from "@/lib/utils/moq";
 import {
   useExchangeRate,
@@ -993,6 +994,14 @@ export function OrderSupplierForm({
     );
   };
 
+  // Ghi chú hàng hóa theo dòng (lưu vào OrderSupplierItem.description).
+  const handleNoteChange = (index: number, note: string) => {
+    if (isFormDisabled) return;
+    setProducts((prev) =>
+      prev.map((p, i) => (i === index ? { ...p, note } : p))
+    );
+  };
+
   const handleQuantityChange = (index: number, value: string) => {
     if (isFormDisabled) return;
     const quantity = roundTo(parseFloat(value) || 0, 2);
@@ -1399,6 +1408,11 @@ export function OrderSupplierForm({
                     </td>
                     <td className="px-[10px] py-2 align-middle text-sm text-gray-900">
                       {item.productName}
+                      <ItemNoteField
+                        value={item.note || ""}
+                        onChange={(note) => handleNoteChange(index, note)}
+                        disabled={!!isFormDisabled}
+                      />
                     </td>
                     <td className="px-[10px] py-2 align-middle">
                       <FactoryLineSelect

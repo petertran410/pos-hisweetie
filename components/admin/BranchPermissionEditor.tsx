@@ -10,9 +10,9 @@ import {
 import { Check, Search, Save, Building2 } from "lucide-react";
 import {
   RESOURCE_LABELS,
-  ACTION_LABELS,
   CATEGORY_ICONS,
   getPermissionLabel,
+  getActionLabel,
 } from "@/lib/constants/permissions";
 
 interface BranchPermissionEditorProps {
@@ -353,8 +353,7 @@ export function BranchPermissionEditor({
                                       )}
                                     </div>
                                     <span className="truncate">
-                                      {ACTION_LABELS[perm.action] ||
-                                        perm.action}
+                                      {getActionLabel(perm.resource, perm.action)}
                                     </span>
                                     {isOverride && (
                                       <span

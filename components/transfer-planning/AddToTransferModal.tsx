@@ -8,7 +8,6 @@ import {
   transfersApi,
   type DraftTransferCandidate,
 } from "@/lib/api/transfers";
-import { productsApi } from "@/lib/api/products";
 import type { TransferPlanningItem } from "@/lib/types/transfer-planning";
 import { TransferPreviewPopup } from "./TransferPreviewPopup";
 
@@ -68,12 +67,8 @@ export function AddToTransferModal({ item, onClose }: AddToTransferModalProps) {
 
   const createMutation = useMutation({
     mutationFn: async (qty: number) => {
-      const product = await productsApi.getProduct(item.id);
-      const hnInventory = product.inventories?.find(
-        (inv: any) => inv.branchId === HN_BRANCH_ID
-      );
-      const price = Number(hnInventory?.cost || 0);
-
+      // Không gửi price → backend lấy giá vốn tại chi nhánh chuyển (client
+      // có thể không thấy giá vốn nếu thiếu quyền products:view_cost_price).
       return transfersApi.create({
         fromBranchId: HN_BRANCH_ID,
         toBranchId: SG_BRANCH_ID,
@@ -83,7 +78,6 @@ export function AddToTransferModal({ item, onClose }: AddToTransferModalProps) {
             productId: item.id,
             productCode: item.sku,
             sendQuantity: qty,
-            price,
           },
         ],
       });
@@ -119,34 +113,29 @@ export function AddToTransferModal({ item, onClose }: AddToTransferModalProps) {
                 productCode: d.productCode,
                 productId: d.productId,
                 sendQuantity: Number(d.sendQuantity) + qty,
-                price: Number(d.sendPrice),
+                // API ẩn sendPrice khi thiếu quyền → không gửi, backend giữ giá cũ.
+                price: d.sendPrice == null ? undefined : Number(d.sendPrice),
               }
             : {
                 productCode: d.productCode,
                 productId: d.productId,
                 sendQuantity: Number(d.sendQuantity),
-                price: Number(d.sendPrice),
+                price: d.sendPrice == null ? undefined : Number(d.sendPrice),
               }
         );
       } else {
-        const product = await productsApi.getProduct(item.id);
-        const hnInventory = product.inventories?.find(
-          (inv: any) => inv.branchId === HN_BRANCH_ID
-        );
-        const price = Number(hnInventory?.cost || 0);
-
         mergedDetails = [
           ...existing.details.map((d) => ({
             productCode: d.productCode,
             productId: d.productId,
             sendQuantity: Number(d.sendQuantity),
-            price: Number(d.sendPrice),
+            price: d.sendPrice == null ? undefined : Number(d.sendPrice),
           })),
           {
             productId: item.id,
             productCode: item.sku,
             sendQuantity: qty,
-            price,
+            // Không gửi price → backend lấy giá vốn tại chi nhánh chuyển.
           },
         ];
       }

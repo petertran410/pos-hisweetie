@@ -6,7 +6,18 @@ export interface ProductComponent {
   componentProductId: number;
   quantity: number;
   inputMode?: string;
+  formulaId?: number | null;
   componentProduct: Product;
+}
+
+/** Công thức thành phần của hàng sản xuất (type 4). */
+export interface ProductFormula {
+  id: number;
+  productId: number;
+  name: string;
+  isDefault: boolean;
+  sortOrder: number;
+  components: ProductComponent[];
 }
 
 export interface ProductQueryParams {
@@ -29,6 +40,7 @@ export interface ProductQueryParams {
   cargoType?: "COLD" | "NORMAL";
   tradeMarkIds?: number[];
   stockStatus?: string;
+  conditionStatus?: "damaged" | "nearExpiry" | "any";
   priceBookId?: number;
   onlyInPriceBook?: boolean;
   orderBy?: string;
@@ -125,6 +137,7 @@ export interface Product {
     size?: number;
   }[];
   comboComponents?: ProductComponent[];
+  formulas?: ProductFormula[];
   inventories?: Inventory[];
   publicationLocation?: ProductPublicationLocation;
   publicationDate?: string;

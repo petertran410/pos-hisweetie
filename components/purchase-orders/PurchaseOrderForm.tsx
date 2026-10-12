@@ -24,6 +24,7 @@ import { SupplierPaymentModal } from "../order-suppliers/SupplierPaymentModal";
 import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useAuthStore } from "@/lib/store/auth";
 import { ProductPickerDropdown } from "@/components/products/ProductPickerDropdown";
+import { ItemNoteField } from "@/components/shared/ItemNoteField";
 import { useExchangeRate, useRefreshExchangeRate } from "@/lib/hooks/useExchangeRate";
 import Swal from "sweetalert2";
 
@@ -721,6 +722,14 @@ export function PurchaseOrderForm({
     });
   };
 
+  // Ghi chú hàng hóa theo dòng (lưu vào PurchaseOrderItem.description).
+  const handleNoteChange = (index: number, note: string) => {
+    if (isFormDisabled) return;
+    setProducts((prev) =>
+      prev.map((p, i) => (i === index ? { ...p, note } : p))
+    );
+  };
+
   const handleQuantityChange = (index: number, value: string) => {
     if (isFormDisabled) return;
     const quantity = roundTo(parseFloat(value) || 0, 2);
@@ -1344,6 +1353,11 @@ export function PurchaseOrderForm({
                       </td>
                       <td className="px-[10px] py-2 align-middle text-sm text-gray-900">
                         {item.productName}
+                        <ItemNoteField
+                          value={item.note || ""}
+                          onChange={(note) => handleNoteChange(index, note)}
+                          disabled={!!isFormDisabled}
+                        />
                       </td>
                       <td className="px-[10px] py-2 align-middle whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1.5">
