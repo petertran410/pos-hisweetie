@@ -545,6 +545,27 @@ const mapDocumentLinesToCartItems = (
     }
   }
 
+  // Khôi phục "user chủ động bỏ" KM cộng dồn theo từng dòng: DB chỉ lưu
+  // promotionId (null = không tham gia), nên với mỗi CT đã có ít nhất 1 dòng
+  // thường tham gia, các dòng thường còn lại được coi là đã bị loại. Thiếu bước
+  // này effect KM tự động sẽ bật lại dòng đã tắt khi mở sửa đơn/HĐ.
+  const stampedPromoIds = new Set<number>();
+  for (const item of mapped) {
+    if (item.isPromoGift) continue;
+    (item.promoEnabledIds || []).forEach((id) => stampedPromoIds.add(id));
+  }
+  if (stampedPromoIds.size > 0) {
+    for (const item of mapped) {
+      if (item.isPromoGift || (item.conditionType || "normal") !== "normal") {
+        continue;
+      }
+      const enabled = new Set(item.promoEnabledIds || []);
+      item.promoExcludedIds = [...stampedPromoIds].filter(
+        (id) => !enabled.has(id),
+      );
+    }
+  }
+
   return mapped;
 };
 
