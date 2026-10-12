@@ -4,6 +4,35 @@ export const toDateInput = (value: Date) => {
   return new Date(value.getTime() - offset).toISOString().slice(0, 10);
 };
 
+/** Thứ hai đầu tuần. Tuần tài chính nội bộ luôn là Thứ hai–Chủ nhật (ISO), khớp số tuần backend. */
+export const startOfWeek = (date: Date) => {
+  const result = new Date(date);
+  const day = result.getDay() || 7;
+  result.setDate(result.getDate() - day + 1);
+  return result;
+};
+
+/** Chủ nhật cuối tuần của tuần Thứ hai–Chủ nhật. */
+export const endOfWeek = (date: Date) => {
+  const result = startOfWeek(date);
+  result.setDate(result.getDate() + 6);
+  return result;
+};
+
+/** Khoảng ngày (yyyy-mm-dd) của tuần ISO trong năm. */
+export const isoWeekRange = (year: number, week: number) => {
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7;
+  const monday = new Date(jan4);
+  monday.setUTCDate(jan4.getUTCDate() - jan4Day + 1 + (week - 1) * 7);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  return {
+    from: monday.toISOString().slice(0, 10),
+    to: sunday.toISOString().slice(0, 10),
+  };
+};
+
 /** Giá trị cho <input type="datetime-local"> theo giờ máy người dùng. */
 export const toDateTimeInput = (value: Date) => {
   const offset = value.getTimezoneOffset() * 60_000;

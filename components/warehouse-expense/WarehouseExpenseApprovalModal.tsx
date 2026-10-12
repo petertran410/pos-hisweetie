@@ -10,6 +10,7 @@ import {
   useWarehouseExpenseBatches,
 } from "@/lib/hooks/useInternalFinance";
 import { formatCurrency } from "@/lib/utils";
+import { endOfWeek, startOfWeek, toDateInput } from "@/lib/internal-finance/dates";
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: "Bản nháp",
@@ -18,24 +19,6 @@ const STATUS_LABELS: Record<string, string> = {
   APPROVED: "Đã duyệt",
   REJECTED: "Từ chối",
   POSTED: "Đã ghi sổ",
-};
-
-const toDateInput = (date: Date) => {
-  const offset = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
-};
-
-const startOfWeek = (date: Date) => {
-  const result = new Date(date);
-  const day = result.getDay() || 7;
-  result.setDate(result.getDate() - day + 1);
-  return result;
-};
-
-const endOfWeek = (date: Date) => {
-  const result = startOfWeek(date);
-  result.setDate(result.getDate() + 6);
-  return result;
 };
 
 export function WarehouseExpenseApprovalModal({

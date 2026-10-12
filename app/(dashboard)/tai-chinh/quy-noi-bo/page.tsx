@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Loader2,
   Plus,
+  RefreshCw,
   SquarePen,
   X,
 } from "lucide-react";
@@ -29,6 +30,7 @@ import {
   useInternalFundApprovals,
   useInternalFundDailyClosing,
   useInternalFundDailyClosings,
+  useInternalFundHistorySync,
   useInternalFundTransactions,
   useInternalFundTransfers,
   useInternalFundSummary,
@@ -65,6 +67,24 @@ const labels: Record<string, string> = {
   MATCHED: "Khớp",
   MISMATCHED: "Lệch quỹ",
 };
+// Nguồn ghi quỹ không qua Approval của POS; hiển thị rõ để phân biệt với thu/chi nội bộ.
+const sourceLabels: Record<string, string> = {
+  WAREHOUSE_CASH_RECEIPT: "Thu tiền khách",
+  SEPAY_FUND_DEPOSIT: "Kho nộp chuyển khoản",
+  LARK_PAYMENT_VOUCHER: "Phiếu chi theo đơn duyệt",
+};
+// Các nguồn này phải hủy tại màn hình gốc để hai bên không lệch nhau;
+// bút toán lịch sử thì chỉ đọc.
+const originOwnedSources = [
+  "WAREHOUSE_CASH_RECEIPT",
+  "SEPAY_FUND_DEPOSIT",
+  "LEDGER_HISTORY",
+];
+// Tên hiển thị của loại giao dịch; chuyển quỹ lịch sử vẫn hiện "Chuyển đến/đi".
+const typeLabel = (row: { sourceType: string; transactionType: string }) =>
+  row.sourceType === "LEDGER_HISTORY"
+    ? labels[row.transactionType]
+    : sourceLabels[row.sourceType] || labels[row.transactionType];
 const today = () =>
   new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
 const dateLabel = (date: string) =>
@@ -150,6 +170,7 @@ function FundScreen() {
   const adjust = useAdjustInternalFundTransaction();
   const close = useCloseInternalFundDay();
   const postApproval = usePostInternalFundApproval();
+  const historySync = useInternalFundHistorySync();
   const [action, setAction] = useState<{
     kind: "cancel" | "transfer" | "adjust";
     id: number;
@@ -271,6 +292,22 @@ function FundScreen() {
               </option>
             ))}
           </select>
+          {can("adjust") && (
+            <button
+              type="button"
+              onClick={historySync.start}
+              disabled={historySync.running}
+              title="Đồng bộ toàn bộ bút toán sổ quỹ lịch sử"
+              className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-sm disabled:opacity-60"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${historySync.running ? "animate-spin" : ""}`}
+              />
+              {historySync.running
+                ? `Đang đồng bộ ${historySync.status?.fetched ?? 0}…`
+                : "Đồng bộ sổ quỹ"}
+            </button>
+          )}
           {can("create_receipt") && can("submit_approval") && (
             <button
               type="button"
@@ -439,7 +476,7 @@ function FundScreen() {
                         {dateLabel(row.occurredAt)}
                       </td>
                       <td className="px-3 py-2">
-                        {labels[row.transactionType]}
+                        {typeLabel(row)}
                       </td>
                       <td className="max-w-64 break-words px-3 py-2">
                         {row.description}
@@ -454,7 +491,9 @@ function FundScreen() {
                         <div className="flex gap-2">
                           {row.status === "POSTED" && (
                             <>
-                              {can("adjust") && !row.transferId && (
+                              {can("adjust") &&
+                                !row.transferId &&
+                                row.sourceType !== "LEDGER_HISTORY" && (
                                 <button
                                   type="button"
                                   title="Điều chỉnh nội dung"
@@ -469,7 +508,10 @@ function FundScreen() {
                                   <SquarePen className="h-4 w-4" />
                                 </button>
                               )}
-                              {can("cancel") && (
+                              {can("cancel") &&
+                                !originOwnedSources.includes(
+                                  row.sourceType,
+                                ) && (
                                 <button
                                   type="button"
                                   title="Hủy giao dịch"

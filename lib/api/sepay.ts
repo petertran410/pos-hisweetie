@@ -43,7 +43,9 @@ export interface SepayOrderSummary {
 
 export interface SepayMatchInfo {
   status: "processing" | "assigned" | "completed";
-  completedSource: "webhook" | "manual" | null;
+  completedSource: "webhook" | "manual" | "fund_deposit" | null;
+  /** Có khi giao dịch là kho nộp tiền mặt về tài khoản công ty. */
+  fundDeposit?: { branchId: number; fundTransactionId: number | null } | null;
   customers: SepayMatchCustomer[];
   refCode: string | null;
   unassignedAmount?: number;
@@ -146,6 +148,13 @@ export const sepayApi = {
   /** Ẩn giao dịch khỏi danh sách */
   hide: (id: number): Promise<{ success: boolean }> => {
     return apiClient.patch(`/sepay/transactions/${id}/hide`);
+  },
+  /** Đánh dấu kho nộp tiền mặt về tài khoản công ty (trừ quỹ nội bộ của kho) */
+  markFundDeposit: (id: number, branchId: number): Promise<SepayMatchInfo> => {
+    return apiClient.post(`/sepay/transactions/${id}/fund-deposit`, { branchId });
+  },
+  unmarkFundDeposit: (id: number): Promise<SepayMatchInfo> => {
+    return apiClient.delete(`/sepay/transactions/${id}/fund-deposit`);
   },
   /** Bỏ ẩn giao dịch */
   unhide: (id: number): Promise<{ success: boolean }> => {

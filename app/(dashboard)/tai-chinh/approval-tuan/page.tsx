@@ -14,6 +14,7 @@ import {
 import type { InternalFinanceQuery } from "@/lib/api/internal-finance";
 import { useCan } from "@/lib/hooks/useCan";
 import { formatCurrency } from "@/lib/utils";
+import { isoWeekRange } from "@/lib/internal-finance/dates";
 
 const BRANCH_IDS = [6, 1, 4, 7];
 const STATUS_OPTIONS = [
@@ -39,19 +40,6 @@ function asBranches(payload: unknown) {
     return (payload as { data: Array<{ id: number; name: string }> }).data;
   }
   return [];
-}
-
-function isoWeekRange(year: number, week: number) {
-  const jan4 = new Date(Date.UTC(year, 0, 4));
-  const jan4Day = jan4.getUTCDay() || 7;
-  const monday = new Date(jan4);
-  monday.setUTCDate(jan4.getUTCDate() - jan4Day + 1 + (week - 1) * 7);
-  const sunday = new Date(monday);
-  sunday.setUTCDate(monday.getUTCDate() + 6);
-  return {
-    from: monday.toISOString().slice(0, 10),
-    to: sunday.toISOString().slice(0, 10),
-  };
 }
 
 function dateLabel(value: string) {
