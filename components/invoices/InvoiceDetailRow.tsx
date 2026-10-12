@@ -627,6 +627,14 @@ export function InvoiceDetailRow({
                         {invoice.branch?.name || "-"}
                       </span>
                     </div>
+                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                      <label className="block text-sm text-gray-500">
+                        Phí ship:
+                      </label>
+                      <span className="block text-sm text-gray-900">
+                        {formatCurrency(shippingFee)}
+                      </span>
+                    </div>
                     {/* <div className="flex items-center gap-2">
                       <label className="text-sm text-gray-500 whitespace-nowrap shrink-0">
                         Kênh bán:
@@ -808,6 +816,16 @@ export function InvoiceDetailRow({
                           )}
                         </tbody>
                       </table>
+                      {shippingFee > 0 && (
+                        <div className="flex items-center justify-between px-[10px] py-2.5 bg-red-50 border-t-2 border-red-300">
+                          <span className="text-base font-bold text-red-600">
+                            Phí ship:
+                          </span>
+                          <span className="text-base font-bold text-red-600">
+                            {formatCurrency(shippingFee)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

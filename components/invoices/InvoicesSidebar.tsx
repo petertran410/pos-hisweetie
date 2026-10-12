@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   PackageX,
   Snowflake,
+  Truck,
 } from "lucide-react";
 import { FilterMultiSelect } from "@/components/ui/filters";
 import {
@@ -539,6 +540,9 @@ export function InvoicesSidebar({
   const [hasColdItems, setHasColdItems] = useState<boolean>(
     saved.current?.hasColdItems || false
   );
+  const [hasShippingFee, setHasShippingFee] = useState<boolean>(
+    saved.current?.hasShippingFee || false
+  );
   const [showWarningFilters, setShowWarningFilters] = useState(false);
   const warningFiltersRef = useRef<HTMLDivElement>(null);
 
@@ -581,6 +585,7 @@ export function InvoicesSidebar({
       priceWarning,
       orphanedPacking,
       hasColdItems,
+      hasShippingFee,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [
@@ -602,6 +607,7 @@ export function InvoicesSidebar({
     priceWarning,
     orphanedPacking,
     hasColdItems,
+    hasShippingFee,
   ]);
 
   // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh, tick lại chi nhánh đó.
@@ -680,6 +686,7 @@ export function InvoicesSidebar({
     if (showPriceWarningFilter && priceWarning) n++;
     if (showPriceWarningFilter && orphanedPacking) n++;
     if (showColdCargoFilter && hasColdItems) n++;
+    if (showPriceWarningFilter && hasShippingFee) n++;
     return n;
   }, [
     selectedBranchIds,
@@ -704,12 +711,14 @@ export function InvoicesSidebar({
     orphanedPacking,
     showColdCargoFilter,
     hasColdItems,
+    hasShippingFee,
   ]);
 
   const warningFilterCount =
     (showPriceWarningFilter && priceWarning ? 1 : 0) +
     (showPriceWarningFilter && orphanedPacking ? 1 : 0) +
-    (showColdCargoFilter && hasColdItems ? 1 : 0);
+    (showColdCargoFilter && hasColdItems ? 1 : 0) +
+    (showPriceWarningFilter && hasShippingFee ? 1 : 0);
 
   // Debounce 300ms
   useEffect(() => {
@@ -764,6 +773,7 @@ export function InvoicesSidebar({
       if (showPriceWarningFilter && priceWarning) f.priceWarning = true;
       if (showPriceWarningFilter && orphanedPacking) f.orphanedPacking = true;
       if (showColdCargoFilter && hasColdItems) f.hasColdItems = true;
+      if (showPriceWarningFilter && hasShippingFee) f.hasShippingFee = true;
 
       onFiltersChange(f);
     }, 300);
@@ -792,6 +802,7 @@ export function InvoicesSidebar({
     orphanedPacking,
     showColdCargoFilter,
     hasColdItems,
+    hasShippingFee,
   ]);
 
   const clearAll = () => {
@@ -829,6 +840,7 @@ export function InvoicesSidebar({
     setPriceWarning(false);
     setOrphanedPacking(false);
     setHasColdItems(false);
+    setHasShippingFee(false);
     onFiltersChange({});
     localStorage.removeItem(STORAGE_KEY);
   };
@@ -860,12 +872,12 @@ export function InvoicesSidebar({
                 type="button"
                 aria-expanded={showWarningFilters}
                 onClick={() => setShowWarningFilters((current) => !current)}
-                className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 text-sm transition-colors ${
+                className={`w-full flex items-center justify-between gap-1.5 px-2.5 py-2.5 text-sm transition-colors ${
                   showWarningFilters || warningFilterCount > 0
                     ? "bg-red-50/60"
                     : "bg-white hover:bg-gray-50"
                 }`}>
-                <span className="flex items-center gap-2 min-w-0">
+                <span className="flex items-center gap-1.5 min-w-0">
                   <AlertTriangle
                     className={`w-4 h-4 flex-shrink-0 ${
                       warningFilterCount > 0
@@ -873,17 +885,17 @@ export function InvoicesSidebar({
                         : "text-gray-400"
                     }`}
                   />
-                  <span className="font-medium text-gray-700">
+                  <span className="font-medium text-gray-700 whitespace-nowrap">
                     Cảnh báo hóa đơn
                   </span>
                   {warningFilterCount > 0 && (
-                    <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[11px] font-semibold text-red-700">
+                    <span className="shrink-0 rounded-full bg-red-100 px-1.5 py-0.5 text-[11px] font-semibold text-red-700">
                       {warningFilterCount}
                     </span>
                   )}
                 </span>
                 <ChevronDown
-                  className={`w-4 h-4 text-gray-400 transition-transform ${
+                  className={`w-4 h-4 shrink-0 text-gray-400 transition-transform ${
                     showWarningFilters ? "rotate-180" : ""
                   }`}
                 />
@@ -919,6 +931,20 @@ export function InvoicesSidebar({
                         <PackageX className="h-4 w-4 shrink-0 text-red-500" />
                         <span className="text-xs font-medium text-gray-700">
                           Chỉ HĐ hủy còn giao hàng
+                        </span>
+                      </label>
+                      <label className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={hasShippingFee}
+                          onChange={(event) =>
+                            setHasShippingFee(event.target.checked)
+                          }
+                          className="h-4 w-4 rounded border-gray-300 accent-brand"
+                        />
+                        <Truck className="h-4 w-4 shrink-0 text-red-500" />
+                        <span className="text-xs font-medium text-gray-700">
+                          Chỉ HĐ có phí ship
                         </span>
                       </label>
                     </>
