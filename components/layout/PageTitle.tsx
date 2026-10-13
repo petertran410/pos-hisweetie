@@ -31,6 +31,7 @@ const TITLE_MAP: Array<{ prefix: string; title: string }> = [
   { prefix: "/san-pham/du-kien-chuyen-kho", title: "Dự kiến chuyển kho" },
   { prefix: "/san-pham/du-kien-dat-hang", title: "Dự kiến đặt hàng" },
   { prefix: "/san-pham/san-xuat", title: "Sản xuất" },
+  { prefix: "/san-pham/gia-cong", title: "Gia công ngoài" },
   { prefix: "/san-pham/xuat-huy", title: "Xuất hủy" },
   { prefix: "/san-pham/xuat-dung-noi-bo", title: "Xuất dùng nội bộ" },
   {

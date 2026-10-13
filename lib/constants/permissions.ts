@@ -8,6 +8,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   transfers: "Chuyển kho",
   transfer_planning: "Dự kiến chuyển kho",
   productions: "Sản xuất",
+  subcontract_orders: "Gia công ngoài",
   recipes: "Công thức pha chế",
   destructions: "Hủy hàng",
   internal_use: "Xuất dùng nội bộ",
@@ -177,6 +178,12 @@ export const CATEGORY_ICONS: Record<string, string> = {
 const RESOURCE_ACTION_LABELS: Record<string, string> = {
   "transfers:view_cost_price": "Xem giá",
   "internal-use:view_cost_price": "Xem giá",
+  "subcontract_orders:update": "Sửa lệnh, gửi nguyên liệu, chi phí",
+  "subcontract_orders:receive": "Nhập thành phẩm",
+  "subcontract_orders:complete": "Hoàn thành & quyết toán",
+  "subcontract_orders:payment": "Thanh toán nhà máy",
+  "subcontract_orders:view_cost_price": "Xem giá vốn, giá thành",
+  "subcontract_orders:apply_cost": "Áp giá vốn thành phẩm",
 };
 
 /** Nhãn action, có xét nhãn riêng theo resource (RESOURCE_ACTION_LABELS). */

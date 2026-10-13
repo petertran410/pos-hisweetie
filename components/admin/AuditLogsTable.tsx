@@ -35,6 +35,7 @@ const categoryNames: Record<string, string> = {
   purchase_order: "Nhập hàng",
   order_supplier: "Đặt hàng NCC",
   production: "Sản xuất",
+  subcontract: "Gia công ngoài",
   destruction: "Xuất hủy",
   packing: "Đóng hàng",
   user: "Người dùng",

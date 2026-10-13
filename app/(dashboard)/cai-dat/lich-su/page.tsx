@@ -21,6 +21,7 @@ const CATEGORY_OPTIONS = [
   { value: "purchase_order", label: "Nhập hàng" },
   { value: "order_supplier", label: "Đặt hàng NCC" },
   { value: "production", label: "Sản xuất" },
+  { value: "subcontract", label: "Gia công ngoài" },
   { value: "destruction", label: "Xuất hủy" },
   { value: "packing", label: "Đóng hàng" },
   { value: "user", label: "Người dùng" },

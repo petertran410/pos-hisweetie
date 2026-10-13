@@ -176,10 +176,14 @@ export function SupplierDebtsTab({
                 const isPayment = item.type === "payment";
                 const isBalanceAdjustment = item.type === "balance_adjustment";
                 const isSupplierReturn = item.type === "supplier_return";
+                const isSubcontract = item.type === "subcontract";
+                // Phát sinh nợ phải trả NCC (cộng nợ).
+                const isDebit =
+                  isPurchase || isSubcontract || isBalanceAdjustment;
 
                 return (
                   <tr
-                    key={`${item.type}-${item.id}`}
+                    key={`${item.type}-${item.subcontractKind ?? ""}-${item.id}`}
                     className="border-b hover:bg-gray-50">
                     <td className="px-4 py-3">
                       {isPurchase ? (
@@ -204,6 +208,12 @@ export function SupplierDebtsTab({
                           code={item.code}
                           className="text-md font-medium text-brand hover:underline"
                         />
+                      ) : isSubcontract ? (
+                        <CodeLink
+                          entity="subcontract-order"
+                          code={item.code}
+                          className="text-md font-medium text-brand hover:underline"
+                        />
                       ) : (
                         <span className="text-brand">{item.code}</span>
                       )}
@@ -216,6 +226,8 @@ export function SupplierDebtsTab({
                         ? "Nhập hàng"
                         : isPayment
                           ? "Thanh toán"
+                          : isSubcontract
+                            ? "Gia công ngoài"
                           : isBalanceAdjustment
                             ? "Cân bằng nợ"
                             : isSupplierReturn
@@ -230,11 +242,9 @@ export function SupplierDebtsTab({
                     <td className="px-4 py-3 text-md text-right">
                       <span
                         className={
-                          isPurchase || isBalanceAdjustment
-                            ? "text-red-600"
-                            : "text-green-600"
+                          isDebit ? "text-red-600" : "text-green-600"
                         }>
-                        {isPurchase || isBalanceAdjustment ? "+" : "-"}
+                        {isDebit ? "+" : "-"}
                         {formatCurrency(item.amount)}
                       </span>
                     </td>

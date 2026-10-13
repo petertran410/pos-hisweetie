@@ -29,6 +29,7 @@ export type CodeEntity =
   | "internal-use"
   | "internal-use-return"
   | "production"
+  | "subcontract-order"
   | "packing-slip"
   | "debt-offset"
   | "promotion"
@@ -56,6 +57,7 @@ const ROUTES: Record<CodeEntity, string> = {
   "internal-use": "/san-pham/xuat-dung-noi-bo",
   "internal-use-return": "/san-pham/tra-hang-xuat-dung-noi-bo",
   production: "/san-pham/san-xuat",
+  "subcontract-order": "/san-pham/gia-cong",
   "packing-slip": "/don-hang/bao-don",
   "debt-offset": "/don-hang/can-tru-cong-no",
   promotion: "/khach-hang/khuyen-mai",

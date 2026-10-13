@@ -77,6 +77,7 @@ export function DashboardHeader() {
             href: "/san-pham/du-kien-chuyen-kho",
           },
           { label: "Sản xuất", href: "/san-pham/san-xuat" },
+          { label: "Gia công ngoài", href: "/san-pham/gia-cong" },
           { label: "Công thức pha chế", href: "/san-pham/pha-che" },
           { label: "Xuất hủy", href: "/san-pham/xuat-huy" },
           {
