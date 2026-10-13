@@ -64,11 +64,59 @@ export function useUpdatePackingSlip() {
   });
 }
 
+/**
+ * Hỏi trước khi hủy báo đơn giao hàng đã có phiếu thu tiền mặt kho.
+ * Trả về null khi người dùng bỏ qua hoặc báo đơn không hủy được.
+ */
+export async function confirmPackingSlipCancel(
+  id: number,
+): Promise<{ id: number; cancelCashFlows?: boolean } | null> {
+  const res = await fetch(`${API_URL}/packing-slips/${id}/cancel-check`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) return { id };
+  const check = (await res.json()) as {
+    receiptCashFlowCount: number;
+    blockedReason: string | null;
+  };
+  if (check.blockedReason) throw new Error(check.blockedReason);
+  if (!check.receiptCashFlowCount) return { id };
+  const { default: Swal } = await import("sweetalert2");
+  const result = await Swal.fire({
+    title: "Xác nhận hủy báo đơn giao hàng",
+    html: `
+      <p>Báo đơn này đã có <strong>${check.receiptCashFlowCount}</strong> phiếu thu tiền mặt.</p>
+      <p class="text-red-600 font-bold mt-2">Bạn có muốn hủy cả phiếu thu không?</p>
+    `,
+    icon: "warning",
+    showCancelButton: true,
+    showDenyButton: true,
+    confirmButtonText: "Có - Hủy kèm phiếu thu",
+    denyButtonText: "Không - Giữ phiếu thu",
+    cancelButtonText: "Hủy bỏ",
+    confirmButtonColor: "#dc2626",
+    denyButtonColor: "#059669",
+    cancelButtonColor: "#6b7280",
+  });
+  if (result.isDismissed) return null;
+  return { id, cancelCashFlows: result.isConfirmed };
+}
+
 export function useDeletePackingSlip() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: number) => {
-      const res = await fetch(`${API_URL}/packing-slips/${id}`, {
+    mutationFn: async (
+      input: number | { id: number; cancelCashFlows?: boolean },
+    ) => {
+      const { id, cancelCashFlows } =
+        typeof input === "number"
+          ? { id: input, cancelCashFlows: undefined }
+          : input;
+      const query =
+        cancelCashFlows === undefined
+          ? ""
+          : `?cancelCashFlows=${cancelCashFlows}`;
+      const res = await fetch(`${API_URL}/packing-slips/${id}${query}`, {
         method: "DELETE",
         headers: getAuthHeaders(),
       });

@@ -4,17 +4,17 @@ import { useMemo, useState } from "react";
 import { Check, ChevronRight, Loader2, Plus, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useBranches } from "@/lib/hooks/useBranches";
-import { useCan } from "@/lib/hooks/useCan";
 import {
-  useCreateWeeklyApproval,
-  useInternalFinanceWeeklyBatch,
-  useInternalFinanceWeeklyBatches,
-  usePrepareWeeklyBatch,
+  useCreateWarehouseExpenseApproval,
+  usePrepareWarehouseExpenseBatch,
+  useWarehouseExpenseBatch,
+  useWarehouseExpenseBatches,
 } from "@/lib/hooks/useInternalFinance";
+import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { InternalFinanceDateField } from "./InternalFinanceDateField";
 import { endOfWeek, startOfWeek, toDateInput } from "@/lib/internal-finance/dates";
 
-const BRANCH_IDS = [6, 1, 4, 7];
+const BRANCH_IDS = [6, 1];
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: "Bản nháp",
@@ -45,29 +45,36 @@ export function InternalFinanceWeeklyPanel({
   initialBatchId?: number | null;
 }) {
   const { data: branchData } = useBranches();
+  const access = useFinanceAccess();
+  const can = (action: string, id: number) =>
+    access.can("warehouse_expense", action, id);
+  const allowedIds = access.branches("warehouse_expense", "view", BRANCH_IDS);
   const branches = useMemo(
-    () => asBranches(branchData).filter((branch) => BRANCH_IDS.includes(branch.id)),
-    [branchData],
+    () =>
+      asBranches(branchData).filter((branch) => allowedIds.includes(branch.id)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [branchData, allowedIds.join(",")],
   );
-  const canUpdate = useCan("cash_flows", "update");
-  const canCreate = useCan("cash_flows", "create");
   const today = useMemo(() => new Date(), []);
-  const [branchId, setBranchId] = useState(6);
+  const [pickedBranchId, setBranchId] = useState<number | null>(null);
+  // Mặc định là kho đầu tiên user được phép.
+  const branchId = pickedBranchId ?? allowedIds[0] ?? 6;
   const [weekStart, setWeekStart] = useState(toDateInput(startOfWeek(today)));
   const [weekEnd, setWeekEnd] = useState(toDateInput(endOfWeek(today)));
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(
     initialBatchId || null,
   );
 
-  const batches = useInternalFinanceWeeklyBatches({
+  const canPrepare = can("prepare", branchId);
+  const batches = useWarehouseExpenseBatches({
     branchIds: [branchId],
     fromDate: weekStart,
     toDate: weekEnd,
     limit: 20,
   });
-  const selectedBatch = useInternalFinanceWeeklyBatch(selectedBatchId);
-  const prepare = usePrepareWeeklyBatch();
-  const createApproval = useCreateWeeklyApproval();
+  const selectedBatch = useWarehouseExpenseBatch(selectedBatchId);
+  const prepare = usePrepareWarehouseExpenseBatch();
+  const createApproval = useCreateWarehouseExpenseApproval();
 
   const prepareBatch = () => {
     prepare.mutate(
@@ -98,7 +105,7 @@ export function InternalFinanceWeeklyPanel({
               Tổng hợp Approval tuần
             </h2>
             <p className="mt-1 text-xs text-gray-500">
-              Chỉ tổng hợp và gửi Approval. Không tạo phiếu chi hoặc CashFlow.
+              Chỉ gom phiếu chi đã được cả Quản lý kho và Kế toán kho tick.
             </p>
           </div>
           <button
@@ -142,7 +149,7 @@ export function InternalFinanceWeeklyPanel({
           <button
             type="button"
             onClick={prepareBatch}
-            disabled={!canUpdate || prepare.isPending}
+            disabled={!canPrepare || prepare.isPending}
             className="mt-4 inline-flex items-center gap-2 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white disabled:opacity-50">
             {prepare.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -209,7 +216,8 @@ export function InternalFinanceWeeklyPanel({
                     <strong>{formatCurrency(selectedBatch.data.totalAmount)}</strong>
                   </p>
                 </div>
-                {selectedBatch.data.status === "READY" && canCreate && (
+                {selectedBatch.data.status === "READY" &&
+                  can("submit", selectedBatch.data.branchId) && (
                   <button
                     type="button"
                     onClick={() => createWeeklyApproval(selectedBatch.data!.id)}
@@ -218,14 +226,14 @@ export function InternalFinanceWeeklyPanel({
                     {createApproval.isPending && (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     )}
-                    Tạo Approval tuần
+                    Tạo approval Lark
                   </button>
                 )}
               </div>
               {selectedBatch.data.status === "APPROVED" && (
                 <div className="mt-3 flex items-center gap-2 rounded-lg bg-green-50 p-3 text-sm text-green-800">
                   <Check className="h-4 w-4 shrink-0" />
-                  Approval đã duyệt. Hãy đánh dấu Đã chi từng khoản ở bảng chính.
+                  Approval đã duyệt. Các phiếu trong tuần đã tự động ghi Đã chi.
                 </div>
               )}
               <div className="mt-4 divide-y rounded-lg border">

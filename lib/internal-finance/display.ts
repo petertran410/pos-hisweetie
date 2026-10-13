@@ -1,5 +1,5 @@
 const SOURCE_LABELS: Record<string, string> = {
-  LARK_IMPORT: "Lịch sử Lark",
+  LARK_IMPORT: "Dữ liệu lịch sử",
   PACKING_SLIP: "Báo đơn",
   MANUAL_RECEIPT: "Phiếu thu thủ công",
   MANUAL_EXPENSE: "Phiếu chi thủ công",

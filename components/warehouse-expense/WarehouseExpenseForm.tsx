@@ -19,6 +19,7 @@ import { uploadPackingSlipExpenseFiles } from "@/lib/hooks/usePackingSlips";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { toDateInput, vnDateKey, vnDayIso } from "@/lib/internal-finance/dates";
 import { WAREHOUSE_EXPENSE_ITEMS } from "@/lib/internal-finance/vehicle-constants";
+import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { useAuthStore } from "@/lib/store/auth";
 import { formatCurrency } from "@/lib/utils";
 
@@ -31,9 +32,6 @@ const numberText = (value: number | string | null | undefined) =>
   value === null || value === undefined || value === ""
     ? ""
     : String(Number(value));
-
-const scopeForBranch = (branchId: number) =>
-  branchId === 6 ? "hn" : branchId === 1 ? "sg" : "vp";
 
 function asBranches(payload: unknown) {
   if (Array.isArray(payload)) {
@@ -59,17 +57,16 @@ export function WarehouseExpenseForm({
   onClose: () => void;
 }) {
   const { user } = useAuthStore();
+  const access = useFinanceAccess();
   const { data: branchData } = useBranches();
   const branches = useMemo(
     () =>
-      asBranches(branchData).filter((branch) => {
-        if (![1, 4, 6, 7].includes(branch.id)) return false;
-        if (user?.roles?.includes("Super Admin")) return true;
-        const action = `warehouse_expense:create_${scopeForBranch(branch.id)}`;
-        return user?.permissions?.includes(action) ||
-          user?.permissions?.includes(`internal_fund:create_expense_${scopeForBranch(branch.id)}`);
-      }),
-    [branchData, user],
+      asBranches(branchData).filter(
+        (branch) =>
+          [1, 4, 6, 7].includes(branch.id) &&
+          access.can("warehouse_expense", "create", branch.id),
+      ),
+    [branchData, access],
   );
   const createExpense = useCreateWarehouseExpense();
   const updateExpense = useUpdateWarehouseExpense();

@@ -17,7 +17,7 @@ import {
   VEHICLE_TYPE_LABELS,
   canVehicle,
 } from "@/lib/internal-finance/vehicle-constants";
-import { useAuthStore } from "@/lib/store/auth";
+import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 
 const DUE_SOON_DAYS = 30;
 
@@ -259,14 +259,14 @@ export function VehicleListModal({
   defaultBranchId: number;
   onClose: () => void;
 }) {
-  const { user } = useAuthStore();
+  const access = useFinanceAccess();
   const vehicles = useVehicles({ includeInactive: true });
   const updateVehicle = useUpdateVehicle();
   const [editing, setEditing] = useState<Vehicle | null>(null);
   const [adding, setAdding] = useState(false);
   const [now] = useState(() => Date.now());
   const manageBranches = branches.filter((branch) =>
-    canVehicle(user, "manage", branch.id),
+    canVehicle(access, "manage", branch.id),
   );
   const rows = vehicles.data || [];
 
@@ -368,7 +368,7 @@ export function VehicleListModal({
                 </tr>
               ) : (
                 rows.map((vehicle) => {
-                  const canManage = canVehicle(user, "manage", vehicle.branchId);
+                  const canManage = canVehicle(access, "manage", vehicle.branchId);
                   return (
                     <tr
                       key={vehicle.id}

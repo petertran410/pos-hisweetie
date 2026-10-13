@@ -2,21 +2,32 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ChevronRight, Plus, WalletCards } from "lucide-react";
-import { useMemo, useState } from "react";
-import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import { Loader2, Plus, Send, WalletCards } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
 import { InternalFinanceDateField } from "@/components/internal-finance/InternalFinanceDateField";
 import { InternalFinanceWeeklyPanel } from "@/components/internal-finance/InternalFinanceWeeklyPanel";
 import { useBranches } from "@/lib/hooks/useBranches";
 import {
-  useInternalFinanceWeeklyBatches,
+  useCreateWarehouseExpenseApproval,
+  useWarehouseExpenseBatches,
 } from "@/lib/hooks/useInternalFinance";
+import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import type { InternalFinanceQuery } from "@/lib/api/internal-finance";
-import { useCan } from "@/lib/hooks/useCan";
 import { formatCurrency } from "@/lib/utils";
 import { isoWeekRange } from "@/lib/internal-finance/dates";
 
-const BRANCH_IDS = [6, 1, 4, 7];
+const BRANCH_IDS = [6, 1];
+
+const APPROVAL_STATUS_LABELS: Record<string, string> = {
+  PENDING: "Đang duyệt",
+  APPROVED: "Đã duyệt",
+  REJECTED: "Từ chối",
+  CANCELED: "Đã hủy",
+  DELETED: "Đã xóa",
+  REVERTED: "Đã thu hồi",
+  CREATE_FAILED: "Tạo thất bại",
+};
 const STATUS_OPTIONS = [
   ["", "Tất cả trạng thái"],
   ["DRAFT", "Bản nháp"],
@@ -48,11 +59,21 @@ function dateLabel(value: string) {
 
 export default function ApprovalTuanPage() {
   const searchParams = useSearchParams();
-  const canCreate = useCan("cash_flows", "create");
+  const access = useFinanceAccess();
+  const can = useCallback(
+    (action: string, id: number) => access.can("warehouse_expense", action, id),
+    [access],
+  );
+  const canPrepareAny = BRANCH_IDS.some((id) => can("prepare", id));
+  const createApproval = useCreateWarehouseExpenseApproval();
+  const [creatingId, setCreatingId] = useState<number | null>(null);
   const { data: branchData } = useBranches();
   const branches = useMemo(
-    () => asBranches(branchData).filter((branch) => BRANCH_IDS.includes(branch.id)),
-    [branchData],
+    () =>
+      asBranches(branchData).filter(
+        (branch) => BRANCH_IDS.includes(branch.id) && can("view", branch.id),
+      ),
+    [branchData, can],
   );
   const currentYear = new Date().getFullYear();
   const [branchId, setBranchId] = useState<number | undefined>();
@@ -76,15 +97,17 @@ export default function ApprovalTuanPage() {
       to: `${year}-12-31`,
     };
     return {
-      branchIds: branchId ? [branchId] : undefined,
+      branchIds: branchId
+        ? [branchId]
+        : BRANCH_IDS.filter((id) => can("view", id)),
       fromDate: weekRange?.from || fromDate || yearRange.from,
       toDate: weekRange?.to || toDate || yearRange.to,
       status: status || undefined,
       limit: 100,
     };
-  }, [branchId, fromDate, status, toDate, week, year]);
+  }, [branchId, can, fromDate, status, toDate, week, year]);
 
-  const batches = useInternalFinanceWeeklyBatches(filters);
+  const batches = useWarehouseExpenseBatches(filters);
   const rows = batches.data || [];
   const totalAmount = rows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
 
@@ -95,7 +118,8 @@ export default function ApprovalTuanPage() {
   };
 
   return (
-    <PagePermissionGuard resource="cash_flows" action="view">
+    <FinancePageGuard
+      permissions={[{ resource: "warehouse_expense", action: "view" }]}>
       <div className="flex h-full min-h-0 flex-col overflow-hidden border-t">
         <div className="flex shrink-0 items-center justify-between gap-3 border-b bg-white px-5 py-3">
           <div className="flex items-center gap-3">
@@ -105,17 +129,17 @@ export default function ApprovalTuanPage() {
                 Approval tuần
               </h1>
               <p className="text-xs text-gray-500">
-                Theo dõi tổng hợp chi phí theo từng chi nhánh và tuần.
+                Gom phiếu chi kho đã đủ hai tick theo tuần và tạo approval trên Lark.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Link
-              href="/tai-chinh/tai-chinh-noi-bo"
+              href="/tai-chinh/phieu-chi-kho"
               className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              Tài chính nội bộ
+              Phiếu chi kho
             </Link>
-            {canCreate && (
+            {canPrepareAny && (
               <button
                 type="button"
                 onClick={() => {
@@ -257,7 +281,7 @@ export default function ApprovalTuanPage() {
                       "Số khoản",
                       "Đã chi",
                       "Trạng thái",
-                      "",
+                      "Approval Lark",
                     ].map((label) => (
                       <th
                         key={label}
@@ -310,8 +334,39 @@ export default function ApprovalTuanPage() {
                             {STATUS_LABELS[row.status] || row.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right">
-                          <ChevronRight className="ml-auto h-4 w-4 text-gray-400" />
+                        <td
+                          className="px-4 py-3"
+                          onClick={(event) => event.stopPropagation()}>
+                          {row.status === "READY" && can("submit", row.branchId) ? (
+                            <button
+                              type="button"
+                              disabled={createApproval.isPending}
+                              onClick={() => {
+                                setCreatingId(row.id);
+                                createApproval.mutate(
+                                  { id: row.id },
+                                  { onSettled: () => setCreatingId(null) },
+                                );
+                              }}
+                              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-brand px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-dark disabled:opacity-50">
+                              {creatingId === row.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Send className="h-3.5 w-3.5" />
+                              )}
+                              Tạo approval
+                            </button>
+                          ) : row.approvalRequest ? (
+                            <span className="text-xs text-gray-600">
+                              {APPROVAL_STATUS_LABELS[row.approvalRequest.status] ||
+                                row.approvalRequest.status}
+                              {row.approvalRequest.status === "PENDING" &&
+                                row.approvalRequest.currentNode &&
+                                ` · ${row.approvalRequest.currentNode}`}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400">-</span>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -328,6 +383,6 @@ export default function ApprovalTuanPage() {
           onClose={() => setShowPanel(false)}
         />
       )}
-    </PagePermissionGuard>
+    </FinancePageGuard>
   );
 }

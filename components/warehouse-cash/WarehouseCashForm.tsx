@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { InternalFinanceDateField } from "@/components/internal-finance/InternalFinanceDateField";
 import type { WarehouseReceipt } from "@/lib/api/internal-finance";
 import { useBranches } from "@/lib/hooks/useBranches";
+import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { useSearchCustomers } from "@/lib/hooks/useCustomers";
 import {
   useCreateWarehouseReceipt,
@@ -105,6 +106,7 @@ export function WarehouseCashForm({
 }) {
   const auto = Boolean(receipt?.packingSlip || receipt?.sourceType === "PACKING_SLIP");
   const { data: branchData } = useBranches();
+  const access = useFinanceAccess();
   const branches = useMemo(() => {
     const payload = branchData as
       | { data?: Array<{ id: number; name: string }> }
@@ -112,13 +114,19 @@ export function WarehouseCashForm({
       | undefined;
     const rows = Array.isArray(payload) ? payload : payload?.data || [];
     const known = rows.filter((branch) => WAREHOUSE_IDS.includes(branch.id));
-    return known.length
+    const base = known.length
       ? known
       : [
           { id: 6, name: "Kho Hà Nội" },
           { id: 1, name: "Kho Sài Gòn" },
         ];
-  }, [branchData]);
+    // Chỉ các kho user có quyền; giữ kho của phiếu đang sửa.
+    return base.filter(
+      (branch) =>
+        branch.id === receipt?.branchId ||
+        access.can("warehouse_cash", receipt ? "update" : "create", branch.id),
+    );
+  }, [branchData, access, receipt]);
   const createReceipt = useCreateWarehouseReceipt();
   const updateReceipt = useUpdateWarehouseReceipt();
   const [branchId, setBranchId] = useState(receipt?.branchId || 6);

@@ -98,13 +98,11 @@ export const vehicleScope = (branchId: number) =>
 
 export type VehicleAction = "view" | "create" | "update" | "manage";
 
+/** Quyền xe cộ theo vai trò × chi nhánh (xem useFinanceAccess). */
 export const canVehicle = (
-  user: { roles?: string[]; permissions?: string[] } | null | undefined,
+  access: {
+    can: (resource: string, action: string, branchId: number) => boolean;
+  },
   action: VehicleAction,
   branchId: number,
-) => {
-  const scope = vehicleScope(branchId);
-  if (!scope) return false;
-  if (user?.roles?.includes("Super Admin")) return true;
-  return Boolean(user?.permissions?.includes(`vehicles:${action}_${scope}`));
-};
+) => vehicleScope(branchId) !== null && access.can("vehicles", action, branchId);

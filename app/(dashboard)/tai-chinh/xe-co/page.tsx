@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import Swal from "sweetalert2";
 import { VehicleFinanceForm } from "@/components/internal-finance/VehicleFinanceForm";
-import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
 import {
   VehicleEntrySidebar,
   type VehicleEntryFilters,
@@ -35,7 +35,7 @@ import {
   canVehicle,
   isExpenseOpenForEdit,
 } from "@/lib/internal-finance/vehicle-constants";
-import { useAuthStore } from "@/lib/store/auth";
+import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
 
@@ -48,15 +48,13 @@ const TABS: Array<{ kind: VehicleEntryKind; label: string }> = [
   { kind: "FUEL", label: "Xăng dầu" },
   { kind: "VEHICLE_CARE", label: "Chăm sóc xe" },
 ];
-const VEHICLE_PAGE_PERMISSIONS = ["view", "create"].flatMap((action) =>
-  ["hn", "sg"].map((scope) => ({
-    resource: "vehicles",
-    action: `${action}_${scope}`,
-  })),
-);
+const VEHICLE_PAGE_PERMISSIONS = ["view", "create"].map((action) => ({
+  resource: "vehicles",
+  action,
+}));
 
 function VehicleScreen() {
-  const { user } = useAuthStore();
+  const access = useFinanceAccess();
   const selectedBranch = useBranchStore((state) => state.selectedBranch);
   const { data: branchData } = useBranches();
   const [kind, setKind] = useState<VehicleEntryKind>("FUEL");
@@ -87,16 +85,16 @@ function VehicleScreen() {
       rows.find((branch) => branch.id === id)?.name || BRANCH_FALLBACK[id];
   }, [branchData]);
   const branchesFor = (action: "view" | "create" | "manage") =>
-    VEHICLE_BRANCH_IDS.filter((id) => canVehicle(user, action, id)).map(
+    VEHICLE_BRANCH_IDS.filter((id) => canVehicle(access, action, id)).map(
       (id) => ({ id, name: branchName(id) }),
     );
   const viewBranches = branchesFor("view");
   const createBranches = branchesFor("create");
   const allBranches = VEHICLE_BRANCH_IDS.filter(
     (id) =>
-      canVehicle(user, "view", id) ||
-      canVehicle(user, "create", id) ||
-      canVehicle(user, "manage", id),
+      canVehicle(access, "view", id) ||
+      canVehicle(access, "create", id) ||
+      canVehicle(access, "manage", id),
   ).map((id) => ({ id, name: branchName(id) }));
   const canView = viewBranches.length > 0;
   const defaultBranchId =
@@ -152,7 +150,7 @@ function VehicleScreen() {
   };
 
   return (
-    <PagePermissionGuard permissions={VEHICLE_PAGE_PERMISSIONS}>
+    <FinancePageGuard permissions={VEHICLE_PAGE_PERMISSIONS}>
       <div className="flex h-full min-h-0 overflow-hidden border-t bg-gray-50">
         {canView && (
           <VehicleEntrySidebar
@@ -272,7 +270,7 @@ function VehicleScreen() {
                     canEdit={(row) =>
                       ["FUEL", "VEHICLE_CARE"].includes(row.sourceType) &&
                       isExpenseOpenForEdit(row) &&
-                      canVehicle(user, "update", row.branchId)
+                      canVehicle(access, "update", row.branchId)
                     }
                     cancellingId={cancellingId}
                     onOpenAttachments={setAttachmentRow}
@@ -346,7 +344,7 @@ function VehicleScreen() {
           onClose={() => setAttachmentRow(null)}
         />
       )}
-    </PagePermissionGuard>
+    </FinancePageGuard>
   );
 }
 

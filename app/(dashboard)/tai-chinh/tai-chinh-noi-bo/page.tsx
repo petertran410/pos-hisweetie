@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarRange, CircleDollarSign, ReceiptText, Truck } from "lucide-react";
+import { CalendarRange, Truck } from "lucide-react";
 import { useState } from "react";
-import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
-import { InternalFinanceReceiptForm } from "@/components/internal-finance/InternalFinanceReceiptForm";
-import { InternalFinanceExpenseForm } from "@/components/internal-finance/InternalFinanceExpenseForm";
+import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
+import { FinanceSyncButton } from "@/components/internal-finance/FinanceSyncButton";
+import { useAuthStore } from "@/lib/store/auth";
 import { InternalFinanceSidebar } from "@/components/internal-finance/InternalFinanceSidebar";
 import {
   InternalFinanceTable,
@@ -16,18 +16,18 @@ import {
   useInternalFinanceSummary,
 } from "@/lib/hooks/useInternalFinance";
 import type { InternalFinanceQuery } from "@/lib/api/internal-finance";
-import { useCan } from "@/lib/hooks/useCan";
 
 const PAGE_SIZE = 50;
 
 export default function TaiChinhNoiBoPage() {
-  const canCreate = useCan("cash_flows", "create");
+  // Đồng bộ dữ liệu cũ và chốt chuyển đổi chỉ dành cho Super Admin.
+  const canSync = useAuthStore((state) =>
+    Boolean(state.user?.roles?.includes("Super Admin")),
+  );
   const [filters, setFilters] = useState<InternalFinanceQuery>({
     page: 1,
     limit: PAGE_SIZE,
   });
-  const [showReceiptForm, setShowReceiptForm] = useState(false);
-  const [showExpenseForm, setShowExpenseForm] = useState(false);
 
   const query = useInternalFinance(filters);
   const summary = useInternalFinanceSummary(filters);
@@ -69,41 +69,24 @@ export default function TaiChinhNoiBoPage() {
 
   const actions = (
     <>
+      {canSync && <FinanceSyncButton />}
       <Link
         href="/tai-chinh/xe-co"
         className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50">
         <Truck className="h-4 w-4" />
         Xăng dầu &amp; xe
       </Link>
-      {canCreate && (
-        <>
-          <Link
-            href="/tai-chinh/approval-tuan"
-            className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50">
-            <CalendarRange className="h-4 w-4" />
-            Approval tuần
-          </Link>
-          <button
-            type="button"
-            onClick={() => setShowExpenseForm(true)}
-            className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50">
-            <CircleDollarSign className="h-4 w-4" />
-            Tạo phiếu chi
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowReceiptForm(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-dark">
-            <ReceiptText className="h-4 w-4" />
-            Tạo phiếu thu
-          </button>
-        </>
-      )}
+      <Link
+        href="/tai-chinh/approval-tuan"
+        className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50">
+        <CalendarRange className="h-4 w-4" />
+        Approval tuần
+      </Link>
     </>
   );
 
   return (
-    <PagePermissionGuard resource="cash_flows" action="view">
+    <FinancePageGuard permissions={[{ resource: "cash_flows", action: "view" }]}>
       <div
         className="flex h-full min-h-0 overflow-hidden border-t"
         style={{ borderColor: "var(--dt-border)" }}>
@@ -132,12 +115,6 @@ export default function TaiChinhNoiBoPage() {
           toolbar={actions}
         />
       </div>
-      {showReceiptForm && (
-        <InternalFinanceReceiptForm onClose={() => setShowReceiptForm(false)} />
-      )}
-      {showExpenseForm && (
-        <InternalFinanceExpenseForm onClose={() => setShowExpenseForm(false)} />
-      )}
-    </PagePermissionGuard>
+    </FinancePageGuard>
   );
 }

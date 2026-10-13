@@ -27,7 +27,7 @@ import {
   usePostWarehouseReceipt,
   useWarehouseReceipts,
 } from "@/lib/hooks/useInternalFinance";
-import { useCan } from "@/lib/hooks/useCan";
+import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import {
   useColumnVisibility,
   type ColumnConfig,
@@ -382,12 +382,19 @@ export function WarehouseCashTable({
   );
   const postReceipt = usePostWarehouseReceipt();
   const cancelReceipt = useCancelWarehouseReceipt();
-  const canCreate = useCan("warehouse_cash", "create");
-  const canUpdate = useCan("warehouse_cash", "update");
-  const canPost = useCan("warehouse_cash", "post");
-  const canCancel = useCan("warehouse_cash", "cancel");
+  // Quyền theo vai trò × chi nhánh: xét theo kho của từng phiếu.
+  const access = useFinanceAccess();
+  const viewBranches = access.branches("warehouse_cash", "view", [6, 1]);
+  const canCreate = access.any("warehouse_cash", "create");
   const pageSize = filters.limit || PAGE_SIZE;
-  const query = useWarehouseReceipts({ ...filters, limit: pageSize });
+  const allowedFilter = (filters.branchIds || []).filter((id) =>
+    viewBranches.includes(Number(id)),
+  );
+  const query = useWarehouseReceipts({
+    ...filters,
+    branchIds: allowedFilter.length ? allowedFilter : undefined,
+    limit: pageSize,
+  });
   const rows = query.data?.data || [];
   const total = query.data?.total || 0;
   const page = query.data?.page || filters.page || 1;
@@ -516,11 +523,15 @@ export function WarehouseCashTable({
               rows.map((row) => {
                 const sale = isWarehouseSale(row);
                 const customers = receiptCustomers(row);
-                const canEditRow = canUpdate && isOpen(row);
+                const canEditRow =
+                  access.can("warehouse_cash", "update", row.branchId) &&
+                  isOpen(row);
                 const canPostRow =
-                  canPost && isOpen(row) && (sale || customers.length > 0);
+                  access.can("warehouse_cash", "post", row.branchId) &&
+                  isOpen(row) &&
+                  (sale || customers.length > 0);
                 const canCancelRow =
-                  canCancel &&
+                  access.can("warehouse_cash", "cancel", row.branchId) &&
                   row.status !== "CANCELLED" &&
                   row.status !== "REJECTED" &&
                   row.status !== "POSTING";

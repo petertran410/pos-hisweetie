@@ -8,6 +8,7 @@ import { MiniCalendar } from "@/components/ui/MiniCalendar";
 import type { Branch } from "@/lib/api/branches";
 import type { InternalFinanceQuery } from "@/lib/api/internal-finance";
 import { useBranches } from "@/lib/hooks/useBranches";
+import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { getFixedRect, normalizeRectForFixed } from "@/lib/utils/zoom";
 
 const FINANCE_BRANCH_IDS = new Set([1, 4, 6, 7]);
@@ -446,12 +447,16 @@ export function InternalFinanceSidebar({
   resetPatch?: Partial<InternalFinanceQuery>;
 }) {
   const branchesQuery = useBranches();
+  const access = useFinanceAccess();
   const branches = useMemo(
     () =>
       asBranches(branchesQuery.data).filter(
-        (branch) => branch.isActive && FINANCE_BRANCH_IDS.has(branch.id),
+        (branch) =>
+          branch.isActive &&
+          FINANCE_BRANCH_IDS.has(branch.id) &&
+          access.can("cash_flows", "view", branch.id),
       ),
-    [branchesQuery.data],
+    [branchesQuery.data, access],
   );
   const branchOptions = useMemo(
     () => branches.map((branch) => ({ value: String(branch.id), label: branch.name })),

@@ -14,7 +14,8 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
+import { useAuthStore } from "@/lib/store/auth";
 import { InternalFinanceDateField } from "@/components/internal-finance/InternalFinanceDateField";
 import { InternalFundReceiptForm } from "@/components/internal-fund/InternalFundReceiptForm";
 import { WarehouseCashAttachmentsModal } from "@/components/warehouse-cash/WarehouseCashAttachmentsModal";
@@ -95,6 +96,9 @@ function FundScreen() {
   const selectedBranch = useBranchStore((state) => state.selectedBranch);
   const setSelectedBranch = useBranchStore((state) => state.setSelectedBranch);
   const access = useInternalFundAccess();
+  const isSuperAdmin = useAuthStore((state) =>
+    Boolean(state.user?.roles?.includes("Super Admin")),
+  );
   const branchQuery = useBranches();
   const params = useSearchParams();
   const allBranches = Array.isArray(branchQuery.data) ? branchQuery.data : [];
@@ -292,7 +296,7 @@ function FundScreen() {
               </option>
             ))}
           </select>
-          {can("adjust") && (
+          {isSuperAdmin && (
             <button
               type="button"
               onClick={historySync.start}
@@ -1167,14 +1171,10 @@ function FundScreen() {
 
 export default function QuyNoiBoPage() {
   return (
-    <PagePermissionGuard
-      permissions={[
-        { resource: "internal_fund", action: "view_hn" },
-        { resource: "internal_fund", action: "view_sg" },
-        { resource: "internal_fund", action: "view_vp" },
-      ]}
+    <FinancePageGuard
+      permissions={[{ resource: "internal_fund", action: "view" }]}
     >
       <FundScreen />
-    </PagePermissionGuard>
+    </FinancePageGuard>
   );
 }

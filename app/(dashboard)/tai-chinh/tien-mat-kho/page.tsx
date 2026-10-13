@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
 import {
   loadWarehouseCashFilters,
   WarehouseCashSidebar,
@@ -48,7 +48,8 @@ export default function TienMatKhoPage() {
   const mounted = useIsClient();
 
   return (
-    <PagePermissionGuard resource="warehouse_cash" action="view">
+    <FinancePageGuard
+      permissions={[{ resource: "warehouse_cash", action: "view" }]}>
       {!mounted ? (
         <div className="flex h-full items-center justify-center">
           <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-brand" />
@@ -56,6 +57,6 @@ export default function TienMatKhoPage() {
       ) : (
         <WarehouseCashScreen />
       )}
-    </PagePermissionGuard>
+    </FinancePageGuard>
   );
 }

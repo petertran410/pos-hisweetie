@@ -25,6 +25,7 @@ import {
   VEHICLE_SERVICE_TYPES,
   canVehicle,
 } from "@/lib/internal-finance/vehicle-constants";
+import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { useAuthStore } from "@/lib/store/auth";
 import { formatCurrency } from "@/lib/utils";
 
@@ -69,6 +70,7 @@ export function VehicleFinanceForm({
   onClose: () => void;
 }) {
   const { user } = useAuthStore();
+  const access = useFinanceAccess();
   const { data: branchData } = useBranches();
   const { data: users } = useUsersForFilter();
   const createFuel = useCreateFuelEntry();
@@ -83,12 +85,12 @@ export function VehicleFinanceForm({
       | undefined;
     const rows = Array.isArray(payload) ? payload : payload?.data || [];
     return VEHICLE_BRANCH_IDS.filter(
-      (id) => entry?.branchId === id || canVehicle(user, "create", id),
+      (id) => entry?.branchId === id || canVehicle(access, "create", id),
     ).map((id) => ({
       id,
       name: rows.find((branch) => branch.id === id)?.name || BRANCH_FALLBACK[id],
     }));
-  }, [branchData, entry, user]);
+  }, [branchData, entry, access]);
 
   const [kind, setKind] = useState<VehicleEntryKind>(
     entry ? (entry.category as VehicleEntryKind) : initialKind,

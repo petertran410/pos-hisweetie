@@ -6,6 +6,7 @@ import { Check, ChevronDown, X } from "lucide-react";
 import { FilterMultiSelect } from "@/components/ui/filters";
 import { InternalFinanceDateField } from "@/components/internal-finance/InternalFinanceDateField";
 import { useBranches } from "@/lib/hooks/useBranches";
+import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import type { WarehouseReceiptQuery } from "@/lib/api/internal-finance";
 import { useBranchStore } from "@/lib/store/branch";
 import { getFixedRect } from "@/lib/utils/zoom";
@@ -200,6 +201,7 @@ export function WarehouseCashSidebar({
   onChange: (patch: Partial<WarehouseReceiptQuery>) => void;
 }) {
   const { data: branchData } = useBranches();
+  const access = useFinanceAccess();
   const { selectedBranch } = useBranchStore();
   const headerBranchId =
     selectedBranch && WAREHOUSE_IDS.includes(selectedBranch.id)
@@ -212,21 +214,26 @@ export function WarehouseCashSidebar({
       | undefined;
     const rows = Array.isArray(payload) ? payload : payload?.data || [];
     const known = rows.filter((branch) => WAREHOUSE_IDS.includes(branch.id));
-    const base = known.length
+    const all = known.length
       ? known
       : [
           { id: 6, name: "Kho Hà Nội" },
           { id: 1, name: "Kho Sài Gòn" },
         ];
+    // Chỉ hiện kho user được xem.
+    const base = all.filter((branch) =>
+      access.can("warehouse_cash", "view", branch.id),
+    );
     if (
       selectedBranch &&
       WAREHOUSE_IDS.includes(selectedBranch.id) &&
+      access.can("warehouse_cash", "view", selectedBranch.id) &&
       !base.some((branch) => branch.id === selectedBranch.id)
     ) {
       return [{ id: selectedBranch.id, name: selectedBranch.name }, ...base];
     }
     return base;
-  }, [branchData, selectedBranch]);
+  }, [branchData, selectedBranch, access]);
   const lastHeaderId = useRef<number | null>(headerBranchId);
   const skippedHeaderSync = useRef(false);
   useEffect(() => {

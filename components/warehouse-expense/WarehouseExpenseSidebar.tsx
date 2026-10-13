@@ -7,7 +7,7 @@ import { useBranches } from "@/lib/hooks/useBranches";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import type { WarehouseExpenseQuery } from "@/lib/api/internal-finance";
 import { WAREHOUSE_EXPENSE_ITEMS } from "@/lib/internal-finance/vehicle-constants";
-import { useAuthStore } from "@/lib/store/auth";
+import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { useBranchStore } from "@/lib/store/branch";
 
 const EXPENSE_BRANCH_IDS = [1, 4, 6, 7];
@@ -21,8 +21,9 @@ const CATEGORY_OPTIONS = [
 ];
 
 const STATUS_OPTIONS = [
-  { value: "PENDING_ACCOUNTANT", label: "Chờ kế toán" },
-  { value: "READY_FOR_WEEKLY_APPROVAL", label: "Sẵn sàng tổng hợp" },
+  { value: "PENDING_ACCOUNTANT", label: "Chờ kiểm tra" },
+  { value: "MANAGER_APPROVED", label: "Đã kiểm tra" },
+  { value: "READY_FOR_WEEKLY_APPROVAL", label: "Đã gom tuần" },
   { value: "IN_WEEKLY_APPROVAL", label: "Đang duyệt" },
   { value: "APPROVED", label: "Đã duyệt" },
   { value: "POSTED", label: "Đã ghi sổ" },
@@ -35,6 +36,7 @@ export type WarehouseExpenseSidebarFilters = Pick<
   | "category"
   | "status"
   | "cashIssued"
+  | "checkStatus"
   | "payerId"
   | "expenseItem"
   | "fromDate"
@@ -69,6 +71,7 @@ export function loadWarehouseExpenseFilters(
     category: saved.category || undefined,
     status: saved.status || undefined,
     cashIssued: saved.cashIssued || undefined,
+    checkStatus: saved.checkStatus || undefined,
     payerId: Number(saved.payerId) || undefined,
     expenseItem: saved.expenseItem || undefined,
     fromDate: saved.fromDate || undefined,
@@ -85,7 +88,7 @@ export function WarehouseExpenseSidebar({
 }) {
   const { data: branchData } = useBranches();
   const { data: users } = useUsersForFilter();
-  const { user } = useAuthStore();
+  const access = useFinanceAccess();
   const { selectedBranch } = useBranchStore();
   const userOptions = useMemo(
     () =>
@@ -105,15 +108,9 @@ export function WarehouseExpenseSidebar({
       if (!EXPENSE_BRANCH_IDS.includes(branch.id) || branch.isActive === false) {
         return false;
       }
-      if (user?.roles?.includes("Super Admin")) return true;
-      const scope =
-        branch.id === 6 ? "hn" : branch.id === 1 ? "sg" : "vp";
-      return Boolean(
-        user?.permissions?.includes(`warehouse_expense:view_${scope}`) ||
-          user?.permissions?.includes(`internal_fund:view_${scope}`),
-      );
+      return access.can("warehouse_expense", "view", branch.id);
     });
-  }, [branchData, user]);
+  }, [branchData, access]);
 
   useEffect(() => {
     localStorage.setItem(
@@ -123,6 +120,7 @@ export function WarehouseExpenseSidebar({
         category: filters.category || "",
         status: filters.status || "",
         cashIssued: filters.cashIssued || "",
+        checkStatus: filters.checkStatus || "",
         payerId: filters.payerId || "",
         expenseItem: filters.expenseItem || "",
         fromDate: filters.fromDate || "",
@@ -134,6 +132,7 @@ export function WarehouseExpenseSidebar({
     filters.category,
     filters.status,
     filters.cashIssued,
+    filters.checkStatus,
     filters.payerId,
     filters.expenseItem,
     filters.fromDate,
@@ -152,6 +151,7 @@ export function WarehouseExpenseSidebar({
     filters.category,
     filters.status,
     filters.cashIssued,
+    filters.checkStatus,
     filters.payerId,
     filters.expenseItem,
     filters.fromDate || filters.toDate,
@@ -167,6 +167,7 @@ export function WarehouseExpenseSidebar({
       category: undefined,
       status: undefined,
       cashIssued: undefined,
+      checkStatus: undefined,
       payerId: undefined,
       expenseItem: undefined,
       fromDate: undefined,
@@ -303,6 +304,27 @@ export function WarehouseExpenseSidebar({
             <option value="">Tất cả</option>
             <option value="NOT_ISSUED">Chưa chi</option>
             <option value="ISSUED">Đã chi</option>
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Kiểm tra
+          </label>
+          <select
+            value={filters.checkStatus || ""}
+            onChange={(event) =>
+              onChange({
+                checkStatus: (event.target.value || undefined) as
+                  | "CHECKED"
+                  | "UNCHECKED"
+                  | undefined,
+              })
+            }
+            className="dt-select h-10 w-full">
+            <option value="">Tất cả</option>
+            <option value="CHECKED">Đã đủ hai tick</option>
+            <option value="UNCHECKED">Chưa đủ hai tick</option>
           </select>
         </div>
 

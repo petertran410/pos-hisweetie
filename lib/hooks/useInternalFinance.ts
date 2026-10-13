@@ -139,16 +139,94 @@ export function useMarkWarehouseExpenseIssued() {
     mutationFn: ({
       id,
       cashIssued,
+      reason,
     }: {
       id: number;
       cashIssued: boolean;
-    }) => internalFinanceApi.markWarehouseExpenseIssued(id, cashIssued),
+      reason?: string;
+    }) => internalFinanceApi.markWarehouseExpenseIssued(id, cashIssued, reason),
     onSuccess: () => {
       invalidateInternalFinance(queryClient);
       toast.success("Đã xác nhận chi và ghi sổ quỹ");
     },
     onError: (error) =>
       toast.error(errorMessage(error, "Xác nhận Đã chi thất bại")),
+  });
+}
+
+/** Đồng bộ dữ liệu thu chi kho: chạy nền, tự hỏi tiến độ cho tới khi xong. */
+export function useFinanceSync() {
+  const queryClient = useQueryClient();
+  const status = useQuery({
+    queryKey: ["internal-finance", "sync-status"],
+    queryFn: internalFinanceApi.syncStatus,
+    refetchInterval: (query) => (query.state.data?.running ? 2000 : false),
+  });
+  const start = useMutation({
+    mutationFn: internalFinanceApi.startSync,
+    onSuccess: (data) => {
+      queryClient.setQueryData(["internal-finance", "sync-status"], data);
+      const timer = setInterval(async () => {
+        const next = await internalFinanceApi.syncStatus();
+        queryClient.setQueryData(["internal-finance", "sync-status"], next);
+        if (next.running) return;
+        clearInterval(timer);
+        invalidateInternalFinance(queryClient);
+        if (next.error) toast.error(next.error);
+        else toast.success("Đã đồng bộ dữ liệu");
+      }, 2000);
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, "Không thể đồng bộ dữ liệu")),
+  });
+  return {
+    start: () => start.mutate(),
+    running: start.isPending || Boolean(status.data?.running),
+    status: status.data,
+  };
+}
+
+/** Chốt chuyển đổi: khóa đồng bộ dữ liệu cũ khi POS đã là sổ chính. */
+export function useFinanceCutover() {
+  const queryClient = useQueryClient();
+  const status = useQuery({
+    queryKey: ["internal-finance", "cutover"],
+    queryFn: internalFinanceApi.cutoverStatus,
+  });
+  const set = useMutation({
+    mutationFn: internalFinanceApi.setCutover,
+    onSuccess: (data) => {
+      queryClient.setQueryData(["internal-finance", "cutover"], data);
+      toast.success(
+        data.locked ? "Đã chốt chuyển đổi" : "Đã mở lại đồng bộ dữ liệu",
+      );
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, "Không đổi được trạng thái chốt")),
+  });
+  return {
+    locked: Boolean(status.data?.locked),
+    cutoverAt: status.data?.cutoverAt || null,
+    set: (locked: boolean) => set.mutate(locked),
+    pending: set.isPending,
+  };
+}
+
+export function useCheckWarehouseExpense() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      role,
+      checked,
+    }: {
+      id: number;
+      role: "manager" | "accountant";
+      checked: boolean;
+    }) => internalFinanceApi.checkWarehouseExpense(id, role, checked),
+    onSuccess: () => invalidateInternalFinance(queryClient),
+    onError: (error) =>
+      toast.error(errorMessage(error, "Cập nhật tick kiểm tra thất bại")),
   });
 }
 

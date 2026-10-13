@@ -12,6 +12,7 @@ import {
   useCreatePackingSlip,
   useUpdatePackingSlip,
   useDeletePackingSlip,
+  confirmPackingSlipCancel,
   useResendPackingSlipNotification,
   useResendPackingSlipLark,
 } from "@/lib/hooks/usePackingSlips";
@@ -297,7 +298,9 @@ export default function BaoDonPage() {
       } else if (item.type === "loading") {
         await deletePackingLoading.mutateAsync(item.id);
       } else {
-        await deletePackingSlip.mutateAsync(item.id);
+        const target = await confirmPackingSlipCancel(item.id);
+        if (!target) return;
+        await deletePackingSlip.mutateAsync(target);
       }
       toast.success("Hủy phiếu thành công");
     } catch (error) {
@@ -316,7 +319,9 @@ export default function BaoDonPage() {
       } else if (slip?.type === "loading") {
         await deletePackingLoading.mutateAsync(slip.id);
       } else {
-        await deletePackingSlip.mutateAsync(slip.id);
+        const target = await confirmPackingSlipCancel(slip.id);
+        if (!target) return;
+        await deletePackingSlip.mutateAsync(target);
       }
       toast.success("Hủy phiếu thành công");
     } catch (error) {

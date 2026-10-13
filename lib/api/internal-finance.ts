@@ -51,8 +51,11 @@ export interface InternalFinanceEntry {
   exceptionDueAt: string | null;
   accountantReviewedAt: string | null;
   managerReviewedAt: string | null;
+  accountantReviewer?: { id: number; name: string } | null;
+  managerReviewer?: { id: number; name: string } | null;
   cashIssued: boolean;
   cashIssuedAt: string | null;
+  cashIssuedReason?: string | null;
   cashIssuer?: { id: number; name: string } | null;
   vehicleName?: string | null;
   vehicleServiceType?: string | null;
@@ -181,11 +184,47 @@ export interface WarehouseReceiptQuery {
   limit?: number;
 }
 
+export type FinanceSyncStepKey =
+  | "EXPENSES"
+  | "WEEKLY_APPROVALS"
+  | "WAREHOUSE_CASH"
+  | "FUND_LEDGER"
+  | "DOCUMENTS";
+
+export interface FinanceSyncStep {
+  key: FinanceSyncStepKey;
+  state: "PENDING" | "RUNNING" | "DONE" | "FAILED";
+  fetched: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  error: string | null;
+}
+
+export interface FinanceAccessSummary {
+  superAdmin: boolean;
+  branches: Array<{ branchId: number; permissions: string[] }>;
+}
+
+export interface FinanceCutoverStatus {
+  locked: boolean;
+  cutoverAt: string | null;
+}
+
+export interface FinanceSyncStatus {
+  running: boolean;
+  startedAt: string | null;
+  finishedAt: string | null;
+  steps: FinanceSyncStep[];
+  error: string | null;
+}
+
 export interface WarehouseExpenseQuery {
   branchId?: number;
   category?: string;
   status?: string;
   cashIssued?: "ISSUED" | "NOT_ISSUED" | "";
+  checkStatus?: "CHECKED" | "UNCHECKED" | "";
   payerId?: number;
   expenseItem?: string;
   vehicleId?: number;
@@ -549,9 +588,36 @@ export const internalFinanceApi = {
   markWarehouseExpenseIssued: (
     id: number,
     cashIssued: boolean,
+    reason?: string,
   ): Promise<InternalFinanceEntry> =>
     apiClient.patch(`/internal-finance/warehouse-expenses/${id}/mark-issued`, {
       cashIssued,
+      reason,
+    }),
+
+  access: (): Promise<FinanceAccessSummary> =>
+    apiClient.get("/internal-finance/access"),
+
+  cutoverStatus: (): Promise<FinanceCutoverStatus> =>
+    apiClient.get("/internal-finance/cutover"),
+
+  setCutover: (locked: boolean): Promise<FinanceCutoverStatus> =>
+    apiClient.post("/internal-finance/cutover", { locked }),
+
+  startSync: (): Promise<FinanceSyncStatus> =>
+    apiClient.post("/internal-finance/sync", {}),
+
+  syncStatus: (): Promise<FinanceSyncStatus> =>
+    apiClient.get("/internal-finance/sync/status"),
+
+  checkWarehouseExpense: (
+    id: number,
+    role: "manager" | "accountant",
+    checked: boolean,
+  ): Promise<InternalFinanceEntry> =>
+    apiClient.patch(`/internal-finance/warehouse-expenses/${id}/check`, {
+      role,
+      checked,
     }),
 
   createWarehouseReceipt: (

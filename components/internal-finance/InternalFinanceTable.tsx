@@ -3,29 +3,14 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import {
-  Check,
-  CheckSquare,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  FileWarning,
-  Loader2,
-  Upload,
-  XCircle,
 } from "lucide-react";
-import { Fragment, useEffect, useRef, useState } from "react";
-import Swal from "sweetalert2";
+import { Fragment, useEffect, useState } from "react";
 import type { InternalFinanceEntry } from "@/lib/api/internal-finance";
-import {
-  useAddInternalFinanceAttachments,
-  usePostInternalFinanceEntry,
-  useReviewInternalFinance,
-  useUpdateInternalFinanceCashIssued,
-} from "@/lib/hooks/useInternalFinance";
-import { uploadPackingSlipExpenseFiles } from "@/lib/hooks/usePackingSlips";
-import { useCan } from "@/lib/hooks/useCan";
 import { formatCurrency } from "@/lib/utils";
 import {
   displayEntryCode,
@@ -56,11 +41,11 @@ const SUBCATEGORY_LABELS: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  PENDING_ACCOUNTANT: "Chờ kế toán",
+  PENDING_ACCOUNTANT: "Chờ kiểm tra",
   ACCOUNTANT_APPROVED: "Kế toán đã duyệt",
   PENDING_MANAGER: "Chờ quản lý",
-  MANAGER_APPROVED: "Quản lý đã duyệt",
-  READY_FOR_WEEKLY_APPROVAL: "Sẵn sàng tổng hợp",
+  MANAGER_APPROVED: "Đã kiểm tra",
+  READY_FOR_WEEKLY_APPROVAL: "Đã gom tuần",
   IN_WEEKLY_APPROVAL: "Đang duyệt tuần",
   APPROVED: "Đã duyệt",
   POSTED: "Đã ghi sổ",
@@ -92,13 +77,6 @@ const EVIDENCE_LABELS: Record<string, string> = {
   MISSING: "Thiếu chứng từ",
   EXCEPTION_APPROVED: "Duyệt ngoại lệ",
 };
-
-const primaryButton =
-  "inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50";
-const secondaryButton =
-  "inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50";
-const dangerButton =
-  "inline-flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50";
 
 export interface InternalFinanceSummaryItem {
   label: string;
@@ -135,104 +113,7 @@ export function InternalFinanceTable({
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;
 }) {
-  const canUpdate = useCan("cash_flows", "update");
-  const canCreate = useCan("cash_flows", "create");
-  const review = useReviewInternalFinance();
-  const post = usePostInternalFinanceEntry();
-  const updateCashIssued = useUpdateInternalFinanceCashIssued();
-  const addAttachments = useAddInternalFinanceAttachments();
-  const attachmentInputs = useRef<Record<number, HTMLInputElement | null>>({});
-  const [uploadingEntryId, setUploadingEntryId] = useState<number | null>(null);
   const [expandedEntryId, setExpandedEntryId] = useState<number | null>(null);
-
-  const uploadEvidence = async (entryId: number, files: FileList | null) => {
-    if (!files?.length) return;
-    setUploadingEntryId(entryId);
-    try {
-      const result = await uploadPackingSlipExpenseFiles(Array.from(files));
-      if (result.files.length) {
-        addAttachments.mutate({
-          id: entryId,
-          attachments: result.files.map((file) => ({
-            fileUrl: file.fileUrl,
-            fileName: file.fileName,
-            fileType: file.fileType,
-            fileSize: file.fileSize,
-            kind: "EVIDENCE",
-          })),
-        });
-      }
-      if (result.errors.length) {
-        await Swal.fire({
-          title: "Một số file chưa được upload",
-          text: result.errors
-            .map((error) => `${error.originalname}: ${error.reason}`)
-            .join("\n"),
-          icon: "warning",
-        });
-      }
-    } catch (error) {
-      await Swal.fire({
-        title: "Upload thất bại",
-        text:
-          error instanceof Error
-            ? error.message
-            : "Không thể upload chứng từ",
-        icon: "error",
-      });
-    } finally {
-      setUploadingEntryId(null);
-    }
-  };
-
-  const runReview = async (
-    row: InternalFinanceEntry,
-    role: "accountant" | "manager",
-    decision: string,
-  ) => {
-    let reason: string | undefined;
-    let dueAt: string | undefined;
-    if (decision === "EXCEPTION_APPROVE" || decision === "MARK_MISSING") {
-      const result = await Swal.fire({
-        title:
-          decision === "MARK_MISSING"
-            ? "Ghi nhận thiếu chứng từ"
-            : "Duyệt ngoại lệ",
-        input: "textarea",
-        inputLabel: "Lý do",
-        inputPlaceholder: "Nhập lý do hoặc chứng từ còn thiếu",
-        inputValidator: (value) => (!value ? "Cần nhập lý do" : undefined),
-        showCancelButton: true,
-        confirmButtonText: "Xác nhận",
-        cancelButtonText: "Hủy",
-      });
-      if (!result.isConfirmed) return;
-      reason = result.value;
-      if (decision === "EXCEPTION_APPROVE") {
-        dueAt = new Date(Date.now() + 7 * 86400000).toISOString();
-      }
-    } else {
-      const result = await Swal.fire({
-        title:
-          decision === "REJECT" ? "Từ chối khoản này?" : "Xác nhận kiểm tra?",
-        text: displayEntryCode({
-          code: row.code,
-          description: row.description,
-          invoiceCodes: row.invoiceLinks.map(({ invoice }) => invoice.code),
-        }),
-        icon: decision === "REJECT" ? "warning" : "question",
-        showCancelButton: true,
-        confirmButtonText: "Xác nhận",
-        cancelButtonText: "Hủy",
-      });
-      if (!result.isConfirmed) return;
-    }
-    review.mutate({
-      id: row.id,
-      role,
-      payload: { decision, reason, dueAt },
-    });
-  };
 
   const [searchText, setSearchText] = useState(search);
 
@@ -254,144 +135,6 @@ export function InternalFinanceTable({
     if (tone === "negative") return "text-red-600";
     if (tone === "warning") return "text-orange-600";
     return "text-gray-900";
-  };
-
-  const renderActions = (row: InternalFinanceEntry) => {
-    const canUpload =
-      canUpdate &&
-      row.evidenceStatus !== "COMPLETE" &&
-      !["POSTED", "REJECTED", "CANCELLED"].includes(row.status);
-    const showAccountant = canUpdate && row.status === "PENDING_ACCOUNTANT";
-    const showManager = canUpdate && row.status === "PENDING_MANAGER";
-    const showPost =
-      canCreate &&
-      row.direction === "RECEIPT" &&
-      row.status === "ACCOUNTANT_APPROVED" &&
-      !row.cashFlow;
-    const showCashIssued =
-      canUpdate &&
-      row.direction === "EXPENSE" &&
-      row.status === "APPROVED" &&
-      row.weeklyBatch?.status === "APPROVED";
-    if (
-      !canUpload &&
-      !showAccountant &&
-      !showManager &&
-      !showPost &&
-      !showCashIssued
-    )
-      return null;
-
-    return (
-      <>
-        {canUpload && (
-          <>
-            <input
-              ref={(element) => {
-                attachmentInputs.current[row.id] = element;
-              }}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={(event) => {
-                void uploadEvidence(row.id, event.target.files);
-                event.target.value = "";
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => attachmentInputs.current[row.id]?.click()}
-              disabled={uploadingEntryId === row.id}
-              className={secondaryButton}>
-              {uploadingEntryId === row.id ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Upload className="h-3.5 w-3.5" />
-              )}
-              Bổ sung chứng từ
-            </button>
-          </>
-        )}
-        {showAccountant && (
-          <>
-            <button
-              type="button"
-              onClick={() => runReview(row, "accountant", "APPROVE")}
-              className={primaryButton}>
-              <Check className="h-3.5 w-3.5" />
-              Kế toán duyệt
-            </button>
-            <button
-              type="button"
-              onClick={() => runReview(row, "accountant", "MARK_MISSING")}
-              className={secondaryButton}>
-              <FileWarning className="h-3.5 w-3.5" />
-              Thiếu chứng từ
-            </button>
-          </>
-        )}
-        {showManager && (
-          <>
-            <button
-              type="button"
-              onClick={() => runReview(row, "manager", "APPROVE")}
-              className={primaryButton}>
-              <Check className="h-3.5 w-3.5" />
-              Quản lý duyệt
-            </button>
-            {row.evidenceStatus === "MISSING" && (
-              <button
-                type="button"
-                onClick={() => runReview(row, "manager", "EXCEPTION_APPROVE")}
-                className={secondaryButton}>
-                <FileWarning className="h-3.5 w-3.5" />
-                Duyệt ngoại lệ
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => runReview(row, "manager", "REJECT")}
-              className={dangerButton}>
-              <XCircle className="h-3.5 w-3.5" />
-              Từ chối
-            </button>
-          </>
-        )}
-        {showPost && (
-          <button
-            type="button"
-            onClick={() => post.mutate(row.id)}
-            disabled={post.isPending}
-            className={primaryButton}>
-            {post.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Check className="h-3.5 w-3.5" />
-            )}
-            Lập phiếu thu
-          </button>
-        )}
-        {showCashIssued && (
-          <button
-            type="button"
-            onClick={() =>
-              updateCashIssued.mutate({
-                id: row.id,
-                cashIssued: !row.cashIssued,
-              })
-            }
-            disabled={updateCashIssued.isPending}
-            className={row.cashIssued ? primaryButton : secondaryButton}>
-            {updateCashIssued.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <CheckSquare className="h-3.5 w-3.5" />
-            )}
-            {row.cashIssued ? "Đã chi" : "Đánh dấu đã chi"}
-          </button>
-        )}
-      </>
-    );
   };
 
   const columns: Array<{
@@ -568,16 +311,35 @@ export function InternalFinanceTable({
                         </span>
                       </td>
                       <td className={`px-4 py-2.5 text-gray-900 ${edge}`}>
-                        {row.reviews.length > 0
-                          ? row.reviews
-                              .map(
+                        {row.direction === "EXPENSE" &&
+                        (row.managerReviewedAt || row.accountantReviewedAt) ? (
+                          <div className="space-y-0.5 text-xs">
+                            {row.managerReviewedAt && (
+                              <div>
+                                QL kho: {row.managerReviewer?.name || "đã tick"}
+                              </div>
+                            )}
+                            {row.accountantReviewedAt && (
+                              <div>
+                                KT kho:{" "}
+                                {row.accountantReviewer?.name || "đã tick"}
+                              </div>
+                            )}
+                          </div>
+                        ) : row.reviews.length > 0 ? (
+                          [
+                            ...new Set(
+                              row.reviews.map(
                                 (review) =>
                                   review.reviewer?.name ||
                                   review.reviewerNameSnapshot ||
                                   "Người dùng Lark chưa liên kết",
-                              )
-                              .join(", ")
-                          : "-"}
+                              ),
+                            ),
+                          ].join(", ")
+                        ) : (
+                          "-"
+                        )}
                       </td>
                       <td className={`px-4 py-2.5 ${edge}`}>
                         <span
@@ -601,32 +363,17 @@ export function InternalFinanceTable({
                           "-"
                         )}
                       </td>
-                      <td
-                        className={`px-4 py-2.5 ${edge}`}
-                        onClick={(event) => event.stopPropagation()}>
+                      <td className={`px-4 py-2.5 text-xs ${edge}`}>
                         {row.direction === "RECEIPT" ? (
-                          <span className="text-xs text-gray-400">-</span>
+                          <span className="text-gray-400">-</span>
+                        ) : row.cashIssued ? (
+                          <span
+                            className="font-medium text-green-700"
+                            title={row.cashIssuedReason || undefined}>
+                            Đã chi
+                          </span>
                         ) : (
-                          <label className="inline-flex items-center gap-1.5 text-xs text-gray-700">
-                            <input
-                              type="checkbox"
-                              checked={row.cashIssued}
-                              disabled={
-                                !canUpdate ||
-                                row.status !== "APPROVED" ||
-                                row.weeklyBatch?.status !== "APPROVED" ||
-                                updateCashIssued.isPending
-                              }
-                              onChange={(event) =>
-                                updateCashIssued.mutate({
-                                  id: row.id,
-                                  cashIssued: event.target.checked,
-                                })
-                              }
-                              className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand"
-                            />
-                            {row.cashIssued ? "Đã chi" : "Chưa chi"}
-                          </label>
+                          <span className="text-gray-400">Chưa chi</span>
                         )}
                       </td>
                       <td className={`px-4 py-2.5 text-gray-900 ${edge}`}>
@@ -653,7 +400,6 @@ export function InternalFinanceTable({
                       <InternalFinanceDetailRow
                         row={row}
                         colSpan={colSpan}
-                        footer={renderActions(row)}
                       />
                     )}
                   </Fragment>

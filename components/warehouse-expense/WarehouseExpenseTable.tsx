@@ -1,12 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  CheckCircle2,
-  FileText,
-  Loader2,
-  Paperclip,
-} from "lucide-react";
+import { FileText, Loader2, Paperclip } from "lucide-react";
 import type { InternalFinanceEntry } from "@/lib/api/internal-finance";
 import { displayOccurredAt, displaySource } from "@/lib/internal-finance/display";
 import { formatCurrency } from "@/lib/utils";
@@ -48,25 +43,83 @@ const APPROVAL_STATUS_CLASS: Record<string, string> = {
   CREATE_FAILED: "bg-red-100 text-red-700",
 };
 
+export type WarehouseExpenseCheckRole = "manager" | "accountant";
+
+const WAREHOUSE_BRANCH_IDS = [6, 1];
+
+const dateTimeLabel = (value?: string | null) =>
+  value ? new Date(value).toLocaleString("vi-VN") : "";
+
+/** Tick kiểm tra chỉ đổi được khi phiếu chưa chi và batch chưa gửi Approval. */
+export function isExpenseCheckOpen(row: InternalFinanceEntry) {
+  return (
+    WAREHOUSE_BRANCH_IDS.includes(row.branchId) &&
+    !row.cashIssued &&
+    !row.cashFlow &&
+    !["CANCELLED", "REJECTED"].includes(row.status) &&
+    (!row.weeklyBatch || row.weeklyBatch.status === "READY")
+  );
+}
+
 export function WarehouseExpenseTable({
   rows,
   isLoading,
+  canCheck,
   canMarkIssued,
   canEdit,
-  markingId,
+  busyId,
+  onCheck,
   onOpenAttachments,
   onEdit,
   onMarkIssued,
 }: {
   rows: InternalFinanceEntry[];
   isLoading: boolean;
+  canCheck: (row: InternalFinanceEntry, role: WarehouseExpenseCheckRole) => boolean;
   canMarkIssued: (row: InternalFinanceEntry) => boolean;
   canEdit: (row: InternalFinanceEntry) => boolean;
-  markingId: number | null;
+  busyId: number | null;
+  onCheck: (
+    row: InternalFinanceEntry,
+    role: WarehouseExpenseCheckRole,
+    checked: boolean,
+  ) => void;
   onOpenAttachments: (row: InternalFinanceEntry) => void;
   onEdit: (row: InternalFinanceEntry) => void;
   onMarkIssued: (row: InternalFinanceEntry) => void;
 }) {
+  const checkCell = (row: InternalFinanceEntry, role: WarehouseExpenseCheckRole) => {
+    if (!WAREHOUSE_BRANCH_IDS.includes(row.branchId)) {
+      return <span className="text-gray-400">-</span>;
+    }
+    const reviewer =
+      role === "manager" ? row.managerReviewer : row.accountantReviewer;
+    const at =
+      role === "manager" ? row.managerReviewedAt : row.accountantReviewedAt;
+    // Tick tính theo thời điểm kiểm tra; dòng đồng bộ về có thể không kèm tên.
+    const checked = Boolean(at);
+    return (
+      <label
+        className="inline-flex items-center gap-1.5 text-xs text-gray-700"
+        title={
+          checked
+            ? [reviewer?.name, dateTimeLabel(at)].filter(Boolean).join(" · ")
+            : undefined
+        }>
+        <input
+          type="checkbox"
+          checked={checked}
+          disabled={busyId === row.id || !canCheck(row, role)}
+          onChange={(event) => onCheck(row, role, event.target.checked)}
+          className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand disabled:opacity-50"
+        />
+        {checked && reviewer && (
+          <span className="max-w-[90px] truncate">{reviewer.name}</span>
+        )}
+      </label>
+    );
+  };
+
   return (
     <div className="min-w-0 flex-1 overflow-auto">
       <table className="w-full text-sm">
@@ -78,12 +131,15 @@ export function WarehouseExpenseTable({
               ["Nội dung", "250px"],
               ["Khoản mục", "200px"],
               ["Người chi", "150px"],
+              ["Người tạo", "150px"],
               ["Số tiền", "130px"],
               ["Chứng từ", "90px"],
+              ["Quản lý kho", "130px"],
+              ["Kế toán kho", "130px"],
               ["Batch Approval", "160px"],
               ["Trạng thái duyệt", "140px"],
-              ["Đã chi", "130px"],
-              ["", "120px"],
+              ["Đã chi", "150px"],
+              ["", "90px"],
             ].map(([label, width]) => (
               <th
                 key={label || "actions"}
@@ -99,7 +155,7 @@ export function WarehouseExpenseTable({
         <tbody>
           {isLoading ? (
             <tr>
-              <td colSpan={11} className="py-20 text-center">
+              <td colSpan={14} className="py-20 text-center">
                 <div className="inline-flex items-center gap-2 text-gray-400">
                   <Loader2 className="h-5 w-5 animate-spin" />
                   Đang tải...
@@ -108,7 +164,7 @@ export function WarehouseExpenseTable({
             </tr>
           ) : rows.length === 0 ? (
             <tr>
-              <td colSpan={11} className="py-20 text-center text-gray-400">
+              <td colSpan={14} className="py-20 text-center text-gray-400">
                 Không có khoản chi phù hợp
               </td>
             </tr>
@@ -124,7 +180,6 @@ export function WarehouseExpenseTable({
                 SUBCATEGORY_LABELS[row.subCategory || ""] ||
                 CATEGORY_LABELS[row.category] ||
                 row.category;
-              const showIssue = canMarkIssued(row);
               return (
                 <tr key={row.id} className="border-b transition-colors hover:bg-gray-50">
                   <td className="whitespace-nowrap px-4 py-2.5">
@@ -188,6 +243,9 @@ export function WarehouseExpenseTable({
                   <td className="px-4 py-2.5">
                     {row.payer?.name || <span className="text-gray-400">-</span>}
                   </td>
+                  <td className="px-4 py-2.5">
+                    {row.creator?.name || <span className="text-gray-400">-</span>}
+                  </td>
                   <td className="px-4 py-2.5 text-right font-semibold text-red-600">
                     {formatCurrency(row.amount)}
                   </td>
@@ -205,6 +263,8 @@ export function WarehouseExpenseTable({
                       <span className="text-gray-400">-</span>
                     )}
                   </td>
+                  <td className="px-4 py-2.5">{checkCell(row, "manager")}</td>
+                  <td className="px-4 py-2.5">{checkCell(row, "accountant")}</td>
                   <td className="px-4 py-2.5">
                     {row.weeklyBatch ? (
                       <div>
@@ -233,32 +293,44 @@ export function WarehouseExpenseTable({
                     )}
                   </td>
                   <td className="px-4 py-2.5">
-                    {row.fundTransaction?.code ? (
-                      <div className={`font-mono text-xs ${row.fundTransaction.status === "CANCELLED" ? "text-red-600" : "text-green-700"}`}>
-                        {row.fundTransaction.code}
-                        {row.fundTransaction.status === "CANCELLED" && <span className="mt-1 block font-sans">Đã hủy giao dịch quỹ</span>}
+                    <label className="inline-flex items-center gap-1.5 text-xs text-gray-700">
+                      {busyId === row.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                      ) : (
+                        <input
+                          type="checkbox"
+                          checked={row.cashIssued}
+                          disabled={row.cashIssued || !canMarkIssued(row)}
+                          onChange={() => onMarkIssued(row)}
+                          className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand disabled:opacity-50"
+                        />
+                      )}
+                      {row.fundTransaction?.code ? (
+                        <span
+                          className={`font-mono ${row.fundTransaction.status === "CANCELLED" ? "text-red-600" : "text-green-700"}`}>
+                          {row.fundTransaction.code}
+                        </span>
+                      ) : row.cashIssued ? (
+                        <span className="font-medium text-green-700">Đã chi</span>
+                      ) : (
+                        <span className="text-gray-400">Chưa chi</span>
+                      )}
+                    </label>
+                    {row.fundTransaction?.status === "CANCELLED" && (
+                      <div className="mt-0.5 text-xs text-red-600">
+                        Đã hủy giao dịch quỹ
                       </div>
-                    ) : row.cashIssued ? (
-                      <span className="text-xs font-medium text-green-700">Đã chi</span>
-                    ) : (
-                      <span className="text-xs text-gray-400">Chưa chi</span>
+                    )}
+                    {row.cashIssuedReason && (
+                      <div
+                        className="mt-0.5 max-w-[150px] break-words text-xs text-gray-500"
+                        title={row.cashIssuer?.name || undefined}>
+                        Lý do: {row.cashIssuedReason}
+                      </div>
                     )}
                   </td>
                   <td className="px-4 py-2.5">
-                    {showIssue ? (
-                      <button
-                        type="button"
-                        disabled={markingId === row.id}
-                        onClick={() => onMarkIssued(row)}
-                        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-brand px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-dark disabled:opacity-50">
-                        {markingId === row.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                        )}
-                        Đã chi
-                      </button>
-                    ) : canEdit(row) && !row.weeklyBatch ? (
+                    {canEdit(row) && !row.weeklyBatch ? (
                       <button
                         type="button"
                         onClick={() => onEdit(row)}

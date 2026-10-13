@@ -1,19 +1,22 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
+  CalendarRange,
   ChevronLeft,
   ChevronRight,
   Plus,
-  Send,
   WalletCards,
 } from "lucide-react";
 import Swal from "sweetalert2";
-import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
+import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
 import { WarehouseCashAttachmentsModal } from "@/components/warehouse-cash/WarehouseCashAttachmentsModal";
-import { WarehouseExpenseApprovalModal } from "@/components/warehouse-expense/WarehouseExpenseApprovalModal";
 import { WarehouseExpenseForm } from "@/components/warehouse-expense/WarehouseExpenseForm";
-import { WarehouseExpenseTable } from "@/components/warehouse-expense/WarehouseExpenseTable";
+import {
+  isExpenseCheckOpen,
+  WarehouseExpenseTable,
+} from "@/components/warehouse-expense/WarehouseExpenseTable";
 import {
   loadWarehouseExpenseFilters,
   WarehouseExpenseSidebar,
@@ -24,21 +27,18 @@ import type {
   WarehouseExpenseQuery,
 } from "@/lib/api/internal-finance";
 import {
+  useCheckWarehouseExpense,
   useMarkWarehouseExpenseIssued,
   useWarehouseExpenses,
 } from "@/lib/hooks/useInternalFinance";
 import { isExpenseOpenForEdit } from "@/lib/internal-finance/vehicle-constants";
-import { useAuthStore } from "@/lib/store/auth";
+import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
 
 const PAGE_SIZE = 50;
 
-const scopeForBranch = (branchId: number) =>
-  branchId === 6 ? "hn" : branchId === 1 ? "sg" : "vp";
-
 function WarehouseExpenseScreen() {
-  const { user } = useAuthStore();
   const selectedBranch = useBranchStore((state) => state.selectedBranch);
   const [filters, setFilters] = useState<WarehouseExpenseSidebarFilters>(() =>
     loadWarehouseExpenseFilters(selectedBranch?.id),
@@ -50,27 +50,20 @@ function WarehouseExpenseScreen() {
   const [showForm, setShowForm] = useState(false);
   const [editingExpense, setEditingExpense] =
     useState<InternalFinanceEntry | null>(null);
-  const [showApproval, setShowApproval] = useState(false);
   const [attachmentRow, setAttachmentRow] =
     useState<InternalFinanceEntry | null>(null);
   const [markingId, setMarkingId] = useState<number | null>(null);
   const markIssued = useMarkWarehouseExpenseIssued();
+  const check = useCheckWarehouseExpense();
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
     return () => clearTimeout(timer);
   }, [search]);
 
-  const canAction = (action: string, targetBranchId = branchId) => {
-    if (user?.roles?.includes("Super Admin")) return true;
-    const fundAction = action === "create" ? "create_expense" : action === "update" ? "adjust" :
-      action === "prepare" || action === "submit" ? "submit_approval" : action;
-    return Boolean(
-      user?.permissions?.includes(
-        `warehouse_expense:${action}_${scopeForBranch(targetBranchId)}`,
-      ) || user?.permissions?.includes(`internal_fund:${fundAction}_${scopeForBranch(targetBranchId)}`),
-    );
-  };
+  const access = useFinanceAccess();
+  const canAction = (action: string, targetBranchId = branchId) =>
+    access.can("warehouse_expense", action, targetBranchId);
 
   const query = useMemo<WarehouseExpenseQuery>(
     () => ({
@@ -78,6 +71,7 @@ function WarehouseExpenseScreen() {
       category: filters.category,
       status: filters.status,
       cashIssued: filters.cashIssued,
+      checkStatus: filters.checkStatus,
       payerId: filters.payerId,
       expenseItem: filters.expenseItem,
       fromDate: filters.fromDate,
@@ -105,34 +99,49 @@ function WarehouseExpenseScreen() {
     setPage(1);
   };
 
+  const inApprovedBatch = (row: InternalFinanceEntry) =>
+    row.status === "APPROVED" && row.weeklyBatch?.status === "APPROVED";
+
   const handleMarkIssued = async (row: InternalFinanceEntry) => {
-    const result = await Swal.fire({
-      title: "Xác nhận đã chi?",
-      text: "Xác nhận khoản chi và ghi vào quỹ nội bộ.",
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "Xác nhận Đã chi",
-      cancelButtonText: "Hủy bỏ",
-      confirmButtonColor: "#0f766e",
-    });
-    if (!result.isConfirmed) return;
+    let reason: string | undefined;
+    if (inApprovedBatch(row)) {
+      const result = await Swal.fire({
+        title: "Xác nhận đã chi?",
+        text: "Xác nhận khoản chi và ghi vào quỹ nội bộ.",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Xác nhận Đã chi",
+        cancelButtonText: "Hủy bỏ",
+        confirmButtonColor: "#0f766e",
+      });
+      if (!result.isConfirmed) return;
+    } else {
+      // Phiếu chưa nằm trong Approval tuần đã duyệt: bắt buộc ghi lý do.
+      const result = await Swal.fire({
+        title: "Đánh dấu Đã chi ngoài Approval tuần",
+        html: `<p class="text-sm text-gray-600">Phiếu này chưa nằm trong Approval tuần đã duyệt. Nhập lý do để ghi Đã chi và trừ quỹ nội bộ <strong>${formatCurrency(row.amount)}</strong>.</p>`,
+        input: "textarea",
+        inputPlaceholder: "Lý do đánh dấu Đã chi",
+        inputValidator: (value) =>
+          value?.trim() ? undefined : "Cần nhập lý do",
+        showCancelButton: true,
+        confirmButtonText: "Xác nhận Đã chi",
+        cancelButtonText: "Hủy bỏ",
+        confirmButtonColor: "#0f766e",
+      });
+      if (!result.isConfirmed) return;
+      reason = String(result.value).trim();
+    }
     setMarkingId(row.id);
     markIssued.mutate(
-      { id: row.id, cashIssued: true },
+      { id: row.id, cashIssued: true, reason },
       { onSettled: () => setMarkingId(null) },
     );
   };
 
   return (
-    <PagePermissionGuard
-      permissions={[
-        { resource: "warehouse_expense", action: "view_hn" },
-        { resource: "warehouse_expense", action: "view_sg" },
-        { resource: "warehouse_expense", action: "view_vp" },
-        { resource: "internal_fund", action: "view_hn" },
-        { resource: "internal_fund", action: "view_sg" },
-        { resource: "internal_fund", action: "view_vp" },
-      ]}>
+    <FinancePageGuard
+      permissions={[{ resource: "warehouse_expense", action: "view" }]}>
       <div className="flex h-full min-h-0 overflow-hidden border-t bg-gray-50">
         <WarehouseExpenseSidebar
           filters={filters}
@@ -167,15 +176,12 @@ function WarehouseExpenseScreen() {
                   Tạo khoản chi khác
                 </button>
               )}
-              {canAction("prepare") && (
-                <button
-                  type="button"
-                  onClick={() => setShowApproval(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-dark">
-                  <Send className="h-4 w-4" />
-                  Tổng hợp tuần
-                </button>
-              )}
+              <Link
+                href="/tai-chinh/approval-tuan"
+                className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                <CalendarRange className="h-4 w-4" />
+                Approval tuần
+              </Link>
             </div>
           </div>
         <div className="flex shrink-0 items-center justify-end gap-4 border-b px-4 py-2 text-sm">
@@ -207,18 +213,24 @@ function WarehouseExpenseScreen() {
             <WarehouseExpenseTable
               rows={rows}
               isLoading={expenses.isLoading || expenses.isFetching}
+              canCheck={(row, role) =>
+                isExpenseCheckOpen(row) &&
+                canAction(`check_${role}`, row.branchId)
+              }
               canMarkIssued={(row) =>
                 canAction("mark_issued", row.branchId) &&
-                row.status === "APPROVED" &&
-                row.weeklyBatch?.status === "APPROVED" &&
-                !row.cashIssued
+                !row.cashIssued &&
+                (inApprovedBatch(row) || isExpenseCheckOpen(row))
+              }
+              onCheck={(row, role, checked) =>
+                check.mutate({ id: row.id, role, checked })
               }
               canEdit={(row) =>
                 row.sourceType === "MANUAL_EXPENSE" &&
                 isExpenseOpenForEdit(row) &&
                 canAction("update", row.branchId)
               }
-              markingId={markingId}
+              busyId={markingId}
               onOpenAttachments={setAttachmentRow}
               onEdit={setEditingExpense}
               onMarkIssued={handleMarkIssued}
@@ -263,14 +275,6 @@ function WarehouseExpenseScreen() {
           onClose={() => setEditingExpense(null)}
         />
       )}
-      {showApproval && (
-        <WarehouseExpenseApprovalModal
-          branchId={branchId}
-          canPrepare={canAction("prepare")}
-          canSubmit={canAction("submit")}
-          onClose={() => setShowApproval(false)}
-        />
-      )}
       {attachmentRow && (
         <WarehouseCashAttachmentsModal
           attachments={attachmentRow.attachments || []}
@@ -278,7 +282,7 @@ function WarehouseExpenseScreen() {
           onClose={() => setAttachmentRow(null)}
         />
       )}
-    </PagePermissionGuard>
+    </FinancePageGuard>
   );
 }
 
