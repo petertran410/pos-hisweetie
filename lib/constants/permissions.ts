@@ -103,7 +103,6 @@ export const ACTION_LABELS: Record<string, string> = {
   check_manager: "Tick Quản lý kho",
   check_accountant: "Tick Kế toán kho",
   create_receipt: "Tạo phiếu thu quỹ",
-  create_expense: "Ghi nhận kho nộp tiền",
   transfer: "Chuyển tiền giữa các quỹ",
   submit_approval: "Gửi duyệt",
   adjust: "Điều chỉnh sau chốt sổ",

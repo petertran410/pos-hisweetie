@@ -71,14 +71,12 @@ const labels: Record<string, string> = {
 // Nguồn ghi quỹ không qua Approval của POS; hiển thị rõ để phân biệt với thu/chi nội bộ.
 const sourceLabels: Record<string, string> = {
   WAREHOUSE_CASH_RECEIPT: "Thu tiền khách",
-  SEPAY_FUND_DEPOSIT: "Kho nộp chuyển khoản",
   LARK_PAYMENT_VOUCHER: "Phiếu chi theo đơn duyệt",
 };
 // Các nguồn này phải hủy tại màn hình gốc để hai bên không lệch nhau;
 // bút toán lịch sử thì chỉ đọc.
 const originOwnedSources = [
   "WAREHOUSE_CASH_RECEIPT",
-  "SEPAY_FUND_DEPOSIT",
   "LEDGER_HISTORY",
 ];
 // Tên hiển thị của loại giao dịch; chuyển quỹ lịch sử vẫn hiện "Chuyển đến/đi".

@@ -13,7 +13,6 @@ import {
   useConfirmSepayReceipt,
   useHideSepayTransaction,
   useUnhideSepayTransaction,
-  useSepayFundDeposit,
 } from "@/lib/hooks/useSepay";
 import { useBranchStore } from "@/lib/store/branch";
 import { usePermission } from "@/lib/hooks/usePermissions";
@@ -42,7 +41,6 @@ import {
   UserMinus,
   ChevronDown,
   ShoppingCart,
-  Warehouse,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import Swal from "sweetalert2";
@@ -52,12 +50,6 @@ const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   assigned: { label: "Đã xác nhận KH", cls: "bg-brand-soft text-brand" },
   completed: { label: "Hoàn thành", cls: "bg-green-100 text-green-700" },
 };
-
-// Kho được nộp tiền mặt về tài khoản công ty (trừ quỹ nội bộ của kho).
-const FUND_DEPOSIT_BRANCHES = [
-  { id: 6, label: "Kho Hà Nội" },
-  { id: 1, label: "Kho Sài Gòn" },
-];
 
 export function SepayStatusBadge({ status }: { status?: string | null }) {
   const s = STATUS_BADGE[status || "processing"] || STATUS_BADGE.processing;
@@ -1071,23 +1063,9 @@ export function SepayMatchActions({
   const confirmMut = useConfirmSepayReceipt();
   const hideMut = useHideSepayTransaction();
   const unhideMut = useUnhideSepayTransaction();
-  const fundDepositMut = useSepayFundDeposit();
 
   const status = tx.match?.status || "processing";
   const customers: SepayMatchCustomer[] = tx.match?.customers || [];
-
-  const confirmFundDeposit = (branchId: number, label: string) => {
-    Swal.fire({
-      title: `${label} nộp tiền?`,
-      text: `Ghi ${formatCurrency(Number(tx.amountIn))} là khoản chi của quỹ ${label} (nộp về tài khoản công ty).`,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "Ghi vào quỹ",
-      cancelButtonText: "Hủy",
-    }).then((result) => {
-      if (result.isConfirmed) fundDepositMut.mutate({ id: tx.id, branchId });
-    });
-  };
 
   // Đóng menu khi click ngoài / Escape
   useEffect(() => {
@@ -1245,20 +1223,6 @@ export function SepayMatchActions({
               <ShoppingCart className="w-3.5 h-3.5" />
               Chọn đơn hàng
             </button>
-            {FUND_DEPOSIT_BRANCHES.map((branch) => (
-              <button
-                key={branch.id}
-                type="button"
-                disabled={fundDepositMut.isPending}
-                onClick={() => {
-                  setAttachMenuOpen(false);
-                  confirmFundDeposit(branch.id, branch.label);
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left text-gray-700 hover:bg-gray-50 disabled:opacity-50">
-                <Warehouse className="w-3.5 h-3.5" />
-                {branch.label} nộp tiền
-              </button>
-            ))}
           </div>
         )}
       </div>
@@ -1282,15 +1246,6 @@ export function SepayMatchActions({
       primary = (
         <span className="text-xs text-gray-500 whitespace-nowrap">
           Tự động
-        </span>
-      );
-    } else if (tx.match?.completedSource === "fund_deposit") {
-      primary = (
-        <span className="text-xs text-gray-500 whitespace-nowrap">
-          {FUND_DEPOSIT_BRANCHES.find(
-            (branch) => branch.id === tx.match?.fundDeposit?.branchId
-          )?.label || "Kho"}{" "}
-          nộp tiền
         </span>
       );
     } else if (cfCodes.length > 0) {
@@ -1373,20 +1328,6 @@ export function SepayMatchActions({
         setMenuOpen(false);
         openDebtView();
       },
-    });
-  }
-
-  if (tx.match?.completedSource === "fund_deposit" && canAssign) {
-    menuItems.push({
-      key: "unmark-fund-deposit",
-      label: "Bỏ đánh dấu kho nộp tiền",
-      icon: <Warehouse className="w-3.5 h-3.5" />,
-      onClick: () => {
-        setMenuOpen(false);
-        fundDepositMut.mutate({ id: tx.id, branchId: null });
-      },
-      disabled: fundDepositMut.isPending,
-      danger: true,
     });
   }
 

@@ -150,29 +150,6 @@ export function useHideSepayTransaction() {
   });
 }
 
-/** Đánh dấu / bỏ đánh dấu kho nộp tiền mặt về tài khoản công ty */
-export function useSepayFundDeposit() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, branchId }: { id: number; branchId: number | null }) =>
-      branchId
-        ? sepayApi.markFundDeposit(id, branchId)
-        : sepayApi.unmarkFundDeposit(id),
-    onSuccess: (_, { branchId }) => {
-      qc.invalidateQueries({ queryKey: ["sepay-transactions"] });
-      qc.invalidateQueries({ queryKey: ["internal-fund"] });
-      toast.success(
-        branchId ? "Đã ghi kho nộp tiền vào quỹ nội bộ" : "Đã bỏ đánh dấu kho nộp tiền"
-      );
-    },
-    onError: (error: unknown) => {
-      toast.error(
-        error instanceof Error ? error.message : "Cập nhật kho nộp tiền thất bại"
-      );
-    },
-  });
-}
-
 /** Bỏ ẩn giao dịch — hiển thị lại trong danh sách */
 export function useUnhideSepayTransaction() {
   const qc = useQueryClient();
