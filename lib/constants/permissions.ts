@@ -192,6 +192,8 @@ export const CATEGORY_ICONS: Record<string, string> = {
 const RESOURCE_ACTION_LABELS: Record<string, string> = {
   "transfers:view_cost_price": "Xem giá",
   "internal-use:view_cost_price": "Xem giá",
+  "warehouse_expense:cancel": "Hủy phiếu chi",
+  "warehouse_expense:request_review": "Ghi chú & tag người xem lại",
 };
 
 /** Nhãn action, có xét nhãn riêng theo resource (RESOURCE_ACTION_LABELS). */
