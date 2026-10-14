@@ -51,6 +51,8 @@ const STATUS_OPTIONS = [
   { value: "APPROVED", label: "Đã duyệt" },
   { value: "POSTED", label: "Đã ghi sổ" },
   { value: "REJECTED", label: "Từ chối" },
+  // Phiếu đã hủy ẩn khỏi danh sách mặc định, chỉ hiện khi chọn đúng mục này.
+  { value: "CANCELLED", label: "Đã hủy" },
 ];
 
 export type WarehouseExpenseSidebarFilters = Pick<
@@ -126,7 +128,10 @@ export function WarehouseExpenseSidebar({
       | undefined;
     const rows = Array.isArray(payload) ? payload : payload?.data || [];
     return rows.filter((branch) => {
-      if (!EXPENSE_BRANCH_IDS.includes(branch.id) || branch.isActive === false) {
+      if (
+        !EXPENSE_BRANCH_IDS.includes(branch.id) ||
+        branch.isActive === false
+      ) {
         return false;
       }
       return access.can("warehouse_expense", "view", branch.id);
@@ -241,7 +246,9 @@ export function WarehouseExpenseSidebar({
       </FilterSection>
       <FilterSection label="Trạng thái chi tiền">
         {select(filters.cashIssued, CASH_ISSUED_OPTIONS, "Tất cả", (value) =>
-          onChange({ cashIssued: value as "ISSUED" | "NOT_ISSUED" | undefined }),
+          onChange({
+            cashIssued: value as "ISSUED" | "NOT_ISSUED" | undefined,
+          }),
         )}
       </FilterSection>
       <FilterSection label="Kiểm tra">

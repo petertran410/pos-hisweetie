@@ -124,6 +124,7 @@ export function VehicleEntryTable({
   onEdit,
   onCancel,
   shows,
+  highlightId,
 }: {
   kind: VehicleEntryKind;
   rows: VehicleEntry[];
@@ -135,6 +136,8 @@ export function VehicleEntryTable({
   onCancel: (row: VehicleEntry) => void;
   /** Cột nào đang hiện (theo nút "Cột hiển thị" ở trang). */
   shows: (key: string) => boolean;
+  /** Dòng mở từ link (?Code=) được tô sáng. */
+  highlightId?: number | null;
 }) {
   const vehicleName = (row: VehicleEntry) =>
     row.vehicle?.label || row.vehicleName || "-";
@@ -427,9 +430,9 @@ export function VehicleEntryTable({
             rows.map((row) => (
               <tr
                 key={row.id}
-                className={`border-b align-top transition-colors hover:bg-gray-50 ${
-                  row.status === "CANCELLED" ? "opacity-60" : ""
-                }`}>
+                className={`border-b align-top transition-colors ${
+                  highlightId === row.id ? "bg-brand-soft" : "hover:bg-gray-50"
+                } ${row.status === "CANCELLED" ? "opacity-60" : ""}`}>
                 {columns.map((column) => (
                   <td
                     key={column.key}

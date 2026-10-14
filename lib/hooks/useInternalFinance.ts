@@ -133,6 +133,89 @@ export function useCreateWarehouseExpenseApproval() {
   });
 }
 
+export function useCancelWarehouseExpense() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: number; reason: string }) =>
+      internalFinanceApi.cancelWarehouseExpense(id, reason),
+    onSuccess: () => {
+      invalidateInternalFinance(queryClient);
+      toast.success("Đã hủy phiếu chi");
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, "Hủy phiếu chi thất bại")),
+  });
+}
+
+export function useWarehouseExpenseNotes(id: number | null) {
+  return useQuery({
+    queryKey: ["warehouse-expenses", "notes", id],
+    queryFn: () => internalFinanceApi.warehouseExpenseNotes(id!),
+    enabled: id != null,
+  });
+}
+
+export function useWarehouseExpenseMentionCandidates(
+  id: number | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: ["warehouse-expenses", "mention-candidates", id],
+    queryFn: () => internalFinanceApi.warehouseExpenseMentionCandidates(id!),
+    enabled: id != null && enabled,
+    staleTime: 60_000,
+  });
+}
+
+export function useCreateWarehouseExpenseNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      content,
+      mentionUserIds,
+    }: {
+      id: number;
+      content: string;
+      mentionUserIds: number[];
+    }) =>
+      internalFinanceApi.createWarehouseExpenseNote(id, {
+        content,
+        mentionUserIds,
+      }),
+    onSuccess: (result, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["warehouse-expenses", "notes", variables.id],
+      });
+      queryClient.invalidateQueries({ queryKey: ["warehouse-expenses"] });
+      const tagged = variables.mentionUserIds.length;
+      if (!tagged) toast.success("Đã lưu ghi chú");
+      else if (!result.failed)
+        toast.success(`Đã lưu ghi chú và gửi Lark cho ${result.sent} người`);
+      else
+        toast.warning(
+          `Đã lưu ghi chú; gửi Lark được ${result.sent}/${tagged} người`,
+        );
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, "Lưu ghi chú thất bại")),
+  });
+}
+
+export function useCancelWarehouseExpenseBatch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) =>
+      internalFinanceApi.cancelWarehouseExpenseBatch(id),
+    onSuccess: () => {
+      invalidateInternalFinance(queryClient);
+      toast.success("Đã hủy tổng hợp tuần");
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, "Hủy tổng hợp tuần thất bại")),
+  });
+}
+
 export function useMarkWarehouseExpenseIssued() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -289,7 +372,12 @@ export function useReviewInternalFinance() {
     }: {
       id: number;
       role: "accountant" | "manager";
-      payload: { decision: string; note?: string; reason?: string; dueAt?: string };
+      payload: {
+        decision: string;
+        note?: string;
+        reason?: string;
+        dueAt?: string;
+      };
     }) => internalFinanceApi.review(id, role, payload),
     onSuccess: () => {
       invalidateInternalFinance(queryClient);
@@ -348,13 +436,8 @@ export function usePostWeeklyBatch() {
 export function useUpdateInternalFinanceCashIssued() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      id,
-      cashIssued,
-    }: {
-      id: number;
-      cashIssued: boolean;
-    }) => internalFinanceApi.updateCashIssued(id, cashIssued),
+    mutationFn: ({ id, cashIssued }: { id: number; cashIssued: boolean }) =>
+      internalFinanceApi.updateCashIssued(id, cashIssued),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["internal-finance"] });
       toast.success("Đã cập nhật trạng thái Đã chi");

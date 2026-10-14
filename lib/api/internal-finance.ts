@@ -57,6 +57,10 @@ export interface InternalFinanceEntry {
   cashIssuedAt: string | null;
   cashIssuedReason?: string | null;
   cashIssuer?: { id: number; name: string } | null;
+  cancelReason?: string | null;
+  cancelledAt?: string | null;
+  canceller?: { id: number; name: string } | null;
+  _count?: { reviewNotes?: number };
   vehicleName?: string | null;
   vehicleServiceType?: string | null;
   vehicleOdo?: number | string | null;
@@ -153,10 +157,12 @@ export interface WarehouseAllocatableInvoice {
 }
 
 export interface WarehouseReceipt extends InternalFinanceEntry {
-  sourceSnapshot?: (Record<string, unknown> & {
-    receiptKind?: "CUSTOMER" | "WAREHOUSE_SALE";
-    note?: string;
-  }) | null;
+  sourceSnapshot?:
+    | (Record<string, unknown> & {
+        receiptKind?: "CUSTOMER" | "WAREHOUSE_SALE";
+        note?: string;
+      })
+    | null;
   customers?: WarehouseCustomer[];
   note?: string;
   postedCashFlows?: WarehouseCashFlowRef[];
@@ -315,6 +321,20 @@ export interface InternalFinanceSummary {
   balance: number;
 }
 
+export interface WarehouseExpenseNote {
+  id: number;
+  entryId: number;
+  content: string;
+  createdAt: string;
+  creator: { id: number; name: string };
+  mentions: Array<{
+    id: number;
+    larkStatus: "PENDING" | "SENT" | "NO_LARK" | "ERROR" | string;
+    sentAt: string | null;
+    user: { id: number; name: string };
+  }>;
+}
+
 export interface WeeklyBatch {
   id: number;
   code: string;
@@ -402,9 +422,7 @@ export const internalFinanceApi = {
       payload,
     ),
 
-  weeklyBatches: (
-    params?: InternalFinanceQuery,
-  ): Promise<WeeklyBatch[]> =>
+  weeklyBatches: (params?: InternalFinanceQuery): Promise<WeeklyBatch[]> =>
     apiClient.get("/internal-finance/weekly-batches", params),
 
   prepareWeeklyBatch: (payload: {
@@ -418,7 +436,10 @@ export const internalFinanceApi = {
     id: number,
     payload?: { detailUrl?: string; viewUrl?: string },
   ): Promise<unknown> =>
-    apiClient.post(`/internal-finance/weekly-batches/${id}/create-approval`, payload),
+    apiClient.post(
+      `/internal-finance/weekly-batches/${id}/create-approval`,
+      payload,
+    ),
 
   postWeeklyBatch: (id: number): Promise<unknown> =>
     apiClient.post(`/internal-finance/weekly-batches/${id}/post`),
@@ -461,7 +482,10 @@ export const internalFinanceApi = {
   warehouseExpenseBatches: (
     params?: InternalFinanceQuery,
   ): Promise<WeeklyBatch[]> =>
-    apiClient.get("/internal-finance/warehouse-expenses/weekly-batches", params),
+    apiClient.get(
+      "/internal-finance/warehouse-expenses/weekly-batches",
+      params,
+    ),
 
   warehouseExpenseBatch: (
     id: number,
@@ -485,6 +509,37 @@ export const internalFinanceApi = {
     apiClient.post(
       `/internal-finance/warehouse-expenses/weekly-batches/${id}/create-approval`,
       payload,
+    ),
+
+  cancelWarehouseExpense: (
+    id: number,
+    reason: string,
+  ): Promise<InternalFinanceEntry> =>
+    apiClient.put(`/internal-finance/warehouse-expenses/${id}/cancel`, {
+      reason,
+    }),
+
+  warehouseExpenseNotes: (id: number): Promise<WarehouseExpenseNote[]> =>
+    apiClient.get(`/internal-finance/warehouse-expenses/${id}/notes`),
+
+  warehouseExpenseMentionCandidates: (
+    id: number,
+  ): Promise<Array<{ id: number; name: string }>> =>
+    apiClient.get(
+      `/internal-finance/warehouse-expenses/${id}/mention-candidates`,
+    ),
+
+  createWarehouseExpenseNote: (
+    id: number,
+    payload: { content: string; mentionUserIds: number[] },
+  ): Promise<{ note: WarehouseExpenseNote; sent: number; failed: number }> =>
+    apiClient.post(`/internal-finance/warehouse-expenses/${id}/notes`, payload),
+
+  cancelWarehouseExpenseBatch: (
+    id: number,
+  ): Promise<{ id: number; code: string; released: number }> =>
+    apiClient.post(
+      `/internal-finance/warehouse-expenses/weekly-batches/${id}/cancel`,
     ),
 
   markWarehouseExpenseIssued: (

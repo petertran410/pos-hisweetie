@@ -35,7 +35,12 @@ import {
   restoreBranchIds,
   writeSavedFilters,
 } from "@/lib/internal-finance/saved-filters";
-import type { InternalFinanceQuery } from "@/lib/api/internal-finance";
+import type {
+  InternalFinanceQuery,
+  WeeklyBatch,
+} from "@/lib/api/internal-finance";
+import { CancelWeeklyBatchDialog } from "@/components/internal-finance/CancelWeeklyBatchDialog";
+import { canCancelBatch } from "@/lib/internal-finance/weekly-batch";
 import { formatCurrency } from "@/lib/utils";
 import { isoWeekRange } from "@/lib/internal-finance/dates";
 
@@ -80,7 +85,7 @@ const STATUS_LABELS: Record<string, string> = Object.fromEntries(
   STATUS_OPTIONS.filter(([value]) => value).map(([value, label]) => [
     value,
     label,
-  ])
+  ]),
 );
 
 function asBranches(payload: unknown) {
@@ -109,38 +114,39 @@ export default function ApprovalTuanPage() {
   const access = useFinanceAccess();
   const can = useCallback(
     (action: string, id: number) => access.can("warehouse_expense", action, id),
-    [access]
+    [access],
   );
   const canPrepareAny = BRANCH_IDS.some((id) => can("prepare", id));
   const createApproval = useCreateWarehouseExpenseApproval();
   const [creatingId, setCreatingId] = useState<number | null>(null);
+  const [cancelling, setCancelling] = useState<WeeklyBatch | null>(null);
   const { data: branchData } = useBranches();
   const branches = useMemo(
     () =>
       asBranches(branchData).filter(
-        (branch) => BRANCH_IDS.includes(branch.id) && can("view", branch.id)
+        (branch) => BRANCH_IDS.includes(branch.id) && can("view", branch.id),
       ),
-    [branchData, can]
+    [branchData, can],
   );
   const { columns, toggleColumn, shows, visibleCount } = useColumnToggle(
     "approvalWeekTableColumns",
-    APPROVAL_COLUMNS
+    APPROVAL_COLUMNS,
   );
   const currentYear = new Date().getFullYear();
   const headerBranchId = useHeaderBranchId(BRANCH_IDS, (id) => can("view", id));
   const [saved] = useState(() =>
-    readSavedFilters<SavedApprovalFilters>(STORAGE_KEY)
+    readSavedFilters<SavedApprovalFilters>(STORAGE_KEY),
   );
   const [branchId, setBranchId] = useState<number | undefined>(
-    () => restoreBranchIds(saved?.branchIds, headerBranchId, BRANCH_IDS)[0]
+    () => restoreBranchIds(saved?.branchIds, headerBranchId, BRANCH_IDS)[0],
   );
   useFollowHeaderBranch(headerBranchId, branchId ? [branchId] : [], (id) =>
-    setBranchId(id || undefined)
+    setBranchId(id || undefined),
   );
   const [year, setYear] = useState(saved?.year || String(currentYear));
   const [week, setWeek] = useState(saved?.week || "");
   const [dates, setDates] = useState<DateRange>(() =>
-    loadSavedDates(STORAGE_KEY)
+    loadSavedDates(STORAGE_KEY),
   );
   const time = useSavedTimeRange(STORAGE_KEY, setDates);
   const fromDate = dates.fromDate || "";
@@ -158,7 +164,7 @@ export default function ApprovalTuanPage() {
   const initialBatchId = Number(searchParams.get("batchId")) || null;
   const [showPanel, setShowPanel] = useState(initialBatchId != null);
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(
-    initialBatchId
+    initialBatchId,
   );
 
   const filters = useMemo<InternalFinanceQuery>(() => {
@@ -184,7 +190,7 @@ export default function ApprovalTuanPage() {
   const rows = batches.data || [];
   const totalAmount = rows.reduce(
     (sum, row) => sum + Number(row.totalAmount || 0),
-    0
+    0,
   );
 
   const clearTime = () => {
@@ -199,7 +205,7 @@ export default function ApprovalTuanPage() {
     clearTime();
   };
   const activeCount = [branchId, week, status, time.active].filter(
-    Boolean
+    Boolean,
   ).length;
 
   return (
@@ -237,7 +243,7 @@ export default function ApprovalTuanPage() {
           <FilterSection label="Năm">
             <FilterSearchableSelect
               options={[currentYear, currentYear - 1, currentYear - 2].map(
-                (item) => ({ value: String(item), label: String(item) })
+                (item) => ({ value: String(item), label: String(item) }),
               )}
               value={year}
               onChange={(value) => {
@@ -268,7 +274,7 @@ export default function ApprovalTuanPage() {
           <FilterSection label="Trạng thái Approval">
             <FilterSearchableSelect
               options={STATUS_OPTIONS.filter(([value]) => value).map(
-                ([value, label]) => ({ value, label })
+                ([value, label]) => ({ value, label }),
               )}
               value={status}
               onChange={setStatus}
@@ -324,7 +330,7 @@ export default function ApprovalTuanPage() {
                 <tr>
                   {[
                     ...APPROVAL_COLUMNS.filter((column) =>
-                      shows(column.key)
+                      shows(column.key),
                     ).map((column) => column.label),
                     // Cột thao tác tạo approval luôn hiện.
                     "Approval Lark",
@@ -404,38 +410,49 @@ export default function ApprovalTuanPage() {
                         <td
                           className="px-4 py-3"
                           onClick={(event) => event.stopPropagation()}>
-                          {row.status === "READY" &&
-                          can("submit", row.branchId) ? (
-                            <button
-                              type="button"
-                              disabled={createApproval.isPending}
-                              onClick={() => {
-                                setCreatingId(row.id);
-                                createApproval.mutate(
-                                  { id: row.id },
-                                  { onSettled: () => setCreatingId(null) }
-                                );
-                              }}
-                              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-brand px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-dark disabled:opacity-50">
-                              {creatingId === row.id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <Send className="h-3.5 w-3.5" />
+                          <div className="flex items-center gap-2">
+                            {row.status === "READY" &&
+                            can("submit", row.branchId) ? (
+                              <button
+                                type="button"
+                                disabled={createApproval.isPending}
+                                onClick={() => {
+                                  setCreatingId(row.id);
+                                  createApproval.mutate(
+                                    { id: row.id },
+                                    { onSettled: () => setCreatingId(null) },
+                                  );
+                                }}
+                                className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-brand px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-dark disabled:opacity-50">
+                                {creatingId === row.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Send className="h-3.5 w-3.5" />
+                                )}
+                                Tạo approval
+                              </button>
+                            ) : row.approvalRequest ? (
+                              <span className="text-xs text-gray-600">
+                                {APPROVAL_STATUS_LABELS[
+                                  row.approvalRequest.status
+                                ] || row.approvalRequest.status}
+                                {row.approvalRequest.status === "PENDING" &&
+                                  row.approvalRequest.currentNode &&
+                                  ` · ${row.approvalRequest.currentNode}`}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-400">-</span>
+                            )}
+                            {can("prepare", row.branchId) &&
+                              canCancelBatch(row) && (
+                                <button
+                                  type="button"
+                                  onClick={() => setCancelling(row)}
+                                  className="whitespace-nowrap rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50">
+                                  Hủy
+                                </button>
                               )}
-                              Tạo approval
-                            </button>
-                          ) : row.approvalRequest ? (
-                            <span className="text-xs text-gray-600">
-                              {APPROVAL_STATUS_LABELS[
-                                row.approvalRequest.status
-                              ] || row.approvalRequest.status}
-                              {row.approvalRequest.status === "PENDING" &&
-                                row.approvalRequest.currentNode &&
-                                ` · ${row.approvalRequest.currentNode}`}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-gray-400">-</span>
-                          )}
+                          </div>
                         </td>
                       )}
                     </tr>
@@ -450,6 +467,12 @@ export default function ApprovalTuanPage() {
         <InternalFinanceWeeklyPanel
           initialBatchId={selectedBatchId}
           onClose={() => setShowPanel(false)}
+        />
+      )}
+      {cancelling && (
+        <CancelWeeklyBatchDialog
+          batch={cancelling}
+          onClose={() => setCancelling(null)}
         />
       )}
     </FinancePageGuard>

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../store/auth";
+import { toast } from "sonner";
 import { API_URL, apiClient, getAuthHeaders } from "../config/api";
 
 export function usePackingSlips(params?: any) {
@@ -17,7 +18,7 @@ export function usePackingSlips(params?: any) {
         `${API_URL}/packing-slips?${queryParams.toString()}`,
         {
           headers: getAuthHeaders(),
-        }
+        },
       );
       if (!res.ok) throw new Error("Failed to fetch packing slips");
       return res.json();
@@ -57,9 +58,19 @@ export function useUpdatePackingSlip() {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) =>
       apiClient.put(`/packing-slips/${id}`, data),
-    onSuccess: () => {
+    onSuccess: (result: {
+      financeLocked?: Array<{ code: string; reason: string }>;
+    }) => {
       queryClient.invalidateQueries({ queryKey: ["packing-slips"] });
       queryClient.invalidateQueries({ queryKey: ["debt-tracking"] });
+      queryClient.invalidateQueries({ queryKey: ["warehouse-expenses"] });
+      // Phiếu chi đang khóa (Approval tuần / đã chi) không theo báo đơn.
+      for (const lock of result?.financeLocked || []) {
+        toast.warning(
+          `Báo đơn đã lưu nhưng phiếu chi ${lock.code} chưa cập nhật: ${lock.reason}`,
+          { duration: 10000 },
+        );
+      }
     },
   });
 }
@@ -148,7 +159,7 @@ export function useResendPackingSlipNotification() {
         {
           method: "POST",
           headers: getAuthHeaders(),
-        }
+        },
       );
       if (!res.ok) {
         let message = "Gửi lại thông báo Zalo thất bại";
@@ -185,8 +196,11 @@ export async function uploadPackingSlipImage(file: File): Promise<string> {
 export async function uploadPackingSlipImages(
   files: File[],
   // Ảnh ký gửi lưu riêng sang folder ky-gui để không lẫn với báo đơn hóa đơn.
-  subfolder: string = "bao-don"
-): Promise<{ urls: string[]; errors: { originalname: string; reason: string }[] }> {
+  subfolder: string = "bao-don",
+): Promise<{
+  urls: string[];
+  errors: { originalname: string; reason: string }[];
+}> {
   const token = useAuthStore.getState().token;
   const formData = new FormData();
   files.forEach((f) => formData.append("files", f));
@@ -196,7 +210,7 @@ export async function uploadPackingSlipImages(
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
-    }
+    },
   );
   if (!res.ok) throw new Error("Upload failed");
   const result = await res.json();
@@ -217,23 +231,18 @@ export interface UploadedExpenseFile {
  * Upload nhiều file (image/pdf/doc/xls/...) cho phần "Chứng từ chi phí" của báo đơn.
  * Subfolder: bao-don/chi-phi.
  */
-export async function uploadPackingSlipExpenseFiles(
-  files: File[]
-): Promise<{
+export async function uploadPackingSlipExpenseFiles(files: File[]): Promise<{
   files: UploadedExpenseFile[];
   errors: { originalname: string; reason: string }[];
 }> {
   const token = useAuthStore.getState().token;
   const formData = new FormData();
   files.forEach((f) => formData.append("files", f));
-  const res = await fetch(
-    `${API_URL}/upload/files?subfolder=bao-don/chi-phi`,
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    }
-  );
+  const res = await fetch(`${API_URL}/upload/files?subfolder=bao-don/chi-phi`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
   if (!res.ok) throw new Error("Upload failed");
   const result = await res.json();
   return {
@@ -248,7 +257,7 @@ export async function uploadPackingSlipExpenseFiles(
         fileName: it.originalname,
         fileType: it.mimetype,
         fileSize: it.size,
-      })
+      }),
     ),
     errors: result.errors ?? [],
   };

@@ -2,6 +2,7 @@
 
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
 import { useColumnToggle } from "@/lib/hooks/useColumnToggle";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   CarFront,
@@ -71,10 +72,18 @@ const VEHICLE_PAGE_PERMISSIONS = ["view", "create"].map((action) => ({
 const STORAGE_KEY = "vehicle-entry-sidebar-filters";
 
 function VehicleScreen() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // Link "Sửa ở Xe cộ" (tin Lark / panel ghi chú phiếu chi): ?Code=&kind=.
+  const codeParam = searchParams.get("Code")?.trim() || "";
+  const kindParam = searchParams.get("kind");
+  const linkKind: VehicleEntryKind | null =
+    kindParam === "FUEL" || kindParam === "VEHICLE_CARE" ? kindParam : null;
   const access = useFinanceAccess();
   const selectedBranch = useBranchStore((state) => state.selectedBranch);
   const { data: branchData } = useBranches();
-  const [kind, setKind] = useState<VehicleEntryKind>("FUEL");
+  const [kind, setKind] = useState<VehicleEntryKind>(linkKind || "FUEL");
   const headerBranchId = useHeaderBranchId(VEHICLE_BRANCH_IDS, (id) =>
     canVehicle(access, "view", id),
   );
@@ -113,8 +122,27 @@ function VehicleScreen() {
     VEHICLE_ENTRY_COLUMNS.VEHICLE_CARE,
   );
   const columnToggle = kind === "FUEL" ? fuelColumns : careColumns;
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [search, setSearch] = useState(codeParam);
+  const [debouncedSearch, setDebouncedSearch] = useState(codeParam);
+  const [openedCode, setOpenedCode] = useState("");
+  // Link mới khi đang ở trang: chuyển tab và tìm theo mã mới ngay.
+  const [seenCode, setSeenCode] = useState(codeParam);
+  if (codeParam !== seenCode) {
+    setSeenCode(codeParam);
+    if (codeParam) {
+      if (linkKind) setKind(linkKind);
+      setSearch(codeParam);
+      setDebouncedSearch(codeParam);
+    }
+  }
+  const clearCodeParam = () => {
+    if (!codeParam) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("Code");
+    params.delete("kind");
+    const rest = params.toString();
+    router.replace(rest ? `${pathname}?${rest}` : pathname);
+  };
   const [page, setPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -158,30 +186,52 @@ function VehicleScreen() {
       : createBranches[0]?.id || viewBranches[0]?.id || 6);
 
   const query = useMemo<VehicleEntryQuery>(
-    () => ({
-      category: kind,
-      branchId: filters.branchId,
-      vehicleId: filters.vehicleId,
-      serviceType: kind === "VEHICLE_CARE" ? filters.serviceType : undefined,
-      check: kind === "FUEL" ? filters.check : undefined,
-      status: filters.status,
-      fromDate: filters.fromDate,
-      toDate: filters.toDate,
-      search: debouncedSearch || undefined,
-      page,
-      limit: PAGE_SIZE,
-    }),
-    [debouncedSearch, filters, kind, page],
+    () =>
+      // Mở theo mã từ link: chỉ tìm đúng mã đó, bỏ qua bộ lọc đã lưu.
+      codeParam && debouncedSearch === codeParam
+        ? { category: kind, search: codeParam, page: 1, limit: PAGE_SIZE }
+        : {
+            category: kind,
+            branchId: filters.branchId,
+            vehicleId: filters.vehicleId,
+            serviceType:
+              kind === "VEHICLE_CARE" ? filters.serviceType : undefined,
+            check: kind === "FUEL" ? filters.check : undefined,
+            status: filters.status,
+            fromDate: filters.fromDate,
+            toDate: filters.toDate,
+            search: debouncedSearch || undefined,
+            page,
+            limit: PAGE_SIZE,
+          },
+    [codeParam, debouncedSearch, filters, kind, page],
   );
   const entries = useVehicleEntries(query, canView);
-  const vehicles = useVehicles({ includeInactive: true }, allBranches.length > 0);
+  const vehicles = useVehicles(
+    { includeInactive: true },
+    allBranches.length > 0,
+  );
   const rows = entries.data?.data || [];
   const total = entries.data?.total || 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const pageAmount = rows.reduce(
-    (sum, row) => sum + (row.status === "CANCELLED" ? 0 : Number(row.amount || 0)),
+    (sum, row) =>
+      sum + (row.status === "CANCELLED" ? 0 : Number(row.amount || 0)),
     0,
   );
+
+  const canEditRow = (row: VehicleEntry) =>
+    ["FUEL", "VEHICLE_CARE"].includes(row.sourceType) &&
+    isExpenseOpenForEdit(row) &&
+    canVehicle(access, "update", row.branchId);
+  const linkedRow = codeParam
+    ? rows.find((row) => row.code === codeParam)
+    : undefined;
+  // Mở form sửa của phiếu trong link một lần (khi còn sửa được và có quyền).
+  if (linkedRow && openedCode !== codeParam) {
+    setOpenedCode(codeParam);
+    if (canEditRow(linkedRow)) setEditing(linkedRow);
+  }
 
   const changeFilters = (patch: Partial<VehicleEntryFilters>) => {
     setFilters((current) => ({ ...current, ...patch }));
@@ -244,6 +294,7 @@ function VehicleScreen() {
                     onClick={() => {
                       setKind(tab.kind);
                       setPage(1);
+                      clearCodeParam();
                     }}
                     className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                       kind === tab.kind
@@ -260,6 +311,8 @@ function VehicleScreen() {
                   onChange={(event) => {
                     setSearch(event.target.value);
                     setPage(1);
+                    if (event.target.value.trim() !== codeParam)
+                      clearCodeParam();
                   }}
                   placeholder="Tìm xe, địa điểm, ghi chú, mã phiếu..."
                   className="h-9 w-full rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand sm:w-64"
@@ -334,11 +387,8 @@ function VehicleScreen() {
                     kind={kind}
                     rows={rows}
                     isLoading={entries.isLoading}
-                    canEdit={(row) =>
-                      ["FUEL", "VEHICLE_CARE"].includes(row.sourceType) &&
-                      isExpenseOpenForEdit(row) &&
-                      canVehicle(access, "update", row.branchId)
-                    }
+                    canEdit={canEditRow}
+                    highlightId={linkedRow?.id}
                     cancellingId={cancellingId}
                     onOpenAttachments={setAttachmentRow}
                     onEdit={setEditing}

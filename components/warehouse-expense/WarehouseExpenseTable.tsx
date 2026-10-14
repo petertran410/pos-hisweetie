@@ -1,9 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, Loader2, Paperclip } from "lucide-react";
+import {
+  Ban,
+  FileText,
+  Loader2,
+  MessageSquareText,
+  Paperclip,
+} from "lucide-react";
 import type { InternalFinanceEntry } from "@/lib/api/internal-finance";
-import { displayOccurredAt, displaySource } from "@/lib/internal-finance/display";
+import {
+  displayOccurredAt,
+  displaySource,
+} from "@/lib/internal-finance/display";
 import { formatCurrency } from "@/lib/utils";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -44,6 +53,7 @@ const APPROVAL_STATUS_CLASS: Record<string, string> = {
 };
 
 export const WAREHOUSE_EXPENSE_COLUMNS = [
+  { key: "code", label: "Mã phiếu", width: "190px" },
   { key: "date", label: "Ngày chi", width: "110px" },
   { key: "source", label: "Nguồn", width: "170px" },
   { key: "content", label: "Nội dung", width: "250px" },
@@ -77,25 +87,45 @@ export function isExpenseCheckOpen(row: InternalFinanceEntry) {
   );
 }
 
+/** Cùng luật với backend: chưa Đã chi, chưa hủy, chưa vào Approval tuần đã gửi. */
+export function isExpenseCancellable(row: InternalFinanceEntry) {
+  return (
+    !row.cashIssued &&
+    !row.cashFlow &&
+    row.status !== "CANCELLED" &&
+    (!row.weeklyBatch || row.weeklyBatch.status === "READY")
+  );
+}
+
 export function WarehouseExpenseTable({
   rows,
   isLoading,
   canCheck,
   canMarkIssued,
   canEdit,
+  canCancel,
   busyId,
+  highlightId,
   onCheck,
   onOpenAttachments,
   onEdit,
   onMarkIssued,
+  onCancel,
+  onOpenNotes,
   shows,
 }: {
   rows: InternalFinanceEntry[];
   isLoading: boolean;
-  canCheck: (row: InternalFinanceEntry, role: WarehouseExpenseCheckRole) => boolean;
+  canCheck: (
+    row: InternalFinanceEntry,
+    role: WarehouseExpenseCheckRole,
+  ) => boolean;
   canMarkIssued: (row: InternalFinanceEntry) => boolean;
   canEdit: (row: InternalFinanceEntry) => boolean;
+  canCancel: (row: InternalFinanceEntry) => boolean;
   busyId: number | null;
+  /** Dòng mở từ link (?Code=) được tô sáng. */
+  highlightId?: number | null;
   onCheck: (
     row: InternalFinanceEntry,
     role: WarehouseExpenseCheckRole,
@@ -104,13 +134,18 @@ export function WarehouseExpenseTable({
   onOpenAttachments: (row: InternalFinanceEntry) => void;
   onEdit: (row: InternalFinanceEntry) => void;
   onMarkIssued: (row: InternalFinanceEntry) => void;
+  onCancel: (row: InternalFinanceEntry) => void;
+  onOpenNotes: (row: InternalFinanceEntry) => void;
   /** Cột nào đang hiện (theo nút "Cột hiển thị" ở trang). */
   shows: (key: string) => boolean;
 }) {
   const visibleCount = WAREHOUSE_EXPENSE_COLUMNS.filter((column) =>
     shows(column.key),
   ).length;
-  const checkCell = (row: InternalFinanceEntry, role: WarehouseExpenseCheckRole) => {
+  const checkCell = (
+    row: InternalFinanceEntry,
+    role: WarehouseExpenseCheckRole,
+  ) => {
     if (!WAREHOUSE_BRANCH_IDS.includes(row.branchId)) {
       return <span className="text-gray-400">-</span>;
     }
@@ -151,7 +186,7 @@ export function WarehouseExpenseTable({
               ...WAREHOUSE_EXPENSE_COLUMNS.filter((column) =>
                 shows(column.key),
               ).map((column) => [column.label, column.width]),
-              ["", "90px"],
+              ["", "150px"],
             ].map(([label, width]) => (
               <th
                 key={label || "actions"}
@@ -176,7 +211,9 @@ export function WarehouseExpenseTable({
             </tr>
           ) : rows.length === 0 ? (
             <tr>
-              <td colSpan={visibleCount + 1} className="py-20 text-center text-gray-400">
+              <td
+                colSpan={visibleCount + 1}
+                className="py-20 text-center text-gray-400">
                 Không có khoản chi phù hợp
               </td>
             </tr>
@@ -192,8 +229,43 @@ export function WarehouseExpenseTable({
                 SUBCATEGORY_LABELS[row.subCategory || ""] ||
                 CATEGORY_LABELS[row.category] ||
                 row.category;
+              const cancelled = row.status === "CANCELLED";
+              const noteCount = row._count?.reviewNotes || 0;
               return (
-                <tr key={row.id} className="border-b transition-colors hover:bg-gray-50">
+                <tr
+                  key={row.id}
+                  className={`border-b transition-colors ${
+                    highlightId === row.id
+                      ? "bg-brand-soft"
+                      : cancelled
+                        ? "bg-gray-50 text-gray-400"
+                        : "hover:bg-gray-50"
+                  }`}>
+                  {shows("code") && (
+                    <td className="px-4 py-2.5">
+                      <div
+                        className={`font-mono text-xs ${cancelled ? "text-gray-400 line-through" : "text-gray-900"}`}>
+                        {row.code}
+                      </div>
+                      {cancelled && (
+                        <div
+                          className="mt-1 max-w-[180px] break-words text-xs text-red-600"
+                          title={[
+                            row.canceller?.name,
+                            dateTimeLabel(row.cancelledAt),
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}>
+                          <span className="rounded bg-red-50 px-1.5 py-0.5 font-medium">
+                            Đã hủy
+                          </span>
+                          {row.cancelReason && (
+                            <span className="ml-1">{row.cancelReason}</span>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  )}
                   {shows("date") && (
                     <td className="whitespace-nowrap px-4 py-2.5">
                       {displayOccurredAt({
@@ -205,7 +277,9 @@ export function WarehouseExpenseTable({
                   )}
                   {shows("source") && (
                     <td className="px-4 py-2.5">
-                      <div className="text-gray-900">{displaySource(row.sourceType, row.category)}</div>
+                      <div className="text-gray-900">
+                        {displaySource(row.sourceType, row.category)}
+                      </div>
                       {row.packingSlip ? (
                         <Link
                           href={`/don-hang/bao-don?Code=${encodeURIComponent(row.packingSlip.code)}`}
@@ -262,12 +336,16 @@ export function WarehouseExpenseTable({
                   )}
                   {shows("payer") && (
                     <td className="px-4 py-2.5">
-                      {row.payer?.name || <span className="text-gray-400">-</span>}
+                      {row.payer?.name || (
+                        <span className="text-gray-400">-</span>
+                      )}
                     </td>
                   )}
                   {shows("creator") && (
                     <td className="px-4 py-2.5">
-                      {row.creator?.name || <span className="text-gray-400">-</span>}
+                      {row.creator?.name || (
+                        <span className="text-gray-400">-</span>
+                      )}
                     </td>
                   )}
                   {shows("amount") && (
@@ -295,7 +373,9 @@ export function WarehouseExpenseTable({
                     <td className="px-4 py-2.5">{checkCell(row, "manager")}</td>
                   )}
                   {shows("accountant") && (
-                    <td className="px-4 py-2.5">{checkCell(row, "accountant")}</td>
+                    <td className="px-4 py-2.5">
+                      {checkCell(row, "accountant")}
+                    </td>
                   )}
                   {shows("batch") && (
                     <td className="px-4 py-2.5">
@@ -321,7 +401,8 @@ export function WarehouseExpenseTable({
                             APPROVAL_STATUS_CLASS[approvalStatus] ||
                             "bg-gray-100 text-gray-600"
                           }`}>
-                          {APPROVAL_STATUS_LABELS[approvalStatus] || approvalStatus}
+                          {APPROVAL_STATUS_LABELS[approvalStatus] ||
+                            approvalStatus}
                         </span>
                       ) : (
                         <span className="text-xs text-gray-400">Chưa gửi</span>
@@ -348,7 +429,9 @@ export function WarehouseExpenseTable({
                             {row.fundTransaction.code}
                           </span>
                         ) : row.cashIssued ? (
-                          <span className="font-medium text-green-700">Đã chi</span>
+                          <span className="font-medium text-green-700">
+                            Đã chi
+                          </span>
                         ) : (
                           <span className="text-gray-400">Chưa chi</span>
                         )}
@@ -368,16 +451,36 @@ export function WarehouseExpenseTable({
                     </td>
                   )}
                   <td className="px-4 py-2.5">
-                    {canEdit(row) && !row.weeklyBatch ? (
+                    <div className="flex items-center gap-1.5">
                       <button
                         type="button"
-                        onClick={() => onEdit(row)}
-                        title="Sửa khoản chi"
-                        className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50">
-                        <FileText className="h-3.5 w-3.5" />
-                        Sửa
+                        onClick={() => onOpenNotes(row)}
+                        title="Ghi chú & yêu cầu xem lại"
+                        className="inline-flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-50">
+                        <MessageSquareText className="h-3.5 w-3.5" />
+                        {noteCount > 0 && noteCount}
                       </button>
-                    ) : null}
+                      {canEdit(row) && !row.weeklyBatch && (
+                        <button
+                          type="button"
+                          onClick={() => onEdit(row)}
+                          title="Sửa khoản chi"
+                          className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50">
+                          <FileText className="h-3.5 w-3.5" />
+                          Sửa
+                        </button>
+                      )}
+                      {canCancel(row) && (
+                        <button
+                          type="button"
+                          onClick={() => onCancel(row)}
+                          title="Hủy phiếu chi"
+                          className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50">
+                          <Ban className="h-3.5 w-3.5" />
+                          Hủy
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

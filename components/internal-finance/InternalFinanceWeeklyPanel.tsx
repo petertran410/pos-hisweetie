@@ -13,7 +13,14 @@ import {
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { FilterSearchableSelect } from "@/components/ui/filters";
 import { InternalFinanceDateField } from "./InternalFinanceDateField";
-import { endOfWeek, startOfWeek, toDateInput } from "@/lib/internal-finance/dates";
+import { CancelWeeklyBatchDialog } from "./CancelWeeklyBatchDialog";
+import { canCancelBatch } from "@/lib/internal-finance/weekly-batch";
+import {
+  endOfWeek,
+  startOfWeek,
+  toDateInput,
+  vnDateKey,
+} from "@/lib/internal-finance/dates";
 
 const BRANCH_IDS = [6, 1];
 
@@ -27,7 +34,8 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 function asBranches(payload: unknown) {
-  if (Array.isArray(payload)) return payload as Array<{ id: number; name: string }>;
+  if (Array.isArray(payload))
+    return payload as Array<{ id: number; name: string }>;
   if (
     payload &&
     typeof payload === "object" &&
@@ -65,6 +73,7 @@ export function InternalFinanceWeeklyPanel({
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(
     initialBatchId || null,
   );
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   const canPrepare = can("prepare", branchId);
   const batches = useWarehouseExpenseBatches({
@@ -76,6 +85,18 @@ export function InternalFinanceWeeklyPanel({
   const selectedBatch = useWarehouseExpenseBatch(selectedBatchId);
   const prepare = usePrepareWarehouseExpenseBatch();
   const createApproval = useCreateWarehouseExpenseApproval();
+
+  // Mở/chọn một batch thì chi nhánh và khoảng ngày theo batch đó, để hủy xong
+  // bấm "Chuẩn bị tổng hợp tuần" là gom lại đúng tuần vừa hủy.
+  const loadedBatch = selectedBatch.data;
+  useEffect(() => {
+    if (!loadedBatch) return;
+    setBranchId(loadedBatch.branchId);
+    setWeekStart(vnDateKey(loadedBatch.weekStart));
+    setWeekEnd(vnDateKey(loadedBatch.weekEnd));
+    // Chỉ đồng bộ khi đổi batch, người dùng vẫn sửa ngày tay được.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadedBatch?.id]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -237,22 +258,37 @@ export function InternalFinanceWeeklyPanel({
                   </h3>
                   <p className="mt-1 text-sm text-gray-600">
                     Tổng chi:{" "}
-                    <strong>{formatCurrency(selectedBatch.data.totalAmount)}</strong>
+                    <strong>
+                      {formatCurrency(selectedBatch.data.totalAmount)}
+                    </strong>
                   </p>
                 </div>
-                {selectedBatch.data.status === "READY" &&
-                  can("submit", selectedBatch.data.branchId) && (
-                  <button
-                    type="button"
-                    onClick={() => createWeeklyApproval(selectedBatch.data!.id)}
-                    disabled={createApproval.isPending}
-                    className="inline-flex items-center gap-2 rounded-lg bg-brand px-3 py-2 text-xs font-medium text-white disabled:opacity-50">
-                    {createApproval.isPending && (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <div className="flex shrink-0 items-center gap-2">
+                  {can("prepare", selectedBatch.data.branchId) &&
+                    canCancelBatch(selectedBatch.data) && (
+                      <button
+                        type="button"
+                        onClick={() => setCancelOpen(true)}
+                        className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50">
+                        Hủy batch
+                      </button>
                     )}
-                    Tạo approval Lark
-                  </button>
-                )}
+                  {selectedBatch.data.status === "READY" &&
+                    can("submit", selectedBatch.data.branchId) && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          createWeeklyApproval(selectedBatch.data!.id)
+                        }
+                        disabled={createApproval.isPending}
+                        className="inline-flex items-center gap-2 rounded-lg bg-brand px-3 py-2 text-xs font-medium text-white disabled:opacity-50">
+                        {createApproval.isPending && (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        )}
+                        Tạo approval Lark
+                      </button>
+                    )}
+                </div>
               </div>
               {selectedBatch.data.status === "APPROVED" && (
                 <div className="mt-3 flex items-center gap-2 rounded-lg bg-green-50 p-3 text-sm text-green-800">
@@ -289,6 +325,14 @@ export function InternalFinanceWeeklyPanel({
           )}
         </div>
       </div>
+      {cancelOpen && selectedBatch.data && (
+        <CancelWeeklyBatchDialog
+          batch={selectedBatch.data}
+          onClose={() => setCancelOpen(false)}
+          // Giữ chi nhánh và khoảng ngày để chỉnh rồi tổng hợp lại.
+          onCancelled={() => setSelectedBatchId(null)}
+        />
+      )}
     </div>
   );
 }
