@@ -1,5 +1,7 @@
 "use client";
 
+import { ColumnToggle } from "@/components/shared/ColumnToggle";
+import { useColumnToggle } from "@/lib/hooks/useColumnToggle";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -16,6 +18,7 @@ import { WarehouseExpenseForm } from "@/components/warehouse-expense/WarehouseEx
 import {
   isExpenseCheckOpen,
   WarehouseExpenseTable,
+  WAREHOUSE_EXPENSE_COLUMNS,
 } from "@/components/warehouse-expense/WarehouseExpenseTable";
 import {
   loadWarehouseExpenseFilters,
@@ -44,6 +47,10 @@ function WarehouseExpenseScreen() {
     loadWarehouseExpenseFilters(selectedBranch?.id),
   );
   const branchId = filters.branchId || selectedBranch?.id || 6;
+  const { columns, toggleColumn, shows } = useColumnToggle(
+    "warehouseExpenseTableColumns",
+    WAREHOUSE_EXPENSE_COLUMNS,
+  );
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -182,6 +189,7 @@ function WarehouseExpenseScreen() {
                 <CalendarRange className="h-4 w-4" />
                 Approval tuần
               </Link>
+              <ColumnToggle columns={columns} onToggle={toggleColumn} />
             </div>
           </div>
         <div className="flex shrink-0 items-center justify-end gap-4 border-b px-4 py-2 text-sm">
@@ -234,6 +242,7 @@ function WarehouseExpenseScreen() {
               onOpenAttachments={setAttachmentRow}
               onEdit={setEditingExpense}
               onMarkIssued={handleMarkIssued}
+              shows={shows}
             />
           )}
           <div className="flex shrink-0 items-center justify-between border-t px-4 py-3 text-sm">

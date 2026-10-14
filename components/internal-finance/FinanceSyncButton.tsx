@@ -14,6 +14,7 @@ const STEP_LABELS: Record<FinanceSyncStepKey, string> = {
   WEEKLY_APPROVALS: "Approval tuần",
   WAREHOUSE_CASH: "Tiền mặt kho",
   FUND_LEDGER: "Sổ quỹ",
+  DAILY_CLOSINGS: "Chốt sổ quỹ hàng ngày",
   DOCUMENTS: "Chứng từ đính kèm",
 };
 

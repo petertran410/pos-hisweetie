@@ -219,7 +219,7 @@ export function InternalFinanceDetailRow({
                       </span>
                     }
                   />
-                  <InfoField label="Nguồn:" value={displaySource(row.sourceType)} />
+                  <InfoField label="Nguồn:" value={displaySource(row.sourceType, row.category)} />
                   <InfoField
                     label="Báo đơn:"
                     value={row.packingSlip?.code || "-"}

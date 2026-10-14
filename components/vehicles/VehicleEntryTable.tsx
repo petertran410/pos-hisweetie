@@ -74,6 +74,46 @@ const STATUS_CLASS: Record<string, string> = {
   READY_FOR_WEEKLY_APPROVAL: "bg-blue-100 text-blue-700",
 };
 
+/** Danh sách cột của từng tab, dùng cho nút "Cột hiển thị". */
+export const VEHICLE_ENTRY_COLUMNS: Record<
+  VehicleEntryKind,
+  Array<{ key: string; label: string }>
+> = {
+  FUEL: [
+    { key: "time", label: "Thời gian" },
+    { key: "vehicle", label: "Xe" },
+    { key: "driver", label: "Lái xe" },
+    { key: "location", label: "Địa điểm" },
+    { key: "unitPrice", label: "Đơn giá" },
+    { key: "liters", label: "Số lít" },
+    { key: "amount", label: "Số tiền" },
+    { key: "odo", label: "ODO" },
+    { key: "prevOdo", label: "ODO kỳ trước" },
+    { key: "nextOdo", label: "ODO kỳ sau" },
+    { key: "km", label: "Km trong kỳ" },
+    { key: "costPerKm", label: "đ/km" },
+    { key: "norm", label: "l/100km" },
+    { key: "check", label: "Kiểm tra" },
+    { key: "payer", label: "Người chi" },
+    { key: "note", label: "Ghi chú" },
+    { key: "files", label: "Ảnh" },
+    { key: "status", label: "Trạng thái" },
+  ],
+  VEHICLE_CARE: [
+    { key: "time", label: "Thời gian" },
+    { key: "vehicle", label: "Xe" },
+    { key: "services", label: "Loại dịch vụ" },
+    { key: "dueAt", label: "Hạn ĐK / BH" },
+    { key: "odo", label: "ODO" },
+    { key: "amount", label: "Chi phí" },
+    { key: "driver", label: "Lái xe" },
+    { key: "payer", label: "Người chi" },
+    { key: "note", label: "Ghi chú" },
+    { key: "files", label: "Ảnh" },
+    { key: "status", label: "Trạng thái" },
+  ],
+};
+
 export function VehicleEntryTable({
   kind,
   rows,
@@ -83,6 +123,7 @@ export function VehicleEntryTable({
   onOpenAttachments,
   onEdit,
   onCancel,
+  shows,
 }: {
   kind: VehicleEntryKind;
   rows: VehicleEntry[];
@@ -92,6 +133,8 @@ export function VehicleEntryTable({
   onOpenAttachments: (row: VehicleEntry) => void;
   onEdit: (row: VehicleEntry) => void;
   onCancel: (row: VehicleEntry) => void;
+  /** Cột nào đang hiện (theo nút "Cột hiển thị" ở trang). */
+  shows: (key: string) => boolean;
 }) {
   const vehicleName = (row: VehicleEntry) =>
     row.vehicle?.label || row.vehicleName || "-";
@@ -194,7 +237,7 @@ export function VehicleEntryTable({
     },
   } satisfies Record<string, Column>;
 
-  const columns: Column[] =
+  const allColumns: Column[] =
     kind === "FUEL"
       ? [
           shared.time,
@@ -341,6 +384,8 @@ export function VehicleEntryTable({
           shared.files,
           shared.status,
         ];
+
+  const columns = allColumns.filter((column) => shows(column.key));
 
   return (
     <div className="min-w-0 flex-1 overflow-auto">

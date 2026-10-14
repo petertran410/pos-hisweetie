@@ -189,6 +189,7 @@ export type FinanceSyncStepKey =
   | "WEEKLY_APPROVALS"
   | "WAREHOUSE_CASH"
   | "FUND_LEDGER"
+  | "DAILY_CLOSINGS"
   | "DOCUMENTS";
 
 export interface FinanceSyncStep {

@@ -1,6 +1,5 @@
 const SOURCE_LABELS: Record<string, string> = {
-  LARK_IMPORT: "Dữ liệu lịch sử",
-  PACKING_SLIP: "Báo đơn",
+  PACKING_SLIP: "Báo đơn giao hàng",
   MANUAL_RECEIPT: "Phiếu thu thủ công",
   MANUAL_EXPENSE: "Phiếu chi thủ công",
   FUEL: "Xăng dầu",
@@ -30,8 +29,23 @@ const LARK_FIELD_LABELS: Record<string, string> = {
   "ghi chu": "Ghi chú",
 };
 
-export function displaySource(sourceType: string) {
-  return SOURCE_LABELS[sourceType] || sourceType;
+// Phiếu chuyển từ hệ thống cũ không có nguồn riêng nên gọi tên theo loại khoản.
+const CATEGORY_SOURCE_LABELS: Record<string, string> = {
+  DELIVERY_FEE: "Báo đơn giao hàng",
+  FUEL: "Xăng dầu",
+  VEHICLE_CARE: "Chăm sóc xe",
+  SALARY_ADVANCE: "Tạm ứng lương",
+  CUSTOMER_RECEIPT: "Thu tiền khách",
+  MANUAL_RECEIPT: "Phiếu thu",
+  OTHER_EXPENSE: "Phiếu chi kho",
+};
+
+export function displaySource(sourceType: string, category?: string | null) {
+  return (
+    SOURCE_LABELS[sourceType] ||
+    CATEGORY_SOURCE_LABELS[category || ""] ||
+    "Phiếu chi kho"
+  );
 }
 
 export function displayEntryCode(input: {

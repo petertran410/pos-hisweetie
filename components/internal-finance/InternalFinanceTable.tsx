@@ -1,5 +1,7 @@
 "use client";
 
+import { ColumnToggle } from "@/components/shared/ColumnToggle";
+import { useColumnToggle } from "@/lib/hooks/useColumnToggle";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import {
@@ -84,6 +86,27 @@ export interface InternalFinanceSummaryItem {
   tone?: "neutral" | "positive" | "negative" | "warning";
 }
 
+const FINANCE_COLUMNS: Array<{
+    key: string;
+    label: string;
+    width: string;
+    align?: "left" | "right";
+  }> = [
+    { key: "code", label: "Mã", width: "150px" },
+    { key: "date", label: "Thời gian", width: "160px" },
+    { key: "branch", label: "Chi nhánh", width: "150px" },
+    { key: "category", label: "Nghiệp vụ", width: "220px" },
+    { key: "invoice", label: "Hóa đơn", width: "150px" },
+    { key: "amount", label: "Số tiền", width: "140px", align: "right" },
+    { key: "evidence", label: "Chứng từ", width: "140px" },
+    { key: "reviewer", label: "Người kiểm tra", width: "170px" },
+    { key: "status", label: "Trạng thái", width: "150px" },
+    { key: "weekly", label: "Approval tuần", width: "170px" },
+    { key: "cashIssued", label: "Đã chi", width: "110px" },
+    { key: "cashFlow", label: "CashFlow", width: "140px" },
+    { key: "source", label: "Nguồn", width: "140px" },
+];
+
 export function InternalFinanceTable({
   rows,
   isLoading,
@@ -137,26 +160,11 @@ export function InternalFinanceTable({
     return "text-gray-900";
   };
 
-  const columns: Array<{
-    key: string;
-    label: string;
-    width: string;
-    align?: "left" | "right";
-  }> = [
-    { key: "code", label: "Mã", width: "150px" },
-    { key: "date", label: "Thời gian", width: "160px" },
-    { key: "branch", label: "Chi nhánh", width: "150px" },
-    { key: "category", label: "Nghiệp vụ", width: "220px" },
-    { key: "invoice", label: "Hóa đơn", width: "150px" },
-    { key: "amount", label: "Số tiền", width: "140px", align: "right" },
-    { key: "evidence", label: "Chứng từ", width: "140px" },
-    { key: "reviewer", label: "Người kiểm tra", width: "170px" },
-    { key: "status", label: "Trạng thái", width: "150px" },
-    { key: "weekly", label: "Approval tuần", width: "170px" },
-    { key: "cashIssued", label: "Đã chi", width: "110px" },
-    { key: "cashFlow", label: "CashFlow", width: "140px" },
-    { key: "source", label: "Nguồn", width: "140px" },
-  ];
+  const { columns: toggleColumns, toggleColumn, shows } = useColumnToggle(
+    "internalFinanceTableColumns",
+    FINANCE_COLUMNS,
+  );
+  const columns = FINANCE_COLUMNS.filter((column) => shows(column.key));
   const colSpan = columns.length + 1;
   const displayTotalPages = Math.max(totalPages, 1);
   const pageNumbers = Array.from(
@@ -183,7 +191,10 @@ export function InternalFinanceTable({
             className="w-64 rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
           />
         </div>
-        <div className="flex shrink-0 items-center gap-2">{toolbar}</div>
+        <div className="flex shrink-0 items-center gap-2">
+          {toolbar}
+          <ColumnToggle columns={toggleColumns} onToggle={toggleColumn} />
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5">
@@ -250,141 +261,167 @@ export function InternalFinanceTable({
                       className={`cursor-pointer transition-colors ${
                         expanded ? "bg-brand-soft" : "border-b hover:bg-gray-50"
                       }`}>
-                      <td
-                        className={`px-4 py-2.5 ${edge} ${
-                          expanded ? "border-l-2 bg-brand-soft" : ""
-                        }`}
-                        style={{ width: "150px", minWidth: "150px" }}>
-                        <span className="font-medium text-brand">
-                          {displayEntryCode({
-                            code: row.code,
-                            description: row.description,
-                            invoiceCodes: row.invoiceLinks.map(
-                              ({ invoice }) => invoice.code,
-                            ),
-                          })}
-                        </span>
-                      </td>
-                      <td className={`px-4 py-2.5 text-gray-900 ${edge}`}>
-                        {displayOccurredAt(row)}
-                      </td>
-                      <td className={`px-4 py-2.5 text-gray-900 ${edge}`}>
-                        {row.branch?.name || "-"}
-                      </td>
-                      <td className={`px-4 py-2.5 ${edge}`}>
-                        <div className="text-gray-900">
-                          {SUBCATEGORY_LABELS[row.subCategory || ""] ||
-                            CATEGORY_LABELS[row.category] ||
-                            row.category}
-                        </div>
-                        {row.description && (
-                          <div className="max-w-[220px] truncate text-xs text-gray-500">
-                            {row.description}
-                          </div>
-                        )}
-                      </td>
-                      <td className={`px-4 py-2.5 text-gray-900 ${edge}`}>
-                        {row.invoiceLinks.length
-                          ? row.invoiceLinks
-                              .map(({ invoice }) => invoice.code)
-                              .join(", ")
-                          : "-"}
-                      </td>
-                      <td className={`px-4 py-2.5 text-right ${edge}`}>
-                        <span
-                          className={`font-semibold ${
-                            row.direction === "RECEIPT"
-                              ? "text-green-700"
-                              : "text-red-600"
-                          }`}>
-                          {row.direction === "RECEIPT" ? "+" : "-"}
-                          {formatCurrency(row.amount)}
-                        </span>
-                      </td>
-                      <td className={`px-4 py-2.5 ${edge}`}>
-                        <span
-                          className={`rounded px-2 py-0.5 text-xs font-medium ${
-                            EVIDENCE_COLORS[row.evidenceStatus] ||
-                            "bg-gray-100 text-gray-600"
-                          }`}>
-                          {EVIDENCE_LABELS[row.evidenceStatus] || row.evidenceStatus}
-                        </span>
-                      </td>
-                      <td className={`px-4 py-2.5 text-gray-900 ${edge}`}>
-                        {row.direction === "EXPENSE" &&
-                        (row.managerReviewedAt || row.accountantReviewedAt) ? (
-                          <div className="space-y-0.5 text-xs">
-                            {row.managerReviewedAt && (
-                              <div>
-                                QL kho: {row.managerReviewer?.name || "đã tick"}
-                              </div>
-                            )}
-                            {row.accountantReviewedAt && (
-                              <div>
-                                KT kho:{" "}
-                                {row.accountantReviewer?.name || "đã tick"}
-                              </div>
-                            )}
-                          </div>
-                        ) : row.reviews.length > 0 ? (
-                          [
-                            ...new Set(
-                              row.reviews.map(
-                                (review) =>
-                                  review.reviewer?.name ||
-                                  review.reviewerNameSnapshot ||
-                                  "Người dùng Lark chưa liên kết",
+                      {shows("code") && (
+                        <td
+                          className={`px-4 py-2.5 ${edge} ${
+                            expanded ? "border-l-2 bg-brand-soft" : ""
+                          }`}
+                          style={{ width: "150px", minWidth: "150px" }}>
+                          <span className="font-medium text-brand">
+                            {displayEntryCode({
+                              code: row.code,
+                              description: row.description,
+                              invoiceCodes: row.invoiceLinks.map(
+                                ({ invoice }) => invoice.code,
                               ),
-                            ),
-                          ].join(", ")
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                      <td className={`px-4 py-2.5 ${edge}`}>
-                        <span
-                          className={`rounded px-2 py-0.5 text-xs font-medium ${
-                            STATUS_COLORS[row.status] || "bg-gray-100 text-gray-600"
-                          }`}>
-                          {STATUS_LABELS[row.status] || row.status}
-                        </span>
-                      </td>
-                      <td className={`px-4 py-2.5 text-gray-900 ${edge}`}>
-                        {row.weeklyBatch ? (
-                          <Link
-                            href={`/tai-chinh/approval-tuan?batchId=${row.weeklyBatch.id}`}
-                            onClick={(event) => event.stopPropagation()}
-                            className="text-brand hover:underline">
-                            {row.weeklyBatch.code}
-                          </Link>
-                        ) : row.direction === "RECEIPT" ? (
-                          "Không áp dụng"
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                      <td className={`px-4 py-2.5 text-xs ${edge}`}>
-                        {row.direction === "RECEIPT" ? (
-                          <span className="text-gray-400">-</span>
-                        ) : row.cashIssued ? (
-                          <span
-                            className="font-medium text-green-700"
-                            title={row.cashIssuedReason || undefined}>
-                            Đã chi
+                            })}
                           </span>
-                        ) : (
-                          <span className="text-gray-400">Chưa chi</span>
-                        )}
-                      </td>
-                      <td className={`px-4 py-2.5 text-gray-900 ${edge}`}>
-                        {row.cashFlow?.code || "-"}
-                      </td>
-                      <td className={`px-4 py-2.5 text-gray-900 ${edge}`}>
-                        <div>{displaySource(row.sourceType)}</div>
-                        {row.packingSlip && (
-                          <div className="text-brand">{row.packingSlip.code}</div>
-                        )}
-                      </td>
+                        </td>
+                      )}
+                      {shows("date") && (
+                        <td className={`px-4 py-2.5 text-gray-900 ${edge}`}>
+                          {displayOccurredAt(row)}
+                        </td>
+                      )}
+                      {shows("branch") && (
+                        <td className={`px-4 py-2.5 text-gray-900 ${edge}`}>
+                          {row.branch?.name || "-"}
+                        </td>
+                      )}
+                      {shows("category") && (
+                        <td className={`px-4 py-2.5 ${edge}`}>
+                          <div className="text-gray-900">
+                            {SUBCATEGORY_LABELS[row.subCategory || ""] ||
+                              CATEGORY_LABELS[row.category] ||
+                              row.category}
+                          </div>
+                          {row.description && (
+                            <div className="max-w-[220px] truncate text-xs text-gray-500">
+                              {row.description}
+                            </div>
+                          )}
+                        </td>
+                      )}
+                      {shows("invoice") && (
+                        <td className={`px-4 py-2.5 text-gray-900 ${edge}`}>
+                          {row.invoiceLinks.length
+                            ? row.invoiceLinks
+                                .map(({ invoice }) => invoice.code)
+                                .join(", ")
+                            : "-"}
+                        </td>
+                      )}
+                      {shows("amount") && (
+                        <td className={`px-4 py-2.5 text-right ${edge}`}>
+                          <span
+                            className={`font-semibold ${
+                              row.direction === "RECEIPT"
+                                ? "text-green-700"
+                                : "text-red-600"
+                            }`}>
+                            {row.direction === "RECEIPT" ? "+" : "-"}
+                            {formatCurrency(row.amount)}
+                          </span>
+                        </td>
+                      )}
+                      {shows("evidence") && (
+                        <td className={`px-4 py-2.5 ${edge}`}>
+                          <span
+                            className={`rounded px-2 py-0.5 text-xs font-medium ${
+                              EVIDENCE_COLORS[row.evidenceStatus] ||
+                              "bg-gray-100 text-gray-600"
+                            }`}>
+                            {EVIDENCE_LABELS[row.evidenceStatus] || row.evidenceStatus}
+                          </span>
+                        </td>
+                      )}
+                      {shows("reviewer") && (
+                        <td className={`px-4 py-2.5 text-gray-900 ${edge}`}>
+                          {row.direction === "EXPENSE" &&
+                          (row.managerReviewedAt || row.accountantReviewedAt) ? (
+                            <div className="space-y-0.5 text-xs">
+                              {row.managerReviewedAt && (
+                                <div>
+                                  QL kho: {row.managerReviewer?.name || "đã tick"}
+                                </div>
+                              )}
+                              {row.accountantReviewedAt && (
+                                <div>
+                                  KT kho:{" "}
+                                  {row.accountantReviewer?.name || "đã tick"}
+                                </div>
+                              )}
+                            </div>
+                          ) : row.reviews.length > 0 ? (
+                            [
+                              ...new Set(
+                                row.reviews.map(
+                                  (review) =>
+                                    review.reviewer?.name ||
+                                    review.reviewerNameSnapshot ||
+                                    "Người dùng Lark chưa liên kết",
+                                ),
+                              ),
+                            ].join(", ")
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                      )}
+                      {shows("status") && (
+                        <td className={`px-4 py-2.5 ${edge}`}>
+                          <span
+                            className={`rounded px-2 py-0.5 text-xs font-medium ${
+                              STATUS_COLORS[row.status] || "bg-gray-100 text-gray-600"
+                            }`}>
+                            {STATUS_LABELS[row.status] || row.status}
+                          </span>
+                        </td>
+                      )}
+                      {shows("weekly") && (
+                        <td className={`px-4 py-2.5 text-gray-900 ${edge}`}>
+                          {row.weeklyBatch ? (
+                            <Link
+                              href={`/tai-chinh/approval-tuan?batchId=${row.weeklyBatch.id}`}
+                              onClick={(event) => event.stopPropagation()}
+                              className="text-brand hover:underline">
+                              {row.weeklyBatch.code}
+                            </Link>
+                          ) : row.direction === "RECEIPT" ? (
+                            "Không áp dụng"
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                      )}
+                      {shows("cashIssued") && (
+                        <td className={`px-4 py-2.5 text-xs ${edge}`}>
+                          {row.direction === "RECEIPT" ? (
+                            <span className="text-gray-400">-</span>
+                          ) : row.cashIssued ? (
+                            <span
+                              className="font-medium text-green-700"
+                              title={row.cashIssuedReason || undefined}>
+                              Đã chi
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">Chưa chi</span>
+                          )}
+                        </td>
+                      )}
+                      {shows("cashFlow") && (
+                        <td className={`px-4 py-2.5 text-gray-900 ${edge}`}>
+                          {row.cashFlow?.code || "-"}
+                        </td>
+                      )}
+                      {shows("source") && (
+                        <td className={`px-4 py-2.5 text-gray-900 ${edge}`}>
+                          <div>{displaySource(row.sourceType, row.category)}</div>
+                          {row.packingSlip && (
+                            <div className="text-brand">{row.packingSlip.code}</div>
+                          )}
+                        </td>
+                      )}
                       <td
                         className={`px-4 py-2.5 ${edge} ${
                           expanded ? "border-r-2" : ""

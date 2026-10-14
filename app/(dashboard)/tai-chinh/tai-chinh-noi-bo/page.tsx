@@ -6,7 +6,10 @@ import { useState } from "react";
 import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
 import { FinanceSyncButton } from "@/components/internal-finance/FinanceSyncButton";
 import { useAuthStore } from "@/lib/store/auth";
-import { InternalFinanceSidebar } from "@/components/internal-finance/InternalFinanceSidebar";
+import {
+  InternalFinanceSidebar,
+  loadInternalFinanceFilters,
+} from "@/components/internal-finance/InternalFinanceSidebar";
 import {
   InternalFinanceTable,
   type InternalFinanceSummaryItem,
@@ -16,18 +19,30 @@ import {
   useInternalFinanceSummary,
 } from "@/lib/hooks/useInternalFinance";
 import type { InternalFinanceQuery } from "@/lib/api/internal-finance";
+import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
+import {
+  useFollowHeaderBranch,
+  useHeaderBranchId,
+} from "@/lib/internal-finance/header-branch";
 
 const PAGE_SIZE = 50;
+const FINANCE_BRANCH_IDS = [1, 4, 6, 7];
+const STORAGE_KEY = "internal-finance-sidebar-filters";
 
 export default function TaiChinhNoiBoPage() {
   // Đồng bộ dữ liệu cũ và chốt chuyển đổi chỉ dành cho Super Admin.
   const canSync = useAuthStore((state) =>
     Boolean(state.user?.roles?.includes("Super Admin")),
   );
-  const [filters, setFilters] = useState<InternalFinanceQuery>({
+  const access = useFinanceAccess();
+  const headerBranchId = useHeaderBranchId(FINANCE_BRANCH_IDS, (id) =>
+    access.can("cash_flows", "view", id),
+  );
+  const [filters, setFilters] = useState<InternalFinanceQuery>(() => ({
+    ...loadInternalFinanceFilters(STORAGE_KEY, headerBranchId),
     page: 1,
     limit: PAGE_SIZE,
-  });
+  }));
 
   const query = useInternalFinance(filters);
   const summary = useInternalFinanceSummary(filters);
@@ -67,6 +82,10 @@ export default function TaiChinhNoiBoPage() {
     }));
   };
 
+  useFollowHeaderBranch(headerBranchId, filters.branchIds || [], (id) =>
+    updateFilters({ branchIds: id ? [id] : undefined }),
+  );
+
   const actions = (
     <>
       {canSync && <FinanceSyncButton />}
@@ -90,7 +109,14 @@ export default function TaiChinhNoiBoPage() {
       <div
         className="flex h-full min-h-0 overflow-hidden border-t"
         style={{ borderColor: "var(--dt-border)" }}>
-        <InternalFinanceSidebar filters={filters} onChange={updateFilters} />
+        <InternalFinanceSidebar
+          filters={filters}
+          onChange={updateFilters}
+          storageKey={STORAGE_KEY}
+          resetPatch={{
+            branchIds: headerBranchId ? [headerBranchId] : undefined,
+          }}
+        />
         <InternalFinanceTable
           title="Tài chính nội bộ"
           rows={rows}

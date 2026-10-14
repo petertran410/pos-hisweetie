@@ -20,7 +20,7 @@ export function ApprovalRequestsPanel({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <Link
-          href="/tai-chinh/quy-noi-bo?view=receipts"
+          href="/tai-chinh/quy-noi-bo"
           className="mt-4 inline-flex items-center gap-2 text-brand"
         >
           <ExternalLink className="h-4 w-4" /> Quỹ nội bộ

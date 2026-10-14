@@ -1,5 +1,7 @@
 "use client";
 
+import { ColumnToggle } from "@/components/shared/ColumnToggle";
+import { useColumnToggle } from "@/lib/hooks/useColumnToggle";
 import { useEffect, useMemo, useState } from "react";
 import {
   CarFront,
@@ -16,7 +18,10 @@ import {
   VehicleEntrySidebar,
   type VehicleEntryFilters,
 } from "@/components/vehicles/VehicleEntrySidebar";
-import { VehicleEntryTable } from "@/components/vehicles/VehicleEntryTable";
+import {
+  VEHICLE_ENTRY_COLUMNS,
+  VehicleEntryTable,
+} from "@/components/vehicles/VehicleEntryTable";
 import { VehicleListModal } from "@/components/vehicles/VehicleListModal";
 import { WarehouseCashAttachmentsModal } from "@/components/warehouse-cash/WarehouseCashAttachmentsModal";
 import type {
@@ -36,6 +41,16 @@ import {
   isExpenseOpenForEdit,
 } from "@/lib/internal-finance/vehicle-constants";
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
+import {
+  useFollowHeaderBranch,
+  useHeaderBranchId,
+} from "@/lib/internal-finance/header-branch";
+import {
+  readSavedFilters,
+  restoreBranchIds,
+  writeSavedFilters,
+} from "@/lib/internal-finance/saved-filters";
+import { loadSavedDates } from "@/lib/internal-finance/time-range";
 import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
 
@@ -53,12 +68,51 @@ const VEHICLE_PAGE_PERMISSIONS = ["view", "create"].map((action) => ({
   action,
 }));
 
+const STORAGE_KEY = "vehicle-entry-sidebar-filters";
+
 function VehicleScreen() {
   const access = useFinanceAccess();
   const selectedBranch = useBranchStore((state) => state.selectedBranch);
   const { data: branchData } = useBranches();
   const [kind, setKind] = useState<VehicleEntryKind>("FUEL");
-  const [filters, setFilters] = useState<VehicleEntryFilters>({});
+  const headerBranchId = useHeaderBranchId(VEHICLE_BRANCH_IDS, (id) =>
+    canVehicle(access, "view", id),
+  );
+  const [filters, setFilters] = useState<VehicleEntryFilters>(() => {
+    const saved = readSavedFilters<
+      VehicleEntryFilters & { branchIds?: number[] }
+    >(STORAGE_KEY);
+    const { branchIds, ...rest } = saved || {};
+    return {
+      ...rest,
+      // Khoảng ngày lấy từ lựa chọn thời gian đã lưu, tính lại theo hôm nay.
+      fromDate: undefined,
+      toDate: undefined,
+      ...loadSavedDates(STORAGE_KEY),
+      branchId: restoreBranchIds(
+        saved ? branchIds : undefined,
+        headerBranchId,
+        VEHICLE_BRANCH_IDS,
+      )[0],
+    };
+  });
+  useEffect(() => {
+    const { branchId, ...rest } = filters;
+    writeSavedFilters(STORAGE_KEY, {
+      ...rest,
+      branchIds: branchId ? [branchId] : [],
+    });
+  }, [filters]);
+  // Mỗi tab có bộ cột riêng nên lưu lựa chọn ẩn/hiện riêng.
+  const fuelColumns = useColumnToggle(
+    "vehicleFuelTableColumns",
+    VEHICLE_ENTRY_COLUMNS.FUEL,
+  );
+  const careColumns = useColumnToggle(
+    "vehicleCareTableColumns",
+    VEHICLE_ENTRY_COLUMNS.VEHICLE_CARE,
+  );
+  const columnToggle = kind === "FUEL" ? fuelColumns : careColumns;
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -133,6 +187,11 @@ function VehicleScreen() {
     setFilters((current) => ({ ...current, ...patch }));
     setPage(1);
   };
+  useFollowHeaderBranch(
+    headerBranchId,
+    filters.branchId ? [filters.branchId] : [],
+    (id) => changeFilters({ branchId: id || undefined, vehicleId: undefined }),
+  );
 
   const handleCancel = async (row: VehicleEntry) => {
     const result = await Swal.fire({
@@ -158,11 +217,12 @@ function VehicleScreen() {
             filters={filters}
             branches={viewBranches}
             vehicles={vehicles.data || []}
+            storageKey={STORAGE_KEY}
             mobileOpen={showFilters}
             onMobileClose={() => setShowFilters(false)}
             onChange={changeFilters}
             onClear={() => {
-              setFilters({});
+              setFilters({ branchId: headerBranchId || undefined });
               setPage(1);
             }}
           />
@@ -215,6 +275,13 @@ function VehicleScreen() {
                   <SlidersHorizontal className="h-4 w-4" />
                   Bộ lọc
                 </button>
+              )}
+              {canView && (
+                <ColumnToggle
+                  key={kind}
+                  columns={columnToggle.columns}
+                  onToggle={columnToggle.toggleColumn}
+                />
               )}
               {allBranches.length > 0 && (
                 <button
@@ -276,6 +343,7 @@ function VehicleScreen() {
                     onOpenAttachments={setAttachmentRow}
                     onEdit={setEditing}
                     onCancel={handleCancel}
+                    shows={columnToggle.shows}
                   />
                 )}
                 <div className="flex shrink-0 items-center justify-between border-t px-4 py-3 text-sm">

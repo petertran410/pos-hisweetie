@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, ChevronRight, Loader2, Plus, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useBranches } from "@/lib/hooks/useBranches";
@@ -11,6 +11,7 @@ import {
   useWarehouseExpenseBatches,
 } from "@/lib/hooks/useInternalFinance";
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
+import { FilterSearchableSelect } from "@/components/ui/filters";
 import { InternalFinanceDateField } from "./InternalFinanceDateField";
 import { endOfWeek, startOfWeek, toDateInput } from "@/lib/internal-finance/dates";
 
@@ -76,6 +77,14 @@ export function InternalFinanceWeeklyPanel({
   const prepare = usePrepareWarehouseExpenseBatch();
   const createApproval = useCreateWarehouseExpenseApproval();
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   const prepareBatch = () => {
     prepare.mutate(
       { branchId, weekStart, weekEnd },
@@ -97,7 +106,12 @@ export function InternalFinanceWeeklyPanel({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/25">
+    <div
+      className="fixed inset-0 z-50 flex justify-end bg-black/25"
+      // Chỉ đóng khi bấm đúng vào nền mờ, không phải bên trong bảng.
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}>
       <div className="flex h-full w-full max-w-xl flex-col border-l bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b px-5 py-4">
           <div>
@@ -118,33 +132,43 @@ export function InternalFinanceWeeklyPanel({
         </div>
 
         <div className="border-b p-5">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <label className="flex flex-col gap-1 text-xs text-gray-600">
-              Chi nhánh
-              <select
-                value={branchId}
-                onChange={(event) => {
-                  setBranchId(Number(event.target.value));
+          <div className="space-y-3">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Chi nhánh
+              </label>
+              <FilterSearchableSelect
+                options={branches.map((branch) => ({
+                  value: String(branch.id),
+                  label: branch.name,
+                }))}
+                value={String(branchId)}
+                onChange={(value) => {
+                  if (!value) return;
+                  setBranchId(Number(value));
                   setSelectedBatchId(null);
                 }}
-                className="dt-select rounded-lg">
-                {branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <InternalFinanceDateField
-              label="Từ ngày"
-              value={weekStart}
-              onChange={(value) => value && setWeekStart(value)}
-            />
-            <InternalFinanceDateField
-              label="Đến ngày"
-              value={weekEnd}
-              onChange={(value) => value && setWeekEnd(value)}
-            />
+                searchable={false}
+                allowDeselect={false}
+                showClearOption={false}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <InternalFinanceDateField
+                variant="filter"
+                label="Từ ngày"
+                value={weekStart}
+                maxDate={weekEnd}
+                onChange={(value) => value && setWeekStart(value)}
+              />
+              <InternalFinanceDateField
+                variant="filter"
+                label="Đến ngày"
+                value={weekEnd}
+                minDate={weekStart}
+                onChange={(value) => value && setWeekEnd(value)}
+              />
+            </div>
           </div>
           <button
             type="button"

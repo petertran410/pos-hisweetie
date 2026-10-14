@@ -9,6 +9,11 @@ import type { Branch } from "@/lib/api/branches";
 import type { InternalFinanceQuery } from "@/lib/api/internal-finance";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
+import {
+  readSavedFilters,
+  restoreBranchIds,
+  writeSavedFilters,
+} from "@/lib/internal-finance/saved-filters";
 import { getFixedRect, normalizeRectForFixed } from "@/lib/utils/zoom";
 
 const FINANCE_BRANCH_IDS = new Set([1, 4, 6, 7]);
@@ -435,16 +440,59 @@ function PresetPanel({
   );
 }
 
+type SavedFinanceFilters = {
+  filters?: Partial<InternalFinanceQuery>;
+  dateMode?: "preset" | "custom";
+  selectedPreset?: string;
+};
+
+/** Bộ lọc đã lưu của trang; khoảng thời gian dạng preset được tính lại theo hôm nay. */
+export function loadInternalFinanceFilters(
+  storageKey: string,
+  headerBranchId: number | null,
+): Partial<InternalFinanceQuery> {
+  const saved = readSavedFilters<SavedFinanceFilters>(storageKey);
+  const filters = saved?.filters || {};
+  const branchIds = restoreBranchIds(
+    saved ? filters.branchIds : undefined,
+    headerBranchId,
+    [...FINANCE_BRANCH_IDS],
+  );
+  let dates: Pick<InternalFinanceQuery, "fromDate" | "toDate"> = {
+    fromDate: filters.fromDate || undefined,
+    toDate: filters.toDate || undefined,
+  };
+  if (saved?.dateMode !== "custom") {
+    const preset = saved?.selectedPreset || "all_time";
+    if (preset === "all_time") dates = {};
+    else {
+      const range = getDateRangeFromPreset(preset);
+      dates = {
+        fromDate: toInputDate(range.from),
+        toDate: toInputDate(range.to),
+      };
+    }
+  }
+  return {
+    ...filters,
+    ...dates,
+    branchIds: branchIds.length ? branchIds : undefined,
+  };
+}
+
 export function InternalFinanceSidebar({
   filters,
   onChange,
   categories = CATEGORIES,
   resetPatch,
+  storageKey,
 }: {
   filters: InternalFinanceQuery;
   onChange: (patch: Partial<InternalFinanceQuery>) => void;
   categories?: string[][];
   resetPatch?: Partial<InternalFinanceQuery>;
+  /** Có thì bộ lọc được lưu lại và khôi phục khi mở lại trang. */
+  storageKey?: string;
 }) {
   const branchesQuery = useBranches();
   const access = useFinanceAccess();
@@ -470,10 +518,31 @@ export function InternalFinanceSidebar({
     [categories],
   );
   const selectedBranchIds = filters.branchIds || [];
-  const [dateMode, setDateMode] = useState<"preset" | "custom">(
-    filters.fromDate || filters.toDate ? "custom" : "preset",
+  const [savedDate] = useState(() =>
+    storageKey ? readSavedFilters<SavedFinanceFilters>(storageKey) : null,
   );
-  const [selectedPreset, setSelectedPreset] = useState("all_time");
+  const [dateMode, setDateMode] = useState<"preset" | "custom">(
+    savedDate?.dateMode ||
+      (filters.fromDate || filters.toDate ? "custom" : "preset"),
+  );
+  const [selectedPreset, setSelectedPreset] = useState(
+    savedDate?.selectedPreset || "all_time",
+  );
+  useEffect(() => {
+    if (!storageKey) return;
+    // Không lưu ô tìm kiếm và số trang; chi nhánh rỗng nghĩa là "Tất cả chi nhánh".
+    writeSavedFilters(storageKey, {
+      filters: {
+        ...filters,
+        search: undefined,
+        page: undefined,
+        limit: undefined,
+        branchIds: filters.branchIds || [],
+      },
+      dateMode,
+      selectedPreset,
+    });
+  }, [storageKey, filters, dateMode, selectedPreset]);
   const [showPresetPanel, setShowPresetPanel] = useState(false);
   const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
   const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);

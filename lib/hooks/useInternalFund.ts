@@ -173,7 +173,7 @@ export function useCloseInternalFundDay() {
     mutationFn: internalFundApi.closeDay,
     onSuccess: () => {
       invalidateInternalFund(queryClient);
-      toast.success("Đã chốt sổ nội bộ");
+      toast.success("Đã lưu số chốt sổ");
     },
     onError: (error) =>
       toast.error(errorMessage(error, "Chốt sổ nội bộ thất bại")),

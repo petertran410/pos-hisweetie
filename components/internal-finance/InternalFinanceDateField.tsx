@@ -4,7 +4,7 @@ import { CalendarDays } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MiniCalendar } from "@/components/ui/MiniCalendar";
-import { normalizeRectForFixed } from "@/lib/utils/zoom";
+import { getFixedViewport, normalizeRectForFixed } from "@/lib/utils/zoom";
 
 const formatDateLabel = (value: string) =>
   value
@@ -22,6 +22,7 @@ export function InternalFinanceDateField({
   minDate,
   maxDate,
   compact = false,
+  variant = "form",
 }: {
   label: string;
   value: string;
@@ -29,6 +30,8 @@ export function InternalFinanceDateField({
   minDate?: string;
   maxDate?: string;
   compact?: boolean;
+  /** "filter": cùng kiểu với các ô chọn trong sidebar bộ lọc. */
+  variant?: "form" | "filter";
 }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -60,13 +63,21 @@ export function InternalFinanceDateField({
       ? (() => {
           const rect = normalizeRectForFixed(anchorRect);
           const width = 272;
+          // Viewport phải cùng hệ toạ độ đã bù zoom với rect, nếu không lịch
+          // của ô sát mép phải bị kéo lệch sang trái.
+          const viewport = getFixedViewport(rect.zoom);
+          // Không đủ chỗ bên phải thì canh mép phải của lịch theo mép phải ô.
+          const preferred =
+            rect.left + width > viewport.width - 8
+              ? rect.right - width
+              : rect.left;
           const left = Math.max(
             8,
-            Math.min(rect.left, window.innerWidth - width - 8),
+            Math.min(preferred, viewport.width - width - 8),
           );
           const estimatedHeight = 350;
           const top =
-            rect.bottom + estimatedHeight > window.innerHeight
+            rect.bottom + estimatedHeight > viewport.height
               ? Math.max(8, rect.top - estimatedHeight - 8)
               : rect.bottom + 8;
 
@@ -91,20 +102,51 @@ export function InternalFinanceDateField({
         })()
       : null;
 
+  const filter = variant === "filter";
+
   return (
-    <div className="relative flex min-w-0 flex-col gap-1.5">
-      <span className="text-xs font-medium text-gray-600">{label}</span>
+    <div
+      className={`relative flex min-w-0 flex-col ${filter ? "gap-2" : "gap-1.5"}`}>
+      <span
+        className={
+          filter
+            ? "text-sm font-medium text-gray-700"
+            : "text-xs font-medium text-gray-600"
+        }>
+        {label}
+      </span>
       <button
         ref={triggerRef}
         type="button"
         onClick={openCalendar}
-        className={`dt-input flex w-full items-center justify-between gap-2 text-left ${
-          compact ? "dt-input-sm h-9 !py-1.5 !text-xs" : "min-h-10"
-        } ${open ? "border-[var(--dt-primary)] ring-2 ring-[var(--dt-primary-ring)]" : ""}`}>
-        <span className={value ? "text-[var(--dt-text)]" : "text-[var(--dt-text-muted)]"}>
+        className={
+          filter
+            ? `flex w-full items-center justify-between gap-2 rounded-lg border bg-white px-2 py-1 text-left text-sm transition-colors ${
+                open
+                  ? "border-brand ring-2 ring-brand-soft"
+                  : "hover:border-gray-400"
+              }`
+            : `dt-input flex w-full items-center justify-between gap-2 text-left ${
+                compact ? "dt-input-sm h-9 !py-1.5 !text-xs" : "min-h-10"
+              } ${open ? "border-[var(--dt-primary)] ring-2 ring-[var(--dt-primary-ring)]" : ""}`
+        }>
+        <span
+          className={
+            filter
+              ? value
+                ? "text-gray-800"
+                : "text-gray-400"
+              : value
+                ? "text-[var(--dt-text)]"
+                : "text-[var(--dt-text-muted)]"
+          }>
           {formatDateLabel(value)}
         </span>
-        <CalendarDays className="h-4 w-4 shrink-0 text-[var(--dt-text-muted)]" />
+        <CalendarDays
+          className={`h-4 w-4 shrink-0 ${
+            filter ? "text-gray-400" : "text-[var(--dt-text-muted)]"
+          }`}
+        />
       </button>
       {popover}
     </div>

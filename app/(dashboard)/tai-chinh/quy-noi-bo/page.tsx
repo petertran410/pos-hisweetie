@@ -1,10 +1,11 @@
 "use client";
 
+import { ColumnToggle } from "@/components/shared/ColumnToggle";
+import { useColumnToggle } from "@/lib/hooks/useColumnToggle";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Ban,
-  Check,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -16,42 +17,39 @@ import {
 import { toast } from "sonner";
 import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
 import { useAuthStore } from "@/lib/store/auth";
-import { InternalFinanceDateField } from "@/components/internal-finance/InternalFinanceDateField";
-import { InternalFundReceiptForm } from "@/components/internal-fund/InternalFundReceiptForm";
-import { WarehouseCashAttachmentsModal } from "@/components/warehouse-cash/WarehouseCashAttachmentsModal";
-import ExpensePage from "@/app/(dashboard)/tai-chinh/phieu-chi-kho/page";
+import {
+  FilterDivider,
+  FilterSection,
+  FinanceFilterSidebar,
+} from "@/components/internal-finance/FinanceFilterSidebar";
+import { TimeRangeFilter } from "@/components/shared/TimeRangeFilter";
+import { FilterSearchableSelect } from "@/components/ui/filters";
+import {
+  loadSavedDates,
+  useSavedTimeRange,
+  type DateRange,
+} from "@/lib/internal-finance/time-range";
+import { FundClosingTable } from "@/components/internal-fund/FundClosingTable";
 import { useBranches } from "@/lib/hooks/useBranches";
 import {
   useAdjustInternalFundTransaction,
   useCancelInternalFundTransaction,
-  useCancelInternalFundTransfer,
-  useCloseInternalFundDay,
   useInternalFundAccess,
-  useInternalFundApproval,
-  useInternalFundApprovals,
-  useInternalFundDailyClosing,
   useInternalFundDailyClosings,
   useInternalFundHistorySync,
   useInternalFundTransactions,
-  useInternalFundTransfers,
   useInternalFundSummary,
-  usePostInternalFundApproval,
 } from "@/lib/hooks/useInternalFund";
 import { useBranchStore } from "@/lib/store/branch";
 import type {
-  InternalFundDailyClosing,
   InternalFundQuery,
   InternalFundTransaction,
 } from "@/lib/api/internal-fund";
-import type { InternalFinanceAttachment } from "@/lib/api/internal-finance";
 import { formatCurrency } from "@/lib/utils";
 
-type View = "transactions" | "expenses" | "receipts" | "transfers" | "closings";
+type View = "transactions" | "closings";
 const views: Array<[View, string]> = [
   ["transactions", "Sổ quỹ"],
-  ["expenses", "Phiếu chi"],
-  ["receipts", "Phiếu thu"],
-  ["transfers", "Chuyển tiền"],
   ["closings", "Chốt sổ"],
 ];
 const labels: Record<string, string> = {
@@ -90,7 +88,18 @@ const dateLabel = (date: string) =>
   new Date(date).toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
 const inputClass = "dt-input h-10 w-full";
 
+const LEDGER_COLUMNS = [
+  { key: "code", label: "Mã" },
+  { key: "date", label: "Ngày" },
+  { key: "type", label: "Loại" },
+  { key: "content", label: "Nội dung" },
+  { key: "amount", label: "Số tiền" },
+  { key: "status", label: "Trạng thái" },
+];
+const STORAGE_KEY = "internal-fund-sidebar-filters";
+
 function FundScreen() {
+  const ledgerColumns = useColumnToggle("fundLedgerTableColumns", LEDGER_COLUMNS);
   const selectedBranch = useBranchStore((state) => state.selectedBranch);
   const setSelectedBranch = useBranchStore((state) => state.setSelectedBranch);
   const access = useInternalFundAccess();
@@ -114,16 +123,24 @@ function FundScreen() {
       ? (params.get("view") as View)
       : "transactions",
   );
-  const [showForm, setShowForm] = useState<"receipt" | "transfer" | null>(null);
+  const [creatingClosing, setCreatingClosing] = useState(false);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"" | "POSTED" | "CANCELLED">("");
-  const [approvalStatus, setApprovalStatus] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [dates, setDates] = useState<DateRange>(() =>
+    loadSavedDates(STORAGE_KEY),
+  );
+  const fromDate = dates.fromDate || "";
+  const toDate = dates.toDate || "";
   const [page, setPage] = useState(1);
-  const [approvalPage, setApprovalPage] = useState(1);
-  const [transferPage, setTransferPage] = useState(1);
   const [closingPage, setClosingPage] = useState(1);
+  const resetPages = () => {
+    setPage(1);
+    setClosingPage(1);
+  };
+  const time = useSavedTimeRange(STORAGE_KEY, (next) => {
+    setDates(next);
+    resetPages();
+  });
   const query: InternalFundQuery = {
     branchId,
     search: search || undefined,
@@ -135,28 +152,6 @@ function FundScreen() {
   };
   const ready = branches.length > 0;
   const transactions = useInternalFundTransactions(query, ready);
-  const approvals = useInternalFundApprovals(
-    {
-      branchId,
-      status: approvalStatus || undefined,
-      fromDate: fromDate || undefined,
-      toDate: toDate || undefined,
-      page: approvalPage,
-      limit: 30,
-    },
-    ready,
-  );
-  const transfers = useInternalFundTransfers(
-    {
-      branchId,
-      status: status || undefined,
-      fromDate: fromDate || undefined,
-      toDate: toDate || undefined,
-      page: transferPage,
-      limit: 30,
-    },
-    ready,
-  );
   const closings = useInternalFundDailyClosings(
     {
       branchId,
@@ -168,54 +163,31 @@ function FundScreen() {
     ready,
   );
   const cancelTransaction = useCancelInternalFundTransaction();
-  const cancelTransfer = useCancelInternalFundTransfer();
   const adjust = useAdjustInternalFundTransaction();
-  const close = useCloseInternalFundDay();
-  const postApproval = usePostInternalFundApproval();
   const historySync = useInternalFundHistorySync();
   const [action, setAction] = useState<{
-    kind: "cancel" | "transfer" | "adjust";
+    kind: "cancel" | "adjust";
     id: number;
     description?: string;
   } | null>(null);
   const [reason, setReason] = useState("");
   const [description, setDescription] = useState("");
-  const [closingDate, setClosingDate] = useState(today);
-  const [actual, setActual] = useState(["", "", "", ""]);
-  const [notes, setNotes] = useState("");
-  const [detail, setDetail] = useState<InternalFundDailyClosing | null>(null);
-  const [approvalDetailId, setApprovalDetailId] = useState<number | null>(null);
-  const [approvalAttachments, setApprovalAttachments] = useState<
-    InternalFinanceAttachment[]
-  >([]);
-  const selectedApproval = useInternalFundApproval(approvalDetailId);
-  const selectedClosing = useInternalFundDailyClosing(detail?.id || null);
   const rows = transactions.data?.data || [];
-  const approvalRows = approvals.data?.data || [];
-  const transferRows = transfers.data?.data || [];
   const closingRows = closings.data?.data || [];
   const summary = useInternalFundSummary({
     branchId,
-    fromDate: view === "closings" ? closingDate : today(),
+    fromDate: today(),
   }, ready);
   const totalPages = Math.max(
     1,
     Math.ceil((transactions.data?.total || 0) / 30),
-  );
-  const approvalTotalPages = Math.max(
-    1,
-    Math.ceil((approvals.data?.total || 0) / 30),
-  );
-  const transferTotalPages = Math.max(
-    1,
-    Math.ceil((transfers.data?.total || 0) / 30),
   );
   const closingTotalPages = Math.max(
     1,
     Math.ceil((closings.data?.total || 0) / 30),
   );
   const requestAction = (
-    kind: "cancel" | "transfer" | "adjust",
+    kind: "cancel" | "adjust",
     id: number,
     text?: string,
   ) => {
@@ -229,71 +201,112 @@ function FundScreen() {
       return;
     }
     const success = { onSuccess: () => setAction(null) };
-    if (action.kind === "transfer")
-      cancelTransfer.mutate({ id: action.id, reason }, success);
-    else if (action.kind === "cancel")
+    // Dòng thuộc một lệnh chuyển tiền thì máy chủ tự hủy cả hai chiều.
+    if (action.kind === "cancel")
       cancelTransaction.mutate({ id: action.id, reason }, success);
     else adjust.mutate({ id: action.id, description, reason }, success);
   };
-  const submitClosing = () => {
-    const values = actual.map((value) =>
-      value === "" ? undefined : Number(value.replace(/,/g, "")),
-    );
-    if (
-      values.some((value) => value !== undefined && !Number.isFinite(value))
-    ) {
-      toast.error("Số liệu kiểm kê không hợp lệ");
-      return;
-    }
-    close.mutate({
-      branchId,
-      closingDate,
-      actualOpeningBalance: values[0],
-      actualReceipt: values[1],
-      actualExpense: values[2],
-      actualClosingBalance: values[3],
-      notes,
-    });
-  };
   const activeError =
-    view === "transactions"
-      ? transactions.error
-      : view === "receipts"
-        ? approvals.error
-        : view === "transfers"
-          ? transfers.error
-          : view === "closings"
-            ? closings.error
-            : null;
+    view === "transactions" ? transactions.error : closings.error;
   const pending =
-    cancelTransaction.isPending || cancelTransfer.isPending || adjust.isPending;
+    cancelTransaction.isPending || adjust.isPending;
 
   return (
-    <div className="flex h-full min-h-0 flex-col border-t">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-white px-4 py-3">
-        <h1 className="text-base font-semibold">Quỹ nội bộ</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            aria-label="Chi nhánh quỹ"
-            className="dt-select h-9"
-            value={branchId}
-            onChange={(event) => {
-              const next = branches.find(
-                (branch) => branch.id === Number(event.target.value),
-              );
-              if (next) setSelectedBranch(next);
-              setPage(1);
-              setApprovalPage(1);
-              setTransferPage(1);
-              setClosingPage(1);
-            }}
+    <div className="flex h-full min-h-0 flex-col overflow-hidden border-t">
+      <div
+        role="tablist"
+        className="flex shrink-0 gap-1 overflow-x-auto border-b bg-white px-4"
+      >
+        {views.map(([key, label]) => (
+          <button
+            key={key}
+            role="tab"
+            aria-selected={view === key}
+            type="button"
+            onClick={() => setView(key)}
+            className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm ${view === key ? "border-brand font-semibold text-brand" : "border-transparent text-gray-600"}`}
           >
-            {branches.map((branch) => (
-              <option key={branch.id} value={branch.id}>
-                {branch.name}
-              </option>
-            ))}
-          </select>
+            {label}
+          </button>
+        ))}
+      </div>
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <FinanceFilterSidebar
+            activeCount={
+              [
+                time.active,
+                view === "transactions" ? status : "",
+              ].filter(Boolean).length
+            }
+            onClear={() => {
+              time.reset();
+              setDates({});
+              setStatus("");
+              resetPages();
+            }}>
+            <TimeRangeFilter
+              label="Thời gian"
+              value={time.range}
+              onChange={time.change}
+            />
+            <FilterDivider />
+            <FilterSection label="Chi nhánh">
+              <FilterSearchableSelect
+                options={branches.map((branch) => ({
+                  value: String(branch.id),
+                  label: branch.name,
+                }))}
+                value={String(branchId)}
+                onChange={(value) => {
+                  const next = branches.find(
+                    (branch) => branch.id === Number(value),
+                  );
+                  if (next) setSelectedBranch(next);
+                  resetPages();
+                }}
+                searchable={false}
+                allowDeselect={false}
+                showClearOption={false}
+              />
+            </FilterSection>
+            {view === "transactions" && (
+              <>
+                <FilterDivider />
+                <FilterSection label="Trạng thái">
+                  <FilterSearchableSelect
+                    options={[{ value: "CANCELLED", label: "Đã hủy" }]}
+                    value={status}
+                    onChange={(value) => {
+                      setStatus(value as typeof status);
+                      resetPages();
+                    }}
+                    placeholder="Đã ghi quỹ"
+                    searchable={false}
+                  />
+                </FilterSection>
+              </>
+            )}
+          </FinanceFilterSidebar>
+          <main className="mb-4 mr-4 mt-4 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-white">
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-2.5">
+              <div className="flex min-w-0 items-center gap-3">
+                <h2 className="whitespace-nowrap text-base font-semibold text-gray-900">
+                  Quỹ nội bộ
+                </h2>
+                {view === "transactions" && (
+                  <input
+                    type="text"
+                    placeholder="Tìm mã, nội dung..."
+                    value={search}
+                    onChange={(event) => {
+                      setSearch(event.target.value);
+                      setPage(1);
+                    }}
+                    className="w-64 rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                  />
+                )}
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
           {isSuperAdmin && (
             <button
               type="button"
@@ -310,43 +323,23 @@ function FundScreen() {
                 : "Đồng bộ sổ quỹ"}
             </button>
           )}
-          {can("create_receipt") && can("submit_approval") && (
+          {view === "closings" && can("close") && (
             <button
               type="button"
-              onClick={() => setShowForm("receipt")}
-              className="inline-flex items-center gap-1 rounded-lg bg-brand px-3 py-2 text-sm text-white"
+              onClick={() => setCreatingClosing(true)}
+              className="inline-flex items-center gap-1 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-dark"
             >
-              <Plus className="h-4 w-4" /> Phiếu thu
+              <Plus className="h-4 w-4" /> Tạo chốt sổ
             </button>
           )}
-          {can("transfer") && can("submit_approval") && (
-            <button
-              type="button"
-              onClick={() => setShowForm("transfer")}
-              className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-sm"
-            >
-              <Plus className="h-4 w-4" /> Chuyển tiền
-            </button>
+          {view === "transactions" && (
+            <ColumnToggle
+              columns={ledgerColumns.columns}
+              onToggle={ledgerColumns.toggleColumn}
+            />
           )}
-        </div>
-      </div>
-      <div
-        role="tablist"
-        className="flex shrink-0 gap-1 overflow-x-auto border-b px-4 py-2"
-      >
-        {views.map(([key, label]) => (
-          <button
-            key={key}
-            role="tab"
-            aria-selected={view === key}
-            type="button"
-            onClick={() => setView(key)}
-            className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm ${view === key ? "border-brand font-semibold text-brand" : "border-transparent text-gray-600"}`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+              </div>
+            </div>
       {activeError && (
         <div
           role="alert"
@@ -366,7 +359,7 @@ function FundScreen() {
       )}
       {summary.data?.[0] && (
         <div className="flex shrink-0 flex-wrap gap-x-6 gap-y-1 border-b bg-gray-50 px-4 py-2 text-sm">
-          <span>Ngày {view === "closings" ? closingDate : today()}</span>
+          <span>Ngày {today()}</span>
           <span>
             Đầu kỳ <strong>{formatCurrency(summary.data[0].opening)}</strong>
           </span>
@@ -387,68 +380,21 @@ function FundScreen() {
           </span>
         </div>
       )}
-      {view === "expenses" ? (
-        <ExpensePage />
-      ) : view === "transactions" ? (
+      {view === "transactions" ? (
         <>
-          <div className="flex flex-wrap items-end gap-3 border-b p-3">
-            <label className="text-xs">
-              Tìm kiếm
-              <input
-                className={inputClass}
-                value={search}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setPage(1);
-                }}
-              />
-            </label>
-            <label className="text-xs">
-              Trạng thái
-              <select
-                className="dt-select h-10"
-                value={status}
-                onChange={(event) =>
-                  setStatus(event.target.value as typeof status)
-                }
-              >
-                <option value="">Đã ghi quỹ</option>
-                <option value="CANCELLED">Đã hủy</option>
-              </select>
-            </label>
-            <InternalFinanceDateField
-              label="Từ ngày"
-              value={fromDate}
-              onChange={(value) => {
-                setFromDate(value || "");
-                setPage(1);
-              }}
-            />
-            <InternalFinanceDateField
-              label="Đến ngày"
-              value={toDate}
-              onChange={(value) => {
-                setToDate(value || "");
-                setPage(1);
-              }}
-            />
-          </div>
           <div className="min-h-0 flex-1 overflow-auto">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-gray-50">
+              <thead className="sticky top-0 z-10 bg-gray-50">
                 <tr>
                   {[
-                    "Mã",
-                    "Ngày",
-                    "Loại",
-                    "Nội dung",
-                    "Số tiền",
-                    "Trạng thái",
+                    ...LEDGER_COLUMNS.filter((column) =>
+                      ledgerColumns.shows(column.key),
+                    ).map((column) => column.label),
                     "",
                   ].map((heading) => (
                     <th
                       key={heading}
-                      className="whitespace-nowrap px-3 py-2 text-left font-medium"
+                      className="whitespace-nowrap px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
                     >
                       {heading}
                     </th>
@@ -458,37 +404,49 @@ function FundScreen() {
               <tbody>
                 {transactions.isLoading ? (
                   <tr>
-                    <td colSpan={7} className="p-10 text-center">
+                    <td colSpan={ledgerColumns.visibleCount + 1} className="p-10 text-center">
                       <Loader2 className="mx-auto h-5 w-5 animate-spin" />
                     </td>
                   </tr>
                 ) : !rows.length ? (
                   <tr>
-                    <td colSpan={7} className="p-10 text-center text-gray-400">
+                    <td colSpan={ledgerColumns.visibleCount + 1} className="p-10 text-center text-gray-400">
                       Chưa có giao dịch
                     </td>
                   </tr>
                 ) : (
                   rows.map((row: InternalFundTransaction) => (
                     <tr key={row.id} className="border-b hover:bg-gray-50">
-                      <td className="max-w-48 break-all px-3 py-2 font-mono text-xs">
-                        {row.code}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2">
-                        {dateLabel(row.occurredAt)}
-                      </td>
-                      <td className="px-3 py-2">
-                        {typeLabel(row)}
-                      </td>
-                      <td className="max-w-64 break-words px-3 py-2">
-                        {row.description}
-                      </td>
-                      <td
-                        className={`whitespace-nowrap px-3 py-2 text-right font-medium ${["EXPENSE", "TRANSFER_OUT"].includes(row.transactionType) ? "text-red-600" : "text-green-700"}`}
-                      >
-                        {formatCurrency(row.amount)}
-                      </td>
-                      <td className="px-3 py-2">{labels[row.status]}</td>
+                      {ledgerColumns.shows("code") && (
+                        <td className="max-w-48 break-all px-3 py-2 font-mono text-xs">
+                          {row.code}
+                        </td>
+                      )}
+                      {ledgerColumns.shows("date") && (
+                        <td className="whitespace-nowrap px-3 py-2">
+                          {dateLabel(row.occurredAt)}
+                        </td>
+                      )}
+                      {ledgerColumns.shows("type") && (
+                        <td className="px-3 py-2">
+                          {typeLabel(row)}
+                        </td>
+                      )}
+                      {ledgerColumns.shows("content") && (
+                        <td className="max-w-64 break-words px-3 py-2">
+                          {row.description}
+                        </td>
+                      )}
+                      {ledgerColumns.shows("amount") && (
+                        <td
+                          className={`whitespace-nowrap px-3 py-2 text-right font-medium ${["EXPENSE", "TRANSFER_OUT"].includes(row.transactionType) ? "text-red-600" : "text-green-700"}`}
+                        >
+                          {formatCurrency(row.amount)}
+                        </td>
+                      )}
+                      {ledgerColumns.shows("status") && (
+                        <td className="px-3 py-2">{labels[row.status]}</td>
+                      )}
                       <td className="px-3 py-2">
                         <div className="flex gap-2">
                           {row.status === "POSTED" && (
@@ -516,7 +474,11 @@ function FundScreen() {
                                 ) && (
                                 <button
                                   type="button"
-                                  title="Hủy giao dịch"
+                                  title={
+                                    row.transferId
+                                      ? "Hủy cả hai chiều chuyển tiền"
+                                      : "Hủy giao dịch"
+                                  }
                                   onClick={() =>
                                     requestAction("cancel", row.id)
                                   }
@@ -534,7 +496,7 @@ function FundScreen() {
               </tbody>
             </table>
           </div>
-          <div className="flex items-center justify-between border-t p-3 text-sm">
+          <div className="flex shrink-0 items-center justify-between border-t px-4 py-2.5 text-sm text-gray-500">
             <span>
               Trang {page}/{totalPages}
             </span>
@@ -558,287 +520,17 @@ function FundScreen() {
             </div>
           </div>
         </>
-      ) : view === "receipts" ? (
-        <div className="min-h-0 flex-1 overflow-auto">
-          <div className="flex flex-wrap items-end gap-3 border-b p-3">
-            <label className="text-xs">
-              Trạng thái Approval
-              <select
-                className="dt-select h-10"
-                value={approvalStatus}
-                onChange={(event) => {
-                  setApprovalStatus(event.target.value);
-                  setApprovalPage(1);
-                }}
-              >
-                <option value="">Tất cả</option>
-                <option value="PENDING">Đang duyệt</option>
-                <option value="APPROVED">Đã duyệt</option>
-                <option value="REJECTED">Từ chối</option>
-              </select>
-            </label>
-          </div>
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                {["Approval", "Loại", "Trạng thái", "Giao dịch quỹ"].map(
-                  (heading) => (
-                    <th key={heading} className="px-4 py-3 text-left">
-                      {heading}
-                    </th>
-                  ),
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {approvalRows.map((approval) => (
-                <tr
-                  key={approval.id}
-                  className="cursor-pointer border-b hover:bg-gray-50"
-                  onClick={() => setApprovalDetailId(approval.id)}
-                >
-                  <td className="max-w-60 break-all px-4 py-3 font-mono text-xs">
-                    {approval.instanceCode || `#${approval.id}`}
-                  </td>
-                  <td className="px-4 py-3">
-                    {approval.sourceType === "INTERNAL_FUND_TRANSFER"
-                      ? "Chuyển tiền"
-                      : "Phiếu thu"}
-                  </td>
-                  <td className="px-4 py-3">
-                    {labels[approval.status] || approval.status}
-                  </td>
-                  <td className="max-w-64 break-all px-4 py-3 text-xs">
-                    {approval.internalFundTransactions
-                      .map((row) => row.code)
-                      .join(", ") || "-"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {!approvalRows.length && (
-            <div className="p-10 text-center text-gray-400">
-              Chưa có Approval nội bộ
-            </div>
-          )}
-          <div className="flex items-center justify-between border-t p-3 text-sm">
-            <span>
-              Trang {approvalPage}/{approvalTotalPages}
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                title="Trang trước"
-                disabled={approvalPage === 1}
-                onClick={() => setApprovalPage((value) => value - 1)}
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                title="Trang sau"
-                disabled={approvalPage >= approvalTotalPages}
-                onClick={() => setApprovalPage((value) => value + 1)}
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : view === "transfers" ? (
-        <div className="min-h-0 flex-1 overflow-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                {[
-                  "Mã",
-                  "Ngày",
-                  "Quỹ nguồn",
-                  "Quỹ đích",
-                  "Số tiền",
-                  "Trạng thái",
-                  "",
-                ].map((heading) => (
-                  <th key={heading} className="px-3 py-2 text-left">
-                    {heading}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {transferRows.map((row) => (
-                <tr key={row.id} className="border-b">
-                  <td className="max-w-48 break-all px-3 py-2 font-mono text-xs">
-                    {row.code}
-                  </td>
-                  <td className="px-3 py-2">{dateLabel(row.occurredAt)}</td>
-                  <td className="px-3 py-2">{row.sourceBranch.name}</td>
-                  <td className="px-3 py-2">{row.destinationBranch.name}</td>
-                  <td className="px-3 py-2 text-right">
-                    {formatCurrency(row.amount)}
-                  </td>
-                  <td className="px-3 py-2">{labels[row.status]}</td>
-                  <td className="px-3 py-2">
-                    {row.status !== "CANCELLED" &&
-                      can("cancel", row.sourceBranchId) &&
-                      can("cancel", row.destinationBranchId) && (
-                        <button
-                          type="button"
-                          title="Hủy cả hai chiều chuyển tiền"
-                          onClick={() => requestAction("transfer", row.id)}
-                        >
-                          <Ban className="h-4 w-4 text-red-600" />
-                        </button>
-                      )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {!transferRows.length && (
-            <div className="p-10 text-center text-gray-400">
-              Chưa có chuyển tiền
-            </div>
-          )}
-          <div className="flex items-center justify-between border-t p-3 text-sm">
-            <span>
-              Trang {transferPage}/{transferTotalPages}
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                title="Trang trước"
-                disabled={transferPage === 1}
-                onClick={() => setTransferPage((value) => value - 1)}
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                title="Trang sau"
-                disabled={transferPage >= transferTotalPages}
-                onClick={() => setTransferPage((value) => value + 1)}
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-        </div>
       ) : (
-        <div className="min-h-0 flex-1 overflow-auto">
-          {can("close") && (
-            <section className="border-b p-4">
-              <div className="grid max-w-4xl gap-3 sm:grid-cols-3">
-                <InternalFinanceDateField
-                  label="Ngày chốt"
-                  value={closingDate}
-                  onChange={(value) => value && setClosingDate(value)}
-                />
-                {[
-                  "Đầu kỳ thực tế",
-                  "Thu thực tế",
-                  "Chi thực tế",
-                  "Cuối kỳ thực tế",
-                ].map((label, index) => (
-                  <label key={label} className="text-xs">
-                    {label}
-                    <input
-                      inputMode="decimal"
-                      value={actual[index]}
-                      onChange={(event) =>
-                        setActual(
-                          actual.map((value, i) =>
-                            i === index ? event.target.value : value,
-                          ),
-                        )
-                      }
-                      className={inputClass}
-                    />
-                  </label>
-                ))}
-                <label className="text-xs">
-                  Ghi chú
-                  <input
-                    value={notes}
-                    onChange={(event) => setNotes(event.target.value)}
-                    className={inputClass}
-                  />
-                </label>
-              </div>
-              <button
-                type="button"
-                onClick={submitClosing}
-                disabled={close.isPending}
-                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-brand px-3 py-2 text-sm text-white"
-              >
-                {close.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Check className="h-4 w-4" />
-                )}{" "}
-                Chốt sổ
-              </button>
-            </section>
-          )}
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                {[
-                  "Ngày",
-                  "Đầu kỳ",
-                  "Thu",
-                  "Chi",
-                  "Cuối kỳ",
-                  "Thực tế",
-                  "Đối soát",
-                ].map((label) => (
-                  <th key={label} className="px-3 py-2 text-left">
-                    {label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {closingRows.map((row) => (
-                <tr
-                  key={row.id}
-                  className="cursor-pointer border-b hover:bg-gray-50"
-                  onClick={() => setDetail(row)}
-                >
-                  <td className="px-3 py-2">{row.closingDate.slice(0, 10)}</td>
-                  {[
-                    row.systemOpeningBalance,
-                    row.systemReceipt,
-                    row.systemExpense,
-                    row.systemClosingBalance,
-                  ].map((value, index) => (
-                    <td key={index} className="px-3 py-2 text-right">
-                      {formatCurrency(value)}
-                    </td>
-                  ))}
-                  <td className="px-3 py-2">
-                    {row.actualClosingBalance === null
-                      ? "-"
-                      : formatCurrency(row.actualClosingBalance)}
-                  </td>
-                  <td
-                    className={`px-3 py-2 ${row.reconciliationStatus === "MISMATCHED" ? "text-red-600" : "text-green-700"}`}
-                  >
-                    {row.reconciliationStatus === "PENDING"
-                      ? "Chờ đối soát"
-                      : labels[row.reconciliationStatus]}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {!closingRows.length && (
-            <div className="p-10 text-center text-gray-400">
-              Chưa có ngày chốt sổ
-            </div>
-          )}
-          <div className="flex items-center justify-between border-t p-3 text-sm">
+        <div className="flex min-h-0 flex-1 flex-col">
+          <FundClosingTable
+            rows={closingRows}
+            isLoading={closings.isLoading}
+            canEdit={can("close")}
+            branchId={branchId}
+            creating={creatingClosing}
+            onCreateClose={() => setCreatingClosing(false)}
+          />
+          <div className="flex shrink-0 items-center justify-between border-t px-4 py-2.5 text-sm text-gray-500">
             <span>
               Trang {closingPage}/{closingTotalPages}
             </span>
@@ -863,13 +555,8 @@ function FundScreen() {
           </div>
         </div>
       )}
-      {showForm && (
-        <InternalFundReceiptForm
-          key={`${showForm}-${branchId}`}
-          transfer={showForm === "transfer"}
-          onClose={() => setShowForm(null)}
-        />
-      )}
+          </main>
+        </div>
       {action && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
@@ -923,245 +610,6 @@ function FundScreen() {
             </button>
           </form>
         </div>
-      )}
-      {detail && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onClick={() => setDetail(null)}
-        >
-          <div
-            className="max-h-[85vh] w-full max-w-3xl overflow-auto rounded-lg bg-white p-5"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="mb-3 flex justify-between">
-              <h2 className="font-semibold">
-                Chốt sổ {detail.closingDate.slice(0, 10)}
-              </h2>
-              <button
-                type="button"
-                title="Đóng"
-                onClick={() => setDetail(null)}
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            {selectedClosing.isLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <p className="text-sm">
-                {selectedClosing.data?.notes || detail.notes || "-"}
-              </p>
-            )}
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <div className="border-b pb-2 text-sm">
-                Cuối kỳ hệ thống:{" "}
-                <strong>{formatCurrency(detail.systemClosingBalance)}</strong>
-              </div>
-              <div className="border-b pb-2 text-sm">
-                Cuối kỳ thực tế:{" "}
-                <strong>
-                  {detail.actualClosingBalance === null
-                    ? "-"
-                    : formatCurrency(detail.actualClosingBalance)}
-                </strong>
-              </div>
-              <div className="border-b pb-2 text-sm">
-                Chênh lệch:{" "}
-                <strong>
-                  {detail.actualClosingBalance === null
-                    ? "-"
-                    : formatCurrency(
-                        Number(detail.actualClosingBalance) -
-                          Number(detail.systemClosingBalance),
-                      )}
-                </strong>
-              </div>
-            </div>
-            <h3 className="mt-4 text-sm font-semibold">Lịch sử chốt</h3>
-            <div className="mt-2 divide-y">
-                  {(selectedClosing.data?.log || detail.log || []).map((item, index) => {
-                const entry = item as Record<string, unknown>;
-                const amounts = Array.isArray(entry.system) ? entry.system : [];
-                return (
-                  <div
-                    key={index}
-                    className="flex flex-wrap justify-between gap-2 py-2 text-xs"
-                  >
-                    <span>{String(entry.capturedAt || "")}</span>
-                    <span>Người chốt #{String(entry.actorId || "")}</span>
-                    <span>
-                      Cuối kỳ {formatCurrency(Number(amounts[3] || 0))}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-      {approvalDetailId && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onClick={() => setApprovalDetailId(null)}
-        >
-          <div
-            className="max-h-[85vh] w-full max-w-2xl overflow-auto rounded-lg bg-white p-5"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-semibold">Chi tiết Approval nội bộ</h2>
-              <button
-                type="button"
-                title="Đóng"
-                onClick={() => setApprovalDetailId(null)}
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            {selectedApproval.isLoading ? (
-              <Loader2 className="mx-auto h-5 w-5 animate-spin" />
-            ) : selectedApproval.data ? (
-              <div className="space-y-3 text-sm">
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <span>
-                    Trạng thái:{" "}
-                    <strong>
-                      {labels[selectedApproval.data.status] ||
-                        selectedApproval.data.status}
-                    </strong>
-                  </span>
-                  <span>
-                    Hình thức thu: <strong>Tiền mặt</strong>
-                  </span>
-                  <span>
-                    Nguồn quỹ:{" "}
-                    <strong>
-                      {selectedApproval.data.metadata?.cashSourceLabel || "-"}
-                    </strong>
-                  </span>
-                  <span>
-                    Người nộp:{" "}
-                    <strong>
-                      {Array.isArray(selectedApproval.data.metadata?.payer)
-                        ? selectedApproval.data.metadata?.payer.join(", ")
-                        : String(selectedApproval.data.metadata?.payer || "-")}
-                    </strong>
-                  </span>
-                  <span>
-                    Ngày:{" "}
-                    <strong>
-                      {selectedApproval.data.metadata?.occurredAt || "-"}
-                    </strong>
-                  </span>
-                  <span>
-                    Số tiền:{" "}
-                    <strong>
-                      {formatCurrency(
-                        selectedApproval.data.metadata?.amount || 0,
-                      )}
-                    </strong>
-                  </span>
-                  <span className="sm:col-span-2">
-                    Nội dung:{" "}
-                    <strong>
-                      {selectedApproval.data.metadata?.description || "-"}
-                    </strong>
-                  </span>
-                </div>
-                <div>
-                  Chứng từ:
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {(selectedApproval.data.metadata?.attachments || []).map(
-                      (file) =>
-                        file.url ? (
-                          <a
-                            key={file.code}
-                            href={file.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="rounded border px-2 py-1 text-brand hover:bg-gray-50"
-                          >
-                            {file.name || file.code}
-                          </a>
-                        ) : (
-                          <span
-                            key={file.code}
-                            className="rounded border border-dashed px-2 py-1 text-gray-500"
-                          >
-                            Chứng từ Lark chưa có URL
-                          </span>
-                        ),
-                    )}
-                  </div>
-                  {selectedApproval.data.metadata?.attachments?.some(
-                    (file) => Boolean(file.url),
-                  ) && (
-                    <button
-                      type="button"
-                      className="mt-2 rounded border px-3 py-1.5 text-xs text-brand hover:bg-gray-50"
-                      onClick={() =>
-                        setApprovalAttachments(
-                          (selectedApproval.data?.metadata?.attachments || [])
-                            .filter((file) => Boolean(file.url))
-                            .map((file) => ({
-                              fileUrl: file.url as string,
-                              fileName: file.name || file.code,
-                              fileType: file.type || undefined,
-                            })),
-                        )
-                      }
-                    >
-                      Xem chứng từ
-                    </button>
-                  )}
-                </div>
-                <div>
-                  Giao dịch quỹ:{" "}
-                  {selectedApproval.data.internalFundTransactions
-                    .map((row) => row.code)
-                    .join(", ") || "Chưa ghi nhận"}
-                </div>
-                {selectedApproval.data.status === "APPROVED" &&
-                  !selectedApproval.data.internalFundTransactions.length &&
-                  (selectedApproval.data.sourceType ===
-                  "INTERNAL_FUND_TRANSFER"
-                    ? can(
-                        "transfer",
-                        selectedApproval.data.internalFundTransfer
-                          ?.sourceBranchId || branchId,
-                      ) &&
-                      can(
-                        "transfer",
-                        selectedApproval.data.internalFundTransfer
-                          ?.destinationBranchId || branchId,
-                      )
-                    : can("mark_received", selectedApproval.data.branchId)) && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        postApproval.mutate(selectedApproval.data!.id, {
-                          onSuccess: () => setApprovalDetailId(null),
-                        })
-                      }
-                      disabled={postApproval.isPending}
-                      className="rounded-lg bg-brand px-3 py-2 text-sm text-white disabled:opacity-50"
-                    >
-                      Ghi nhận lại vào quỹ
-                    </button>
-                  )}
-              </div>
-            ) : (
-              <p className="text-sm text-red-600">Không tải được chi tiết</p>
-            )}
-          </div>
-        </div>
-      )}
-      {approvalAttachments.length > 0 && (
-        <WarehouseCashAttachmentsModal
-          attachments={approvalAttachments}
-          title="Chứng từ Approval quỹ nội bộ"
-          onClose={() => setApprovalAttachments([])}
-        />
       )}
     </div>
   );
