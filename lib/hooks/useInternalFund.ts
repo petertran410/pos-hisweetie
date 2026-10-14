@@ -180,37 +180,3 @@ export function useCloseInternalFundDay() {
   });
 }
 
-/** Đồng bộ sổ quỹ lịch sử: bấm để chạy nền, tự hỏi tiến độ cho tới khi xong. */
-export function useInternalFundHistorySync() {
-  const queryClient = useQueryClient();
-  const status = useQuery({
-    queryKey: ["internal-fund-history-sync"],
-    queryFn: internalFundApi.historySyncStatus,
-    refetchInterval: (query) => (query.state.data?.running ? 2000 : false),
-  });
-  const start = useMutation({
-    mutationFn: internalFundApi.syncHistory,
-    onSuccess: (data) => {
-      queryClient.setQueryData(["internal-fund-history-sync"], data);
-      const timer = setInterval(async () => {
-        const next = await internalFundApi.historySyncStatus();
-        queryClient.setQueryData(["internal-fund-history-sync"], next);
-        if (next.running) return;
-        clearInterval(timer);
-        invalidateInternalFund(queryClient);
-        if (next.error) toast.error(next.error);
-        else
-          toast.success(
-            `Đã đồng bộ sổ quỹ: thêm ${next.created}, cập nhật ${next.updated}`,
-          );
-      }, 2000);
-    },
-    onError: (error) =>
-      toast.error(errorMessage(error, "Không thể đồng bộ sổ quỹ")),
-  });
-  return {
-    start: () => start.mutate(),
-    running: start.isPending || Boolean(status.data?.running),
-    status: status.data,
-  };
-}

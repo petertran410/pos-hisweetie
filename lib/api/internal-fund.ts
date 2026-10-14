@@ -241,21 +241,5 @@ export const internalFundApi = {
       description,
       reason,
     }),
-
-  /** Đồng bộ toàn bộ bút toán sổ quỹ lịch sử (chạy nền, theo dõi bằng status). */
-  syncHistory: (): Promise<InternalFundHistorySyncStatus> =>
-    apiClient.post("/internal-finance/fund-history/sync", {}),
-  historySyncStatus: (): Promise<InternalFundHistorySyncStatus> =>
-    apiClient.get("/internal-finance/fund-history/sync/status"),
 };
 
-export interface InternalFundHistorySyncStatus {
-  running: boolean;
-  startedAt: string | null;
-  finishedAt: string | null;
-  fetched: number;
-  created: number;
-  updated: number;
-  skipped: number;
-  error: string | null;
-}

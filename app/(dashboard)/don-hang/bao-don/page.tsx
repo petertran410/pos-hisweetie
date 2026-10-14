@@ -14,7 +14,6 @@ import {
   useDeletePackingSlip,
   confirmPackingSlipCancel,
   useResendPackingSlipNotification,
-  useResendPackingSlipLark,
 } from "@/lib/hooks/usePackingSlips";
 import {
   useCreatePackingHang,
@@ -137,7 +136,6 @@ export default function BaoDonPage() {
   const updatePackingSlip = useUpdatePackingSlip();
   const deletePackingSlip = useDeletePackingSlip();
   const resendPackingSlipNotification = useResendPackingSlipNotification();
-  const resendPackingSlipLark = useResendPackingSlipLark();
 
   const createPackingHang = useCreatePackingHang();
   const updatePackingHang = useUpdatePackingHang();
@@ -344,19 +342,6 @@ export default function BaoDonPage() {
     }
   };
 
-  const handleResendLark = async (id: number) => {
-    try {
-      await resendPackingSlipLark.mutateAsync(id);
-      toast.success("Đã đồng bộ phiếu chi lên Lark");
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Đồng bộ phiếu chi lên Lark thất bại"
-      );
-    }
-  };
-
   const handleResendLoadingLark = async (id: number) => {
     try {
       await resendPackingLoadingLark.mutateAsync(id);
@@ -417,7 +402,6 @@ export default function BaoDonPage() {
             onEditClick={handleEditClick}
             onDeleteClick={handleDelete}
             onResendClick={handleResend}
-            onResendLarkClick={handleResendLark}
             onResendLoadingLarkClick={handleResendLoadingLark}
             search={tableSearch}
             onSearchChange={setTableSearch}
@@ -462,7 +446,6 @@ export default function BaoDonPage() {
             handleMobileDelete(item);
           }}
           onResendClick={handleResend}
-          onResendLarkClick={handleResendLark}
           onResendLoadingLarkClick={handleResendLoadingLark}
         />
 

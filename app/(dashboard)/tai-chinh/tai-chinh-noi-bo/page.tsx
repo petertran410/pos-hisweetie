@@ -4,8 +4,6 @@ import Link from "next/link";
 import { CalendarRange, Truck } from "lucide-react";
 import { useState } from "react";
 import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
-import { FinanceSyncButton } from "@/components/internal-finance/FinanceSyncButton";
-import { useAuthStore } from "@/lib/store/auth";
 import {
   InternalFinanceSidebar,
   loadInternalFinanceFilters,
@@ -30,10 +28,6 @@ const FINANCE_BRANCH_IDS = [1, 4, 6, 7];
 const STORAGE_KEY = "internal-finance-sidebar-filters";
 
 export default function TaiChinhNoiBoPage() {
-  // Đồng bộ dữ liệu cũ và chốt chuyển đổi chỉ dành cho Super Admin.
-  const canSync = useAuthStore((state) =>
-    Boolean(state.user?.roles?.includes("Super Admin")),
-  );
   const access = useFinanceAccess();
   const headerBranchId = useHeaderBranchId(FINANCE_BRANCH_IDS, (id) =>
     access.can("cash_flows", "view", id),
@@ -88,7 +82,6 @@ export default function TaiChinhNoiBoPage() {
 
   const actions = (
     <>
-      {canSync && <FinanceSyncButton />}
       <Link
         href="/tai-chinh/xe-co"
         className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50">

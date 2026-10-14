@@ -10,13 +10,11 @@ import {
   ChevronRight,
   Loader2,
   Plus,
-  RefreshCw,
   SquarePen,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
-import { useAuthStore } from "@/lib/store/auth";
 import {
   FilterDivider,
   FilterSection,
@@ -36,7 +34,6 @@ import {
   useCancelInternalFundTransaction,
   useInternalFundAccess,
   useInternalFundDailyClosings,
-  useInternalFundHistorySync,
   useInternalFundTransactions,
   useInternalFundSummary,
 } from "@/lib/hooks/useInternalFund";
@@ -103,9 +100,6 @@ function FundScreen() {
   const selectedBranch = useBranchStore((state) => state.selectedBranch);
   const setSelectedBranch = useBranchStore((state) => state.setSelectedBranch);
   const access = useInternalFundAccess();
-  const isSuperAdmin = useAuthStore((state) =>
-    Boolean(state.user?.roles?.includes("Super Admin")),
-  );
   const branchQuery = useBranches();
   const params = useSearchParams();
   const allBranches = Array.isArray(branchQuery.data) ? branchQuery.data : [];
@@ -164,7 +158,6 @@ function FundScreen() {
   );
   const cancelTransaction = useCancelInternalFundTransaction();
   const adjust = useAdjustInternalFundTransaction();
-  const historySync = useInternalFundHistorySync();
   const [action, setAction] = useState<{
     kind: "cancel" | "adjust";
     id: number;
@@ -307,22 +300,6 @@ function FundScreen() {
                 )}
               </div>
               <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {isSuperAdmin && (
-            <button
-              type="button"
-              onClick={historySync.start}
-              disabled={historySync.running}
-              title="Đồng bộ toàn bộ bút toán sổ quỹ lịch sử"
-              className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-sm disabled:opacity-60"
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${historySync.running ? "animate-spin" : ""}`}
-              />
-              {historySync.running
-                ? `Đang đồng bộ ${historySync.status?.fetched ?? 0}…`
-                : "Đồng bộ sổ quỹ"}
-            </button>
-          )}
           {view === "closings" && can("close") && (
             <button
               type="button"

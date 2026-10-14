@@ -154,64 +154,6 @@ export function useMarkWarehouseExpenseIssued() {
   });
 }
 
-/** Đồng bộ dữ liệu thu chi kho: chạy nền, tự hỏi tiến độ cho tới khi xong. */
-export function useFinanceSync() {
-  const queryClient = useQueryClient();
-  const status = useQuery({
-    queryKey: ["internal-finance", "sync-status"],
-    queryFn: internalFinanceApi.syncStatus,
-    refetchInterval: (query) => (query.state.data?.running ? 2000 : false),
-  });
-  const start = useMutation({
-    mutationFn: internalFinanceApi.startSync,
-    onSuccess: (data) => {
-      queryClient.setQueryData(["internal-finance", "sync-status"], data);
-      const timer = setInterval(async () => {
-        const next = await internalFinanceApi.syncStatus();
-        queryClient.setQueryData(["internal-finance", "sync-status"], next);
-        if (next.running) return;
-        clearInterval(timer);
-        invalidateInternalFinance(queryClient);
-        if (next.error) toast.error(next.error);
-        else toast.success("Đã đồng bộ dữ liệu");
-      }, 2000);
-    },
-    onError: (error) =>
-      toast.error(errorMessage(error, "Không thể đồng bộ dữ liệu")),
-  });
-  return {
-    start: () => start.mutate(),
-    running: start.isPending || Boolean(status.data?.running),
-    status: status.data,
-  };
-}
-
-/** Chốt chuyển đổi: khóa đồng bộ dữ liệu cũ khi POS đã là sổ chính. */
-export function useFinanceCutover() {
-  const queryClient = useQueryClient();
-  const status = useQuery({
-    queryKey: ["internal-finance", "cutover"],
-    queryFn: internalFinanceApi.cutoverStatus,
-  });
-  const set = useMutation({
-    mutationFn: internalFinanceApi.setCutover,
-    onSuccess: (data) => {
-      queryClient.setQueryData(["internal-finance", "cutover"], data);
-      toast.success(
-        data.locked ? "Đã chốt chuyển đổi" : "Đã mở lại đồng bộ dữ liệu",
-      );
-    },
-    onError: (error) =>
-      toast.error(errorMessage(error, "Không đổi được trạng thái chốt")),
-  });
-  return {
-    locked: Boolean(status.data?.locked),
-    cutoverAt: status.data?.cutoverAt || null,
-    set: (locked: boolean) => set.mutate(locked),
-    pending: set.isPending,
-  };
-}
-
 export function useCheckWarehouseExpense() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -242,38 +184,6 @@ export function invalidateInternalFinance(
   queryClient.invalidateQueries({ queryKey: ["cashflows"] });
   queryClient.invalidateQueries({ queryKey: ["approval-requests"] });
   queryClient.invalidateQueries({ queryKey: ["invoices"] });
-}
-
-export function useLarkImportStatus(enabled = true) {
-  return useQuery({
-    queryKey: ["internal-finance", "lark-import", "status"],
-    queryFn: () => internalFinanceApi.larkImportStatus(),
-    enabled,
-    refetchInterval: (query) =>
-      query.state.data?.running ? 3000 : false,
-    refetchIntervalInBackground: true,
-  });
-}
-
-export function useStartLarkImport() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (payload: { dryRun: boolean; sources?: string[] }) =>
-      internalFinanceApi.startLarkImport(payload),
-    onSuccess: (data) => {
-      queryClient.setQueryData(
-        ["internal-finance", "lark-import", "status"],
-        data,
-      );
-      toast.success(
-        data.dryRun
-          ? "Đang kiểm tra dữ liệu Lark..."
-          : "Đang đồng bộ dữ liệu Lark...",
-      );
-    },
-    onError: (error) =>
-      toast.error(errorMessage(error, "Không bắt đầu được đồng bộ Lark")),
-  });
 }
 
 export function useCreateManualReceipt() {
@@ -366,19 +276,6 @@ export function useCancelVehicleEntry() {
     },
     onError: (error) =>
       toast.error(errorMessage(error, "Hủy phiếu xe thất bại")),
-  });
-}
-
-export function useBackfillExpenseMetadata() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (dryRun: boolean) =>
-      internalFinanceApi.backfillExpenseMetadata(dryRun),
-    onSuccess: (report) => {
-      if (!report.dryRun) invalidateInternalFinance(queryClient);
-    },
-    onError: (error) =>
-      toast.error(errorMessage(error, "Bổ sung dữ liệu phiếu chi thất bại")),
   });
 }
 

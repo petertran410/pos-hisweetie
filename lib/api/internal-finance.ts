@@ -184,40 +184,9 @@ export interface WarehouseReceiptQuery {
   limit?: number;
 }
 
-export type FinanceSyncStepKey =
-  | "EXPENSES"
-  | "WEEKLY_APPROVALS"
-  | "WAREHOUSE_CASH"
-  | "FUND_LEDGER"
-  | "DAILY_CLOSINGS"
-  | "DOCUMENTS";
-
-export interface FinanceSyncStep {
-  key: FinanceSyncStepKey;
-  state: "PENDING" | "RUNNING" | "DONE" | "FAILED";
-  fetched: number;
-  created: number;
-  updated: number;
-  skipped: number;
-  error: string | null;
-}
-
 export interface FinanceAccessSummary {
   superAdmin: boolean;
   branches: Array<{ branchId: number; permissions: string[] }>;
-}
-
-export interface FinanceCutoverStatus {
-  locked: boolean;
-  cutoverAt: string | null;
-}
-
-export interface FinanceSyncStatus {
-  running: boolean;
-  startedAt: string | null;
-  finishedAt: string | null;
-  steps: FinanceSyncStep[];
-  error: string | null;
 }
 
 export interface WarehouseExpenseQuery {
@@ -327,20 +296,6 @@ export interface VehicleEntryUpdateInput {
   attachments?: InternalFinanceAttachment[];
 }
 
-export interface ExpenseMetadataBackfillReport {
-  dryRun: boolean;
-  payerFromPackingSlip: number;
-  payerFromCreator: number;
-  expenseItemDefaults: number;
-  vehicleLinked: number;
-  serviceTypesFilled: number;
-  unmatchedVehicles: Array<{ label: string; count: number }>;
-  duplicateVehicleExpenses: {
-    count: number;
-    sample: Array<Record<string, unknown>>;
-  };
-}
-
 export interface WarehouseReceiptInput {
   branchId?: number;
   amount?: number;
@@ -380,53 +335,6 @@ export interface WeeklyBatch {
   _count?: { entries: number };
   cashIssuedCount?: number;
   entries?: InternalFinanceEntry[];
-}
-
-export type LarkImportJobPhase =
-  | "IDLE"
-  | "QUEUED"
-  | "DATA"
-  | "TRANSACTIONS"
-  | "ATTACHMENTS"
-  | "COMPLETED"
-  | "FAILED";
-
-export interface LarkImportTableResult {
-  source: string;
-  tableId: string | null;
-  tableName: string | null;
-  fetched: number;
-  created: number;
-  updated: number;
-  skipped: number;
-  pendingAttachments: number;
-  unmatchedInvoices: string[];
-  error?: string;
-}
-
-export interface LarkImportJobStatus {
-  runId: string | null;
-  running: boolean;
-  dryRun: boolean;
-  phase: LarkImportJobPhase;
-  sources: string[];
-  startedAt: string | null;
-  finishedAt: string | null;
-  fetched: number;
-  created: number;
-  updated: number;
-  skipped: number;
-  fundTransactions: number;
-  attachmentsTotal: number;
-  attachmentsDownloaded: number;
-  attachmentsFailed: number;
-  error: string | null;
-  result: {
-    dryRun: boolean;
-    tables: LarkImportTableResult[];
-    attachments: { total: number; downloaded: number; failed: number };
-    fundTransactions: number;
-  } | null;
 }
 
 export const internalFinanceApi = {
@@ -478,13 +386,6 @@ export const internalFinanceApi = {
 
   cancelVehicleEntry: (id: number): Promise<VehicleEntry> =>
     apiClient.put(`/internal-finance/vehicle-entries/${id}/cancel`),
-
-  backfillExpenseMetadata: (
-    dryRun: boolean,
-  ): Promise<ExpenseMetadataBackfillReport> =>
-    apiClient.post("/internal-finance/maintenance/backfill-expense-metadata", {
-      dryRun,
-    }),
 
   review: (
     id: number,
@@ -599,18 +500,6 @@ export const internalFinanceApi = {
   access: (): Promise<FinanceAccessSummary> =>
     apiClient.get("/internal-finance/access"),
 
-  cutoverStatus: (): Promise<FinanceCutoverStatus> =>
-    apiClient.get("/internal-finance/cutover"),
-
-  setCutover: (locked: boolean): Promise<FinanceCutoverStatus> =>
-    apiClient.post("/internal-finance/cutover", { locked }),
-
-  startSync: (): Promise<FinanceSyncStatus> =>
-    apiClient.post("/internal-finance/sync", {}),
-
-  syncStatus: (): Promise<FinanceSyncStatus> =>
-    apiClient.get("/internal-finance/sync/status"),
-
   checkWarehouseExpense: (
     id: number,
     role: "manager" | "accountant",
@@ -658,13 +547,4 @@ export const internalFinanceApi = {
     attachments: InternalFinanceAttachment[],
   ): Promise<InternalFinanceEntry> =>
     apiClient.post(`/internal-finance/${id}/attachments`, { attachments }),
-
-  startLarkImport: (payload: {
-    dryRun: boolean;
-    sources?: string[];
-  }): Promise<LarkImportJobStatus> =>
-    apiClient.post("/internal-finance/lark-import", payload),
-
-  larkImportStatus: (): Promise<LarkImportJobStatus> =>
-    apiClient.get("/internal-finance/lark-import/status"),
 };
