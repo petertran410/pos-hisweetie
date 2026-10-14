@@ -6,14 +6,21 @@ import { createPortal } from "react-dom";
 import { MiniCalendar } from "@/components/ui/MiniCalendar";
 import { getFixedViewport, normalizeRectForFixed } from "@/lib/utils/zoom";
 
-const formatDateLabel = (value: string) =>
-  value
-    ? new Date(`${value}T00:00:00`).toLocaleDateString("vi-VN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      })
-    : "dd/mm/yyyy";
+const formatDateLabel = (value: string, withTime: boolean) => {
+  if (!value) return withTime ? "dd/mm/yyyy --:--" : "dd/mm/yyyy";
+  const date = new Date(value.includes("T") ? value : `${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  const day = date.toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  if (!withTime) return day;
+  const time = `${String(date.getHours()).padStart(2, "0")}:${String(
+    date.getMinutes(),
+  ).padStart(2, "0")}`;
+  return `${day} ${time}`;
+};
 
 export function InternalFinanceDateField({
   label,
@@ -23,6 +30,7 @@ export function InternalFinanceDateField({
   maxDate,
   compact = false,
   variant = "form",
+  withTime = false,
 }: {
   label: string;
   value: string;
@@ -32,6 +40,8 @@ export function InternalFinanceDateField({
   compact?: boolean;
   /** "filter": cùng kiểu với các ô chọn trong sidebar bộ lọc. */
   variant?: "form" | "filter";
+  /** Chọn cả giờ: giá trị dạng "YYYY-MM-DDTHH:mm" (giờ máy). */
+  withTime?: boolean;
 }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -75,7 +85,7 @@ export function InternalFinanceDateField({
             8,
             Math.min(preferred, viewport.width - width - 8),
           );
-          const estimatedHeight = 350;
+          const estimatedHeight = withTime ? 410 : 350;
           const top =
             rect.bottom + estimatedHeight > viewport.height
               ? Math.max(8, rect.top - estimatedHeight - 8)
@@ -90,9 +100,11 @@ export function InternalFinanceDateField({
                 value={value}
                 minDate={minDate}
                 maxDate={maxDate}
+                withTime={withTime}
                 onChange={(nextValue) => {
                   onChange(nextValue || undefined);
-                  setOpen(false);
+                  // Có giờ thì để mở cho chỉnh giờ; bấm "Xong" mới đóng.
+                  if (!withTime) setOpen(false);
                 }}
                 onClose={() => setOpen(false)}
               />
@@ -140,7 +152,7 @@ export function InternalFinanceDateField({
                 ? "text-[var(--dt-text)]"
                 : "text-[var(--dt-text-muted)]"
           }>
-          {formatDateLabel(value)}
+          {formatDateLabel(value, withTime)}
         </span>
         <CalendarDays
           className={`h-4 w-4 shrink-0 ${

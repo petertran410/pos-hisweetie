@@ -27,6 +27,7 @@ import {
 } from "@/lib/internal-finance/vehicle-constants";
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { useAuthStore } from "@/lib/store/auth";
+import { InternalFinanceDateField } from "./InternalFinanceDateField";
 import { formatCurrency } from "@/lib/utils";
 
 const BRANCH_FALLBACK: Record<number, string> = {
@@ -88,7 +89,8 @@ export function VehicleFinanceForm({
       (id) => entry?.branchId === id || canVehicle(access, "create", id),
     ).map((id) => ({
       id,
-      name: rows.find((branch) => branch.id === id)?.name || BRANCH_FALLBACK[id],
+      name:
+        rows.find((branch) => branch.id === id)?.name || BRANCH_FALLBACK[id],
     }));
   }, [branchData, entry, access]);
 
@@ -140,7 +142,10 @@ export function VehicleFinanceForm({
       label: vehicle.label,
     }));
     // Xe đã ngừng dùng vẫn phải hiện khi sửa phiếu cũ.
-    if (entry?.vehicle && !rows.some((row) => row.value === String(entry.vehicle?.id))) {
+    if (
+      entry?.vehicle &&
+      !rows.some((row) => row.value === String(entry.vehicle?.id))
+    ) {
       rows.unshift({
         value: String(entry.vehicle.id),
         label: entry.vehicle.label,
@@ -260,7 +265,8 @@ export function VehicleFinanceForm({
 
   const pending =
     createFuel.isPending || createCare.isPending || updateEntry.isPending;
-  const labelClass = "flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600";
+  const labelClass =
+    "flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 sm:items-center sm:p-4">
@@ -273,7 +279,8 @@ export function VehicleFinanceForm({
               {isEdit ? "Sửa phiếu xe" : "Tạo phiếu xe"}
             </h2>
             <p className="mt-0.5 text-xs text-gray-500">
-              Phiếu tạo một khoản chi kho, được tổng hợp tuần cùng phiếu chi kho.
+              Phiếu tạo một khoản chi kho, được tổng hợp tuần cùng phiếu chi
+              kho.
             </p>
           </div>
           <button
@@ -291,7 +298,9 @@ export function VehicleFinanceForm({
             <select
               value={kind}
               disabled={isEdit}
-              onChange={(event) => setKind(event.target.value as VehicleEntryKind)}
+              onChange={(event) =>
+                setKind(event.target.value as VehicleEntryKind)
+              }
               className="dt-select h-10 w-full disabled:bg-gray-50">
               <option value="FUEL">Xăng dầu</option>
               <option value="VEHICLE_CARE">Chăm sóc xe</option>
@@ -336,16 +345,13 @@ export function VehicleFinanceForm({
               </span>
             )}
           </label>
-          <label className={labelClass}>
-            Thời gian
-            <input
-              type="datetime-local"
-              value={occurredAt}
-              onChange={(event) => setOccurredAt(event.target.value)}
-              className="dt-input h-10 w-full"
-              required
-            />
-          </label>
+          <InternalFinanceDateField
+            label="Thời gian"
+            value={occurredAt}
+            withTime
+            // Thời gian là bắt buộc: bấm "Xóa" trong lịch thì giữ giá trị cũ.
+            onChange={(value) => value && setOccurredAt(value)}
+          />
           <label className={labelClass}>
             {kind === "FUEL" ? "Số tiền" : "Chi phí (VNĐ)"}
             <input
@@ -410,15 +416,11 @@ export function VehicleFinanceForm({
                   })}
                 </div>
               </div>
-              <label className={labelClass}>
-                Hạn đăng kiểm / bảo hiểm
-                <input
-                  type="date"
-                  value={dueAt}
-                  onChange={(event) => setDueAt(event.target.value)}
-                  className="dt-input h-10 w-full"
-                />
-              </label>
+              <InternalFinanceDateField
+                label="Hạn đăng kiểm / bảo hiểm"
+                value={dueAt}
+                onChange={(value) => setDueAt(value || "")}
+              />
             </>
           )}
 

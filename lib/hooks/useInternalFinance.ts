@@ -352,7 +352,8 @@ export function useUpdateVehicleEntry() {
 export function useCancelVehicleEntry() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => internalFinanceApi.cancelVehicleEntry(id),
+    mutationFn: ({ id, reason }: { id: number; reason: string }) =>
+      internalFinanceApi.cancelVehicleEntry(id, reason),
     onSuccess: () => {
       invalidateInternalFinance(queryClient);
       toast.success("Đã hủy phiếu xe");

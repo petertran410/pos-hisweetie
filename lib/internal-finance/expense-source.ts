@@ -10,7 +10,10 @@ export type ExpenseSourceAction =
  * thì phiếu chi tự cập nhật), phiếu tay sửa ngay ở Phiếu chi kho.
  */
 export function expenseSourceAction(
-  entry: Pick<InternalFinanceEntry, "code" | "sourceType" | "packingSlip">,
+  entry: Pick<
+    InternalFinanceEntry,
+    "code" | "sourceType" | "category" | "packingSlip"
+  >,
 ): ExpenseSourceAction {
   if (entry.packingSlip?.code) {
     return {
@@ -19,11 +22,15 @@ export function expenseSourceAction(
       href: `/don-hang/bao-don?Code=${encodeURIComponent(entry.packingSlip.code)}`,
     };
   }
-  if (entry.sourceType === "FUEL" || entry.sourceType === "VEHICLE_CARE") {
+  // Phiếu xe tạo trên POS hoặc chuyển từ Lark đều sửa ở trang Xe cộ.
+  if (
+    (entry.category === "FUEL" || entry.category === "VEHICLE_CARE") &&
+    ["FUEL", "VEHICLE_CARE", "LARK_IMPORT"].includes(entry.sourceType)
+  ) {
     return {
       kind: "link",
       label: "Sửa ở Xe cộ",
-      href: `/tai-chinh/xe-co?Code=${encodeURIComponent(entry.code)}&kind=${entry.sourceType}`,
+      href: `/tai-chinh/xe-co?Code=${encodeURIComponent(entry.code)}&kind=${entry.category}`,
     };
   }
   if (entry.sourceType === "MANUAL_EXPENSE") {

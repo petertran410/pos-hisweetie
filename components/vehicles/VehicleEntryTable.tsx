@@ -118,7 +118,8 @@ export function VehicleEntryTable({
   kind,
   rows,
   isLoading,
-  canEdit,
+  editBlockReason,
+  cancelBlockReason,
   cancellingId,
   onOpenAttachments,
   onEdit,
@@ -129,7 +130,9 @@ export function VehicleEntryTable({
   kind: VehicleEntryKind;
   rows: VehicleEntry[];
   isLoading: boolean;
-  canEdit: (row: VehicleEntry) => boolean;
+  /** Lý do khóa nút Sửa / Hủy (null: bấm được). Nút luôn hiện. */
+  editBlockReason: (row: VehicleEntry) => string | null;
+  cancelBlockReason: (row: VehicleEntry) => string | null;
   cancellingId: number | null;
   onOpenAttachments: (row: VehicleEntry) => void;
   onEdit: (row: VehicleEntry) => void;
@@ -215,6 +218,20 @@ export function VehicleEntryTable({
             }`}>
             {ENTRY_STATUS_LABELS[row.status] || row.status}
           </span>
+          {row.status === "CANCELLED" && row.cancelReason && (
+            <div
+              className="mt-0.5 max-w-[160px] break-words text-[11px] text-red-600"
+              title={[
+                row.canceller?.name,
+                row.cancelledAt
+                  ? new Date(row.cancelledAt).toLocaleString("vi-VN")
+                  : "",
+              ]
+                .filter(Boolean)
+                .join(" · ")}>
+              {row.cancelReason}
+            </div>
+          )}
           {row.weeklyBatch?.code && (
             <div
               className="mt-0.5 max-w-[130px] truncate font-mono text-[11px] text-gray-400"
@@ -445,29 +462,41 @@ export function VehicleEntryTable({
                   </td>
                 ))}
                 <td className="px-3 py-2.5">
-                  {canEdit(row) && (
-                    <div className="flex justify-end gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => onEdit(row)}
-                        className="inline-flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-50">
-                        <FileText className="h-3.5 w-3.5" />
-                        Sửa
-                      </button>
-                      <button
-                        type="button"
-                        disabled={cancellingId === row.id}
-                        onClick={() => onCancel(row)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50">
-                        {cancellingId === row.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Ban className="h-3.5 w-3.5" />
-                        )}
-                        Hủy
-                      </button>
-                    </div>
-                  )}
+                  {(() => {
+                    const editBlock = editBlockReason(row);
+                    const cancelBlock = cancelBlockReason(row);
+                    return (
+                      <div className="flex justify-end gap-1.5">
+                        {/* Nút khóa vẫn hiện, rê chuột xem lý do. */}
+                        <span title={editBlock || "Sửa phiếu xe"}>
+                          <button
+                            type="button"
+                            disabled={Boolean(editBlock)}
+                            onClick={() => onEdit(row)}
+                            className="inline-flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent">
+                            <FileText className="h-3.5 w-3.5" />
+                            Sửa
+                          </button>
+                        </span>
+                        <span title={cancelBlock || "Hủy phiếu xe"}>
+                          <button
+                            type="button"
+                            disabled={
+                              Boolean(cancelBlock) || cancellingId === row.id
+                            }
+                            onClick={() => onCancel(row)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent">
+                            {cancellingId === row.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Ban className="h-3.5 w-3.5" />
+                            )}
+                            Hủy
+                          </button>
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </td>
               </tr>
             ))

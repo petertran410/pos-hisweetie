@@ -404,8 +404,10 @@ export const internalFinanceApi = {
   ): Promise<VehicleEntry> =>
     apiClient.patch(`/internal-finance/vehicle-entries/${id}`, payload),
 
-  cancelVehicleEntry: (id: number): Promise<VehicleEntry> =>
-    apiClient.put(`/internal-finance/vehicle-entries/${id}/cancel`),
+  cancelVehicleEntry: (id: number, reason: string): Promise<VehicleEntry> =>
+    apiClient.put(`/internal-finance/vehicle-entries/${id}/cancel`, {
+      reason,
+    }),
 
   review: (
     id: number,

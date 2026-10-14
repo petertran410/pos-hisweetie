@@ -39,7 +39,8 @@ import { useVehicles } from "@/lib/hooks/useVehicles";
 import {
   VEHICLE_BRANCH_IDS,
   canVehicle,
-  isExpenseOpenForEdit,
+  vehicleCancelBlockReason,
+  vehicleEditBlockReason,
 } from "@/lib/internal-finance/vehicle-constants";
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import {
@@ -220,10 +221,11 @@ function VehicleScreen() {
     0,
   );
 
-  const canEditRow = (row: VehicleEntry) =>
-    ["FUEL", "VEHICLE_CARE"].includes(row.sourceType) &&
-    isExpenseOpenForEdit(row) &&
-    canVehicle(access, "update", row.branchId);
+  const editBlockReason = (row: VehicleEntry) =>
+    vehicleEditBlockReason(row, canVehicle(access, "update", row.branchId));
+  const cancelBlockReason = (row: VehicleEntry) =>
+    vehicleCancelBlockReason(row, canVehicle(access, "update", row.branchId));
+  const canEditRow = (row: VehicleEntry) => !editBlockReason(row);
   const linkedRow = codeParam
     ? rows.find((row) => row.code === codeParam)
     : undefined;
@@ -246,8 +248,13 @@ function VehicleScreen() {
   const handleCancel = async (row: VehicleEntry) => {
     const result = await Swal.fire({
       title: "Hủy phiếu xe?",
-      text: `${row.vehicle?.label || row.vehicleName || row.code} – ${formatCurrency(row.amount)} đ. Phiếu đã hủy không được tổng hợp tuần.`,
+      text: `${row.vehicle?.label || row.vehicleName || row.code} – ${formatCurrency(row.amount)} đ. Phiếu đã hủy không được tổng hợp tuần và không ghi quỹ.`,
       icon: "warning",
+      input: "textarea",
+      inputPlaceholder: "Lý do hủy phiếu",
+      inputAttributes: { maxlength: "500" },
+      inputValidator: (value) =>
+        value?.trim() ? undefined : "Cần nhập lý do hủy",
       showCancelButton: true,
       confirmButtonText: "Hủy phiếu",
       cancelButtonText: "Giữ lại",
@@ -255,7 +262,10 @@ function VehicleScreen() {
     });
     if (!result.isConfirmed) return;
     setCancellingId(row.id);
-    cancelEntry.mutate(row.id, { onSettled: () => setCancellingId(null) });
+    cancelEntry.mutate(
+      { id: row.id, reason: String(result.value).trim() },
+      { onSettled: () => setCancellingId(null) },
+    );
   };
 
   return (
@@ -387,7 +397,8 @@ function VehicleScreen() {
                     kind={kind}
                     rows={rows}
                     isLoading={entries.isLoading}
-                    canEdit={canEditRow}
+                    editBlockReason={editBlockReason}
+                    cancelBlockReason={cancelBlockReason}
                     highlightId={linkedRow?.id}
                     cancellingId={cancellingId}
                     onOpenAttachments={setAttachmentRow}
