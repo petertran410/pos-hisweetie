@@ -284,6 +284,36 @@ export function useCheckWarehouseExpense() {
   });
 }
 
+export function useBulkCheckWarehouseExpenses() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: internalFinanceApi.bulkCheckWarehouseExpenses,
+    // Tick hiện ngay trên các dòng đã chọn, không chờ tải lại bảng.
+    onMutate: async ({ ids, role }) => {
+      await queryClient.cancelQueries({ queryKey: ["warehouse-expenses"] });
+      const at = new Date().toISOString();
+      for (const id of ids)
+        replaceWarehouseExpenseRow(queryClient, id, (row) =>
+          role === "manager"
+            ? { ...row, managerReviewedAt: row.managerReviewedAt || at }
+            : { ...row, accountantReviewedAt: row.accountantReviewedAt || at },
+        );
+    },
+    onSuccess: (result) => {
+      for (const entry of result.updated)
+        replaceWarehouseExpenseRow(queryClient, entry.id, (row) => ({
+          ...row,
+          ...entry,
+        }));
+      invalidateInternalFinance(queryClient);
+    },
+    onError: (error) => {
+      queryClient.invalidateQueries({ queryKey: ["warehouse-expenses"] });
+      toast.error(errorMessage(error, "Tick hàng loạt thất bại"));
+    },
+  });
+}
+
 /** Sửa một dòng trong mọi trang danh sách phiếu chi kho đang lưu cache. */
 function replaceWarehouseExpenseRow(
   queryClient: ReturnType<typeof useQueryClient>,

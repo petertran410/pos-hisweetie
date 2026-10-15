@@ -56,8 +56,8 @@ export function InternalFinanceWeeklyPanel({
   const { data: branchData } = useBranches();
   const access = useFinanceAccess();
   const can = (action: string, id: number) =>
-    access.can("warehouse_expense", action, id);
-  const allowedIds = access.branches("warehouse_expense", "view", BRANCH_IDS);
+    access.can("weekly_approval", action, id);
+  const allowedIds = access.branches("weekly_approval", "view", BRANCH_IDS);
   const branches = useMemo(
     () =>
       asBranches(branchData).filter((branch) => allowedIds.includes(branch.id)),

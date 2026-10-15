@@ -121,7 +121,7 @@ export default function ApprovalTuanPage() {
   const searchParams = useSearchParams();
   const access = useFinanceAccess();
   const can = useCallback(
-    (action: string, id: number) => access.can("warehouse_expense", action, id),
+    (action: string, id: number) => access.can("weekly_approval", action, id),
     [access],
   );
   const canPrepareAny = BRANCH_IDS.some((id) => can("prepare", id));
@@ -230,7 +230,7 @@ export default function ApprovalTuanPage() {
 
   return (
     <FinancePageGuard
-      permissions={[{ resource: "warehouse_expense", action: "view" }]}>
+      permissions={[{ resource: "weekly_approval", action: "view" }]}>
       <div
         className={`flex h-full min-h-0 overflow-hidden border-t ${
           isMobile ? "flex-col" : ""

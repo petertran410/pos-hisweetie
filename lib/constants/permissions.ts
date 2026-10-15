@@ -36,6 +36,8 @@ export const RESOURCE_LABELS: Record<string, string> = {
   cash_flows: "Sổ quỹ",
   warehouse_cash: "Tiền mặt kho",
   warehouse_expense: "Phiếu chi kho",
+  internal_finance: "Tài chính nội bộ",
+  weekly_approval: "Approval tuần",
   internal_fund: "Quỹ nội bộ",
   vehicles: "Xe cộ",
   reports: "Báo cáo",
@@ -379,7 +381,10 @@ export const LEGACY_REPORT_ACTIONS = ["sales", "inventory", "customer"];
  * - các resource khác → giữ nguyên resource.
  * Trả null nếu là quyền cần ẩn (legacy reports).
  */
-export function getPermGroupKey(resource: string, action: string): string | null {
+export function getPermGroupKey(
+  resource: string,
+  action: string,
+): string | null {
   if (resource !== "reports") return resource;
   if (LEGACY_REPORT_ACTIONS.includes(action)) return null;
   return REPORT_ACTION_TO_SUBGROUP[action] || "reports";

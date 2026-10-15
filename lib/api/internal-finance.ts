@@ -571,6 +571,16 @@ export const internalFinanceApi = {
   access: (): Promise<FinanceAccessSummary> =>
     apiClient.get("/internal-finance/access"),
 
+  bulkCheckWarehouseExpenses: (payload: {
+    ids: number[];
+    role: "manager" | "accountant";
+  }): Promise<{
+    updated: InternalFinanceEntry[];
+    skipped: Array<{ id: number; code: string; reason: string }>;
+    alreadyChecked: number;
+  }> =>
+    apiClient.patch("/internal-finance/warehouse-expenses/check-bulk", payload),
+
   checkWarehouseExpense: (
     id: number,
     role: "manager" | "accountant",

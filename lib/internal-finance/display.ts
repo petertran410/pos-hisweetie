@@ -111,9 +111,16 @@ function businessDateFromSnapshot(
   snapshot?: Record<string, unknown> | null,
 ): string | null {
   const fields = snapshot?.fields;
-  if (!fields || typeof fields !== "object" || Array.isArray(fields)) return null;
+  if (!fields || typeof fields !== "object" || Array.isArray(fields))
+    return null;
   const record = fields as Record<string, unknown>;
-  for (const key of ["Năm-Tháng", "NĂM/THÁNG/NGÀY", "Ngày", "Ngày chi", "Ngày thu"]) {
+  for (const key of [
+    "Năm-Tháng",
+    "NĂM/THÁNG/NGÀY",
+    "Ngày",
+    "Ngày chi",
+    "Ngày thu",
+  ]) {
     const parsed = dateFromText(plainText(record[key]));
     if (parsed) return parsed;
   }
@@ -169,4 +176,25 @@ function normalizeKey(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+}
+
+// Mã loại phí cũ ghi thẳng vào nội dung phiếu (vd "FEE_GUI_BEN - BD-123").
+const DESCRIPTION_CODE_LABELS: Record<string, string> = {
+  FEE_GUI_BEN: "Phí gửi bến",
+  FEE_GRAB: "Phí Grab",
+  SHIPPING_OUT: "Cước gửi hàng",
+  SHIPPING_IN: "Cước nhận hàng",
+  DELIVERY_FEE: "Chi phí giao hàng",
+  OTHER_EXPENSE: "Chi phí khác",
+  VEHICLE_CARE: "Chăm sóc xe",
+  CUSTOMER_RECEIPT: "Thu tiền khách",
+};
+
+/** Nội dung phiếu để hiển thị: đổi các mã tiếng Anh còn sót sang tiếng Việt. */
+export function displayDescription(text?: string | null) {
+  if (!text) return text || "";
+  return text.replace(
+    /\b(FEE_GUI_BEN|FEE_GRAB|SHIPPING_OUT|SHIPPING_IN|DELIVERY_FEE|OTHER_EXPENSE|VEHICLE_CARE|CUSTOMER_RECEIPT)\b/g,
+    (code) => DESCRIPTION_CODE_LABELS[code] || code,
+  );
 }

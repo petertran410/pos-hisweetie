@@ -11,6 +11,7 @@ import {
   displayOccurredAt,
   displaySource,
   humanSnapshotRows,
+  displayDescription,
 } from "@/lib/internal-finance/display";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -83,7 +84,9 @@ function DetailTable({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">{children}</tbody>
+          <tbody className="divide-y divide-gray-200 bg-white">
+            {children}
+          </tbody>
         </table>
       </div>
     </div>
@@ -148,13 +151,18 @@ export function InternalFinanceDetailRow({
       <td
         colSpan={colSpan}
         className="border-b-2 border-l-2 border-r-2 border-brand bg-gray-50">
-        <div ref={wrapperRef} className="sticky left-0 bg-gray-50" style={{ width: 0 }}>
+        <div
+          ref={wrapperRef}
+          className="sticky left-0 bg-gray-50"
+          style={{ width: 0 }}>
           <div className="overflow-hidden border border-gray-200 bg-white">
             <div className="p-4">
               <div className="mb-4 border-b border-gray-200 pb-3">
                 <div className="mb-4 flex items-center justify-between border-b pb-2">
                   <div className="flex min-w-0 items-center gap-2">
-                    <span className="text-lg font-bold text-brand">{entryCode}</span>
+                    <span className="text-lg font-bold text-brand">
+                      {entryCode}
+                    </span>
                     <span className="text-gray-400">-</span>
                     {row.customer?.code ? (
                       <>
@@ -195,7 +203,9 @@ export function InternalFinanceDetailRow({
                 <div className="grid grid-cols-3 gap-x-8 pb-4">
                   <InfoField
                     label="Loại phiếu:"
-                    value={row.direction === "RECEIPT" ? "Phiếu thu" : "Phiếu chi"}
+                    value={
+                      row.direction === "RECEIPT" ? "Phiếu thu" : "Phiếu chi"
+                    }
                   />
                   <InfoField
                     label="Ngày:"
@@ -219,7 +229,10 @@ export function InternalFinanceDetailRow({
                       </span>
                     }
                   />
-                  <InfoField label="Nguồn:" value={displaySource(row.sourceType, row.category)} />
+                  <InfoField
+                    label="Nguồn:"
+                    value={displaySource(row.sourceType, row.category)}
+                  />
                   <InfoField
                     label="Báo đơn:"
                     value={row.packingSlip?.code || "-"}
@@ -227,20 +240,20 @@ export function InternalFinanceDetailRow({
                   <InfoField
                     label="Approval tuần:"
                     value={
-                      row.weeklyBatch
-                        ? (
-                            <Link
-                              href={`/tai-chinh/approval-tuan?batchId=${row.weeklyBatch.id}`}
-                              onClick={(event) => event.stopPropagation()}
-                              className="text-brand hover:underline">
-                              {row.weeklyBatch.code} ·{" "}
-                              {STATUS_LABELS[row.weeklyBatch.status] ||
-                                row.weeklyBatch.status}
-                            </Link>
-                          )
-                        : row.direction === "RECEIPT"
-                          ? "Không áp dụng"
-                          : "-"
+                      row.weeklyBatch ? (
+                        <Link
+                          href={`/tai-chinh/approval-tuan?batchId=${row.weeklyBatch.id}`}
+                          onClick={(event) => event.stopPropagation()}
+                          className="text-brand hover:underline">
+                          {row.weeklyBatch.code} ·{" "}
+                          {STATUS_LABELS[row.weeklyBatch.status] ||
+                            row.weeklyBatch.status}
+                        </Link>
+                      ) : row.direction === "RECEIPT" ? (
+                        "Không áp dụng"
+                      ) : (
+                        "-"
+                      )
                     }
                   />
                   <InfoField
@@ -274,7 +287,10 @@ export function InternalFinanceDetailRow({
                             : "Chờ Approval tuần"
                     }
                   />
-                  <InfoField label="Nội dung:" value={row.description || "-"} />
+                  <InfoField
+                    label="Nội dung:"
+                    value={displayDescription(row.description) || "-"}
+                  />
                   {row.direction === "EXPENSE" && (
                     <>
                       <InfoField
@@ -294,16 +310,22 @@ export function InternalFinanceDetailRow({
                       {row.vehicle && (
                         <InfoField label="Xe:" value={row.vehicle.label} />
                       )}
-                      {row.note && <InfoField label="Ghi chú:" value={row.note} />}
+                      {row.note && (
+                        <InfoField label="Ghi chú:" value={row.note} />
+                      )}
                     </>
                   )}
                 </div>
               </div>
 
               {snapshotRows.length > 0 && (
-                <DetailTable title="Chi tiết phát sinh" headers={["Hạng mục", "Giá trị"]}>
+                <DetailTable
+                  title="Chi tiết phát sinh"
+                  headers={["Hạng mục", "Giá trị"]}>
                   {snapshotRows.map((item) => (
-                    <tr key={item.label} className="transition-colors hover:bg-gray-50">
+                    <tr
+                      key={item.label}
+                      className="transition-colors hover:bg-gray-50">
                       <td className="px-[10px] py-2 text-sm text-gray-900">
                         {item.label}
                       </td>
@@ -316,9 +338,13 @@ export function InternalFinanceDetailRow({
               )}
 
               {row.invoiceLinks.length > 0 && (
-                <DetailTable title="Hóa đơn liên quan" headers={["STT", "Mã hóa đơn"]}>
+                <DetailTable
+                  title="Hóa đơn liên quan"
+                  headers={["STT", "Mã hóa đơn"]}>
                   {row.invoiceLinks.map(({ invoice }, index) => (
-                    <tr key={invoice.id} className="transition-colors hover:bg-gray-50">
+                    <tr
+                      key={invoice.id}
+                      className="transition-colors hover:bg-gray-50">
                       <td className="px-[10px] py-2 text-center text-sm text-gray-900">
                         {index + 1}
                       </td>
@@ -330,16 +356,22 @@ export function InternalFinanceDetailRow({
                 </DetailTable>
               )}
 
-              <DetailTable title="Chứng từ" headers={["STT", "Tên file", "Loại"]}>
+              <DetailTable
+                title="Chứng từ"
+                headers={["STT", "Tên file", "Loại"]}>
                 {row.attachments.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="px-[10px] py-6 text-center text-sm text-gray-400">
+                    <td
+                      colSpan={3}
+                      className="px-[10px] py-6 text-center text-sm text-gray-400">
                       Chưa có chứng từ
                     </td>
                   </tr>
                 ) : (
                   row.attachments.map((attachment, index) => (
-                    <tr key={attachment.fileUrl} className="transition-colors hover:bg-gray-50">
+                    <tr
+                      key={attachment.fileUrl}
+                      className="transition-colors hover:bg-gray-50">
                       <td className="px-[10px] py-2 text-center text-sm text-gray-900">
                         {index + 1}
                       </td>
@@ -365,7 +397,9 @@ export function InternalFinanceDetailRow({
                   title="Lịch sử kiểm tra"
                   headers={["Người kiểm tra", "Vai trò", "Kết quả", "Lý do"]}>
                   {row.reviews.map((review) => (
-                    <tr key={review.id} className="transition-colors hover:bg-gray-50">
+                    <tr
+                      key={review.id}
+                      className="transition-colors hover:bg-gray-50">
                       <td className="px-[10px] py-2 text-sm text-gray-900">
                         {review.reviewer?.name || "-"}
                       </td>

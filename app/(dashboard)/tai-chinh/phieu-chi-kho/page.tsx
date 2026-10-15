@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "sonner";
+import { BulkCheckBar } from "@/components/warehouse-expense/BulkCheckBar";
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
 import { TablePagination } from "@/components/shared/TablePagination";
 import { usePageSize } from "@/lib/hooks/usePageSize";
@@ -10,7 +12,7 @@ import { useColumnToggle } from "@/lib/hooks/useColumnToggle";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { CalendarRange, Plus, WalletCards } from "lucide-react";
+import { CalendarRange, Plus, WalletCards, X } from "lucide-react";
 import Swal from "sweetalert2";
 import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
 import { WarehouseCashAttachmentsModal } from "@/components/warehouse-cash/WarehouseCashAttachmentsModal";
@@ -32,6 +34,7 @@ import type {
   WarehouseExpenseQuery,
 } from "@/lib/api/internal-finance";
 import {
+  useBulkCheckWarehouseExpenses,
   useCancelWarehouseExpense,
   useCheckWarehouseExpense,
   useMarkWarehouseExpenseIssued,
@@ -75,6 +78,9 @@ function WarehouseExpenseScreen() {
   const [openedCode, setOpenedCode] = useState("");
   const markIssued = useMarkWarehouseExpenseIssued();
   const check = useCheckWarehouseExpense();
+  const bulkCheck = useBulkCheckWarehouseExpenses();
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [selectMode, setSelectMode] = useState(false);
   const cancel = useCancelWarehouseExpense();
 
   // Link mới (đang ở trang mà bấm link khác): tìm theo mã mới ngay.
@@ -179,6 +185,102 @@ function WarehouseExpenseScreen() {
     (inApprovedBatch(row) || isExpenseCheckOpen(row));
   const canCancelRow = (row: InternalFinanceEntry) =>
     isExpenseCancellable(row) && canAction("cancel", row.branchId);
+  // Tick hàng loạt: chọn phiếu còn tick được và user có quyền tick ở kho đó.
+  const canCheckAny = (row: InternalFinanceEntry) =>
+    canAction("check_manager", row.branchId) ||
+    canAction("check_accountant", row.branchId);
+  const selectBlockReason = (row: InternalFinanceEntry) => {
+    if (!isExpenseCheckOpen(row))
+      return "Phiếu đã chi, đã hủy hoặc đã gửi Approval tuần";
+    if (!canCheckAny(row)) return "Không có quyền tick ở kho này";
+    if (row.managerReviewedAt && row.accountantReviewedAt)
+      return "Đã đủ hai tick";
+    return null;
+  };
+  const showSelection = rows.some(canCheckAny);
+  // Đổi trang / bộ lọc / tìm kiếm thì bỏ chọn.
+  const selectionKey = JSON.stringify(query);
+  const [seenSelectionKey, setSeenSelectionKey] = useState(selectionKey);
+  if (selectionKey !== seenSelectionKey) {
+    setSeenSelectionKey(selectionKey);
+    if (selected.size) setSelected(new Set());
+  }
+  const selectedRows = rows.filter((row) => selected.has(row.id));
+  const toggleSelected = (id: number) =>
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const handleBulkTick = async (role: "manager" | "accountant") => {
+    const label = role === "manager" ? "Quản lý kho" : "Kế toán kho";
+    const ids = selectedRows.map((row) => row.id);
+    const amount = selectedRows.reduce(
+      (sum, row) => sum + Number(row.amount || 0),
+      0,
+    );
+    const confirm = await Swal.fire({
+      title: `Tick ${label} cho ${ids.length} phiếu?`,
+      html: `<p class="text-sm text-gray-600">Tổng tiền <strong>${formatCurrency(amount)}</strong>. Phiếu đã tick ${label} sẵn được giữ nguyên.</p>`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: `Tick ${label}`,
+      cancelButtonText: "Hủy bỏ",
+      confirmButtonColor: "#0f766e",
+    });
+    if (!confirm.isConfirmed) return;
+    bulkCheck.mutate(
+      { ids, role },
+      {
+        onSuccess: (result) => {
+          setSelected(new Set());
+          setSelectMode(false);
+          const done = result.updated.length;
+          if (!result.skipped.length) {
+            toast.success(
+              `Đã tick ${label} ${done} phiếu` +
+                (result.alreadyChecked
+                  ? `, ${result.alreadyChecked} phiếu đã tick sẵn`
+                  : ""),
+            );
+            return;
+          }
+          void Swal.fire({
+            title: `Đã tick ${done}/${ids.length} phiếu`,
+            icon: "warning",
+            html: `<p class="mb-2 text-sm text-gray-600">Các phiếu sau không tick được:</p><ul class="max-h-60 overflow-auto text-left text-sm">${result.skipped
+              .map(
+                (item) =>
+                  `<li class="py-0.5"><strong>${item.code}</strong>: ${item.reason}</li>`,
+              )
+              .join("")}</ul>`,
+            confirmButtonText: "Đóng",
+          });
+        },
+      },
+    );
+  };
+  const bulkBar = selected.size ? (
+    <BulkCheckBar
+      count={selectedRows.length}
+      amount={selectedRows.reduce(
+        (sum, row) => sum + Number(row.amount || 0),
+        0,
+      )}
+      canManager={selectedRows.some((row) =>
+        canAction("check_manager", row.branchId),
+      )}
+      canAccountant={selectedRows.some((row) =>
+        canAction("check_accountant", row.branchId),
+      )}
+      pending={bulkCheck.isPending}
+      onTick={(role) => void handleBulkTick(role)}
+      onClear={() => setSelected(new Set())}
+      floating={isMobile}
+    />
+  ) : null;
+
   const activeFilterCount = [
     filters.branchId,
     filters.category,
@@ -279,7 +381,26 @@ function WarehouseExpenseScreen() {
             onMarkIssued={handleMarkIssued}
             onCancel={handleCancel}
             onOpenNotes={setNotesRow}
+            selection={
+              showSelection
+                ? {
+                    selected,
+                    blockReason: selectBlockReason,
+                    onToggle: toggleSelected,
+                  }
+                : undefined
+            }
+            selectMode={selectMode}
+            onToggleSelectMode={
+              showSelection
+                ? () => {
+                    setSelectMode((current) => !current);
+                    setSelected(new Set());
+                  }
+                : undefined
+            }
           />
+          {bulkBar}
         </div>
       ) : (
         <div className="flex h-full min-h-0 overflow-hidden border-t bg-gray-50">
@@ -296,17 +417,32 @@ function WarehouseExpenseScreen() {
                     Phiếu chi kho
                   </h1>
                 </div>
-                <input
-                  value={search}
-                  onChange={(event) => {
-                    setSearch(event.target.value);
-                    setPage(1);
-                    if (event.target.value.trim() !== codeParam)
-                      clearCodeParam();
-                  }}
-                  placeholder="Tìm mã, nội dung, ghi chú, xe, mã báo đơn..."
-                  className="h-9 w-64 rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-                />
+                <div className="relative">
+                  <input
+                    value={search}
+                    onChange={(event) => {
+                      setSearch(event.target.value);
+                      setPage(1);
+                      if (event.target.value.trim() !== codeParam)
+                        clearCodeParam();
+                    }}
+                    placeholder="Tìm mã, nội dung, ghi chú, xe, mã báo đơn..."
+                    className="h-9 w-64 rounded-lg border px-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                  />
+                  {search && (
+                    <button
+                      type="button"
+                      title="Xóa tìm kiếm"
+                      onClick={() => {
+                        setSearch("");
+                        setPage(1);
+                        clearCodeParam();
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-gray-400 hover:bg-gray-100">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="flex shrink-0 flex-wrap items-center gap-2">
                 {canAction("create") && (
@@ -327,28 +463,8 @@ function WarehouseExpenseScreen() {
                 <ColumnToggle columns={columns} onToggle={toggleColumn} />
               </div>
             </div>
-            <div className="flex shrink-0 items-center justify-end gap-4 border-b px-4 py-2 text-sm">
-              <span className="text-gray-500">
-                Số dòng: <strong className="text-gray-900">{total}</strong>
-              </span>
-              <span className="text-gray-500">
-                Tổng tiền trang:{" "}
-                <strong className="text-red-600">
-                  {formatCurrency(pageAmount)}
-                </strong>
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setSearch("");
-                  clearCodeParam();
-                }}
-                className="text-sm font-medium text-brand hover:underline">
-                Xóa tìm kiếm
-              </button>
-            </div>
-
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              {bulkBar}
               {expenses.isError ? (
                 <div className="flex flex-1 items-center justify-center text-sm text-red-600">
                   {expenses.error instanceof Error
@@ -376,6 +492,23 @@ function WarehouseExpenseScreen() {
                   onCancel={handleCancel}
                   onOpenNotes={setNotesRow}
                   shows={shows}
+                  selection={
+                    showSelection
+                      ? {
+                          selected,
+                          blockReason: selectBlockReason,
+                          onToggle: toggleSelected,
+                          onToggleAll: (ids, checked) =>
+                            setSelected((current) => {
+                              const next = new Set(current);
+                              for (const id of ids)
+                                if (checked) next.add(id);
+                                else next.delete(id);
+                              return next;
+                            }),
+                        }
+                      : undefined
+                  }
                 />
               )}
               <TablePagination

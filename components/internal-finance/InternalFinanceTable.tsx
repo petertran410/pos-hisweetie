@@ -18,6 +18,7 @@ import {
   displayEntryCode,
   displayOccurredAt,
   displaySource,
+  displayDescription,
 } from "@/lib/internal-finance/display";
 import { InternalFinanceDetailRow } from "./InternalFinanceDetailRow";
 
@@ -238,7 +239,7 @@ export function InternalFinanceTable({
                   </div>
                   {row.description && (
                     <div className="line-clamp-2 break-words">
-                      {row.description}
+                      {displayDescription(row.description)}
                     </div>
                   )}
                   <div>
@@ -417,7 +418,7 @@ export function InternalFinanceTable({
                           </div>
                           {row.description && (
                             <div className="max-w-[220px] truncate text-xs text-gray-500">
-                              {row.description}
+                              {displayDescription(row.description)}
                             </div>
                           )}
                         </td>

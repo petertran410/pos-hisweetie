@@ -87,15 +87,16 @@ export const ROUTE_PERMISSIONS: Record<
   "/khach-hang": { resource: "customers", action: "view" },
   "/so-quy": { resource: "cash_flows", action: "view" },
   "/tai-chinh/so-quy": { resource: "cash_flows", action: "view" },
-  "/tai-chinh/tai-chinh-noi-bo": { resource: "cash_flows", action: "view" },
+  "/tai-chinh/tai-chinh-noi-bo": {
+    resource: "internal_finance",
+    action: "view",
+  },
   "/tai-chinh/tien-mat-kho": { resource: "warehouse_cash", action: "view" },
   "/tai-chinh/phieu-chi-kho": [
     { resource: "warehouse_expense", action: "view" },
   ],
-  "/tai-chinh/quy-noi-bo": [
-    { resource: "internal_fund", action: "view" },
-  ],
-  "/tai-chinh/approval-tuan": { resource: "warehouse_expense", action: "view" },
+  "/tai-chinh/quy-noi-bo": [{ resource: "internal_fund", action: "view" }],
+  "/tai-chinh/approval-tuan": { resource: "weekly_approval", action: "view" },
   "/tai-chinh/xe-co": [
     { resource: "vehicles", action: "view" },
     { resource: "vehicles", action: "create" },
@@ -144,13 +145,13 @@ export const NAV_CONFIG: NavSection[] = [
         permission: { resource: "transfers", action: "view" },
       },
       {
-key: "transfer-planning",
-          label: "Dự kiến chuyển kho",
-          href: "/san-pham/du-kien-chuyen-kho",
-          permission: [
-            { resource: "transfer_planning", action: "view" },
-            { resource: "transfers", action: "view" },
-          ],
+        key: "transfer-planning",
+        label: "Dự kiến chuyển kho",
+        href: "/san-pham/du-kien-chuyen-kho",
+        permission: [
+          { resource: "transfer_planning", action: "view" },
+          { resource: "transfers", action: "view" },
+        ],
       },
       {
         key: "product-quality",
@@ -336,7 +337,7 @@ key: "transfer-planning",
         key: "internal-finance",
         label: "Tài chính nội bộ",
         href: "/tai-chinh/tai-chinh-noi-bo",
-        permission: { resource: "cash_flows", action: "view" },
+        permission: { resource: "internal_finance", action: "view" },
       },
       {
         key: "warehouse-cash",
@@ -348,23 +349,19 @@ key: "transfer-planning",
         key: "warehouse-expense",
         label: "Phiếu chi kho",
         href: "/tai-chinh/phieu-chi-kho",
-        permission: [
-          { resource: "warehouse_expense", action: "view" },
-        ],
+        permission: [{ resource: "warehouse_expense", action: "view" }],
       },
       {
         key: "internal-fund",
         label: "Quỹ nội bộ",
         href: "/tai-chinh/quy-noi-bo",
-        permission: [
-          { resource: "internal_fund", action: "view" },
-        ],
+        permission: [{ resource: "internal_fund", action: "view" }],
       },
       {
         key: "internal-finance-weekly-approvals",
         label: "Approval tuần",
         href: "/tai-chinh/approval-tuan",
-        permission: { resource: "warehouse_expense", action: "view" },
+        permission: { resource: "weekly_approval", action: "view" },
       },
       {
         key: "vehicle-finance",
@@ -401,11 +398,11 @@ export const POS_ACTIONS: NavItem[] = [
 ];
 
 export function getRoutePermission(
-  path: string
+  path: string,
 ): PermissionDef | PermissionDef[] | null {
   if (ROUTE_PERMISSIONS[path]) return ROUTE_PERMISSIONS[path];
   const match = Object.entries(ROUTE_PERMISSIONS).find(([route]) =>
-    path.startsWith(route)
+    path.startsWith(route),
   );
   return match ? match[1] : null;
 }

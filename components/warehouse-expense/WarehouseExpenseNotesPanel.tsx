@@ -21,6 +21,7 @@ import {
 import {
   displayOccurredAt,
   displaySource,
+  displayDescription,
 } from "@/lib/internal-finance/display";
 import {
   expenseLockReason,
@@ -153,7 +154,7 @@ export function WarehouseExpenseNotesPanel({
           <div className="col-span-2 min-w-0">
             <div className="text-xs text-gray-500">Nội dung</div>
             <div className="break-words text-gray-900">
-              {entry.description || "-"}
+              {displayDescription(entry.description) || "-"}
             </div>
           </div>
           <div className="col-span-2 space-y-2 pt-1">

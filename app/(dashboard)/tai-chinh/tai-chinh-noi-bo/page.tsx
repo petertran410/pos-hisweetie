@@ -32,7 +32,7 @@ const STORAGE_KEY = "internal-finance-sidebar-filters";
 export default function TaiChinhNoiBoPage() {
   const access = useFinanceAccess();
   const headerBranchId = useHeaderBranchId(FINANCE_BRANCH_IDS, (id) =>
-    access.can("cash_flows", "view", id),
+    access.can("internal_finance", "view", id),
   );
   const [pageSize, setPageSize] = usePageSize("internalFinancePageSize");
   const [filters, setFilters] = useState<InternalFinanceQuery>(() => ({
@@ -110,7 +110,7 @@ export default function TaiChinhNoiBoPage() {
 
   return (
     <FinancePageGuard
-      permissions={[{ resource: "cash_flows", action: "view" }]}>
+      permissions={[{ resource: "internal_finance", action: "view" }]}>
       <div
         className={`flex h-full min-h-0 overflow-hidden border-t ${
           isMobile ? "flex-col" : ""

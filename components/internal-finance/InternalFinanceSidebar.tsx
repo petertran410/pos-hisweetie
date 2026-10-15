@@ -48,7 +48,11 @@ const DIRECTION_OPTIONS = [
 const EVIDENCE_OPTIONS = [
   { value: "COMPLETE", label: "Đủ chứng từ", dot: "bg-green-500" },
   { value: "MISSING", label: "Thiếu chứng từ", dot: "bg-red-400" },
-  { value: "EXCEPTION_APPROVED", label: "Duyệt ngoại lệ", dot: "bg-orange-400" },
+  {
+    value: "EXCEPTION_APPROVED",
+    label: "Duyệt ngoại lệ",
+    dot: "bg-orange-400",
+  },
 ];
 
 const ACCOUNTANT_OPTIONS = [
@@ -81,11 +85,23 @@ const CASH_ISSUED_OPTIONS = [
 
 const STATUS_OPTIONS = [
   { value: "PENDING_ACCOUNTANT", label: "Chờ kế toán", dot: "bg-yellow-400" },
-  { value: "ACCOUNTANT_APPROVED", label: "Kế toán đã duyệt", dot: "bg-teal-500" },
+  {
+    value: "ACCOUNTANT_APPROVED",
+    label: "Kế toán đã duyệt",
+    dot: "bg-teal-500",
+  },
   { value: "PENDING_MANAGER", label: "Chờ quản lý", dot: "bg-orange-400" },
   { value: "MANAGER_APPROVED", label: "Quản lý đã duyệt", dot: "bg-teal-300" },
-  { value: "READY_FOR_WEEKLY_APPROVAL", label: "Sẵn sàng tổng hợp", dot: "bg-blue-400" },
-  { value: "IN_WEEKLY_APPROVAL", label: "Đang duyệt tuần", dot: "bg-orange-500" },
+  {
+    value: "READY_FOR_WEEKLY_APPROVAL",
+    label: "Sẵn sàng tổng hợp",
+    dot: "bg-blue-400",
+  },
+  {
+    value: "IN_WEEKLY_APPROVAL",
+    label: "Đang duyệt tuần",
+    dot: "bg-orange-500",
+  },
   { value: "APPROVED", label: "Đã duyệt", dot: "bg-green-500" },
   { value: "POSTED", label: "Đã ghi sổ", dot: "bg-green-600" },
   { value: "REJECTED", label: "Từ chối", dot: "bg-red-400" },
@@ -148,7 +164,15 @@ interface FilterChoice {
 }
 
 const endOfDay = (date: Date) =>
-  new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+  new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    23,
+    59,
+    59,
+    999,
+  );
 
 const toInputDate = (date: Date) => {
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -164,7 +188,10 @@ const getDateRangeFromPreset = (preset: string) => {
       return { from: today, to: now };
     case "yesterday": {
       const yesterday = new Date(today.getTime() - 86400000);
-      return { from: yesterday, to: new Date(yesterday.getTime() + 86400000 - 1) };
+      return {
+        from: yesterday,
+        to: new Date(yesterday.getTime() + 86400000 - 1),
+      };
     }
     case "this_week": {
       const start = new Date(today);
@@ -199,7 +226,10 @@ const getDateRangeFromPreset = (preset: string) => {
         quarter === 0
           ? new Date(now.getFullYear() - 1, 9, 1)
           : new Date(now.getFullYear(), (quarter - 1) * 3, 1);
-      return { from: start, to: endOfDay(new Date(now.getFullYear(), quarter * 3, 0)) };
+      return {
+        from: start,
+        to: endOfDay(new Date(now.getFullYear(), quarter * 3, 0)),
+      };
     }
     case "this_year":
       return { from: new Date(now.getFullYear(), 0, 1), to: now };
@@ -341,15 +371,16 @@ function FilterDropdown({
           if (event.key === "Enter") setOpen((current) => !current);
         }}
         className={`flex w-full cursor-pointer select-none items-center justify-between gap-2 rounded-lg border bg-white px-2 py-1 text-sm transition-colors ${
-          open
-            ? "border-brand ring-2 ring-brand-soft"
-            : "hover:border-gray-400"
+          open ? "border-brand ring-2 ring-brand-soft" : "hover:border-gray-400"
         }`}>
         <span className="flex min-w-0 items-center gap-2">
           {selected?.dot && (
             <span className={`h-2 w-2 shrink-0 rounded-full ${selected.dot}`} />
           )}
-          <span className={selected ? "truncate text-gray-800" : "truncate text-gray-400"}>
+          <span
+            className={
+              selected ? "truncate text-gray-800" : "truncate text-gray-400"
+            }>
             {selected ? selected.label : placeholder}
           </span>
         </span>
@@ -395,7 +426,10 @@ function PresetPanel({
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (ref.current?.contains(target) || triggerRef.current?.contains(target)) {
+      if (
+        ref.current?.contains(target) ||
+        triggerRef.current?.contains(target)
+      ) {
         return;
       }
       onClose();
@@ -410,7 +444,12 @@ function PresetPanel({
   return createPortal(
     <div
       ref={ref}
-      style={{ position: "fixed", top: rect.top, left: rect.right + 8, zIndex: 9999 }}
+      style={{
+        position: "fixed",
+        top: rect.top,
+        left: rect.right + 8,
+        zIndex: 9999,
+      }}
       className="flex animate-in gap-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl fade-in zoom-in-95 duration-150">
       {PRESET_GROUPS.map((group) => (
         <div key={group.label} className="flex min-w-[88px] flex-col gap-1.5">
@@ -502,12 +541,16 @@ export function InternalFinanceSidebar({
         (branch) =>
           branch.isActive &&
           FINANCE_BRANCH_IDS.has(branch.id) &&
-          access.can("cash_flows", "view", branch.id),
+          access.can("internal_finance", "view", branch.id),
       ),
     [branchesQuery.data, access],
   );
   const branchOptions = useMemo(
-    () => branches.map((branch) => ({ value: String(branch.id), label: branch.name })),
+    () =>
+      branches.map((branch) => ({
+        value: String(branch.id),
+        label: branch.name,
+      })),
     [branches],
   );
   const categoryOptions = useMemo(
@@ -553,7 +596,8 @@ export function InternalFinanceSidebar({
     let count = 0;
     if (selectedBranchIds.length > 0) count += 1;
     if (filters.direction) count += 1;
-    if (filters.category && filters.category !== resetPatch?.category) count += 1;
+    if (filters.category && filters.category !== resetPatch?.category)
+      count += 1;
     if (filters.evidenceStatus) count += 1;
     if (filters.accountantStatus) count += 1;
     if (filters.managerStatus) count += 1;
@@ -620,15 +664,15 @@ export function InternalFinanceSidebar({
   return (
     <aside className="m-4 flex h-[calc(100%-2rem)] max-h-[calc(100%-2rem)] w-64 shrink-0 flex-col overflow-hidden rounded-xl border bg-white shadow-xl">
       <div className="flex shrink-0 items-center justify-between rounded-t-xl border-b bg-white px-4 py-2">
-          <h2 className="text-base font-semibold text-gray-800">Bộ lọc</h2>
-          {activeFilterCount > 0 && (
-            <button
-              type="button"
-              onClick={clearAll}
-              className="text-sm font-medium text-brand hover:text-brand-dark">
-              Xóa tất cả
-            </button>
-          )}
+        <h2 className="text-base font-semibold text-gray-800">Bộ lọc</h2>
+        {activeFilterCount > 0 && (
+          <button
+            type="button"
+            onClick={clearAll}
+            className="text-sm font-medium text-brand hover:text-brand-dark">
+            Xóa tất cả
+          </button>
+        )}
       </div>
       <div
         className="custom-sidebar-scroll min-h-0 flex-1 overscroll-y-contain"
@@ -703,7 +747,9 @@ export function InternalFinanceSidebar({
                 <div ref={customDateRef} className="space-y-2 pt-1">
                   {(["from", "to"] as const).map((field) => {
                     const isFrom = field === "from";
-                    const value = isFrom ? filters.fromDate || "" : filters.toDate || "";
+                    const value = isFrom
+                      ? filters.fromDate || ""
+                      : filters.toDate || "";
                     const isOpen = openCal === field;
                     return (
                       <div key={field}>
@@ -722,7 +768,9 @@ export function InternalFinanceSidebar({
                               ? "border-brand ring-2 ring-brand-soft"
                               : "hover:border-gray-300"
                           }`}>
-                          <span>{value ? formatDateLabel(value) : "Chọn ngày"}</span>
+                          <span>
+                            {value ? formatDateLabel(value) : "Chọn ngày"}
+                          </span>
                           <Calendar className="h-4 w-4 shrink-0 text-gray-400" />
                         </button>
                         {isOpen && (
@@ -736,8 +784,12 @@ export function InternalFinanceSidebar({
                               )
                             }
                             onClose={() => setOpenCal(null)}
-                            minDate={field === "to" ? filters.fromDate : undefined}
-                            maxDate={field === "from" ? filters.toDate : undefined}
+                            minDate={
+                              field === "to" ? filters.fromDate : undefined
+                            }
+                            maxDate={
+                              field === "from" ? filters.toDate : undefined
+                            }
                           />
                         )}
                       </div>
@@ -888,9 +940,7 @@ export function InternalFinanceSidebar({
               onChange={(value) =>
                 onChange({
                   posted: (value || undefined) as
-                    | "POSTED"
-                    | "UNPOSTED"
-                    | undefined,
+                    "POSTED" | "UNPOSTED" | undefined,
                 })
               }
             />
@@ -904,9 +954,7 @@ export function InternalFinanceSidebar({
               options={CASH_ISSUED_OPTIONS}
               value={filters.cashIssued || ""}
               placeholder="Tất cả"
-              onChange={(value) =>
-                onChange({ cashIssued: value || undefined })
-              }
+              onChange={(value) => onChange({ cashIssued: value || undefined })}
             />
           </div>
 

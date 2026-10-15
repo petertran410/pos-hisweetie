@@ -12,6 +12,7 @@ import type { InternalFinanceEntry } from "@/lib/api/internal-finance";
 import {
   displayOccurredAt,
   displaySource,
+  displayDescription,
 } from "@/lib/internal-finance/display";
 import { formatCurrency } from "@/lib/utils";
 
@@ -113,7 +114,16 @@ export function WarehouseExpenseTable({
   onCancel,
   onOpenNotes,
   shows,
+  selection,
 }: {
+  /** Chọn nhiều phiếu để tick hàng loạt; không truyền thì không có cột chọn. */
+  selection?: {
+    selected: Set<number>;
+    /** null: chọn được; chuỗi: lý do không chọn được. */
+    blockReason: (row: InternalFinanceEntry) => string | null;
+    onToggle: (id: number) => void;
+    onToggleAll: (ids: number[], checked: boolean) => void;
+  };
   rows: InternalFinanceEntry[];
   isLoading: boolean;
   canCheck: (
@@ -139,9 +149,15 @@ export function WarehouseExpenseTable({
   /** Cột nào đang hiện (theo nút "Cột hiển thị" ở trang). */
   shows: (key: string) => boolean;
 }) {
-  const visibleCount = WAREHOUSE_EXPENSE_COLUMNS.filter((column) =>
-    shows(column.key),
-  ).length;
+  const visibleCount =
+    WAREHOUSE_EXPENSE_COLUMNS.filter((column) => shows(column.key)).length +
+    (selection ? 1 : 0);
+  const selectableIds = selection
+    ? rows.filter((row) => !selection.blockReason(row)).map((row) => row.id)
+    : [];
+  const allSelected =
+    selectableIds.length > 0 &&
+    selectableIds.every((id) => selection?.selected.has(id));
   const checkCell = (
     row: InternalFinanceEntry,
     role: WarehouseExpenseCheckRole,
@@ -182,6 +198,20 @@ export function WarehouseExpenseTable({
       <table className="w-full text-sm">
         <thead className="sticky top-0 z-10 bg-gray-50">
           <tr>
+            {selection && (
+              <th className="w-10 px-3 py-2.5">
+                <input
+                  type="checkbox"
+                  title="Chọn tất cả phiếu tick được trên trang"
+                  checked={allSelected}
+                  disabled={!selectableIds.length}
+                  onChange={(event) =>
+                    selection.onToggleAll(selectableIds, event.target.checked)
+                  }
+                  className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand disabled:opacity-40"
+                />
+              </th>
+            )}
             {[
               ...WAREHOUSE_EXPENSE_COLUMNS.filter((column) =>
                 shows(column.key),
@@ -239,8 +269,27 @@ export function WarehouseExpenseTable({
                       ? "bg-brand-soft"
                       : cancelled
                         ? "bg-gray-50 text-gray-400"
-                        : "hover:bg-gray-50"
+                        : selection?.selected.has(row.id)
+                          ? "bg-brand-soft/60"
+                          : "hover:bg-gray-50"
                   }`}>
+                  {selection && (
+                    <td className="w-10 px-3 py-2.5">
+                      {(() => {
+                        const block = selection.blockReason(row);
+                        return (
+                          <input
+                            type="checkbox"
+                            title={block || "Chọn để tick hàng loạt"}
+                            checked={selection.selected.has(row.id)}
+                            disabled={Boolean(block)}
+                            onChange={() => selection.onToggle(row.id)}
+                            className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand disabled:opacity-30"
+                          />
+                        );
+                      })()}
+                    </td>
+                  )}
                   {shows("code") && (
                     <td className="px-4 py-2.5">
                       <div
@@ -307,7 +356,7 @@ export function WarehouseExpenseTable({
                   {shows("content") && (
                     <td className="px-4 py-2.5">
                       <div className="max-w-[280px] break-words text-gray-900">
-                        {row.description || "-"}
+                        {displayDescription(row.description) || "-"}
                       </div>
                       {row.quantity != null && row.unitPrice != null && (
                         <div className="mt-0.5 text-xs text-gray-500">

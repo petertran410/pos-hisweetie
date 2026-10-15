@@ -14,6 +14,7 @@ import type { InternalFinanceEntry } from "@/lib/api/internal-finance";
 import {
   displayOccurredAt,
   displaySource,
+  displayDescription,
 } from "@/lib/internal-finance/display";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -51,7 +52,18 @@ export function WarehouseExpenseMobileList({
   onMarkIssued,
   onCancel,
   onOpenNotes,
+  selection,
+  selectMode = false,
+  onToggleSelectMode,
 }: {
+  /** Chế độ chọn để tick hàng loạt (nút "Chọn" ở đầu danh sách). */
+  selection?: {
+    selected: Set<number>;
+    blockReason: (row: InternalFinanceEntry) => string | null;
+    onToggle: (id: number) => void;
+  };
+  selectMode?: boolean;
+  onToggleSelectMode?: () => void;
   rows: InternalFinanceEntry[];
   isLoading: boolean;
   search: string;
@@ -125,12 +137,26 @@ export function WarehouseExpenseMobileList({
       activeFilterCount={activeFilterCount}
       onOpenFilter={onOpenFilter}
       actions={
-        <Link
-          href="/tai-chinh/approval-tuan"
-          className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium text-gray-700">
-          <CalendarRange className="h-3.5 w-3.5" />
-          Approval tuần
-        </Link>
+        <>
+          {onToggleSelectMode && (
+            <button
+              type="button"
+              onClick={onToggleSelectMode}
+              className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium ${
+                selectMode
+                  ? "border-brand bg-brand text-white"
+                  : "text-gray-700"
+              }`}>
+              {selectMode ? "Xong" : "Chọn"}
+            </button>
+          )}
+          <Link
+            href="/tai-chinh/approval-tuan"
+            className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium text-gray-700">
+            <CalendarRange className="h-3.5 w-3.5" />
+            Approval tuần
+          </Link>
+        </>
       }
       summary={
         <div className="flex items-center justify-between text-gray-500">
@@ -151,7 +177,7 @@ export function WarehouseExpenseMobileList({
       page={page}
       totalPages={totalPages}
       onPageChange={onPageChange}
-      onCreate={onCreate}>
+      onCreate={selectMode ? undefined : onCreate}>
       {rows.map((row) => {
         const cancelled = row.status === "CANCELLED";
         const warehouse = WAREHOUSE_BRANCH_IDS.includes(row.branchId);
@@ -159,7 +185,28 @@ export function WarehouseExpenseMobileList({
         return (
           <FinanceMobileCard
             key={row.id}
-            code={row.code}
+            code={
+              selectMode && selection ? (
+                <span className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selection.selected.has(row.id)}
+                    disabled={Boolean(selection.blockReason(row))}
+                    onChange={() => selection.onToggle(row.id)}
+                    onClick={(event) => event.stopPropagation()}
+                    className="h-5 w-5 rounded border-gray-300 text-brand disabled:opacity-30"
+                  />
+                  {row.code}
+                </span>
+              ) : (
+                row.code
+              )
+            }
+            onClick={
+              selectMode && selection && !selection.blockReason(row)
+                ? () => selection.onToggle(row.id)
+                : undefined
+            }
             muted={cancelled}
             highlight={highlightId === row.id}
             badge={
@@ -177,7 +224,7 @@ export function WarehouseExpenseMobileList({
                 </span>
               ) : null
             }
-            title={row.description || "-"}
+            title={displayDescription(row.description) || "-"}
             meta={
               <>
                 <div>
