@@ -229,17 +229,18 @@ function ClosingDialog({
   onClose: () => void;
 }) {
   const save = useCloseInternalFundDay();
-  const [date, setDate] = useState(
-    row ? row.closingDate.slice(0, 10) : todayInput(),
-  );
-  // Ngày đang chọn đã có chốt sổ thì sửa dòng đó thay vì tạo dòng thứ hai.
-  const existing =
-    row ||
+  const originalDate = row?.closingDate.slice(0, 10);
+  const [date, setDate] = useState(originalDate || todayInput());
+  const sameDay =
     rows.find(
       (item) =>
         item.branchId === branchId && item.closingDate.slice(0, 10) === date,
-    ) ||
-    null;
+    ) || null;
+  // Ngày đang chọn đã có chốt sổ thì sửa dòng đó thay vì tạo dòng thứ hai.
+  const existing = row || sameDay;
+  // Dời chốt sổ đang sửa sang ngày khác: ngày đó phải còn trống.
+  const moved = Boolean(row) && date !== originalDate;
+  const conflict = moved && sameDay !== null;
   const saved = useInternalFundDailyClosing(existing?.id ?? null);
   // Số hệ thống của ngày đang chọn, tính trực tiếp từ sổ quỹ.
   const summary = useInternalFundSummary({ branchId, fromDate: date });
@@ -292,8 +293,10 @@ function ClosingDialog({
         className="max-h-[90vh] w-full max-w-xl overflow-auto rounded-xl bg-white p-5"
         onSubmit={(event) => {
           event.preventDefault();
+          if (conflict) return;
           save.mutate(
             {
+              id: row?.id,
               branchId,
               closingDate: date,
               actualOpeningBalance: values[0],
@@ -306,26 +309,42 @@ function ClosingDialog({
         }}>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-gray-900">
-            {row ? `Chốt sổ ngày ${dayLabel(date)}` : "Tạo chốt sổ"}
+            {originalDate
+              ? `Chốt sổ ngày ${dayLabel(originalDate)}`
+              : "Tạo chốt sổ"}
           </h2>
           <button type="button" title="Đóng" onClick={onClose}>
             <X className="h-5 w-5 text-gray-500" />
           </button>
         </div>
 
-        {!row && (
+        {(!row || canEdit) && (
           <div className="mb-3 max-w-[220px]">
             <InternalFinanceDateField
               variant="filter"
               label="Ngày"
               value={date}
               maxDate={todayInput()}
-              onChange={(value) => value && pickDate(value)}
+              // Khi sửa chỉ đổi ngày, giữ nguyên số đang nhập.
+              onChange={(value) =>
+                value && (row ? setDate(value) : pickDate(value))
+              }
             />
-            {existing && (
-              <p className="mt-1 text-xs text-amber-600">
-                Ngày này đã có chốt sổ, lưu sẽ cập nhật dòng đó.
+            {conflict ? (
+              <p className="mt-1 text-xs text-red-600">
+                Ngày này đã có chốt sổ khác.
               </p>
+            ) : moved ? (
+              <p className="mt-1 text-xs text-amber-600">
+                Lưu sẽ chuyển chốt sổ sang ngày {dayLabel(date)}.
+              </p>
+            ) : (
+              !row &&
+              existing && (
+                <p className="mt-1 text-xs text-amber-600">
+                  Ngày này đã có chốt sổ, lưu sẽ cập nhật dòng đó.
+                </p>
+              )
             )}
           </div>
         )}
@@ -421,6 +440,8 @@ function ClosingDialog({
                     <span>
                       Kế toán {money(actual[3] as number | null)} · Hệ thống{" "}
                       {money(system[3] as number | null)}
+                      {typeof entry.movedFrom === "string" &&
+                        ` · Đổi từ ngày ${dayLabel(entry.movedFrom)}`}
                     </span>
                   </div>
                 );
@@ -439,7 +460,7 @@ function ClosingDialog({
           {canEdit && (
             <button
               type="submit"
-              disabled={save.isPending}
+              disabled={save.isPending || conflict}
               className="inline-flex items-center gap-2 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-60">
               {save.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

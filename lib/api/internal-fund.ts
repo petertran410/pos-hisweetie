@@ -216,6 +216,8 @@ export const internalFundApi = {
     apiClient.get(`/internal-fund/daily-closings/${id}`),
 
   closeDay: (payload: {
+    /** Sửa chốt sổ đã có (đổi được ngày); bỏ trống là tạo/ghi theo ngày. */
+    id?: number;
     branchId: number;
     closingDate: string;
     actualOpeningBalance?: number;
