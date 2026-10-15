@@ -5,6 +5,7 @@ import {
   type InternalFinanceEntry,
   type InternalFinanceResponse,
   type InternalFinanceQuery,
+  type LarkApprovalQuery,
   type VehicleEntryQuery,
   type VehicleEntryUpdateInput,
   type WarehouseExpenseInput,
@@ -131,6 +132,14 @@ export function useRemoveWeeklyBatchEntries() {
     },
     onError: (error) =>
       toast.error(errorMessage(error, "Bỏ phiếu khỏi approval thất bại")),
+  });
+}
+
+export function useLarkApprovals(params: LarkApprovalQuery) {
+  return useQuery({
+    queryKey: ["internal-finance", "lark-approvals", params],
+    queryFn: () => internalFinanceApi.larkApprovals(params),
+    placeholderData: (previous) => previous,
   });
 }
 

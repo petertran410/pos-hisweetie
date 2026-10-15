@@ -4,6 +4,7 @@ const SOURCE_LABELS: Record<string, string> = {
   MANUAL_EXPENSE: "Phiếu chi thủ công",
   FUEL: "Xăng dầu",
   VEHICLE_CARE: "Chăm sóc xe",
+  LARK_APPROVAL: "Lark Approval",
 };
 
 const SNAPSHOT_LABELS: Record<string, string> = {
@@ -56,7 +57,12 @@ export function displayEntryCode(input: {
   return input.code || "-";
 }
 
-const DATE_ONLY_SOURCES = ["LARK_IMPORT", "MANUAL_EXPENSE", "MANUAL_RECEIPT"];
+const DATE_ONLY_SOURCES = [
+  "LARK_IMPORT",
+  "LARK_APPROVAL",
+  "MANUAL_EXPENSE",
+  "MANUAL_RECEIPT",
+];
 
 export function displayOccurredAt(input: {
   occurredAt?: string | null;

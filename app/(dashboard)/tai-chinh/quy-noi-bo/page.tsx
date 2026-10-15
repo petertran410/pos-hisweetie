@@ -1,5 +1,7 @@
 "use client";
 
+import { TablePagination } from "@/components/shared/TablePagination";
+import { usePageSize } from "@/lib/hooks/usePageSize";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import {
   CardAction,
@@ -134,6 +136,11 @@ function FundScreen() {
   const fromDate = dates.fromDate || "";
   const toDate = dates.toDate || "";
   const [page, setPage] = useState(1);
+  const [limit, setLimit, limitOptions] = usePageSize(
+    "internalFundLedgerPageSize",
+    30,
+    [10, 15, 20, 30, 50, 100],
+  );
   const [closingPage, setClosingPage] = useState(1);
   const resetPages = () => {
     setPage(1);
@@ -150,7 +157,7 @@ function FundScreen() {
     fromDate: fromDate || undefined,
     toDate: toDate || undefined,
     page,
-    limit: 30,
+    limit,
   };
   const ready = branches.length > 0;
   const transactions = useInternalFundTransactions(query, ready);
@@ -184,7 +191,7 @@ function FundScreen() {
   );
   const totalPages = Math.max(
     1,
-    Math.ceil((transactions.data?.total || 0) / 30),
+    Math.ceil((transactions.data?.total || 0) / limit),
   );
   const closingTotalPages = Math.max(
     1,
@@ -636,27 +643,19 @@ function FundScreen() {
                     </tbody>
                   </table>
                 </div>
-                <div className="flex shrink-0 items-center justify-between border-t px-4 py-2.5 text-sm text-gray-500">
-                  <span>
-                    Trang {page}/{totalPages}
-                  </span>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      title="Trang trước"
-                      disabled={page === 1}
-                      onClick={() => setPage(page - 1)}>
-                      <ChevronLeft className="h-5 w-5" />
-                    </button>
-                    <button
-                      type="button"
-                      title="Trang sau"
-                      disabled={page >= totalPages}
-                      onClick={() => setPage(page + 1)}>
-                      <ChevronRight className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
+                <TablePagination
+                  page={page}
+                  totalPages={totalPages}
+                  total={transactions.data?.total || 0}
+                  limit={limit}
+                  limitOptions={limitOptions}
+                  unit="giao dịch"
+                  onPageChange={setPage}
+                  onLimitChange={(next) => {
+                    setLimit(next);
+                    setPage(1);
+                  }}
+                />
               </>
             ) : (
               <div className="flex min-h-0 flex-1 flex-col">

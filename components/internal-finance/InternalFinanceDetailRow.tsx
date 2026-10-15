@@ -22,6 +22,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   CUSTOMER_RECEIPT: "Thu tiền khách hàng",
   MANUAL_RECEIPT: "Phiếu thu thủ công",
   OTHER_EXPENSE: "Chi phí khác",
+  CASH_FUND_EXPENSE: "Chi tiền mặt quỹ",
+  CASH_FUND_RECEIPT: "Thu tiền mặt quỹ",
 };
 
 const STATUS_LABELS: Record<string, string> = {

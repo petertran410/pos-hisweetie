@@ -27,6 +27,8 @@ const CATEGORIES = [
   ["CUSTOMER_RECEIPT", "Thu tiền khách hàng"],
   ["MANUAL_RECEIPT", "Phiếu thu thủ công"],
   ["OTHER_EXPENSE", "Chi phí khác"],
+  ["CASH_FUND_EXPENSE", "Chi tiền mặt quỹ"],
+  ["CASH_FUND_RECEIPT", "Thu tiền mặt quỹ"],
 ];
 
 const SUBCATEGORIES = [
@@ -38,6 +40,16 @@ const SUBCATEGORIES = [
   ["VEHICLE_CARE", "Chăm sóc xe"],
   ["SALARY_ADVANCE", "Tạm ứng lương"],
   ["OTHER", "Chi phí khác"],
+];
+
+const SOURCE_OPTIONS = [
+  { value: "PACKING_SLIP", label: "Báo đơn giao hàng" },
+  { value: "MANUAL_EXPENSE", label: "Phiếu chi thủ công" },
+  { value: "MANUAL_RECEIPT", label: "Phiếu thu thủ công" },
+  { value: "FUEL", label: "Xăng dầu" },
+  { value: "VEHICLE_CARE", label: "Chăm sóc xe" },
+  { value: "LARK_APPROVAL", label: "Lark Approval" },
+  { value: "LARK_IMPORT", label: "Dữ liệu cũ chuyển sang" },
 ];
 
 const DIRECTION_OPTIONS = [
@@ -596,6 +608,7 @@ export function InternalFinanceSidebar({
     let count = 0;
     if (selectedBranchIds.length > 0) count += 1;
     if (filters.direction) count += 1;
+    if (filters.sourceType) count += 1;
     if (filters.category && filters.category !== resetPatch?.category)
       count += 1;
     if (filters.evidenceStatus) count += 1;
@@ -645,6 +658,7 @@ export function InternalFinanceSidebar({
     onChange({
       branchIds: undefined,
       direction: undefined,
+      sourceType: undefined,
       category: undefined,
       status: undefined,
       accountantStatus: undefined,
@@ -837,6 +851,18 @@ export function InternalFinanceSidebar({
               value={filters.direction || ""}
               placeholder="Thu và chi"
               onChange={(value) => onChange({ direction: value || undefined })}
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700">
+              Nguồn
+            </label>
+            <FilterDropdown
+              options={SOURCE_OPTIONS}
+              value={filters.sourceType || ""}
+              placeholder="Tất cả nguồn"
+              onChange={(value) => onChange({ sourceType: value || undefined })}
             />
           </div>
 

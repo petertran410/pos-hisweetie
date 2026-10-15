@@ -137,6 +137,7 @@ export function DashboardHeader() {
       { label: "Phiếu chi kho", href: "/tai-chinh/phieu-chi-kho" },
       { label: "Quỹ nội bộ", href: "/tai-chinh/quy-noi-bo" },
       { label: "Approval tuần", href: "/tai-chinh/approval-tuan" },
+      { label: "Đơn Lark Approval", href: "/tai-chinh/don-lark-approval" },
       { label: "Xăng dầu & chăm sóc xe", href: "/tai-chinh/xe-co" },
       { label: "Biến động số dư", href: "/tai-chinh/bien-dong-so-du" },
     ],

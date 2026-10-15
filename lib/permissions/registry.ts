@@ -97,6 +97,10 @@ export const ROUTE_PERMISSIONS: Record<
   ],
   "/tai-chinh/quy-noi-bo": [{ resource: "internal_fund", action: "view" }],
   "/tai-chinh/approval-tuan": { resource: "weekly_approval", action: "view" },
+  "/tai-chinh/don-lark-approval": {
+    resource: "lark_approval",
+    action: "view",
+  },
   "/tai-chinh/xe-co": [
     { resource: "vehicles", action: "view" },
     { resource: "vehicles", action: "create" },
@@ -362,6 +366,12 @@ export const NAV_CONFIG: NavSection[] = [
         label: "Approval tuần",
         href: "/tai-chinh/approval-tuan",
         permission: { resource: "weekly_approval", action: "view" },
+      },
+      {
+        key: "lark-approvals",
+        label: "Đơn Lark Approval",
+        href: "/tai-chinh/don-lark-approval",
+        permission: { resource: "lark_approval", action: "view" },
       },
       {
         key: "vehicle-finance",

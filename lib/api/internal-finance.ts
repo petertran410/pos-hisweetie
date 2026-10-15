@@ -9,7 +9,9 @@ export type InternalFinanceCategory =
   | "SALARY_ADVANCE"
   | "CUSTOMER_RECEIPT"
   | "MANUAL_RECEIPT"
-  | "OTHER_EXPENSE";
+  | "OTHER_EXPENSE"
+  | "CASH_FUND_EXPENSE"
+  | "CASH_FUND_RECEIPT";
 
 export interface InternalFinanceAttachment {
   fileUrl: string;
@@ -361,6 +363,46 @@ export interface WeeklyBatch {
   entries?: InternalFinanceEntry[];
 }
 
+export type LarkFormKind =
+  "PHIEU_THU" | "PHIEU_CHI" | "PHIEU_CHI_KHO_HN" | "PHIEU_CHI_KHO_SG";
+
+/** Đơn nhân viên tạo trực tiếp trên Lark Approval (không có mã đơn Lark). */
+export interface LarkApprovalRow {
+  id: number;
+  formKind: LarkFormKind;
+  status: string;
+  requesterName: string | null;
+  submittedAt: string | null;
+  completedAt: string | null;
+  occurredAt: string | null;
+  amount: number | null;
+  cashAmount: number | null;
+  method: string | null;
+  cashSource: string | null;
+  description: string | null;
+  branchId: number | null;
+  branchName: string | null;
+  direction: "EXPENSE" | "RECEIPT" | null;
+  inScope: boolean;
+  skipReason: string | null;
+  entry: { id: number; code: string; status: string } | null;
+  suspectDuplicate: { id: number; code: string; status: string } | null;
+  syncedAt: string;
+}
+
+export interface LarkApprovalQuery {
+  branchIds?: number[];
+  formKind?: string;
+  status?: string;
+  scope?: "IN" | "OUT" | string;
+  suspect?: "true" | string;
+  fromDate?: string;
+  toDate?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
 export const internalFinanceApi = {
   list: (params?: InternalFinanceQuery): Promise<InternalFinanceResponse> =>
     apiClient.get("/internal-finance", params),
@@ -520,6 +562,16 @@ export const internalFinanceApi = {
       `/internal-finance/warehouse-expenses/weekly-batches/${batchId}/remove-entries`,
       { entryIds },
     ),
+
+  larkApprovals: (
+    params?: LarkApprovalQuery,
+  ): Promise<{
+    data: LarkApprovalRow[];
+    total: number;
+    totalAmount: number;
+    page: number;
+    limit: number;
+  }> => apiClient.get("/internal-finance/lark-approvals", params),
 
   warehouseExpenseBatchPage: (
     params?: InternalFinanceQuery,

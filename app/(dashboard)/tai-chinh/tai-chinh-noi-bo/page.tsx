@@ -6,6 +6,7 @@ import { usePageSize } from "@/lib/hooks/usePageSize";
 import Link from "next/link";
 import { CalendarRange, Truck } from "lucide-react";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
 import {
   InternalFinanceSidebar,
@@ -35,11 +36,17 @@ export default function TaiChinhNoiBoPage() {
     access.can("internal_finance", "view", id),
   );
   const [pageSize, setPageSize] = usePageSize("internalFinancePageSize");
-  const [filters, setFilters] = useState<InternalFinanceQuery>(() => ({
-    ...loadInternalFinanceFilters(STORAGE_KEY, headerBranchId),
-    page: 1,
-    limit: pageSize,
-  }));
+  // Link từ trang Đơn Lark Approval: ?Code=<mã> chỉ tìm đúng mã đó.
+  const codeParam = useSearchParams().get("Code")?.trim() || "";
+  const [filters, setFilters] = useState<InternalFinanceQuery>(() =>
+    codeParam
+      ? { search: codeParam, page: 1, limit: pageSize }
+      : {
+          ...loadInternalFinanceFilters(STORAGE_KEY, headerBranchId),
+          page: 1,
+          limit: pageSize,
+        },
+  );
 
   const isMobile = useIsMobile(768);
   const [showFilters, setShowFilters] = useState(false);
