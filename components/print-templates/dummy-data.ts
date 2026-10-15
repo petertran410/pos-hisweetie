@@ -416,6 +416,9 @@ export const DUMMY_DATA: Record<string, Record<string, any>> = {
     Phuong_Xa_Giao_Hang: "Phường Trần Phú",
     Khu_Vuc_Giao_Hang: "Hà Nội - Quận Hoàng Mai",
     Ghi_Chu_Giao_Hang: "Gọi trước 30 phút",
+    Dia_Chi_Cu_Giao_Hang: "Phường Kim Mã, Quận Ba Đình, Thành phố Hà Nội",
+    Dong_Dia_Chi_Cu_Giao_Hang:
+      "<br>(Địa chỉ cũ: Phường Kim Mã, Quận Ba Đình, Thành phố Hà Nội)",
     Trang_Thai_Giao_Hang: "Chờ xử lý",
     // Nhân viên
     Nhan_Vien_Ban_Hang: "Linh Thu Trang",
@@ -476,6 +479,9 @@ export const DUMMY_DATA: Record<string, Record<string, any>> = {
     Phuong_Xa_Giao_Hang: "Phường Trần Phú",
     Khu_Vuc_Giao_Hang: "Hà Nội - Quận Hoàng Mai",
     Ghi_Chu_Giao_Hang: "Gọi trước 30 phút",
+    Dia_Chi_Cu_Giao_Hang: "Phường Kim Mã, Quận Ba Đình, Thành phố Hà Nội",
+    Dong_Dia_Chi_Cu_Giao_Hang:
+      "<br>(Địa chỉ cũ: Phường Kim Mã, Quận Ba Đình, Thành phố Hà Nội)",
     Nhan_Vien_Ban_Hang: "Linh Thu Trang",
     Nguoi_Lap: "Nguyễn Huyền Trang",
     items: [

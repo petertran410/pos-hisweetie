@@ -40,8 +40,11 @@ export function FinancePanel({ data, finRange, onFinRangeChange }: Props) {
   const debt = data?.debt ?? 0;
   const overdue = data?.overdue ?? 0;
   const aging = data?.aging ?? { inTerm: 0, d1to30: 0, over30: 0 };
-  const total = debt || 1;
-  const overduePct = debt ? (overdue / debt) * 100 : 0;
+  // Tỷ lệ theo tổng các nhóm tuổi nợ (phần khách còn nợ) — "Tổng phải thu"
+  // là số ròng (đã trừ khách trả dư) nên có thể nhỏ hơn tổng các nhóm.
+  const agingSum = aging.inTerm + aging.d1to30 + aging.over30;
+  const total = agingSum || 1;
+  const overduePct = agingSum ? (overdue / agingSum) * 100 : 0;
 
   const cells = [
     {
