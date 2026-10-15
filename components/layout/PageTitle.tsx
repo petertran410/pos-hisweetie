@@ -87,6 +87,13 @@ const TITLE_MAP: Array<{ prefix: string; title: string }> = [
   { prefix: "/bao-don/loading", title: "Loading" },
   { prefix: "/bao-don", title: "Báo đơn" },
 
+  // Tạo phiếu kho (ngoài dashboard)
+  { prefix: "/phieu-kho/chi-khac", title: "Khoản chi khác" },
+  { prefix: "/phieu-kho/tien-mat", title: "Phiếu tiền mặt kho" },
+  { prefix: "/phieu-kho/xang-dau", title: "Phiếu xăng dầu" },
+  { prefix: "/phieu-kho/cham-soc-xe", title: "Phiếu chăm sóc xe" },
+  { prefix: "/phieu-kho", title: "Tạo phiếu kho" },
+
   // Đăng nhập
   { prefix: "/login", title: "Đăng nhập" },
 ];

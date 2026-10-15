@@ -2,16 +2,15 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  Loader2,
-  Upload,
-  X,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { toast } from "sonner";
+import { EvidenceUploadTiles } from "@/components/internal-finance/EvidenceUploadTiles";
+import {
+  FinanceFormActions,
+  FinanceFormSheet,
+} from "@/components/internal-finance/FinanceFormSheet";
 import { InternalFinanceDateField } from "@/components/internal-finance/InternalFinanceDateField";
+import { useBranchStore } from "@/lib/store/branch";
 import type { WarehouseReceipt } from "@/lib/api/internal-finance";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
@@ -42,48 +41,6 @@ const isImageFile = (file: AttachmentPreviewFile) => {
   return /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/.test(path);
 };
 
-function AttachmentPreview({
-  file,
-  onPreview,
-}: {
-  file: AttachmentPreviewFile;
-  onPreview: (url: string) => void;
-}) {
-  const image = isImageFile(file);
-  const name = file.fileName || file.fileUrl;
-
-  if (image) {
-    return (
-      <button
-        type="button"
-        title={`Xem ${name}`}
-        aria-label={`Xem ${name}`}
-        onClick={() => onPreview(file.fileUrl)}
-        className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-white">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={file.fileUrl}
-          alt={name}
-          className="h-full w-full object-cover transition-transform group-hover:scale-105"
-        />
-        <span className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/20" />
-      </button>
-    );
-  }
-
-  return (
-    <a
-      href={file.fileUrl}
-      target="_blank"
-      rel="noreferrer"
-      title={name}
-      aria-label={`Mở ${name}`}
-      className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-gray-400 hover:bg-gray-100">
-      <FileText className="h-6 w-6" />
-    </a>
-  );
-}
-
 const toDateInput = (value?: string | null) => {
   if (!value) {
     const now = new Date();
@@ -100,11 +57,17 @@ type CustomerPick = { id: number; name: string; code?: string | null };
 export function WarehouseCashForm({
   receipt,
   onClose,
+  keepOpenAfterCreate = false,
 }: {
   receipt?: WarehouseReceipt | null;
   onClose: () => void;
+  /** Trang riêng /phieu-kho: tạo xong thì làm trống form để nhập phiếu tiếp. */
+  keepOpenAfterCreate?: boolean;
 }) {
-  const auto = Boolean(receipt?.packingSlip || receipt?.sourceType === "PACKING_SLIP");
+  const headerBranchId = useBranchStore((state) => state.selectedBranch?.id);
+  const auto = Boolean(
+    receipt?.packingSlip || receipt?.sourceType === "PACKING_SLIP",
+  );
   const { data: branchData } = useBranches();
   const access = useFinanceAccess();
   const branches = useMemo(() => {
@@ -129,11 +92,28 @@ export function WarehouseCashForm({
   }, [branchData, access, receipt]);
   const createReceipt = useCreateWarehouseReceipt();
   const updateReceipt = useUpdateWarehouseReceipt();
-  const [branchId, setBranchId] = useState(receipt?.branchId || 6);
-  const [amount, setAmount] = useState(
-    receipt ? formatNumberInput(String(Math.round(Number(receipt.amount)))) : "",
+  // Phiếu mới theo kho đang chọn ở header (nếu được phép), không cố định Kho HN.
+  const [branchId, setBranchId] = useState(
+    receipt?.branchId ||
+      (headerBranchId && WAREHOUSE_IDS.includes(headerBranchId)
+        ? headerBranchId
+        : 6),
   );
-  const [occurredAt, setOccurredAt] = useState(toDateInput(receipt?.occurredAt));
+  if (
+    !receipt &&
+    branches.length &&
+    !branches.some((branch) => branch.id === branchId)
+  ) {
+    setBranchId(branches[0].id);
+  }
+  const [amount, setAmount] = useState(
+    receipt
+      ? formatNumberInput(String(Math.round(Number(receipt.amount))))
+      : "",
+  );
+  const [occurredAt, setOccurredAt] = useState(
+    toDateInput(receipt?.occurredAt),
+  );
   const [description, setDescription] = useState(receipt?.description || "");
   const [note, setNote] = useState(receipt?.note || "");
   const [receiptKind, setReceiptKind] = useState<"CUSTOMER" | "WAREHOUSE_SALE">(
@@ -152,8 +132,7 @@ export function WarehouseCashForm({
   const [uploading, setUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const previewImages = useMemo<AttachmentPreviewFile[]>(
-    () =>
-      [...(receipt?.attachments || []), ...attachments].filter(isImageFile),
+    () => [...(receipt?.attachments || []), ...attachments].filter(isImageFile),
     [attachments, receipt?.attachments],
   );
   const changePreviewImage = useCallback(
@@ -193,12 +172,9 @@ export function WarehouseCashForm({
     debouncedCustomerSearch || undefined,
     { enabled: Boolean(debouncedCustomerSearch) },
   );
-  const customerOptions = (debouncedCustomerSearch
-    ? customerQuery.data?.data || []
-    : []
-  ).filter(
-    (customer) => !customers.some((item) => item.id === customer.id),
-  );
+  const customerOptions = (
+    debouncedCustomerSearch ? customerQuery.data?.data || [] : []
+  ).filter((customer) => !customers.some((item) => item.id === customer.id));
   const pending = createReceipt.isPending || updateReceipt.isPending;
 
   const addCustomer = (customer: CustomerPick) => {
@@ -210,15 +186,27 @@ export function WarehouseCashForm({
     setCustomers((current) => current.filter((item) => item.id !== customerId));
   };
 
+  const resetForNext = () => {
+    setAmount("");
+    setDescription("");
+    setNote("");
+    setCustomers([]);
+    setCustomerSearch("");
+    setAttachments([]);
+  };
+
   const handleUpload = async (files: FileList | null) => {
     if (!files?.length) return;
     setUploading(true);
     try {
       const result = await uploadPackingSlipExpenseFiles(Array.from(files));
       setAttachments((current) => [...current, ...result.files]);
-      if (result.errors.length) toast.error(`Có ${result.errors.length} file không upload được`);
+      if (result.errors.length)
+        toast.error(`Có ${result.errors.length} file không upload được`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Upload chứng từ thất bại");
+      toast.error(
+        error instanceof Error ? error.message : "Upload chứng từ thất bại",
+      );
     } finally {
       setUploading(false);
     }
@@ -272,177 +260,156 @@ export function WarehouseCashForm({
     if (receipt) {
       updateReceipt.mutate({ id: receipt.id, payload }, { onSuccess: onClose });
     } else {
-      createReceipt.mutate(payload, { onSuccess: onClose });
+      createReceipt.mutate(payload, {
+        onSuccess: keepOpenAfterCreate ? resetForNext : onClose,
+      });
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
-      <form
+    <>
+      <FinanceFormSheet
+        title={receipt ? "Sửa phiếu tiền mặt" : "Tạo phiếu tiền mặt"}
+        onClose={onClose}
         onSubmit={submit}
-        className="max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto rounded-xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b px-5 py-4">
-          <h2 className="text-base font-semibold text-gray-900">
-            {receipt ? "Sửa phiếu tiền mặt" : "Tạo phiếu tiền mặt"}
-          </h2>
-          <button type="button" title="Đóng" onClick={onClose} className="rounded p-1.5 text-gray-500 hover:bg-gray-100">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        <div className="grid gap-4 p-5 sm:grid-cols-2">
-          {!auto && (
-            <>
-              <label className="flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600">
-                Chi nhánh
-                <select
-                  value={branchId}
-                  onChange={(event) => setBranchId(Number(event.target.value))}
-                  className="dt-select h-10 w-full">
-                  {branches.map((branch) => (
-                    <option key={branch.id} value={branch.id}>{branch.name}</option>
-                  ))}
-                </select>
-              </label>
-              <InternalFinanceDateField
-                label="Ngày thu"
-                value={occurredAt}
-                onChange={(value) => value && setOccurredAt(value)}
+        width="sm:max-w-2xl"
+        footer={
+          <FinanceFormActions
+            onCancel={onClose}
+            pending={pending}
+            disabled={uploading}
+            submitLabel="Lưu"
+          />
+        }>
+        {!auto && (
+          <>
+            <label className="flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600">
+              Chi nhánh
+              <select
+                value={branchId}
+                onChange={(event) => setBranchId(Number(event.target.value))}
+                className="dt-select h-10 w-full">
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <InternalFinanceDateField
+              label="Ngày thu"
+              value={occurredAt}
+              onChange={(value) => value && setOccurredAt(value)}
+            />
+            <label className="flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600 sm:col-span-2">
+              Số tiền
+              <input
+                inputMode="numeric"
+                value={amount}
+                onChange={(event) =>
+                  setAmount(formatNumberInput(event.target.value))
+                }
+                className="dt-input h-10 w-full"
+                required
               />
-              <label className="flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600 sm:col-span-2">
-                Số tiền
-                <input
-                  inputMode="numeric"
-                  value={amount}
-                  onChange={(event) => setAmount(formatNumberInput(event.target.value))}
-                  className="dt-input h-10 w-full"
-                  required
-                />
-              </label>
-              <div className="sm:col-span-2">
-                <span className="mb-1.5 block text-xs font-medium text-gray-600">Loại phiếu</span>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setReceiptKind("CUSTOMER")}
-                    className={`h-10 rounded-lg border px-3 text-sm ${receiptKind === "CUSTOMER" ? "border-brand bg-brand-soft font-medium text-gray-900" : "text-gray-600 hover:bg-gray-50"}`}>
-                    Thu khách
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setReceiptKind("WAREHOUSE_SALE")}
-                    className={`h-10 rounded-lg border px-3 text-sm ${receiptKind === "WAREHOUSE_SALE" ? "border-brand bg-brand-soft font-medium text-gray-900" : "text-gray-600 hover:bg-gray-50"}`}>
-                    Bán đồ kho
-                  </button>
-                </div>
+            </label>
+            <div className="sm:col-span-2">
+              <span className="mb-1.5 block text-xs font-medium text-gray-600">
+                Loại phiếu
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setReceiptKind("CUSTOMER")}
+                  className={`h-10 rounded-lg border px-3 text-sm ${receiptKind === "CUSTOMER" ? "border-brand bg-brand-soft font-medium text-gray-900" : "text-gray-600 hover:bg-gray-50"}`}>
+                  Thu khách
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReceiptKind("WAREHOUSE_SALE")}
+                  className={`h-10 rounded-lg border px-3 text-sm ${receiptKind === "WAREHOUSE_SALE" ? "border-brand bg-brand-soft font-medium text-gray-900" : "text-gray-600 hover:bg-gray-50"}`}>
+                  Bán đồ kho
+                </button>
               </div>
-              {!sale && (
+            </div>
+            {!sale && (
               <>
-              <div className="relative flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600 sm:col-span-2">
-                Khách hàng
-                <input
-                  value={customerSearch}
-                  onChange={(event) => setCustomerSearch(event.target.value)}
-                  className="dt-input h-10 w-full font-normal"
-                  placeholder="Tìm tên hoặc mã khách"
-                />
-                {debouncedCustomerSearch && customerOptions.length > 0 && (
-                  <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-y-auto rounded-lg border bg-white shadow-lg">
-                    {customerOptions.slice(0, 8).map((customer) => (
-                      <button
+                <div className="relative flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600 sm:col-span-2">
+                  Khách hàng
+                  <input
+                    value={customerSearch}
+                    onChange={(event) => setCustomerSearch(event.target.value)}
+                    className="dt-input h-10 w-full font-normal"
+                    placeholder="Tìm tên hoặc mã khách"
+                  />
+                  {debouncedCustomerSearch && customerOptions.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-y-auto rounded-lg border bg-white shadow-lg">
+                      {customerOptions.slice(0, 8).map((customer) => (
+                        <button
+                          key={customer.id}
+                          type="button"
+                          onClick={() => addCustomer(customer)}
+                          className="block w-full border-b px-3 py-2 text-left text-xs hover:bg-gray-50">
+                          {customer.name}
+                          {customer.code ? ` · ${customer.code}` : ""}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {customers.map((customer) => (
+                      <span
                         key={customer.id}
-                        type="button"
-                        onClick={() => addCustomer(customer)}
-                        className="block w-full border-b px-3 py-2 text-left text-xs hover:bg-gray-50">
+                        className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-gray-700">
                         {customer.name}
-                        {customer.code ? ` · ${customer.code}` : ""}
-                      </button>
+                        <button
+                          type="button"
+                          title={`Bỏ khách hàng ${customer.name}`}
+                          onClick={() => removeCustomer(customer.id)}
+                          className="rounded-full text-gray-400 hover:text-gray-700">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
                     ))}
                   </div>
-                )}
-                <div className="mt-1 flex flex-wrap gap-1.5">
-                  {customers.map((customer) => (
-                    <span
-                      key={customer.id}
-                      className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-gray-700">
-                      {customer.name}
-                      <button
-                        type="button"
-                        title={`Bỏ khách hàng ${customer.name}`}
-                        onClick={() => removeCustomer(customer.id)}
-                        className="rounded-full text-gray-400 hover:text-gray-700">
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
                 </div>
-              </div>
               </>
-              )}
-            </>
-          )}
-          <label className="flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600 sm:col-span-2">
-            Nội dung
-            <input
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              className="dt-input h-10 w-full font-normal"
-            />
-          </label>
-          <label className="flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600 sm:col-span-2">
-            Ghi chú
-            <textarea
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              rows={3}
-              className="dt-input w-full font-normal"
-            />
-          </label>
-          {!auto && (
-            <div className="sm:col-span-2">
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                Chứng từ
-                <input
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={(event) => {
-                    void handleUpload(event.target.files);
-                    event.target.value = "";
-                  }}
-                />
-              </label>
-              {(receipt?.attachments?.length || attachments.length) > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {receipt?.attachments?.map((file) => (
-                    <AttachmentPreview
-                      key={file.fileUrl}
-                      file={file}
-                      onPreview={setPreviewImage}
-                    />
-                  ))}
-                  {attachments.map((file) => (
-                    <AttachmentPreview
-                      key={file.fileUrl}
-                      file={file}
-                      onPreview={setPreviewImage}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-        <div className="flex justify-end border-t px-5 py-3">
-          <button
-            type="submit"
-            disabled={pending}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-50">
-            {pending && <Loader2 className="h-4 w-4 animate-spin" />}
-            Lưu
-          </button>
-        </div>
-      </form>
+            )}
+          </>
+        )}
+        <label className="flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600 sm:col-span-2">
+          Nội dung
+          <input
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            className="dt-input h-10 w-full font-normal"
+          />
+        </label>
+        <label className="flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600 sm:col-span-2">
+          Ghi chú
+          <textarea
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            rows={3}
+            className="dt-input w-full font-normal"
+          />
+        </label>
+        {!auto && (
+          <EvidenceUploadTiles
+            label="Chứng từ"
+            files={[...(receipt?.attachments || []), ...attachments]}
+            uploading={uploading}
+            onFiles={(files) => void handleUpload(files)}
+            onPreview={(file) => setPreviewImage(file.fileUrl)}
+            // Chỉ bỏ được file vừa tải; chứng từ đã lưu giữ nguyên.
+            onRemove={(file) =>
+              setAttachments((current) =>
+                current.filter((item) => item.fileUrl !== file.fileUrl),
+              )
+            }
+          />
+        )}
+      </FinanceFormSheet>
       {previewImage &&
         createPortal(
           <div
@@ -523,6 +490,6 @@ export function WarehouseCashForm({
           </div>,
           document.body,
         )}
-    </div>
+    </>
   );
 }

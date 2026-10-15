@@ -35,3 +35,22 @@ export function useFollowHeaderBranch(
     if (following) apply(headerBranchId);
   }, [headerBranchId, current, apply]);
 }
+
+/**
+ * Chi nhánh mặc định khi tạo phiếu: chi nhánh ở header nếu được tạo ở đó,
+ * không thì chi nhánh đầu tiên được phép (trang riêng /phieu-kho).
+ */
+export function useCreateBranchId(
+  resource: string,
+  candidates: readonly number[],
+): number {
+  const access = useFinanceAccess();
+  const headerId = useHeaderBranchId(candidates, (id) =>
+    access.can(resource, "create", id),
+  );
+  return (
+    headerId ??
+    access.branches(resource, "create", [...candidates])[0] ??
+    candidates[0]
+  );
+}

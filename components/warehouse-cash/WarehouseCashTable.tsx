@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  CardAction,
+  FinanceMobileCard,
+  FinanceMobileShell,
+} from "@/components/internal-finance/mobile/FinanceMobileShell";
 import { TablePagination } from "@/components/shared/TablePagination";
 import { PAGE_SIZE_OPTIONS } from "@/lib/hooks/usePageSize";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -38,6 +43,10 @@ import { WarehouseCashForm } from "./WarehouseCashForm";
 interface WarehouseCashTableProps {
   filters: WarehouseReceiptQuery;
   onFiltersChange: (patch: Partial<WarehouseReceiptQuery>) => void;
+  /** Điện thoại: danh sách thẻ thay cho bảng. */
+  isMobile?: boolean;
+  activeFilterCount?: number;
+  onOpenFilter?: () => void;
 }
 
 const PAGE_SIZE = 20;
@@ -360,6 +369,9 @@ const createWarehouseColumns = (
 export function WarehouseCashTable({
   filters,
   onFiltersChange,
+  isMobile = false,
+  activeFilterCount = 0,
+  onOpenFilter,
 }: WarehouseCashTableProps) {
   const [search, setSearch] = useState(filters.search || "");
   const [formReceipt, setFormReceipt] = useState<
@@ -455,6 +467,170 @@ export function WarehouseCashTable({
     }
   };
 
+  const rowActions = (row: WarehouseReceipt) => {
+    const sale = isWarehouseSale(row);
+    const customers = receiptCustomers(row);
+    const canEdit =
+      access.can("warehouse_cash", "update", row.branchId) && isOpen(row);
+    const canPost =
+      access.can("warehouse_cash", "post", row.branchId) &&
+      isOpen(row) &&
+      (sale || customers.length > 0);
+    const canCancel =
+      access.can("warehouse_cash", "cancel", row.branchId) &&
+      row.status !== "CANCELLED" &&
+      row.status !== "REJECTED" &&
+      row.status !== "POSTING";
+    return {
+      sale,
+      customers,
+      canEdit,
+      canPost,
+      canCancel,
+      post: () =>
+        sale
+          ? postReceipt.mutate({ id: row.id, allocations: [] })
+          : setAllocatingId(row.id),
+    };
+  };
+
+  const modals = (
+    <>
+      {formReceipt !== undefined && (
+        <WarehouseCashForm
+          receipt={formReceipt}
+          onClose={() => setFormReceipt(undefined)}
+        />
+      )}
+      {allocatingId != null && (
+        <WarehouseCashAllocationModal
+          id={allocatingId}
+          onClose={() => setAllocatingId(null)}
+        />
+      )}
+      {attachmentRow && (
+        <WarehouseCashAttachmentsModal
+          attachments={attachmentRow.attachments || []}
+          title={attachmentRow.code}
+          onClose={() => setAttachmentRow(null)}
+        />
+      )}
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        <FinanceMobileShell
+          title="Tiền mặt kho"
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Tìm mã, khách, hóa đơn, báo đơn..."
+          activeFilterCount={activeFilterCount}
+          onOpenFilter={onOpenFilter}
+          summary={
+            <span className="text-gray-500">
+              <strong className="text-gray-900">{total}</strong> phiếu
+            </span>
+          }
+          isLoading={query.isLoading}
+          isEmpty={rows.length === 0}
+          emptyText="Không có phiếu tiền mặt"
+          page={page}
+          totalPages={totalPages}
+          onPageChange={(next) => onFiltersChange({ page: next })}
+          onCreate={canCreate ? () => setFormReceipt(null) : undefined}>
+          {rows.map((row) => {
+            const actions = rowActions(row);
+            const status = statusLabel(row);
+            const flows = receiptCashFlows(row);
+            const canceling =
+              cancelReceipt.isPending && cancelReceipt.variables?.id === row.id;
+            return (
+              <FinanceMobileCard
+                key={row.id}
+                code={row.code}
+                muted={row.status === "CANCELLED"}
+                badge={
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${status.className}`}>
+                    {status.text}
+                  </span>
+                }
+                title={
+                  actions.sale
+                    ? "Bán đồ kho"
+                    : actions.customers.map((item) => item.name).join(", ") ||
+                      "Chưa có khách"
+                }
+                meta={
+                  <>
+                    <div>
+                      {dateLabel(row.occurredAt)} · {row.branch?.name || "-"}
+                    </div>
+                    {(row.packingSlip?.code || row.invoiceLinks?.length) && (
+                      <div className="truncate font-mono">
+                        {[
+                          row.packingSlip?.code,
+                          ...(row.invoiceLinks || []).map(
+                            (link) => link.invoice.code,
+                          ),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </div>
+                    )}
+                    {row.description && (
+                      <div className="break-words">{row.description}</div>
+                    )}
+                    {flows.length > 0 && (
+                      <div className="font-mono text-green-700">
+                        {flows.map((flow) => flow.code).join(", ")}
+                      </div>
+                    )}
+                  </>
+                }
+                amount={formatCurrency(Number(row.amount))}
+                amountTone="positive">
+                {(row.attachments?.length || 0) > 0 && (
+                  <CardAction onClick={() => setAttachmentRow(row)}>
+                    <Paperclip className="h-3.5 w-3.5" />
+                    {row.attachments?.length}
+                  </CardAction>
+                )}
+                {actions.canPost && (
+                  <CardAction
+                    tone="primary"
+                    disabled={postReceipt.isPending}
+                    onClick={actions.post}>
+                    Lập phiếu thu
+                  </CardAction>
+                )}
+                {actions.canEdit && (
+                  <CardAction onClick={() => setFormReceipt(row)}>
+                    Sửa
+                  </CardAction>
+                )}
+                {actions.canCancel && (
+                  <CardAction
+                    tone="danger"
+                    disabled={canceling}
+                    onClick={() => void handleCancelReceipt(row)}>
+                    {canceling ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : null}
+                    Hủy
+                  </CardAction>
+                )}
+              </FinanceMobileCard>
+            );
+          })}
+        </FinanceMobileShell>
+        {modals}
+      </>
+    );
+  }
+
   return (
     <div className="mb-4 mr-4 mt-4 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-white">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b px-4 py-2.5">
@@ -524,20 +700,12 @@ export function WarehouseCashTable({
               </tr>
             ) : (
               rows.map((row) => {
-                const sale = isWarehouseSale(row);
-                const customers = receiptCustomers(row);
-                const canEditRow =
-                  access.can("warehouse_cash", "update", row.branchId) &&
-                  isOpen(row);
-                const canPostRow =
-                  access.can("warehouse_cash", "post", row.branchId) &&
-                  isOpen(row) &&
-                  (sale || customers.length > 0);
-                const canCancelRow =
-                  access.can("warehouse_cash", "cancel", row.branchId) &&
-                  row.status !== "CANCELLED" &&
-                  row.status !== "REJECTED" &&
-                  row.status !== "POSTING";
+                const {
+                  canEdit: canEditRow,
+                  canPost: canPostRow,
+                  canCancel: canCancelRow,
+                  post,
+                } = rowActions(row);
                 const hasRowActions = canEditRow || canPostRow || canCancelRow;
 
                 return (
@@ -573,14 +741,7 @@ export function WarehouseCashTable({
                             cancelReceipt.variables?.id === row.id
                           }
                           onEdit={() => setFormReceipt(row)}
-                          onPost={() =>
-                            sale
-                              ? postReceipt.mutate({
-                                  id: row.id,
-                                  allocations: [],
-                                })
-                              : setAllocatingId(row.id)
-                          }
+                          onPost={post}
                           onCancel={() => void handleCancelReceipt(row)}
                         />
                       )}
@@ -604,25 +765,7 @@ export function WarehouseCashTable({
         onLimitChange={(next) => onFiltersChange({ limit: next, page: 1 })}
       />
 
-      {formReceipt !== undefined && (
-        <WarehouseCashForm
-          receipt={formReceipt}
-          onClose={() => setFormReceipt(undefined)}
-        />
-      )}
-      {allocatingId != null && (
-        <WarehouseCashAllocationModal
-          id={allocatingId}
-          onClose={() => setAllocatingId(null)}
-        />
-      )}
-      {attachmentRow && (
-        <WarehouseCashAttachmentsModal
-          attachments={attachmentRow.attachments || []}
-          title={attachmentRow.code}
-          onClose={() => setAttachmentRow(null)}
-        />
-      )}
+      {modals}
     </div>
   );
 }

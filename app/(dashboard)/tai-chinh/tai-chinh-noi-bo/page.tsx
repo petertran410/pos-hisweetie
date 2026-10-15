@@ -1,5 +1,7 @@
 "use client";
 
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
+import { MobileFilterDrawer } from "@/components/internal-finance/mobile/FinanceMobileShell";
 import { usePageSize } from "@/lib/hooks/usePageSize";
 import Link from "next/link";
 import { CalendarRange, Truck } from "lucide-react";
@@ -39,6 +41,15 @@ export default function TaiChinhNoiBoPage() {
     limit: pageSize,
   }));
 
+  const isMobile = useIsMobile(768);
+  const [showFilters, setShowFilters] = useState(false);
+  const activeFilterCount = [
+    filters.branchIds?.length,
+    filters.direction,
+    filters.category,
+    filters.status,
+    filters.fromDate || filters.toDate,
+  ].filter(Boolean).length;
   const query = useInternalFinance(filters);
   const summary = useInternalFinanceSummary(filters);
   const rows = query.data?.data || [];
@@ -101,17 +112,35 @@ export default function TaiChinhNoiBoPage() {
     <FinancePageGuard
       permissions={[{ resource: "cash_flows", action: "view" }]}>
       <div
-        className="flex h-full min-h-0 overflow-hidden border-t"
+        className={`flex h-full min-h-0 overflow-hidden border-t ${
+          isMobile ? "flex-col" : ""
+        }`}
         style={{ borderColor: "var(--dt-border)" }}>
-        <InternalFinanceSidebar
-          filters={filters}
-          onChange={updateFilters}
-          storageKey={STORAGE_KEY}
-          resetPatch={{
-            branchIds: headerBranchId ? [headerBranchId] : undefined,
-          }}
-        />
+        {(() => {
+          const sidebar = (
+            <InternalFinanceSidebar
+              filters={filters}
+              onChange={updateFilters}
+              storageKey={STORAGE_KEY}
+              resetPatch={{
+                branchIds: headerBranchId ? [headerBranchId] : undefined,
+              }}
+            />
+          );
+          return isMobile ? (
+            <MobileFilterDrawer
+              open={showFilters}
+              onClose={() => setShowFilters(false)}>
+              {sidebar}
+            </MobileFilterDrawer>
+          ) : (
+            sidebar
+          );
+        })()}
         <InternalFinanceTable
+          isMobile={isMobile}
+          activeFilterCount={activeFilterCount}
+          onOpenFilter={() => setShowFilters(true)}
           title="Tài chính nội bộ"
           rows={rows}
           search={filters.search || ""}

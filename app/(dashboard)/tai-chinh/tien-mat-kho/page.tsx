@@ -1,5 +1,6 @@
 "use client";
 
+import { MobileFilterDrawer } from "@/components/internal-finance/mobile/FinanceMobileShell";
 import { usePageSize } from "@/lib/hooks/usePageSize";
 import { useCallback, useState } from "react";
 import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
@@ -40,14 +41,35 @@ function WarehouseCashScreen() {
     [pageSize, setPageSize],
   );
 
+  const [showFilters, setShowFilters] = useState(false);
+  const activeFilterCount = [
+    filters.branchIds?.length,
+    filters.receiptStatus,
+    filters.fromDate || filters.toDate,
+  ].filter(Boolean).length;
+
   return (
     <div
-      className={`flex h-full min-h-0 border-t ${
-        isMobile ? "flex-col overflow-auto" : "overflow-hidden"
+      className={`flex h-full min-h-0 overflow-hidden border-t ${
+        isMobile ? "flex-col" : ""
       }`}
       style={{ borderColor: "var(--dt-border)" }}>
-      <WarehouseCashSidebar filters={filters} onChange={updateFilters} />
-      <WarehouseCashTable filters={filters} onFiltersChange={updateFilters} />
+      {isMobile ? (
+        <MobileFilterDrawer
+          open={showFilters}
+          onClose={() => setShowFilters(false)}>
+          <WarehouseCashSidebar filters={filters} onChange={updateFilters} />
+        </MobileFilterDrawer>
+      ) : (
+        <WarehouseCashSidebar filters={filters} onChange={updateFilters} />
+      )}
+      <WarehouseCashTable
+        filters={filters}
+        onFiltersChange={updateFilters}
+        isMobile={isMobile}
+        activeFilterCount={activeFilterCount}
+        onOpenFilter={() => setShowFilters(true)}
+      />
     </div>
   );
 }

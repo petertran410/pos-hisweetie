@@ -3,6 +3,9 @@
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
 import { TablePagination } from "@/components/shared/TablePagination";
 import { usePageSize } from "@/lib/hooks/usePageSize";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
+import { MobileFilterDrawer } from "@/components/internal-finance/mobile/FinanceMobileShell";
+import { WarehouseExpenseMobileList } from "@/components/warehouse-expense/WarehouseExpenseMobileList";
 import { useColumnToggle } from "@/lib/hooks/useColumnToggle";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -67,6 +70,8 @@ function WarehouseExpenseScreen() {
     useState<InternalFinanceEntry | null>(null);
   const [markingId, setMarkingId] = useState<number | null>(null);
   const [notesRow, setNotesRow] = useState<InternalFinanceEntry | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const isMobile = useIsMobile(768);
   const [openedCode, setOpenedCode] = useState("");
   const markIssued = useMarkWarehouseExpenseIssued();
   const check = useCheckWarehouseExpense();
@@ -164,6 +169,27 @@ function WarehouseExpenseScreen() {
     setPage(1);
   };
 
+  const canCheckRow = (
+    row: InternalFinanceEntry,
+    role: "manager" | "accountant",
+  ) => isExpenseCheckOpen(row) && canAction(`check_${role}`, row.branchId);
+  const canMarkIssuedRow = (row: InternalFinanceEntry) =>
+    canAction("mark_issued", row.branchId) &&
+    !row.cashIssued &&
+    (inApprovedBatch(row) || isExpenseCheckOpen(row));
+  const canCancelRow = (row: InternalFinanceEntry) =>
+    isExpenseCancellable(row) && canAction("cancel", row.branchId);
+  const activeFilterCount = [
+    filters.branchId,
+    filters.category,
+    filters.status,
+    filters.cashIssued,
+    filters.checkStatus,
+    filters.payerId,
+    filters.expenseItem,
+    filters.fromDate || filters.toDate,
+  ].filter(Boolean).length;
+
   const canEditRow = (row: InternalFinanceEntry) =>
     row.sourceType === "MANUAL_EXPENSE" &&
     isExpenseOpenForEdit(row) &&
@@ -212,126 +238,163 @@ function WarehouseExpenseScreen() {
   return (
     <FinancePageGuard
       permissions={[{ resource: "warehouse_expense", action: "view" }]}>
-      <div className="flex h-full min-h-0 overflow-hidden border-t bg-gray-50">
-        <WarehouseExpenseSidebar
-          filters={filters}
-          onChange={handleFiltersChange}
-        />
-        <main className="m-4 mb-4 ml-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-white shadow-sm">
-          <div className="flex shrink-0 items-center justify-between gap-4 border-b px-4 py-2.5">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex min-w-0 items-center gap-2">
-                <WalletCards className="h-5 w-5 text-brand" />
-                <h1 className="whitespace-nowrap text-base font-semibold text-gray-900">
-                  Phiếu chi kho
-                </h1>
-              </div>
-              <input
-                value={search}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setPage(1);
-                  if (event.target.value.trim() !== codeParam) clearCodeParam();
-                }}
-                placeholder="Tìm mã, nội dung, ghi chú, xe, mã báo đơn..."
-                className="h-9 w-64 rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-              />
-            </div>
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
-              {canAction("create") && (
-                <button
-                  type="button"
-                  onClick={() => setShowForm(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                  <Plus className="h-4 w-4" />
-                  Tạo khoản chi khác
-                </button>
-              )}
-              <Link
-                href="/tai-chinh/approval-tuan"
-                className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                <CalendarRange className="h-4 w-4" />
-                Approval tuần
-              </Link>
-              <ColumnToggle columns={columns} onToggle={toggleColumn} />
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center justify-end gap-4 border-b px-4 py-2 text-sm">
-            <span className="text-gray-500">
-              Số dòng: <strong className="text-gray-900">{total}</strong>
-            </span>
-            <span className="text-gray-500">
-              Tổng tiền trang:{" "}
-              <strong className="text-red-600">
-                {formatCurrency(pageAmount)}
-              </strong>
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                setSearch("");
-                clearCodeParam();
-              }}
-              className="text-sm font-medium text-brand hover:underline">
-              Xóa tìm kiếm
-            </button>
-          </div>
-
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {expenses.isError ? (
-              <div className="flex flex-1 items-center justify-center text-sm text-red-600">
-                {expenses.error instanceof Error
-                  ? expenses.error.message
-                  : "Không tải được dữ liệu"}
-              </div>
-            ) : (
-              <WarehouseExpenseTable
-                rows={rows}
-                // Chỉ hiện "Đang tải" lần đầu; tải lại nền (sau tick, Đã chi…)
-                // giữ nguyên bảng, trang và vị trí cuộn.
-                isLoading={expenses.isLoading}
-                canCheck={(row, role) =>
-                  isExpenseCheckOpen(row) &&
-                  canAction(`check_${role}`, row.branchId)
-                }
-                canMarkIssued={(row) =>
-                  canAction("mark_issued", row.branchId) &&
-                  !row.cashIssued &&
-                  (inApprovedBatch(row) || isExpenseCheckOpen(row))
-                }
-                onCheck={(row, role, checked) =>
-                  check.mutate({ id: row.id, role, checked })
-                }
-                canEdit={canEditRow}
-                canCancel={(row) =>
-                  isExpenseCancellable(row) && canAction("cancel", row.branchId)
-                }
-                busyId={markingId}
-                highlightId={linkedRow?.id}
-                onOpenAttachments={setAttachmentRow}
-                onEdit={setEditingExpense}
-                onMarkIssued={handleMarkIssued}
-                onCancel={handleCancel}
-                onOpenNotes={setNotesRow}
-                shows={shows}
-              />
-            )}
-            <TablePagination
-              page={page}
-              totalPages={totalPages}
-              total={total}
-              limit={limit}
-              limitOptions={limitOptions}
-              unit="phiếu"
-              onPageChange={setPage}
-              onLimitChange={(next) => {
-                setLimit(next);
-                setPage(1);
-              }}
+      {isMobile ? (
+        <div className="flex h-full min-h-0 flex-col border-t">
+          <MobileFilterDrawer
+            open={showFilters}
+            onClose={() => setShowFilters(false)}>
+            <WarehouseExpenseSidebar
+              filters={filters}
+              onChange={handleFiltersChange}
             />
-          </div>
-        </main>
-      </div>
+          </MobileFilterDrawer>
+          <WarehouseExpenseMobileList
+            rows={rows}
+            isLoading={expenses.isLoading}
+            search={search}
+            onSearchChange={(value) => {
+              setSearch(value);
+              setPage(1);
+              if (value.trim() !== codeParam) clearCodeParam();
+            }}
+            activeFilterCount={activeFilterCount}
+            onOpenFilter={() => setShowFilters(true)}
+            total={total}
+            pageAmount={pageAmount}
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            onCreate={canAction("create") ? () => setShowForm(true) : undefined}
+            canCheck={canCheckRow}
+            canMarkIssued={canMarkIssuedRow}
+            canEdit={canEditRow}
+            canCancel={canCancelRow}
+            busyId={markingId}
+            highlightId={linkedRow?.id}
+            onCheck={(row, role, checked) =>
+              check.mutate({ id: row.id, role, checked })
+            }
+            onOpenAttachments={setAttachmentRow}
+            onEdit={setEditingExpense}
+            onMarkIssued={handleMarkIssued}
+            onCancel={handleCancel}
+            onOpenNotes={setNotesRow}
+          />
+        </div>
+      ) : (
+        <div className="flex h-full min-h-0 overflow-hidden border-t bg-gray-50">
+          <WarehouseExpenseSidebar
+            filters={filters}
+            onChange={handleFiltersChange}
+          />
+          <main className="m-4 mb-4 ml-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-white shadow-sm">
+            <div className="flex shrink-0 items-center justify-between gap-4 border-b px-4 py-2.5">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <WalletCards className="h-5 w-5 text-brand" />
+                  <h1 className="whitespace-nowrap text-base font-semibold text-gray-900">
+                    Phiếu chi kho
+                  </h1>
+                </div>
+                <input
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setPage(1);
+                    if (event.target.value.trim() !== codeParam)
+                      clearCodeParam();
+                  }}
+                  placeholder="Tìm mã, nội dung, ghi chú, xe, mã báo đơn..."
+                  className="h-9 w-64 rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                />
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                {canAction("create") && (
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    <Plus className="h-4 w-4" />
+                    Tạo khoản chi khác
+                  </button>
+                )}
+                <Link
+                  href="/tai-chinh/approval-tuan"
+                  className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  <CalendarRange className="h-4 w-4" />
+                  Approval tuần
+                </Link>
+                <ColumnToggle columns={columns} onToggle={toggleColumn} />
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center justify-end gap-4 border-b px-4 py-2 text-sm">
+              <span className="text-gray-500">
+                Số dòng: <strong className="text-gray-900">{total}</strong>
+              </span>
+              <span className="text-gray-500">
+                Tổng tiền trang:{" "}
+                <strong className="text-red-600">
+                  {formatCurrency(pageAmount)}
+                </strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  clearCodeParam();
+                }}
+                className="text-sm font-medium text-brand hover:underline">
+                Xóa tìm kiếm
+              </button>
+            </div>
+
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              {expenses.isError ? (
+                <div className="flex flex-1 items-center justify-center text-sm text-red-600">
+                  {expenses.error instanceof Error
+                    ? expenses.error.message
+                    : "Không tải được dữ liệu"}
+                </div>
+              ) : (
+                <WarehouseExpenseTable
+                  rows={rows}
+                  // Chỉ hiện "Đang tải" lần đầu; tải lại nền (sau tick, Đã chi…)
+                  // giữ nguyên bảng, trang và vị trí cuộn.
+                  isLoading={expenses.isLoading}
+                  canCheck={canCheckRow}
+                  canMarkIssued={canMarkIssuedRow}
+                  onCheck={(row, role, checked) =>
+                    check.mutate({ id: row.id, role, checked })
+                  }
+                  canEdit={canEditRow}
+                  canCancel={canCancelRow}
+                  busyId={markingId}
+                  highlightId={linkedRow?.id}
+                  onOpenAttachments={setAttachmentRow}
+                  onEdit={setEditingExpense}
+                  onMarkIssued={handleMarkIssued}
+                  onCancel={handleCancel}
+                  onOpenNotes={setNotesRow}
+                  shows={shows}
+                />
+              )}
+              <TablePagination
+                page={page}
+                totalPages={totalPages}
+                total={total}
+                limit={limit}
+                limitOptions={limitOptions}
+                unit="phiếu"
+                onPageChange={setPage}
+                onLimitChange={(next) => {
+                  setLimit(next);
+                  setPage(1);
+                }}
+              />
+            </div>
+          </main>
+        </div>
+      )}
 
       {showForm && (
         <WarehouseExpenseForm

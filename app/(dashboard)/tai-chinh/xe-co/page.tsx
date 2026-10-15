@@ -1,5 +1,7 @@
 "use client";
 
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
+import { VehicleEntryMobileList } from "@/components/vehicles/VehicleEntryMobileList";
 import { TablePagination } from "@/components/shared/TablePagination";
 import { usePageSize } from "@/lib/hooks/usePageSize";
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
@@ -139,6 +141,7 @@ function VehicleScreen() {
     router.replace(rest ? `${pathname}?${rest}` : pathname);
   };
   const [page, setPage] = useState(1);
+  const isMobile = useIsMobile(768);
   const [limit, setLimit, limitOptions] = usePageSize("vehicleEntryPageSize");
   const [showFilters, setShowFilters] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -230,6 +233,15 @@ function VehicleScreen() {
     if (canEditRow(linkedRow)) setEditing(linkedRow);
   }
 
+  const activeFilterCount = [
+    filters.branchId,
+    filters.vehicleId,
+    filters.serviceType,
+    filters.check,
+    filters.status,
+    filters.fromDate || filters.toDate,
+  ].filter(Boolean).length;
+
   const changeFilters = (patch: Partial<VehicleEntryFilters>) => {
     setFilters((current) => ({ ...current, ...patch }));
     setPage(1);
@@ -265,7 +277,10 @@ function VehicleScreen() {
 
   return (
     <FinancePageGuard permissions={VEHICLE_PAGE_PERMISSIONS}>
-      <div className="flex h-full min-h-0 overflow-hidden border-t bg-gray-50">
+      <div
+        className={`flex h-full min-h-0 overflow-hidden border-t bg-gray-50 ${
+          isMobile ? "flex-col" : ""
+        }`}>
         {canView && (
           <VehicleEntrySidebar
             kind={kind}
@@ -282,143 +297,191 @@ function VehicleScreen() {
             }}
           />
         )}
-        <main className="m-2 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-white shadow-sm md:m-4 md:ml-0">
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-3 py-2.5 md:px-4">
-            <div className="flex min-w-0 flex-wrap items-center gap-2 md:gap-3">
-              <div className="flex items-center gap-2">
-                <CarFront className="h-5 w-5 text-brand" />
-                <h1 className="whitespace-nowrap text-base font-semibold text-gray-900">
-                  Xe cộ
-                </h1>
-              </div>
-              <div className="flex rounded-lg border p-0.5">
-                {TABS.map((tab) => (
-                  <button
-                    key={tab.kind}
-                    type="button"
-                    onClick={() => {
-                      setKind(tab.kind);
+        {isMobile ? (
+          <VehicleEntryMobileList
+            kind={kind}
+            tabs={TABS}
+            onKindChange={(next) => {
+              setKind(next);
+              setPage(1);
+              clearCodeParam();
+            }}
+            rows={rows}
+            isLoading={entries.isLoading}
+            search={search}
+            onSearchChange={(value) => {
+              setSearch(value);
+              setPage(1);
+              if (value.trim() !== codeParam) clearCodeParam();
+            }}
+            activeFilterCount={activeFilterCount}
+            onOpenFilter={canView ? () => setShowFilters(true) : undefined}
+            total={total}
+            pageAmount={pageAmount}
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            onCreate={
+              createBranches.length > 0 ? () => setShowForm(true) : undefined
+            }
+            onOpenVehicles={
+              allBranches.length > 0 ? () => setShowVehicles(true) : undefined
+            }
+            highlightId={linkedRow?.id}
+            cancellingId={cancellingId}
+            editBlockReason={editBlockReason}
+            cancelBlockReason={cancelBlockReason}
+            onOpenAttachments={setAttachmentRow}
+            onEdit={setEditing}
+            onCancel={handleCancel}
+            notice={
+              canView ? undefined : (
+                <p className="px-4 py-10 text-center text-sm text-gray-500">
+                  Tài khoản chỉ có quyền tạo phiếu xe. Bấm nút “+” để nhập phiếu
+                  xăng dầu hoặc chăm sóc xe.
+                </p>
+              )
+            }
+          />
+        ) : (
+          <main className="m-2 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-white shadow-sm md:m-4 md:ml-0">
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-3 py-2.5 md:px-4">
+              <div className="flex min-w-0 flex-wrap items-center gap-2 md:gap-3">
+                <div className="flex items-center gap-2">
+                  <CarFront className="h-5 w-5 text-brand" />
+                  <h1 className="whitespace-nowrap text-base font-semibold text-gray-900">
+                    Xe cộ
+                  </h1>
+                </div>
+                <div className="flex rounded-lg border p-0.5">
+                  {TABS.map((tab) => (
+                    <button
+                      key={tab.kind}
+                      type="button"
+                      onClick={() => {
+                        setKind(tab.kind);
+                        setPage(1);
+                        clearCodeParam();
+                      }}
+                      className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                        kind === tab.kind
+                          ? "bg-brand text-white"
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}>
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                {canView && (
+                  <input
+                    value={search}
+                    onChange={(event) => {
+                      setSearch(event.target.value);
                       setPage(1);
-                      clearCodeParam();
+                      if (event.target.value.trim() !== codeParam)
+                        clearCodeParam();
                     }}
-                    className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                      kind === tab.kind
-                        ? "bg-brand text-white"
-                        : "text-gray-600 hover:bg-gray-50"
-                    }`}>
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-              {canView && (
-                <input
-                  value={search}
-                  onChange={(event) => {
-                    setSearch(event.target.value);
-                    setPage(1);
-                    if (event.target.value.trim() !== codeParam)
-                      clearCodeParam();
-                  }}
-                  placeholder="Tìm xe, địa điểm, ghi chú, mã phiếu..."
-                  className="h-9 w-full rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand sm:w-64"
-                />
-              )}
-            </div>
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
-              {canView && (
-                <button
-                  type="button"
-                  onClick={() => setShowFilters(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 md:hidden">
-                  <SlidersHorizontal className="h-4 w-4" />
-                  Bộ lọc
-                </button>
-              )}
-              {canView && (
-                <ColumnToggle
-                  key={kind}
-                  columns={columnToggle.columns}
-                  onToggle={columnToggle.toggleColumn}
-                />
-              )}
-              {allBranches.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowVehicles(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                  <ListChecks className="h-4 w-4" />
-                  Danh sách xe
-                </button>
-              )}
-              {createBranches.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowForm(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-dark">
-                  <Plus className="h-4 w-4" />
-                  Tạo phiếu xe
-                </button>
-              )}
-            </div>
-          </div>
-
-          {!canView ? (
-            <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-gray-500">
-              Tài khoản chỉ có quyền tạo phiếu xe. Bấm “Tạo phiếu xe” để nhập
-              phiếu xăng dầu hoặc chăm sóc xe.
-            </div>
-          ) : (
-            <>
-              <div className="flex shrink-0 items-center justify-end gap-4 border-b px-4 py-2 text-sm">
-                <span className="text-gray-500">
-                  Số phiếu: <strong className="text-gray-900">{total}</strong>
-                </span>
-                <span className="text-gray-500">
-                  Tổng tiền trang:{" "}
-                  <strong className="text-red-600">
-                    {formatCurrency(pageAmount)}
-                  </strong>
-                </span>
-              </div>
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                {entries.isError ? (
-                  <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-red-600">
-                    {entries.error instanceof Error
-                      ? entries.error.message
-                      : "Không tải được dữ liệu"}
-                  </div>
-                ) : (
-                  <VehicleEntryTable
-                    kind={kind}
-                    rows={rows}
-                    isLoading={entries.isLoading}
-                    editBlockReason={editBlockReason}
-                    cancelBlockReason={cancelBlockReason}
-                    highlightId={linkedRow?.id}
-                    cancellingId={cancellingId}
-                    onOpenAttachments={setAttachmentRow}
-                    onEdit={setEditing}
-                    onCancel={handleCancel}
-                    shows={columnToggle.shows}
+                    placeholder="Tìm xe, địa điểm, ghi chú, mã phiếu..."
+                    className="h-9 w-full rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand sm:w-64"
                   />
                 )}
-                <TablePagination
-                  page={page}
-                  totalPages={totalPages}
-                  total={total}
-                  limit={limit}
-                  limitOptions={limitOptions}
-                  unit="phiếu"
-                  onPageChange={setPage}
-                  onLimitChange={(next) => {
-                    setLimit(next);
-                    setPage(1);
-                  }}
-                />
               </div>
-            </>
-          )}
-        </main>
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                {canView && (
+                  <button
+                    type="button"
+                    onClick={() => setShowFilters(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 md:hidden">
+                    <SlidersHorizontal className="h-4 w-4" />
+                    Bộ lọc
+                  </button>
+                )}
+                {canView && (
+                  <ColumnToggle
+                    key={kind}
+                    columns={columnToggle.columns}
+                    onToggle={columnToggle.toggleColumn}
+                  />
+                )}
+                {allBranches.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowVehicles(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    <ListChecks className="h-4 w-4" />
+                    Danh sách xe
+                  </button>
+                )}
+                {createBranches.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-dark">
+                    <Plus className="h-4 w-4" />
+                    Tạo phiếu xe
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {!canView ? (
+              <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-gray-500">
+                Tài khoản chỉ có quyền tạo phiếu xe. Bấm “Tạo phiếu xe” để nhập
+                phiếu xăng dầu hoặc chăm sóc xe.
+              </div>
+            ) : (
+              <>
+                <div className="flex shrink-0 items-center justify-end gap-4 border-b px-4 py-2 text-sm">
+                  <span className="text-gray-500">
+                    Số phiếu: <strong className="text-gray-900">{total}</strong>
+                  </span>
+                  <span className="text-gray-500">
+                    Tổng tiền trang:{" "}
+                    <strong className="text-red-600">
+                      {formatCurrency(pageAmount)}
+                    </strong>
+                  </span>
+                </div>
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                  {entries.isError ? (
+                    <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-red-600">
+                      {entries.error instanceof Error
+                        ? entries.error.message
+                        : "Không tải được dữ liệu"}
+                    </div>
+                  ) : (
+                    <VehicleEntryTable
+                      kind={kind}
+                      rows={rows}
+                      isLoading={entries.isLoading}
+                      editBlockReason={editBlockReason}
+                      cancelBlockReason={cancelBlockReason}
+                      highlightId={linkedRow?.id}
+                      cancellingId={cancellingId}
+                      onOpenAttachments={setAttachmentRow}
+                      onEdit={setEditing}
+                      onCancel={handleCancel}
+                      shows={columnToggle.shows}
+                    />
+                  )}
+                  <TablePagination
+                    page={page}
+                    totalPages={totalPages}
+                    total={total}
+                    limit={limit}
+                    limitOptions={limitOptions}
+                    unit="phiếu"
+                    onPageChange={setPage}
+                    onLimitChange={(next) => {
+                      setLimit(next);
+                      setPage(1);
+                    }}
+                  />
+                </div>
+              </>
+            )}
+          </main>
+        )}
       </div>
 
       {showForm && (

@@ -1,5 +1,11 @@
 "use client";
 
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
+import {
+  CardAction,
+  FinanceMobileCard,
+  FinanceMobileShell,
+} from "@/components/internal-finance/mobile/FinanceMobileShell";
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
 import { useColumnToggle } from "@/lib/hooks/useColumnToggle";
 import Link from "next/link";
@@ -121,6 +127,8 @@ export default function ApprovalTuanPage() {
   const canPrepareAny = BRANCH_IDS.some((id) => can("prepare", id));
   const createApproval = useCreateWarehouseExpenseApproval();
   const [creatingId, setCreatingId] = useState<number | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const isMobile = useIsMobile(768);
   const [cancelling, setCancelling] = useState<WeeklyBatch | null>(null);
   const { data: branchData } = useBranches();
   const branches = useMemo(
@@ -224,9 +232,15 @@ export default function ApprovalTuanPage() {
     <FinancePageGuard
       permissions={[{ resource: "warehouse_expense", action: "view" }]}>
       <div
-        className="flex h-full min-h-0 overflow-hidden border-t"
+        className={`flex h-full min-h-0 overflow-hidden border-t ${
+          isMobile ? "flex-col" : ""
+        }`}
         style={{ borderColor: "var(--dt-border)" }}>
-        <FinanceFilterSidebar activeCount={activeCount} onClear={clearAll}>
+        <FinanceFilterSidebar
+          activeCount={activeCount}
+          onClear={clearAll}
+          mobileOpen={showFilters}
+          onMobileClose={isMobile ? () => setShowFilters(false) : undefined}>
           {!week && (
             <>
               <TimeRangeFilter
@@ -296,197 +310,301 @@ export default function ApprovalTuanPage() {
           </FilterSection>
         </FinanceFilterSidebar>
 
-        <div className="mb-4 mr-4 mt-4 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-white">
-          <div className="flex shrink-0 items-center justify-between gap-4 border-b px-4 py-2.5">
-            <div className="flex min-w-0 items-center gap-2">
-              <WalletCards className="h-5 w-5 text-brand" />
-              <h2 className="whitespace-nowrap text-base font-semibold text-gray-900">
-                Approval tuần
-              </h2>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
+        {isMobile ? (
+          <FinanceMobileShell
+            title="Approval tuần"
+            activeFilterCount={activeCount}
+            onOpenFilter={() => setShowFilters(true)}
+            actions={
               <Link
                 href="/tai-chinh/phieu-chi-kho"
-                className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium text-gray-700">
                 Phiếu chi kho
               </Link>
-              {canPrepareAny && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedBatchId(null);
-                    setShowPanel(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-dark">
-                  <Plus className="h-4 w-4" />
-                  Tổng hợp tuần
-                </button>
-              )}
-              <ColumnToggle columns={columns} onToggle={toggleColumn} />
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center justify-end gap-4 border-b px-4 py-2 text-sm">
-            <span className="text-gray-500">
-              Số batch: <strong className="text-gray-900">{total}</strong>
-            </span>
-            <span className="text-gray-500">
-              Tổng chi:{" "}
-              <strong className="text-red-600">
-                {formatCurrency(totalAmount)}
-              </strong>
-            </span>
-          </div>
-          <div className="min-h-0 flex-1 overflow-auto">
-            <table className="w-full min-w-[900px] text-sm">
-              <thead className="sticky top-0 z-10 border-b bg-gray-50">
-                <tr>
-                  {[
-                    ...APPROVAL_COLUMNS.filter((column) =>
-                      shows(column.key),
-                    ).map((column) => column.label),
-                    // Cột thao tác tạo approval luôn hiện.
-                    "Approval Lark",
-                  ].map((label) => (
-                    <th
-                      key={label}
-                      className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      {label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {batches.isLoading ? (
-                  <tr>
-                    <td
-                      colSpan={visibleCount + 1}
-                      className="py-16 text-center text-sm text-gray-400">
-                      Đang tải batch tuần...
-                    </td>
-                  </tr>
-                ) : rows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={visibleCount + 1}
-                      className="py-16 text-center text-sm text-gray-400">
-                      Không có batch phù hợp
-                    </td>
-                  </tr>
-                ) : (
-                  rows.map((row) => (
-                    <tr
-                      key={row.id}
-                      onClick={() => {
-                        setSelectedBatchId(row.id);
-                        setShowPanel(true);
-                      }}
-                      className="cursor-pointer hover:bg-brand-soft">
-                      {shows("code") && (
-                        <td className="px-4 py-3 font-medium text-brand">
-                          {row.code}
-                        </td>
-                      )}
-                      {shows("branch") && (
-                        <td className="px-4 py-3 text-gray-800">
-                          {row.branch?.name || "-"}
-                        </td>
-                      )}
-                      {shows("range") && (
-                        <td className="px-4 py-3 text-gray-800">
-                          {dateLabel(row.weekStart)} - {dateLabel(row.weekEnd)}
-                        </td>
-                      )}
-                      {shows("total") && (
-                        <td className="px-4 py-3 font-semibold text-red-600">
-                          {formatCurrency(row.totalAmount)}
-                        </td>
-                      )}
-                      {shows("count") && (
-                        <td className="px-4 py-3 text-gray-700">
-                          {row._count?.entries || 0}
-                        </td>
-                      )}
-                      {shows("issued") && (
-                        <td className="px-4 py-3 text-gray-700">
-                          {row.cashIssuedCount || 0}/{row._count?.entries || 0}
-                        </td>
-                      )}
-                      {shows("status") && (
-                        <td className="px-4 py-3">
-                          <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700">
-                            {STATUS_LABELS[row.status] || row.status}
-                          </span>
-                        </td>
-                      )}
-                      {shows("approval") && (
-                        <td
-                          className="px-4 py-3"
-                          onClick={(event) => event.stopPropagation()}>
-                          <div className="flex items-center gap-2">
-                            {row.status === "READY" &&
-                            can("submit", row.branchId) ? (
-                              <button
-                                type="button"
-                                disabled={createApproval.isPending}
-                                onClick={() => {
-                                  setCreatingId(row.id);
-                                  createApproval.mutate(
-                                    { id: row.id },
-                                    { onSettled: () => setCreatingId(null) },
-                                  );
-                                }}
-                                className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-brand px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-dark disabled:opacity-50">
-                                {creatingId === row.id ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <Send className="h-3.5 w-3.5" />
-                                )}
-                                Tạo approval
-                              </button>
-                            ) : row.approvalRequest ? (
-                              <span className="text-xs text-gray-600">
-                                {APPROVAL_STATUS_LABELS[
-                                  row.approvalRequest.status
-                                ] || row.approvalRequest.status}
-                                {row.approvalRequest.status === "PENDING" &&
-                                  row.approvalRequest.currentNode &&
-                                  ` · ${row.approvalRequest.currentNode}`}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-gray-400">-</span>
-                            )}
-                            {can("prepare", row.branchId) &&
-                              canCancelBatch(row) && (
-                                <button
-                                  type="button"
-                                  onClick={() => setCancelling(row)}
-                                  className="whitespace-nowrap rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50">
-                                  Hủy
-                                </button>
-                              )}
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-          <TablePagination
+            }
+            summary={
+              <div className="flex items-center justify-between text-gray-500">
+                <span>
+                  <strong className="text-gray-900">{total}</strong> batch
+                </span>
+                <span>
+                  Tổng chi:{" "}
+                  <strong className="text-red-600">
+                    {formatCurrency(totalAmount)}
+                  </strong>
+                </span>
+              </div>
+            }
+            isLoading={batches.isLoading}
+            isEmpty={rows.length === 0}
+            emptyText="Không có batch phù hợp"
             page={page}
             totalPages={totalPages}
-            total={total}
-            limit={limit}
-            limitOptions={limitOptions}
-            unit="batch"
             onPageChange={setPage}
-            onLimitChange={(next) => {
-              setLimit(next);
-              setPage(1);
-            }}
-          />
-        </div>
+            onCreate={
+              canPrepareAny
+                ? () => {
+                    setSelectedBatchId(null);
+                    setShowPanel(true);
+                  }
+                : undefined
+            }>
+            {rows.map((row) => (
+              <FinanceMobileCard
+                key={row.id}
+                code={row.code}
+                badge={
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
+                    {STATUS_LABELS[row.status] || row.status}
+                  </span>
+                }
+                title={`${row.branch?.name || "-"} · ${dateLabel(row.weekStart)} - ${dateLabel(row.weekEnd)}`}
+                meta={
+                  <>
+                    <div>
+                      {row._count?.entries || 0} khoản · Đã chi{" "}
+                      {row.cashIssuedCount || 0}/{row._count?.entries || 0}
+                    </div>
+                    {row.approvalRequest && (
+                      <div>
+                        Lark:{" "}
+                        {APPROVAL_STATUS_LABELS[row.approvalRequest.status] ||
+                          row.approvalRequest.status}
+                        {row.approvalRequest.status === "PENDING" &&
+                          row.approvalRequest.currentNode &&
+                          ` · ${row.approvalRequest.currentNode}`}
+                      </div>
+                    )}
+                  </>
+                }
+                amount={formatCurrency(row.totalAmount)}
+                amountTone="negative"
+                onClick={() => {
+                  setSelectedBatchId(row.id);
+                  setShowPanel(true);
+                }}>
+                {row.status === "READY" && can("submit", row.branchId) && (
+                  <CardAction
+                    tone="primary"
+                    disabled={createApproval.isPending}
+                    onClick={() => {
+                      setCreatingId(row.id);
+                      createApproval.mutate(
+                        { id: row.id },
+                        { onSettled: () => setCreatingId(null) },
+                      );
+                    }}>
+                    {creatingId === row.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Send className="h-3.5 w-3.5" />
+                    )}
+                    Tạo approval
+                  </CardAction>
+                )}
+                {can("prepare", row.branchId) && canCancelBatch(row) && (
+                  <CardAction tone="danger" onClick={() => setCancelling(row)}>
+                    Hủy
+                  </CardAction>
+                )}
+              </FinanceMobileCard>
+            ))}
+          </FinanceMobileShell>
+        ) : (
+          <div className="mb-4 mr-4 mt-4 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-white">
+            <div className="flex shrink-0 items-center justify-between gap-4 border-b px-4 py-2.5">
+              <div className="flex min-w-0 items-center gap-2">
+                <WalletCards className="h-5 w-5 text-brand" />
+                <h2 className="whitespace-nowrap text-base font-semibold text-gray-900">
+                  Approval tuần
+                </h2>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Link
+                  href="/tai-chinh/phieu-chi-kho"
+                  className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  Phiếu chi kho
+                </Link>
+                {canPrepareAny && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedBatchId(null);
+                      setShowPanel(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-dark">
+                    <Plus className="h-4 w-4" />
+                    Tổng hợp tuần
+                  </button>
+                )}
+                <ColumnToggle columns={columns} onToggle={toggleColumn} />
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center justify-end gap-4 border-b px-4 py-2 text-sm">
+              <span className="text-gray-500">
+                Số batch: <strong className="text-gray-900">{total}</strong>
+              </span>
+              <span className="text-gray-500">
+                Tổng chi:{" "}
+                <strong className="text-red-600">
+                  {formatCurrency(totalAmount)}
+                </strong>
+              </span>
+            </div>
+            <div className="min-h-0 flex-1 overflow-auto">
+              <table className="w-full min-w-[900px] text-sm">
+                <thead className="sticky top-0 z-10 border-b bg-gray-50">
+                  <tr>
+                    {[
+                      ...APPROVAL_COLUMNS.filter((column) =>
+                        shows(column.key),
+                      ).map((column) => column.label),
+                      // Cột thao tác tạo approval luôn hiện.
+                      "Approval Lark",
+                    ].map((label) => (
+                      <th
+                        key={label}
+                        className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        {label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {batches.isLoading ? (
+                    <tr>
+                      <td
+                        colSpan={visibleCount + 1}
+                        className="py-16 text-center text-sm text-gray-400">
+                        Đang tải batch tuần...
+                      </td>
+                    </tr>
+                  ) : rows.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={visibleCount + 1}
+                        className="py-16 text-center text-sm text-gray-400">
+                        Không có batch phù hợp
+                      </td>
+                    </tr>
+                  ) : (
+                    rows.map((row) => (
+                      <tr
+                        key={row.id}
+                        onClick={() => {
+                          setSelectedBatchId(row.id);
+                          setShowPanel(true);
+                        }}
+                        className="cursor-pointer hover:bg-brand-soft">
+                        {shows("code") && (
+                          <td className="px-4 py-3 font-medium text-brand">
+                            {row.code}
+                          </td>
+                        )}
+                        {shows("branch") && (
+                          <td className="px-4 py-3 text-gray-800">
+                            {row.branch?.name || "-"}
+                          </td>
+                        )}
+                        {shows("range") && (
+                          <td className="px-4 py-3 text-gray-800">
+                            {dateLabel(row.weekStart)} -{" "}
+                            {dateLabel(row.weekEnd)}
+                          </td>
+                        )}
+                        {shows("total") && (
+                          <td className="px-4 py-3 font-semibold text-red-600">
+                            {formatCurrency(row.totalAmount)}
+                          </td>
+                        )}
+                        {shows("count") && (
+                          <td className="px-4 py-3 text-gray-700">
+                            {row._count?.entries || 0}
+                          </td>
+                        )}
+                        {shows("issued") && (
+                          <td className="px-4 py-3 text-gray-700">
+                            {row.cashIssuedCount || 0}/
+                            {row._count?.entries || 0}
+                          </td>
+                        )}
+                        {shows("status") && (
+                          <td className="px-4 py-3">
+                            <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700">
+                              {STATUS_LABELS[row.status] || row.status}
+                            </span>
+                          </td>
+                        )}
+                        {shows("approval") && (
+                          <td
+                            className="px-4 py-3"
+                            onClick={(event) => event.stopPropagation()}>
+                            <div className="flex items-center gap-2">
+                              {row.status === "READY" &&
+                              can("submit", row.branchId) ? (
+                                <button
+                                  type="button"
+                                  disabled={createApproval.isPending}
+                                  onClick={() => {
+                                    setCreatingId(row.id);
+                                    createApproval.mutate(
+                                      { id: row.id },
+                                      { onSettled: () => setCreatingId(null) },
+                                    );
+                                  }}
+                                  className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-brand px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-dark disabled:opacity-50">
+                                  {creatingId === row.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <Send className="h-3.5 w-3.5" />
+                                  )}
+                                  Tạo approval
+                                </button>
+                              ) : row.approvalRequest ? (
+                                <span className="text-xs text-gray-600">
+                                  {APPROVAL_STATUS_LABELS[
+                                    row.approvalRequest.status
+                                  ] || row.approvalRequest.status}
+                                  {row.approvalRequest.status === "PENDING" &&
+                                    row.approvalRequest.currentNode &&
+                                    ` · ${row.approvalRequest.currentNode}`}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-400">-</span>
+                              )}
+                              {can("prepare", row.branchId) &&
+                                canCancelBatch(row) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setCancelling(row)}
+                                    className="whitespace-nowrap rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50">
+                                    Hủy
+                                  </button>
+                                )}
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <TablePagination
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              limit={limit}
+              limitOptions={limitOptions}
+              unit="batch"
+              onPageChange={setPage}
+              onLimitChange={(next) => {
+                setLimit(next);
+                setPage(1);
+              }}
+            />
+          </div>
+        )}
       </div>
       {showPanel && (
         <InternalFinanceWeeklyPanel

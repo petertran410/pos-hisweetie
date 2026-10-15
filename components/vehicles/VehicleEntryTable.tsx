@@ -35,7 +35,7 @@ const CHECK_CLASS: Record<string, string> = {
   ABNORMAL: "bg-red-100 text-red-700",
 };
 
-function CheckBadges({ metrics }: { metrics?: FuelMetrics | null }) {
+export function CheckBadges({ metrics }: { metrics?: FuelMetrics | null }) {
   if (!metrics || (!metrics.consumptionCheck && !metrics.costCheck)) {
     return <span className="text-xs text-gray-400">Chờ lần đổ sau</span>;
   }
@@ -65,7 +65,7 @@ function CheckBadges({ metrics }: { metrics?: FuelMetrics | null }) {
   );
 }
 
-const STATUS_CLASS: Record<string, string> = {
+export const STATUS_CLASS: Record<string, string> = {
   APPROVED: "bg-green-100 text-green-700",
   POSTED: "bg-green-100 text-green-700",
   REJECTED: "bg-red-100 text-red-700",

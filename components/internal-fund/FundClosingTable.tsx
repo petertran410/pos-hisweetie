@@ -56,7 +56,10 @@ export function FundClosingTable({
   branchId,
   creating,
   onCreateClose,
+  isMobile = false,
 }: {
+  /** Điện thoại: thẻ từng ngày thay cho bảng hai phía. */
+  isMobile?: boolean;
   rows: InternalFundDailyClosing[];
   isLoading: boolean;
   /** Được nhập số đối soát của kế toán. */
@@ -69,125 +72,204 @@ export function FundClosingTable({
 }) {
   const [editing, setEditing] = useState<InternalFundDailyClosing | null>(null);
 
+  const diffOf = (row: InternalFundDailyClosing) =>
+    row.actualClosingBalance === null
+      ? null
+      : Number(row.actualClosingBalance) - Number(row.systemClosingBalance);
+
+  const list = isMobile ? (
+    <div className="space-y-3">
+      {isLoading ? (
+        <div className="py-16 text-center text-gray-400">
+          <Loader2 className="mx-auto h-5 w-5 animate-spin" />
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="py-16 text-center text-sm text-gray-400">
+          Chưa có chốt sổ nào
+        </div>
+      ) : (
+        rows.map((row) => {
+          const status = STATUS[row.reconciliationStatus] || STATUS.PENDING;
+          const diff = diffOf(row);
+          return (
+            <button
+              key={`${row.branchId}-${row.closingDate}`}
+              type="button"
+              onClick={() => setEditing(row)}
+              className="block w-full rounded-2xl border border-gray-100 bg-white p-3.5 text-left shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-gray-900">
+                  {dayLabel(row.closingDate)}
+                </span>
+                <span
+                  className={`rounded px-2 py-0.5 text-[11px] font-medium ${status.className}`}>
+                  {status.label}
+                </span>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-lg bg-gray-50 p-2">
+                  <div className="text-gray-500">Kế toán nhập</div>
+                  <div className="mt-0.5 text-sm font-semibold text-gray-900">
+                    {money(row.actualClosingBalance)}
+                  </div>
+                  <div className="text-gray-500">
+                    Thu {money(row.actualReceipt)} · Chi{" "}
+                    {money(row.actualExpense)}
+                  </div>
+                </div>
+                <div className="rounded-lg bg-gray-50 p-2">
+                  <div className="text-gray-500">Hệ thống</div>
+                  <div className="mt-0.5 text-sm font-semibold text-gray-900">
+                    {money(row.systemClosingBalance)}
+                  </div>
+                  <div className="text-gray-500">
+                    Thu {money(row.systemReceipt)} · Chi{" "}
+                    {money(row.systemExpense)}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs">
+                <span className="text-gray-500">Chênh lệch</span>
+                <span
+                  className={
+                    diff ? "font-semibold text-red-600" : "text-gray-500"
+                  }>
+                  {diff === null ? "-" : formatCurrency(diff)}
+                </span>
+              </div>
+              {row.notes && (
+                <div className="mt-1 line-clamp-2 whitespace-pre-line text-xs text-gray-600">
+                  {row.notes}
+                </div>
+              )}
+            </button>
+          );
+        })
+      )}
+    </div>
+  ) : null;
+
   return (
     <>
-      <div className="min-h-0 flex-1 overflow-auto">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 z-10 bg-gray-50">
-            <tr>
-              <th rowSpan={2} className={`${TH} text-left`}>
-                Ngày
-              </th>
-              <th colSpan={4} className={`${TH} border-l text-center`}>
-                Kế toán nhập
-              </th>
-              <th colSpan={4} className={`${TH} border-l text-center`}>
-                Hệ thống
-              </th>
-              <th rowSpan={2} className={`${TH} border-l text-right`}>
-                Chênh lệch
-              </th>
-              <th rowSpan={2} className={`${TH} text-left`}>
-                Kiểm tra
-              </th>
-              <th rowSpan={2} className={`${TH} text-left`}>
-                Ghi chú
-              </th>
-            </tr>
-            <tr>
-              {[0, 1].flatMap((group) =>
-                ["Đầu kỳ", "Thu", "Chi", "Cuối kỳ"].map((label, index) => (
-                  <th
-                    key={`${group}-${label}`}
-                    className={`${TH} text-right ${index === 0 ? "border-l" : ""}`}>
-                    {label}
-                  </th>
-                )),
+      {list || (
+        <div className="min-h-0 flex-1 overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 z-10 bg-gray-50">
+              <tr>
+                <th rowSpan={2} className={`${TH} text-left`}>
+                  Ngày
+                </th>
+                <th colSpan={4} className={`${TH} border-l text-center`}>
+                  Kế toán nhập
+                </th>
+                <th colSpan={4} className={`${TH} border-l text-center`}>
+                  Hệ thống
+                </th>
+                <th rowSpan={2} className={`${TH} border-l text-right`}>
+                  Chênh lệch
+                </th>
+                <th rowSpan={2} className={`${TH} text-left`}>
+                  Kiểm tra
+                </th>
+                <th rowSpan={2} className={`${TH} text-left`}>
+                  Ghi chú
+                </th>
+              </tr>
+              <tr>
+                {[0, 1].flatMap((group) =>
+                  ["Đầu kỳ", "Thu", "Chi", "Cuối kỳ"].map((label, index) => (
+                    <th
+                      key={`${group}-${label}`}
+                      className={`${TH} text-right ${index === 0 ? "border-l" : ""}`}>
+                      {label}
+                    </th>
+                  )),
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={12} className="py-16 text-center text-gray-400">
+                    <Loader2 className="mx-auto h-5 w-5 animate-spin" />
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={12} className="py-16 text-center text-gray-400">
+                    Chưa có chốt sổ nào
+                  </td>
+                </tr>
+              ) : (
+                rows.map((row) => {
+                  const status =
+                    STATUS[row.reconciliationStatus] || STATUS.PENDING;
+                  const diff =
+                    row.actualClosingBalance === null
+                      ? null
+                      : Number(row.actualClosingBalance) -
+                        Number(row.systemClosingBalance);
+                  return (
+                    <tr
+                      key={`${row.branchId}-${row.closingDate}`}
+                      onClick={() => setEditing(row)}
+                      className="cursor-pointer border-b transition-colors hover:bg-gray-50">
+                      <td className="whitespace-nowrap px-4 py-2.5 font-medium text-gray-900">
+                        {dayLabel(row.closingDate)}
+                      </td>
+                      {[
+                        row.actualOpeningBalance,
+                        row.actualReceipt,
+                        row.actualExpense,
+                        row.actualClosingBalance,
+                      ].map((value, index) => (
+                        <td
+                          key={`a${index}`}
+                          className={`whitespace-nowrap px-4 py-2.5 text-right tabular-nums ${
+                            index === 0 ? "border-l" : ""
+                          } ${index === 3 ? "font-semibold text-gray-900" : "text-gray-700"}`}>
+                          {money(value)}
+                        </td>
+                      ))}
+                      {[
+                        row.systemOpeningBalance,
+                        row.systemReceipt,
+                        row.systemExpense,
+                        row.systemClosingBalance,
+                      ].map((value, index) => (
+                        <td
+                          key={`s${index}`}
+                          className={`whitespace-nowrap px-4 py-2.5 text-right tabular-nums ${
+                            index === 0 ? "border-l" : ""
+                          } ${index === 3 ? "font-semibold text-gray-900" : "text-gray-500"}`}>
+                          {money(value)}
+                        </td>
+                      ))}
+                      <td
+                        className={`whitespace-nowrap border-l px-4 py-2.5 text-right tabular-nums ${
+                          diff ? "font-semibold text-red-600" : "text-gray-500"
+                        }`}>
+                        {diff === null ? "-" : formatCurrency(diff)}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <span
+                          className={`whitespace-nowrap rounded px-2 py-0.5 text-xs font-medium ${status.className}`}>
+                          {status.label}
+                        </span>
+                      </td>
+                      <td className="max-w-[260px] px-4 py-2.5 text-xs text-gray-600">
+                        <div className="line-clamp-2 whitespace-pre-line">
+                          {row.notes || "-"}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr>
-                <td colSpan={12} className="py-16 text-center text-gray-400">
-                  <Loader2 className="mx-auto h-5 w-5 animate-spin" />
-                </td>
-              </tr>
-            ) : rows.length === 0 ? (
-              <tr>
-                <td colSpan={12} className="py-16 text-center text-gray-400">
-                  Chưa có chốt sổ nào
-                </td>
-              </tr>
-            ) : (
-              rows.map((row) => {
-                const status =
-                  STATUS[row.reconciliationStatus] || STATUS.PENDING;
-                const diff =
-                  row.actualClosingBalance === null
-                    ? null
-                    : Number(row.actualClosingBalance) -
-                      Number(row.systemClosingBalance);
-                return (
-                  <tr
-                    key={`${row.branchId}-${row.closingDate}`}
-                    onClick={() => setEditing(row)}
-                    className="cursor-pointer border-b transition-colors hover:bg-gray-50">
-                    <td className="whitespace-nowrap px-4 py-2.5 font-medium text-gray-900">
-                      {dayLabel(row.closingDate)}
-                    </td>
-                    {[
-                      row.actualOpeningBalance,
-                      row.actualReceipt,
-                      row.actualExpense,
-                      row.actualClosingBalance,
-                    ].map((value, index) => (
-                      <td
-                        key={`a${index}`}
-                        className={`whitespace-nowrap px-4 py-2.5 text-right tabular-nums ${
-                          index === 0 ? "border-l" : ""
-                        } ${index === 3 ? "font-semibold text-gray-900" : "text-gray-700"}`}>
-                        {money(value)}
-                      </td>
-                    ))}
-                    {[
-                      row.systemOpeningBalance,
-                      row.systemReceipt,
-                      row.systemExpense,
-                      row.systemClosingBalance,
-                    ].map((value, index) => (
-                      <td
-                        key={`s${index}`}
-                        className={`whitespace-nowrap px-4 py-2.5 text-right tabular-nums ${
-                          index === 0 ? "border-l" : ""
-                        } ${index === 3 ? "font-semibold text-gray-900" : "text-gray-500"}`}>
-                        {money(value)}
-                      </td>
-                    ))}
-                    <td
-                      className={`whitespace-nowrap border-l px-4 py-2.5 text-right tabular-nums ${
-                        diff ? "font-semibold text-red-600" : "text-gray-500"
-                      }`}>
-                      {diff === null ? "-" : formatCurrency(diff)}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <span
-                        className={`whitespace-nowrap rounded px-2 py-0.5 text-xs font-medium ${status.className}`}>
-                        {status.label}
-                      </span>
-                    </td>
-                    <td className="max-w-[260px] px-4 py-2.5 text-xs text-gray-600">
-                      <div className="line-clamp-2 whitespace-pre-line">
-                        {row.notes || "-"}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+            </tbody>
+          </table>
+        </div>
+      )}
       {editing && (
         <ClosingDialog
           key={`${editing.branchId}-${editing.closingDate}`}
@@ -285,12 +367,12 @@ function ClosingDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}>
       <form
-        className="max-h-[90vh] w-full max-w-xl overflow-auto rounded-xl bg-white p-5"
+        className="fin-sheet max-h-[92dvh] w-full max-w-xl overflow-auto rounded-t-2xl bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:max-h-[90vh] sm:rounded-xl sm:p-5"
         onSubmit={(event) => {
           event.preventDefault();
           if (conflict) return;
@@ -418,9 +500,7 @@ function ClosingDialog({
 
         {log.length > 0 && (
           <div className="mt-4">
-            <h3 className="text-sm font-semibold text-gray-800">
-              Lịch sử lưu
-            </h3>
+            <h3 className="text-sm font-semibold text-gray-800">Lịch sử lưu</h3>
             <div className="mt-1 divide-y text-xs text-gray-600">
               {log.map((item, index) => {
                 const entry = item as Record<string, unknown>;

@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  FinanceMobileCard,
+  FinanceMobileShell,
+} from "@/components/internal-finance/mobile/FinanceMobileShell";
 import { TablePagination } from "@/components/shared/TablePagination";
 import { PAGE_SIZE_OPTIONS } from "@/lib/hooks/usePageSize";
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
@@ -117,7 +121,14 @@ export function InternalFinanceTable({
   totalPages = 1,
   onPageChange,
   onPageSizeChange,
+  isMobile = false,
+  activeFilterCount = 0,
+  onOpenFilter,
 }: {
+  /** Điện thoại: danh sách thẻ, bấm thẻ mở chi tiết dạng bottom sheet. */
+  isMobile?: boolean;
+  activeFilterCount?: number;
+  onOpenFilter?: () => void;
   rows: InternalFinanceEntry[];
   isLoading: boolean;
   title: string;
@@ -164,6 +175,121 @@ export function InternalFinanceTable({
   const columns = FINANCE_COLUMNS.filter((column) => shows(column.key));
   const colSpan = columns.length + 1;
   const displayTotalPages = Math.max(totalPages, 1);
+
+  if (isMobile) {
+    const detailRow = rows.find((row) => row.id === expandedEntryId);
+    return (
+      <>
+        <FinanceMobileShell
+          title={title}
+          search={searchText}
+          onSearchChange={setSearchText}
+          searchPlaceholder="Tìm mã phiếu, khách hàng..."
+          activeFilterCount={activeFilterCount}
+          onOpenFilter={onOpenFilter}
+          actions={toolbar}
+          summary={
+            summary && summary.length > 0 ? (
+              <div className="-mx-4 flex gap-4 overflow-x-auto px-4 dt-no-scrollbar">
+                {summary.map((item) => (
+                  <span key={item.label} className="shrink-0 whitespace-nowrap">
+                    <span className="mr-1.5 text-gray-500">{item.label}</span>
+                    <span className={`font-semibold ${toneClass(item.tone)}`}>
+                      {formatCurrency(item.value)}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            ) : undefined
+          }
+          isLoading={isLoading}
+          isEmpty={rows.length === 0}
+          emptyText="Không có dòng tài chính nào"
+          page={page}
+          totalPages={displayTotalPages}
+          onPageChange={onPageChange}>
+          {rows.map((row) => (
+            <FinanceMobileCard
+              key={row.id}
+              code={displayEntryCode({
+                code: row.code,
+                description: row.description,
+                invoiceCodes: row.invoiceLinks.map(
+                  ({ invoice }) => invoice.code,
+                ),
+              })}
+              badge={
+                <span
+                  className={`rounded px-2 py-0.5 text-[11px] font-medium ${
+                    STATUS_COLORS[row.status] || "bg-gray-100 text-gray-600"
+                  }`}>
+                  {STATUS_LABELS[row.status] || row.status}
+                </span>
+              }
+              title={
+                SUBCATEGORY_LABELS[row.subCategory || ""] ||
+                CATEGORY_LABELS[row.category] ||
+                row.category
+              }
+              meta={
+                <>
+                  <div>
+                    {displayOccurredAt(row)} · {row.branch?.name || "-"}
+                  </div>
+                  {row.description && (
+                    <div className="line-clamp-2 break-words">
+                      {row.description}
+                    </div>
+                  )}
+                  <div>
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                        EVIDENCE_COLORS[row.evidenceStatus] ||
+                        "bg-gray-100 text-gray-600"
+                      }`}>
+                      {EVIDENCE_LABELS[row.evidenceStatus] ||
+                        row.evidenceStatus}
+                    </span>
+                  </div>
+                </>
+              }
+              amount={`${row.direction === "RECEIPT" ? "+" : "-"}${formatCurrency(row.amount)}`}
+              amountTone={row.direction === "RECEIPT" ? "positive" : "negative"}
+              onClick={() => setExpandedEntryId(row.id)}
+            />
+          ))}
+        </FinanceMobileShell>
+        {detailRow && (
+          <div
+            className="fixed inset-0 z-50 flex items-end bg-black/40"
+            onClick={() => setExpandedEntryId(null)}>
+            <div
+              className="flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white"
+              onClick={(event) => event.stopPropagation()}>
+              <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
+                <span className="font-mono text-sm font-semibold text-brand">
+                  {detailRow.code}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setExpandedEntryId(null)}
+                  className="rounded-lg border px-3 py-1.5 text-sm text-gray-700">
+                  Đóng
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-auto pb-[env(safe-area-inset-bottom)]">
+                <table className="w-full text-sm">
+                  <tbody>
+                    <InternalFinanceDetailRow row={detailRow} colSpan={1} />
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
     <div className="mb-4 mr-4 mt-4 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-white">

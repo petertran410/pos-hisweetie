@@ -1006,3 +1006,17 @@
 .dt-no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Form tạo phiếu kho trên điện thoại (FinanceFormSheet): ô nhập 16px để iOS
+   không tự phóng to khi bấm, cao 44px cho dễ chạm. */
+@media (max-width: 639px) {
+  .fin-sheet input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .fin-sheet select,
+  .fin-sheet textarea {
+    font-size: 16px;
+  }
+  .fin-sheet input.dt-input,
+  .fin-sheet select.dt-select {
+    min-height: 44px;
+  }
+}

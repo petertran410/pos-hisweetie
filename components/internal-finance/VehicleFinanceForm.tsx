@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { FilterSearchableSelect } from "@/components/ui/filters";
 import type {
@@ -28,6 +27,8 @@ import {
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { useAuthStore } from "@/lib/store/auth";
 import { InternalFinanceDateField } from "./InternalFinanceDateField";
+import { EvidenceUploadTiles } from "./EvidenceUploadTiles";
+import { FinanceFormActions, FinanceFormSheet } from "./FinanceFormSheet";
 import { formatCurrency } from "@/lib/utils";
 
 const BRANCH_FALLBACK: Record<number, string> = {
@@ -64,11 +65,17 @@ export function VehicleFinanceForm({
   branchId: initialBranchId,
   entry,
   onClose,
+  keepOpenAfterCreate = false,
+  lockKind = false,
 }: {
   kind: VehicleEntryKind;
   branchId: number;
   entry?: VehicleEntry | null;
   onClose: () => void;
+  /** Trang riêng /phieu-kho: tạo xong thì làm trống form để nhập phiếu tiếp. */
+  keepOpenAfterCreate?: boolean;
+  /** Trang riêng đã chọn sẵn Xăng dầu / Chăm sóc xe: không cho đổi nhóm. */
+  lockKind?: boolean;
 }) {
   const { user } = useAuthStore();
   const access = useFinanceAccess();
@@ -103,6 +110,13 @@ export function VehicleFinanceForm({
         ? initialBranchId
         : branches[0]?.id || initialBranchId),
   );
+  if (
+    !entry &&
+    branches.length &&
+    !branches.some((branch) => branch.id === branchId)
+  ) {
+    setBranchId(branches[0].id);
+  }
   const [vehicleId, setVehicleId] = useState(
     entry?.vehicleId ? String(entry.vehicleId) : "",
   );
@@ -190,6 +204,20 @@ export function VehicleFinanceForm({
     }
   };
 
+  // Giữ chi nhánh, xe, người chi để nhập tiếp phiếu khác của cùng xe.
+  const resetForNext = () => {
+    setOccurredAt(toDateTimeInput(new Date()));
+    setAmount("");
+    setUnitPrice("");
+    setOdo("");
+    setLocation("");
+    setServiceTypes([]);
+    setDueAt("");
+    setNote("");
+    setAttachments([]);
+  };
+  const afterCreate = keepOpenAfterCreate ? resetForNext : onClose;
+
   const toggleService = (service: string) =>
     setServiceTypes((current) =>
       current.includes(service)
@@ -253,12 +281,12 @@ export function VehicleFinanceForm({
     if (kind === "FUEL") {
       createFuel.mutate(
         { ...createCommon, unitPrice: parsedUnitPrice ?? undefined },
-        { onSuccess: onClose },
+        { onSuccess: afterCreate },
       );
     } else {
       createCare.mutate(
         { ...createCommon, serviceTypes, dueAt: dueAt || undefined },
-        { onSuccess: onClose },
+        { onSuccess: afterCreate },
       );
     }
   };
@@ -269,278 +297,213 @@ export function VehicleFinanceForm({
     "flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 sm:items-center sm:p-4">
-      <form
-        onSubmit={submit}
-        className="flex max-h-[100dvh] w-full flex-col overflow-hidden rounded-t-xl bg-white shadow-xl sm:max-h-[calc(100vh-2rem)] sm:max-w-2xl sm:rounded-xl">
-        <div className="flex shrink-0 items-center justify-between border-b px-5 py-4">
-          <div>
-            <h2 className="text-base font-semibold text-gray-900">
-              {isEdit ? "Sửa phiếu xe" : "Tạo phiếu xe"}
-            </h2>
-            <p className="mt-0.5 text-xs text-gray-500">
-              Phiếu tạo một khoản chi kho, được tổng hợp tuần cùng phiếu chi
-              kho.
-            </p>
-          </div>
-          <button
-            type="button"
-            title="Đóng"
-            onClick={onClose}
-            className="rounded p-1.5 text-gray-500 hover:bg-gray-100">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+    <FinanceFormSheet
+      title={
+        isEdit
+          ? "Sửa phiếu xe"
+          : lockKind
+            ? kind === "FUEL"
+              ? "Phiếu xăng dầu"
+              : "Phiếu chăm sóc xe"
+            : "Tạo phiếu xe"
+      }
+      subtitle="Phiếu tạo một khoản chi kho, được tổng hợp tuần cùng phiếu chi kho."
+      onClose={onClose}
+      onSubmit={submit}
+      width="sm:max-w-2xl"
+      footer={
+        <FinanceFormActions
+          onCancel={onClose}
+          pending={pending}
+          disabled={uploadingKind !== null}
+          submitLabel={isEdit ? "Lưu thay đổi" : "Tạo phiếu"}
+          summary={
+            parsedAmount ? `${formatCurrency(parsedAmount)} đ` : undefined
+          }
+        />
+      }>
+      <label className={labelClass}>
+        Nhóm nghiệp vụ
+        <select
+          value={kind}
+          disabled={isEdit || lockKind}
+          onChange={(event) => setKind(event.target.value as VehicleEntryKind)}
+          className="dt-select h-10 w-full disabled:bg-gray-50">
+          <option value="FUEL">Xăng dầu</option>
+          <option value="VEHICLE_CARE">Chăm sóc xe</option>
+        </select>
+      </label>
+      <label className={labelClass}>
+        Chi nhánh
+        <select
+          value={branchId}
+          disabled={isEdit}
+          onChange={(event) => {
+            setBranchId(Number(event.target.value));
+            setVehicleId("");
+          }}
+          className="dt-select h-10 w-full disabled:bg-gray-50">
+          {branches.map((branch) => (
+            <option key={branch.id} value={branch.id}>
+              {branch.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={labelClass}>
+        Xe
+        <select
+          value={vehicleId}
+          onChange={(event) => setVehicleId(event.target.value)}
+          className="dt-select h-10 w-full"
+          required>
+          <option value="">
+            {vehicles.isLoading ? "Đang tải..." : "Chọn xe"}
+          </option>
+          {vehicleOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        {!vehicles.isLoading && vehicleOptions.length === 0 && (
+          <span className="font-normal text-amber-600">
+            Chi nhánh chưa có xe. Thêm xe ở mục Danh sách xe.
+          </span>
+        )}
+      </label>
+      <InternalFinanceDateField
+        label="Thời gian"
+        value={occurredAt}
+        withTime
+        // Thời gian là bắt buộc: bấm "Xóa" trong lịch thì giữ giá trị cũ.
+        onChange={(value) => value && setOccurredAt(value)}
+      />
+      <label className={labelClass}>
+        {kind === "FUEL" ? "Số tiền" : "Chi phí (VNĐ)"}
+        <input
+          inputMode="numeric"
+          value={amount}
+          onChange={(event) => setAmount(event.target.value)}
+          className="dt-input h-10 w-full"
+          placeholder="0"
+          required
+        />
+      </label>
+      <label className={labelClass}>
+        ODO
+        <input
+          inputMode="numeric"
+          value={odo}
+          onChange={(event) => setOdo(event.target.value)}
+          className="dt-input h-10 w-full"
+          placeholder="Số km trên đồng hồ"
+        />
+      </label>
 
-        <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-5 sm:grid-cols-2">
+      {kind === "FUEL" ? (
+        <>
           <label className={labelClass}>
-            Nhóm nghiệp vụ
-            <select
-              value={kind}
-              disabled={isEdit}
-              onChange={(event) =>
-                setKind(event.target.value as VehicleEntryKind)
-              }
-              className="dt-select h-10 w-full disabled:bg-gray-50">
-              <option value="FUEL">Xăng dầu</option>
-              <option value="VEHICLE_CARE">Chăm sóc xe</option>
-            </select>
-          </label>
-          <label className={labelClass}>
-            Chi nhánh
-            <select
-              value={branchId}
-              disabled={isEdit}
-              onChange={(event) => {
-                setBranchId(Number(event.target.value));
-                setVehicleId("");
-              }}
-              className="dt-select h-10 w-full disabled:bg-gray-50">
-              {branches.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={labelClass}>
-            Xe
-            <select
-              value={vehicleId}
-              onChange={(event) => setVehicleId(event.target.value)}
-              className="dt-select h-10 w-full"
-              required>
-              <option value="">
-                {vehicles.isLoading ? "Đang tải..." : "Chọn xe"}
-              </option>
-              {vehicleOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            {!vehicles.isLoading && vehicleOptions.length === 0 && (
-              <span className="font-normal text-amber-600">
-                Chi nhánh chưa có xe. Thêm xe ở mục Danh sách xe.
-              </span>
-            )}
-          </label>
-          <InternalFinanceDateField
-            label="Thời gian"
-            value={occurredAt}
-            withTime
-            // Thời gian là bắt buộc: bấm "Xóa" trong lịch thì giữ giá trị cũ.
-            onChange={(value) => value && setOccurredAt(value)}
-          />
-          <label className={labelClass}>
-            {kind === "FUEL" ? "Số tiền" : "Chi phí (VNĐ)"}
+            Đơn giá
             <input
               inputMode="numeric"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
+              value={unitPrice}
+              onChange={(event) => setUnitPrice(event.target.value)}
               className="dt-input h-10 w-full"
-              placeholder="0"
-              required
-            />
-          </label>
-          <label className={labelClass}>
-            ODO
-            <input
-              inputMode="numeric"
-              value={odo}
-              onChange={(event) => setOdo(event.target.value)}
-              className="dt-input h-10 w-full"
-              placeholder="Số km trên đồng hồ"
-            />
-          </label>
-
-          {kind === "FUEL" ? (
-            <>
-              <label className={labelClass}>
-                Đơn giá
-                <input
-                  inputMode="numeric"
-                  value={unitPrice}
-                  onChange={(event) => setUnitPrice(event.target.value)}
-                  className="dt-input h-10 w-full"
-                  placeholder="đ/lít"
-                />
-              </label>
-              <div className={labelClass}>
-                Số lít
-                <div className="flex h-10 items-center rounded-lg border bg-gray-50 px-3 text-sm font-normal text-gray-700">
-                  {liters ? liters.toFixed(2) : "= Số tiền / Đơn giá"}
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className={`${labelClass} sm:col-span-2`}>
-                Loại dịch vụ
-                <div className="flex flex-wrap gap-1.5">
-                  {VEHICLE_SERVICE_TYPES.map((service) => {
-                    const active = serviceTypes.includes(service);
-                    return (
-                      <button
-                        key={service}
-                        type="button"
-                        onClick={() => toggleService(service)}
-                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                          active
-                            ? "border-brand bg-brand text-white"
-                            : "border-gray-200 text-gray-700 hover:bg-gray-50"
-                        }`}>
-                        {service}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <InternalFinanceDateField
-                label="Hạn đăng kiểm / bảo hiểm"
-                value={dueAt}
-                onChange={(value) => setDueAt(value || "")}
-              />
-            </>
-          )}
-
-          <label className={labelClass}>
-            Địa điểm
-            <input
-              value={location}
-              onChange={(event) => setLocation(event.target.value)}
-              className="dt-input h-10 w-full"
+              placeholder="đ/lít"
             />
           </label>
           <div className={labelClass}>
-            Người chi
-            <FilterSearchableSelect
-              options={userOptions}
-              value={payerId}
-              onChange={setPayerId}
-              placeholder="Chọn người chi"
-              searchPlaceholder="Tìm nhân viên..."
-              allowDeselect={false}
-              showClearOption={false}
-            />
+            Số lít
+            <div className="flex h-10 items-center rounded-lg border bg-gray-50 px-3 text-sm font-normal text-gray-700">
+              {liters ? liters.toFixed(2) : "= Số tiền / Đơn giá"}
+            </div>
           </div>
-          <label className={`${labelClass} sm:col-span-2`}>
-            Ghi chú
-            <textarea
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              rows={2}
-              className="dt-input w-full"
-            />
-          </label>
-
-          {UPLOAD_GROUPS[kind].map((group) => {
-            // Ảnh nhập từ trước chưa phân loại được xếp chung với hóa đơn.
-            const files = attachments.filter(
-              (file) =>
-                file.kind === group.kind ||
-                (group.kind === VEHICLE_ATTACHMENT_KIND.INVOICE &&
-                  !UPLOAD_GROUPS[kind].some((item) => item.kind === file.kind)),
-            );
-            return (
-              <div key={group.kind}>
-                <div className="mb-1.5 text-xs font-medium text-gray-600">
-                  {group.label}
-                </div>
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                  {uploadingKind === group.kind ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4" />
-                  )}
-                  Chụp / tải ảnh
-                  <input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    multiple
-                    className="hidden"
-                    onChange={(event) => {
-                      void handleUpload(group.kind, event.target.files);
-                      event.target.value = "";
-                    }}
-                  />
-                </label>
-                {files.length > 0 && (
-                  <ul className="mt-2 space-y-1 text-xs text-gray-600">
-                    {files.map((file) => (
-                      <li
-                        key={file.fileUrl}
-                        className="flex items-center justify-between gap-2">
-                        <a
-                          href={file.fileUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="truncate text-brand hover:underline">
-                          {file.fileName || file.fileUrl.split("/").pop()}
-                        </a>
-                        <button
-                          type="button"
-                          title="Bỏ file"
-                          onClick={() =>
-                            setAttachments((current) =>
-                              current.filter(
-                                (item) => item.fileUrl !== file.fileUrl,
-                              ),
-                            )
-                          }
-                          className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-red-600">
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="flex shrink-0 items-center justify-between gap-2 border-t px-5 py-4">
-          <span className="text-xs text-gray-500">
-            {parsedAmount ? `${formatCurrency(parsedAmount)} đ` : ""}
-          </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-              Hủy
-            </button>
-            <button
-              type="submit"
-              disabled={pending || uploadingKind !== null}
-              className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
-              {pending && <Loader2 className="h-4 w-4 animate-spin" />}
-              {isEdit ? "Lưu thay đổi" : "Tạo phiếu"}
-            </button>
+        </>
+      ) : (
+        <>
+          <div className={`${labelClass} sm:col-span-2`}>
+            Loại dịch vụ
+            <div className="flex flex-wrap gap-1.5">
+              {VEHICLE_SERVICE_TYPES.map((service) => {
+                const active = serviceTypes.includes(service);
+                return (
+                  <button
+                    key={service}
+                    type="button"
+                    onClick={() => toggleService(service)}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      active
+                        ? "border-brand bg-brand text-white"
+                        : "border-gray-200 text-gray-700 hover:bg-gray-50"
+                    }`}>
+                    {service}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </form>
-    </div>
+          <InternalFinanceDateField
+            label="Hạn đăng kiểm / bảo hiểm"
+            value={dueAt}
+            onChange={(value) => setDueAt(value || "")}
+          />
+        </>
+      )}
+
+      <label className={labelClass}>
+        Địa điểm
+        <input
+          value={location}
+          onChange={(event) => setLocation(event.target.value)}
+          className="dt-input h-10 w-full"
+        />
+      </label>
+      <div className={labelClass}>
+        Người chi
+        <FilterSearchableSelect
+          options={userOptions}
+          value={payerId}
+          onChange={setPayerId}
+          placeholder="Chọn người chi"
+          searchPlaceholder="Tìm nhân viên..."
+          allowDeselect={false}
+          showClearOption={false}
+        />
+      </div>
+      <label className={`${labelClass} sm:col-span-2`}>
+        Ghi chú
+        <textarea
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+          rows={2}
+          className="dt-input w-full"
+        />
+      </label>
+
+      {UPLOAD_GROUPS[kind].map((group) => {
+        // Ảnh nhập từ trước chưa phân loại được xếp chung với hóa đơn.
+        const files = attachments.filter(
+          (file) =>
+            file.kind === group.kind ||
+            (group.kind === VEHICLE_ATTACHMENT_KIND.INVOICE &&
+              !UPLOAD_GROUPS[kind].some((item) => item.kind === file.kind)),
+        );
+        return (
+          <EvidenceUploadTiles
+            key={group.kind}
+            label={group.label}
+            files={files}
+            uploading={uploadingKind === group.kind}
+            onFiles={(picked) => void handleUpload(group.kind, picked)}
+            onRemove={(file) =>
+              setAttachments((current) =>
+                current.filter((item) => item.fileUrl !== file.fileUrl),
+              )
+            }
+          />
+        );
+      })}
+    </FinanceFormSheet>
   );
 }
