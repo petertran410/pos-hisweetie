@@ -124,6 +124,18 @@ export function WarehouseExpenseForm({
       })),
     [users],
   );
+  // Khoản mục cũ không còn trong danh sách vẫn hiện để sửa phiếu cũ.
+  const expenseItemOptions = useMemo(
+    () =>
+      [
+        ...(expenseItem &&
+        !(WAREHOUSE_EXPENSE_ITEMS as readonly string[]).includes(expenseItem)
+          ? [expenseItem]
+          : []),
+        ...WAREHOUSE_EXPENSE_ITEMS,
+      ].map((item) => ({ value: item, label: item })),
+    [expenseItem],
+  );
   const parsedQuantity = parseNumber(quantity);
   const parsedUnitPrice = parseNumber(unitPrice);
   const lineTotal =
@@ -236,24 +248,19 @@ export function WarehouseExpenseForm({
           ))}
         </select>
       </label>
-      <label className="flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600 sm:col-span-2">
+      <div className="flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600 sm:col-span-2">
         Khoản mục
-        <select
+        <FilterSearchableSelect
+          options={expenseItemOptions}
           value={expenseItem}
-          onChange={(event) => setExpenseItem(event.target.value)}
-          className="dt-select h-10 w-full">
-          <option value="">Chọn khoản mục</option>
-          {expenseItem &&
-            !(WAREHOUSE_EXPENSE_ITEMS as readonly string[]).includes(
-              expenseItem,
-            ) && <option value={expenseItem}>{expenseItem}</option>}
-          {WAREHOUSE_EXPENSE_ITEMS.map((item) => (
-            <option key={item} value={item}>
-              {item}
-            </option>
-          ))}
-        </select>
-      </label>
+          onChange={setExpenseItem}
+          placeholder="Chọn khoản mục"
+          searchPlaceholder="Tìm khoản mục..."
+          showClearOption={false}
+          size="form"
+          wrapOptions
+        />
+      </div>
       <label className="flex min-w-0 flex-col gap-1.5 text-xs font-medium text-gray-600">
         Số lượng
         <input
@@ -319,6 +326,7 @@ export function WarehouseExpenseForm({
           searchPlaceholder="Tìm nhân viên..."
           allowDeselect={false}
           showClearOption={false}
+          size="form"
         />
       </div>
       <EvidenceUploadTiles

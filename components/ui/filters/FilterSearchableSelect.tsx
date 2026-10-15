@@ -18,6 +18,10 @@ interface FilterSearchableSelectProps {
   allowDeselect?: boolean;
   /** Hiển thị dòng "placeholder" như tuỳ chọn xoá ở đầu list (mặc định true). */
   showClearOption?: boolean;
+  /** "form": ô cao như input trong form (điện thoại chữ 16px, không bị phóng to). */
+  size?: "filter" | "form";
+  /** Xuống dòng nhãn dài thay vì cắt "..." (ví dụ khoản mục chi phí). */
+  wrapOptions?: boolean;
 }
 
 /**
@@ -33,7 +37,10 @@ export function FilterSearchableSelect({
   searchPlaceholder = "Tìm kiếm...",
   allowDeselect = true,
   showClearOption = true,
+  size = "filter",
+  wrapOptions = false,
 }: FilterSearchableSelectProps) {
+  const form = size === "form";
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -69,7 +76,7 @@ export function FilterSearchableSelect({
     const q = search.trim().toLowerCase();
     if (!q) return options;
     return options.filter((o) =>
-      (o.value + " " + o.label).toLowerCase().includes(q)
+      (o.value + " " + o.label).toLowerCase().includes(q),
     );
   }, [options, search]);
 
@@ -87,10 +94,17 @@ export function FilterSearchableSelect({
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none bg-white ${
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg cursor-pointer transition-colors select-none bg-white ${
+          form
+            ? "min-h-10 px-3 py-2 text-base sm:text-sm text-left"
+            : "px-2 py-1 text-sm"
+        } ${
           open ? "border-brand ring-2 ring-brand-soft" : "hover:border-gray-400"
         }`}>
-        <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
+        <span
+          className={`${selected ? "text-gray-800" : "text-gray-400"} ${
+            wrapOptions ? "break-words" : "truncate"
+          }`}>
           {selected ? selected.label : placeholder}
         </span>
         <ChevronDown
@@ -124,7 +138,9 @@ export function FilterSearchableSelect({
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder={searchPlaceholder}
-                    className="w-full pl-8 pr-2 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-brand"
+                    className={`w-full pl-8 pr-2 py-1.5 border rounded-md focus:outline-none focus:ring-1 focus:ring-brand ${
+                      form ? "text-base sm:text-sm" : "text-sm"
+                    }`}
                   />
                 </div>
               </div>
@@ -163,7 +179,9 @@ export function FilterSearchableSelect({
                         ? "bg-brand-soft text-brand-dark font-medium"
                         : "hover:bg-gray-50 text-gray-700"
                     }`}>
-                    <span className="truncate">{opt.label}</span>
+                    <span className={wrapOptions ? "break-words" : "truncate"}>
+                      {opt.label}
+                    </span>
                     {value === opt.value && (
                       <Check className="w-3.5 h-3.5 text-brand flex-shrink-0 ml-2" />
                     )}
@@ -172,7 +190,7 @@ export function FilterSearchableSelect({
               )}
             </div>
           </div>,
-          document.body
+          document.body,
         )}
     </div>
   );
