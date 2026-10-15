@@ -11,6 +11,7 @@ import {
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
 import { useColumnToggle } from "@/lib/hooks/useColumnToggle";
 import { useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   Ban,
@@ -89,10 +90,25 @@ const today = () =>
 const dateLabel = (date: string) =>
   new Date(date).toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
 const inputClass = "dt-input h-10 w-full";
+// Nhóm phiếu chi hiện ở trang Phiếu chi kho; phiếu khác mở ở Tài chính nội bộ.
+const WAREHOUSE_EXPENSE_CATEGORIES = [
+  "DELIVERY_FEE",
+  "FUEL",
+  "VEHICLE_CARE",
+  "OTHER_EXPENSE",
+];
+const entryHref = (entry: NonNullable<InternalFundTransaction["entry"]>) =>
+  `${
+    entry.direction === "EXPENSE" &&
+    WAREHOUSE_EXPENSE_CATEGORIES.includes(entry.category)
+      ? "/tai-chinh/phieu-chi-kho"
+      : "/tai-chinh/tai-chinh-noi-bo"
+  }?Code=${encodeURIComponent(entry.code)}`;
 
 const LEDGER_COLUMNS = [
   { key: "code", label: "Mã" },
-  { key: "date", label: "Ngày" },
+  { key: "date", label: "Ngày ghi quỹ" },
+  { key: "entryDate", label: "Ngày phiếu" },
   { key: "type", label: "Loại" },
   { key: "content", label: "Nội dung" },
   { key: "amount", label: "Số tiền" },
@@ -310,7 +326,7 @@ function FundScreen() {
                   }
                 : undefined
             }
-            searchPlaceholder="Tìm mã, nội dung..."
+            searchPlaceholder="Tìm mã, mã phiếu, nội dung..."
             activeFilterCount={
               [time.active, view === "transactions" ? status : ""].filter(
                 Boolean,
@@ -391,7 +407,7 @@ function FundScreen() {
                   return (
                     <FinanceMobileCard
                       key={row.id}
-                      code={row.code}
+                      code={row.entry?.code || row.code}
                       muted={row.status === "CANCELLED"}
                       badge={
                         <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
@@ -401,7 +417,11 @@ function FundScreen() {
                       title={row.description || "-"}
                       meta={
                         <div>
-                          {dateLabel(row.occurredAt)} · {typeLabel(row)}
+                          Ghi quỹ {dateLabel(row.occurredAt)} · {typeLabel(row)}
+                          {row.entry &&
+                            ` · Phiếu ngày ${dateLabel(row.entry.occurredAt)}`}
+                          {row.entry?.weeklyBatch?.code &&
+                            ` · Approval tuần ${row.entry.weeklyBatch.code}`}
                         </div>
                       }
                       amount={`${out ? "-" : "+"}${formatCurrency(row.amount)}`}
@@ -457,7 +477,7 @@ function FundScreen() {
                 {view === "transactions" && (
                   <input
                     type="text"
-                    placeholder="Tìm mã, nội dung..."
+                    placeholder="Tìm mã, mã phiếu, nội dung..."
                     value={search}
                     onChange={(event) => {
                       setSearch(event.target.value);
@@ -569,12 +589,28 @@ function FundScreen() {
                             className="border-b hover:bg-gray-50">
                             {ledgerColumns.shows("code") && (
                               <td className="max-w-48 break-all px-3 py-2 font-mono text-xs">
-                                {row.code}
+                                {row.entry ? (
+                                  <Link
+                                    href={entryHref(row.entry)}
+                                    title={`Mã giao dịch quỹ: ${row.code}`}
+                                    className="text-brand hover:underline">
+                                    {row.entry.code}
+                                  </Link>
+                                ) : (
+                                  row.code
+                                )}
                               </td>
                             )}
                             {ledgerColumns.shows("date") && (
                               <td className="whitespace-nowrap px-3 py-2">
                                 {dateLabel(row.occurredAt)}
+                              </td>
+                            )}
+                            {ledgerColumns.shows("entryDate") && (
+                              <td className="whitespace-nowrap px-3 py-2 text-gray-600">
+                                {row.entry
+                                  ? dateLabel(row.entry.occurredAt)
+                                  : "-"}
                               </td>
                             )}
                             {ledgerColumns.shows("type") && (
@@ -583,6 +619,11 @@ function FundScreen() {
                             {ledgerColumns.shows("content") && (
                               <td className="max-w-64 break-words px-3 py-2">
                                 {row.description}
+                                {row.entry?.weeklyBatch?.code && (
+                                  <div className="mt-0.5 text-[11px] text-gray-400">
+                                    Approval tuần {row.entry.weeklyBatch.code}
+                                  </div>
+                                )}
                               </td>
                             )}
                             {ledgerColumns.shows("amount") && (

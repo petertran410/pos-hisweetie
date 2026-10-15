@@ -23,6 +23,16 @@ export interface InternalFundTransaction {
   status: "POSTED" | "CANCELLED" | string;
   cancelledAt: string | null;
   createdAt: string;
+  /** Phiếu gốc: quỹ ghi theo ngày tiền ra, phiếu giữ ngày chi thật. */
+  entry?: {
+    id: number;
+    code: string;
+    occurredAt: string;
+    direction: string;
+    category: string;
+    sourceType: string;
+    weeklyBatch?: { code: string } | null;
+  } | null;
 }
 
 export interface InternalFundDailyClosing {
