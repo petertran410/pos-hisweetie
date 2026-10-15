@@ -10,6 +10,7 @@ import {
   type VehicleEntryUpdateInput,
   type WarehouseExpenseInput,
   type WarehouseExpenseQuery,
+  type WarehouseReceipt,
   type WarehouseReceiptInput,
   type WarehouseReceiptQuery,
 } from "@/lib/api/internal-finance";
@@ -660,6 +661,72 @@ export function useUpdateWarehouseReceipt() {
     },
     onError: (error) =>
       toast.error(errorMessage(error, "Cập nhật phiếu tiền mặt thất bại")),
+  });
+}
+
+/** Kế toán kho xác nhận số tiền thực nhận: cập nhật ngay trên dòng, không tải lại bảng. */
+export function useConfirmWarehouseReceiptAmount() {
+  const queryClient = useQueryClient();
+  const replace = (
+    id: number,
+    update: (row: WarehouseReceipt) => WarehouseReceipt,
+  ) =>
+    queryClient.setQueriesData<InternalFinanceResponse<WarehouseReceipt>>(
+      {
+        predicate: (query) =>
+          query.queryKey[0] === "warehouse-receipts" &&
+          query.queryKey.length === 2 &&
+          typeof query.queryKey[1] === "object",
+      },
+      (current) =>
+        current && Array.isArray(current.data)
+          ? {
+              ...current,
+              data: current.data.map((row) =>
+                row.id === id ? update(row) : row,
+              ),
+            }
+          : current,
+    );
+  return useMutation({
+    mutationFn: ({
+      id,
+      mode,
+      amount,
+    }: {
+      id: number;
+      mode: "MATCH" | "MANUAL" | "CLEAR";
+      amount?: number;
+    }) =>
+      internalFinanceApi.confirmWarehouseReceiptAmount(id, { mode, amount }),
+    onMutate: async ({ id, mode, amount }) => {
+      await queryClient.cancelQueries({ queryKey: ["warehouse-receipts"] });
+      replace(id, (row) => {
+        const confirmed =
+          mode === "CLEAR"
+            ? null
+            : mode === "MATCH"
+              ? Number(row.amount)
+              : Number(amount);
+        return {
+          ...row,
+          confirmedAmount: confirmed,
+          confirmedMode: mode === "CLEAR" ? null : mode,
+          difference:
+            confirmed === null ? null : Number(row.amount) - confirmed,
+        };
+      });
+    },
+    onSuccess: (entry) => {
+      replace(entry.id, (row) => ({ ...row, ...entry }));
+      queryClient.invalidateQueries({
+        queryKey: ["warehouse-receipts", "detail", entry.id],
+      });
+    },
+    onError: (error) => {
+      queryClient.invalidateQueries({ queryKey: ["warehouse-receipts"] });
+      toast.error(errorMessage(error, "Xác nhận số tiền thất bại"));
+    },
   });
 }
 

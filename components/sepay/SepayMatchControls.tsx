@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { invoicesApi } from "@/lib/api/invoices";
+import { useState, useEffect, type ReactNode } from "react";
+import {
+  useUnpaidInvoices,
+  type UnpaidInvoice,
+} from "@/lib/hooks/useUnpaidInvoices";
 import { useCustomer, useSearchCustomers } from "@/lib/hooks/useCustomers";
 import {
   useAssignSepayCustomer,
@@ -521,65 +523,9 @@ interface AllocRow {
   invoices: Record<number, string>; // invoiceId -> tiền thu (chuỗi)
 }
 
-interface UnpaidInvoice {
-  id: number;
-  code: string;
-  purchaseDate: string;
-  grandTotal: number;
-  debtAmount: number;
-}
-
 const onlyDigitsStr = (raw: string) => raw.replace(/[^\d]/g, "");
 const displayAmount = (v: string) =>
   v === "" ? "" : Number(v).toLocaleString("en-US");
-
-interface InvoiceApiRow {
-  id: number;
-  code: string;
-  purchaseDate: string;
-  grandTotal: number | string;
-  debtAmount: number | string;
-  status: number;
-  returnOrderAmount?: number | string | null;
-}
-
-/** Lọc + sắp xếp hóa đơn còn nợ của 1 khách (đồng bộ logic CustomerPaymentModal). */
-function useUnpaidInvoices(customerId: number, enabled: boolean) {
-  const { data, isLoading } = useQuery({
-    queryKey: ["invoices", "customer", [customerId], "unpaid-sepay"],
-    queryFn: () =>
-      invoicesApi.getInvoices({ customerIds: [customerId], limit: 1000 }),
-    enabled: enabled && customerId > 0,
-  });
-
-  const invoices = useMemo<UnpaidInvoice[]>(() => {
-    return (
-      (data?.data || [])
-        .filter((invoice: InvoiceApiRow) => {
-          const debtAmount = Number(invoice.debtAmount);
-          if (debtAmount <= 0) return false;
-          if (invoice.status === 2) return false;
-          const returnOrderAmount = Number(invoice.returnOrderAmount || 0);
-          if (returnOrderAmount >= debtAmount) return false;
-          return true;
-        })
-        .sort(
-          (a: InvoiceApiRow, b: InvoiceApiRow) =>
-            new Date(a.purchaseDate).getTime() -
-            new Date(b.purchaseDate).getTime()
-        )
-        .map((inv: InvoiceApiRow) => ({
-          id: inv.id,
-          code: inv.code,
-          purchaseDate: inv.purchaseDate,
-          grandTotal: Number(inv.grandTotal),
-          debtAmount: Number(inv.debtAmount),
-        })) || []
-    );
-  }, [data]);
-
-  return { invoices, isLoading };
-}
 
 /**
  * Khối phân bổ tiền vào hóa đơn của 1 khách trong phiếu thu.

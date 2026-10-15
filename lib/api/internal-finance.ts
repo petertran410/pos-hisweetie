@@ -158,9 +158,20 @@ export interface WarehouseAllocatableInvoice {
   customerId?: number | null;
   debtAmount?: number | string;
   purchaseDate?: string;
+  /** Hóa đơn của phiếu giao hàng (hiện mặc định khi lập phiếu thu). */
+  inPackingSlip?: boolean;
 }
 
+export type WarehouseConfirmMode = "MATCH" | "MANUAL";
+
 export interface WarehouseReceipt extends InternalFinanceEntry {
+  /** Số kế toán kho xác nhận thực nhận; phiếu thu chỉ lập theo số này. */
+  confirmedAmount?: number | string | null;
+  confirmedMode?: WarehouseConfirmMode | null;
+  confirmedAt?: string | null;
+  confirmer?: { id: number; name: string } | null;
+  /** Số báo đơn − số xác nhận (dương = thiếu). */
+  difference?: number | null;
   sourceSnapshot?:
     | (Record<string, unknown> & {
         receiptKind?: "CUSTOMER" | "WAREHOUSE_SALE";
@@ -189,6 +200,7 @@ export interface WarehouseReceiptQuery {
   fromDate?: string;
   toDate?: string;
   receiptStatus?: "OPEN" | "POSTED" | "CANCELLED" | "";
+  confirmStatus?: "UNCONFIRMED" | "CONFIRMED" | "DIFFERENT" | "";
   search?: string;
   page?: number;
   limit?: number;
@@ -707,6 +719,15 @@ export const internalFinanceApi = {
     payload: Partial<WarehouseReceiptInput>,
   ): Promise<WarehouseReceipt> =>
     apiClient.patch(`/internal-finance/warehouse-receipts/${id}`, payload),
+
+  confirmWarehouseReceiptAmount: (
+    id: number,
+    payload: { mode: WarehouseConfirmMode | "CLEAR"; amount?: number },
+  ): Promise<WarehouseReceipt> =>
+    apiClient.patch(
+      `/internal-finance/warehouse-receipts/${id}/confirm-amount`,
+      payload,
+    ),
 
   postWarehouseReceipt: (
     id: number,

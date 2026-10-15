@@ -45,6 +45,7 @@ function WarehouseCashScreen() {
   const activeFilterCount = [
     filters.branchIds?.length,
     filters.receiptStatus,
+    filters.confirmStatus,
     filters.fromDate || filters.toDate,
   ].filter(Boolean).length;
 

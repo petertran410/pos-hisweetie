@@ -19,6 +19,7 @@ type SavedWarehouseFilters = {
   fromDate?: string;
   toDate?: string;
   receiptStatus?: string;
+  confirmStatus?: string;
 };
 
 function readSavedFilters(): SavedWarehouseFilters | null {
@@ -58,6 +59,11 @@ export function loadWarehouseCashFilters(headerBranchId: number | null): Warehou
       status === "OPEN" || status === "POSTED" || status === "CANCELLED"
         ? status
         : undefined,
+    confirmStatus: CONFIRM_OPTIONS.some(
+      (option) => option.value && option.value === saved?.confirmStatus,
+    )
+      ? (saved?.confirmStatus as WarehouseReceiptQuery["confirmStatus"])
+      : undefined,
   };
 }
 
@@ -68,18 +74,28 @@ const STATUS_OPTIONS = [
   { value: "CANCELLED", label: "Đã hủy", dot: "bg-red-400" },
 ];
 
+// Kế toán kho xác nhận số tiền thực nhận.
+const CONFIRM_OPTIONS = [
+  { value: "", label: "Tất cả", dot: "bg-gray-300" },
+  { value: "UNCONFIRMED", label: "Chưa xác nhận", dot: "bg-amber-400" },
+  { value: "CONFIRMED", label: "Đã xác nhận", dot: "bg-green-500" },
+  { value: "DIFFERENT", label: "Có chênh lệch", dot: "bg-red-400" },
+];
+
 function StatusDropdown({
   value,
   onChange,
+  options = STATUS_OPTIONS,
 }: {
   value: string;
   onChange: (value: string) => void;
+  options?: typeof STATUS_OPTIONS;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState<ReturnType<typeof getFixedRect> | null>(null);
-  const selected = STATUS_OPTIONS.find((option) => option.value === value) || STATUS_OPTIONS[0];
+  const selected = options.find((option) => option.value === value) || options[0];
 
   useEffect(() => {
     if (!open || !triggerRef.current) return;
@@ -126,7 +142,7 @@ function StatusDropdown({
               };
             })()}
             className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
-            {STATUS_OPTIONS.map((option, index) => (
+            {options.map((option, index) => (
               <button
                 key={option.value || "all"}
                 type="button"
@@ -255,13 +271,21 @@ export function WarehouseCashSidebar({
       fromDate: filters.fromDate || "",
       toDate: filters.toDate || "",
       receiptStatus: filters.receiptStatus || "",
+      confirmStatus: filters.confirmStatus || "",
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [filters.branchIds, filters.fromDate, filters.toDate, filters.receiptStatus]);
+  }, [
+    filters.branchIds,
+    filters.fromDate,
+    filters.toDate,
+    filters.receiptStatus,
+    filters.confirmStatus,
+  ]);
   const activeCount = [
     filters.branchIds?.length,
     filters.fromDate || filters.toDate,
     filters.receiptStatus,
+    filters.confirmStatus,
   ].filter(Boolean).length;
   const resetBranchIds = headerBranchId ? [headerBranchId] : undefined;
 
@@ -278,6 +302,7 @@ export function WarehouseCashSidebar({
                 fromDate: undefined,
                 toDate: undefined,
                 receiptStatus: undefined,
+                confirmStatus: undefined,
               })
             }
             className="text-sm font-medium text-brand hover:text-brand-dark">
@@ -334,6 +359,21 @@ export function WarehouseCashSidebar({
             onChange={(value) =>
               onChange({
                 receiptStatus: (value || undefined) as WarehouseReceiptQuery["receiptStatus"],
+              })
+            }
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            Kế toán kho xác nhận
+          </label>
+          <StatusDropdown
+            value={filters.confirmStatus || ""}
+            options={CONFIRM_OPTIONS}
+            onChange={(value) =>
+              onChange({
+                confirmStatus: (value || undefined) as WarehouseReceiptQuery["confirmStatus"],
               })
             }
           />

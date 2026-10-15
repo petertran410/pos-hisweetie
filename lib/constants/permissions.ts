@@ -197,6 +197,7 @@ const RESOURCE_ACTION_LABELS: Record<string, string> = {
   "internal-use:view_cost_price": "Xem giá",
   "warehouse_expense:cancel": "Hủy phiếu chi",
   "warehouse_expense:request_review": "Ghi chú & tag người xem lại",
+  "warehouse_cash:confirm_amount": "Xác nhận số tiền thực nhận",
 };
 
 /** Nhãn action, có xét nhãn riêng theo resource (RESOURCE_ACTION_LABELS). */
