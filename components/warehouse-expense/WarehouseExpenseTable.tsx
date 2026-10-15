@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Ban,
   FileText,
   Loader2,
@@ -115,7 +118,15 @@ export function WarehouseExpenseTable({
   onOpenNotes,
   shows,
   selection,
+  sort,
+  onSort,
+  totals,
 }: {
+  /** Cột đang sắp xếp (null: mặc định ngày chi mới nhất trước). */
+  sort?: { key: "date" | "amount"; dir: "asc" | "desc" } | null;
+  onSort?: (key: "date" | "amount") => void;
+  /** Dòng tổng dưới tên cột: tổng toàn bộ phiếu khớp bộ lọc. */
+  totals?: { amount: number; issuedAmount: number };
   /** Chọn nhiều phiếu để tick hàng loạt; không truyền thì không có cột chọn. */
   selection?: {
     selected: Set<number>;
@@ -212,22 +223,71 @@ export function WarehouseExpenseTable({
                 />
               </th>
             )}
-            {[
-              ...WAREHOUSE_EXPENSE_COLUMNS.filter((column) =>
-                shows(column.key),
-              ).map((column) => [column.label, column.width]),
-              ["", "150px"],
-            ].map(([label, width]) => (
-              <th
-                key={label || "actions"}
-                className={`whitespace-nowrap px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-gray-500 ${
-                  label === "Số tiền" ? "text-right" : "text-left"
-                }`}
-                style={{ width, minWidth: width }}>
-                {label}
-              </th>
-            ))}
+            {WAREHOUSE_EXPENSE_COLUMNS.filter((column) =>
+              shows(column.key),
+            ).map((column) => {
+              const sortable =
+                Boolean(onSort) &&
+                (column.key === "date" || column.key === "amount");
+              const active = sortable && sort?.key === column.key;
+              return (
+                <th
+                  key={column.key}
+                  onClick={
+                    sortable
+                      ? () => onSort?.(column.key as "date" | "amount")
+                      : undefined
+                  }
+                  className={`whitespace-nowrap px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-gray-500 ${
+                    column.key === "amount" ? "text-right" : "text-left"
+                  } ${sortable ? "cursor-pointer select-none hover:bg-gray-100" : ""}`}
+                  style={{ width: column.width, minWidth: column.width }}>
+                  <span
+                    className={`inline-flex items-center gap-1 ${
+                      column.key === "amount" ? "justify-end" : ""
+                    }`}>
+                    {column.label}
+                    {sortable &&
+                      (active && sort?.dir === "desc" ? (
+                        <ArrowDown className="h-3 w-3 text-brand" />
+                      ) : active && sort?.dir === "asc" ? (
+                        <ArrowUp className="h-3 w-3 text-brand" />
+                      ) : (
+                        <ArrowUpDown className="h-3 w-3 text-gray-400 opacity-40" />
+                      ))}
+                  </span>
+                </th>
+              );
+            })}
+            <th style={{ width: "150px", minWidth: "150px" }} />
           </tr>
+          {totals && (shows("amount") || shows("cashIssued")) && (
+            <tr className="border-b bg-gray-50/60">
+              {selection && <td className="px-3 py-2" />}
+              {WAREHOUSE_EXPENSE_COLUMNS.filter((column) =>
+                shows(column.key),
+              ).map((column) => (
+                <td
+                  key={column.key}
+                  className={`whitespace-nowrap px-4 py-2 ${
+                    column.key === "amount" ? "text-right" : ""
+                  }`}>
+                  {column.key === "amount" ? (
+                    <span className="font-semibold text-red-600">
+                      {formatCurrency(totals.amount)}
+                    </span>
+                  ) : column.key === "cashIssued" ? (
+                    <span
+                      className="font-semibold text-green-700"
+                      title="Tổng tiền các phiếu đã tick Đã chi">
+                      {formatCurrency(totals.issuedAmount)}
+                    </span>
+                  ) : null}
+                </td>
+              ))}
+              <td className="px-4 py-2" />
+            </tr>
+          )}
         </thead>
         <tbody>
           {isLoading ? (

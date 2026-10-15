@@ -55,10 +55,82 @@ export function useWarehouseExpenses(params: WarehouseExpenseQuery) {
   });
 }
 
+export function useWarehouseExpensePayerSummary(
+  params: WarehouseExpenseQuery,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: ["warehouse-expenses", "payer-summary", params],
+    queryFn: () => internalFinanceApi.warehouseExpensePayerSummary(params),
+    enabled,
+  });
+}
+
 export function useWarehouseExpenseBatches(params: InternalFinanceQuery) {
   return useQuery({
     queryKey: ["warehouse-expenses", "weekly-batches", params],
     queryFn: () => internalFinanceApi.warehouseExpenseBatches(params),
+  });
+}
+
+/** Phiếu sót tuần trước có thể gộp vào tuần bắt đầu từ `weekStart`. */
+export function useWarehouseExpenseCarryOver(
+  branchId: number,
+  weekStart: string,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: ["warehouse-expenses", "carry-over", branchId, weekStart],
+    queryFn: () =>
+      internalFinanceApi.warehouseExpenseCarryOver({ branchId, weekStart }),
+    enabled: enabled && Boolean(branchId && weekStart),
+  });
+}
+
+export function useAddWeeklyBatchEntries() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      batchId,
+      entryIds,
+    }: {
+      batchId: number;
+      entryIds: number[];
+    }) => internalFinanceApi.addWeeklyBatchEntries(batchId, entryIds),
+    onSuccess: (result) => {
+      invalidateInternalFinance(queryClient);
+      toast.success(
+        `Đã thêm ${result.added} phiếu vào approval` +
+          (result.skipped
+            ? `, bỏ qua ${result.skipped} phiếu không đủ điều kiện`
+            : ""),
+      );
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, "Thêm phiếu vào approval thất bại")),
+  });
+}
+
+export function useRemoveWeeklyBatchEntries() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      batchId,
+      entryIds,
+    }: {
+      batchId: number;
+      entryIds: number[];
+    }) => internalFinanceApi.removeWeeklyBatchEntries(batchId, entryIds),
+    onSuccess: (result) => {
+      invalidateInternalFinance(queryClient);
+      toast.success(
+        result.batchDeleted
+          ? "Đã bỏ phiếu; batch không còn phiếu nào nên đã xóa"
+          : "Đã bỏ phiếu khỏi approval",
+      );
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, "Bỏ phiếu khỏi approval thất bại")),
   });
 }
 

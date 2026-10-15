@@ -133,6 +133,8 @@ export interface InternalFinanceResponse<T = InternalFinanceEntry> {
   total: number;
   page: number;
   limit: number;
+  /** Phiếu chi kho: tổng của toàn bộ phiếu khớp bộ lọc. */
+  totals?: { amount: number; issuedAmount: number };
 }
 
 export interface WarehouseCustomer {
@@ -207,6 +209,8 @@ export interface WarehouseExpenseQuery {
   fromDate?: string;
   toDate?: string;
   search?: string;
+  orderBy?: "occurredAt" | "amount";
+  orderDirection?: "asc" | "desc";
   page?: number;
   limit?: number;
 }
@@ -481,6 +485,42 @@ export const internalFinanceApi = {
   ): Promise<InternalFinanceEntry> =>
     apiClient.patch(`/internal-finance/warehouse-expenses/${id}`, payload),
 
+  warehouseExpenseCarryOver: (params: {
+    branchId: number;
+    weekStart: string;
+  }): Promise<{
+    data: Array<{
+      id: number;
+      code: string;
+      occurredAt: string;
+      description: string | null;
+      amount: number | string;
+    }>;
+    total: number;
+  }> =>
+    apiClient.get(
+      "/internal-finance/warehouse-expenses/weekly-carry-over",
+      params,
+    ),
+
+  addWeeklyBatchEntries: (
+    batchId: number,
+    entryIds: number[],
+  ): Promise<{ added: number; skipped: number }> =>
+    apiClient.post(
+      `/internal-finance/warehouse-expenses/weekly-batches/${batchId}/add-entries`,
+      { entryIds },
+    ),
+
+  removeWeeklyBatchEntries: (
+    batchId: number,
+    entryIds: number[],
+  ): Promise<{ removed: number; batchDeleted: boolean }> =>
+    apiClient.post(
+      `/internal-finance/warehouse-expenses/weekly-batches/${batchId}/remove-entries`,
+      { entryIds },
+    ),
+
   warehouseExpenseBatchPage: (
     params?: InternalFinanceQuery,
   ): Promise<{
@@ -570,6 +610,20 @@ export const internalFinanceApi = {
 
   access: (): Promise<FinanceAccessSummary> =>
     apiClient.get("/internal-finance/access"),
+
+  warehouseExpensePayerSummary: (
+    params?: WarehouseExpenseQuery,
+  ): Promise<{
+    rows: Array<{
+      payerId: number | null;
+      name: string;
+      count: number;
+      amount: number;
+    }>;
+    total: number;
+    count: number;
+  }> =>
+    apiClient.get("/internal-finance/warehouse-expenses/payer-summary", params),
 
   bulkCheckWarehouseExpenses: (payload: {
     ids: number[];

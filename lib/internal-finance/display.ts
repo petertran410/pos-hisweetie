@@ -56,6 +56,8 @@ export function displayEntryCode(input: {
   return input.code || "-";
 }
 
+const DATE_ONLY_SOURCES = ["LARK_IMPORT", "MANUAL_EXPENSE", "MANUAL_RECEIPT"];
+
 export function displayOccurredAt(input: {
   occurredAt?: string | null;
   sourceType?: string | null;
@@ -66,11 +68,12 @@ export function displayOccurredAt(input: {
   if (!input.occurredAt) return "-";
   const date = new Date(input.occurredAt);
   if (Number.isNaN(date.getTime())) return "-";
+  // Phiếu chỉ nhập ngày (không có giờ): dữ liệu từ Lark, phiếu chi/thu tay.
   if (
-    input.sourceType === "LARK_IMPORT" ||
+    DATE_ONLY_SOURCES.includes(input.sourceType || "") ||
     input.sourceSnapshot?.missingDate === true
   ) {
-    return date.toLocaleDateString("vi-VN");
+    return date.toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
   }
   return date.toLocaleString("vi-VN");
 }

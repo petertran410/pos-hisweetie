@@ -36,6 +36,7 @@ export function WarehouseExpenseMobileList({
   onOpenFilter,
   total,
   pageAmount,
+  totals,
   page,
   totalPages,
   onPageChange,
@@ -55,7 +56,10 @@ export function WarehouseExpenseMobileList({
   selection,
   selectMode = false,
   onToggleSelectMode,
+  onOpenPayerSummary,
 }: {
+  /** Mở báo cáo chi tiêu theo người chi. */
+  onOpenPayerSummary?: () => void;
   /** Chế độ chọn để tick hàng loạt (nút "Chọn" ở đầu danh sách). */
   selection?: {
     selected: Set<number>;
@@ -72,6 +76,8 @@ export function WarehouseExpenseMobileList({
   onOpenFilter: () => void;
   total: number;
   pageAmount: number;
+  /** Tổng toàn bộ phiếu khớp bộ lọc (không chỉ trang đang xem). */
+  totals?: { amount: number; issuedAmount: number };
   page: number;
   totalPages: number;
   onPageChange: (page: number) => void;
@@ -138,6 +144,14 @@ export function WarehouseExpenseMobileList({
       onOpenFilter={onOpenFilter}
       actions={
         <>
+          {onOpenPayerSummary && (
+            <button
+              type="button"
+              onClick={onOpenPayerSummary}
+              className="rounded-lg border px-2.5 py-1.5 text-xs font-medium text-gray-700">
+              Người chi
+            </button>
+          )}
           {onToggleSelectMode && (
             <button
               type="button"
@@ -159,16 +173,21 @@ export function WarehouseExpenseMobileList({
         </>
       }
       summary={
-        <div className="flex items-center justify-between text-gray-500">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 text-gray-500">
           <span>
-            <strong className="text-gray-900">{total}</strong> phiếu
-          </span>
-          <span>
-            Trang này:{" "}
+            <strong className="text-gray-900">{total}</strong> phiếu ·{" "}
             <strong className="text-red-600">
-              {formatCurrency(pageAmount)}
+              {formatCurrency(totals?.amount ?? pageAmount)}
             </strong>
           </span>
+          {totals && (
+            <span>
+              Đã chi:{" "}
+              <strong className="text-green-700">
+                {formatCurrency(totals.issuedAmount)}
+              </strong>
+            </span>
+          )}
         </div>
       }
       isLoading={isLoading}

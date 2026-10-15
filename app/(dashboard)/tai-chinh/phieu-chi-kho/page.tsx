@@ -1,5 +1,7 @@
 "use client";
 
+import { PayerSummaryModal } from "@/components/warehouse-expense/PayerSummaryModal";
+import { useBranches } from "@/lib/hooks/useBranches";
 import { toast } from "sonner";
 import { BulkCheckBar } from "@/components/warehouse-expense/BulkCheckBar";
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
@@ -12,7 +14,7 @@ import { useColumnToggle } from "@/lib/hooks/useColumnToggle";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { CalendarRange, Plus, WalletCards, X } from "lucide-react";
+import { CalendarRange, Plus, Users, WalletCards, X } from "lucide-react";
 import Swal from "sweetalert2";
 import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
 import { WarehouseCashAttachmentsModal } from "@/components/warehouse-cash/WarehouseCashAttachmentsModal";
@@ -63,6 +65,21 @@ function WarehouseExpenseScreen() {
   const [search, setSearch] = useState(codeParam);
   const [debouncedSearch, setDebouncedSearch] = useState(codeParam);
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<{
+    key: "date" | "amount";
+    dir: "asc" | "desc";
+  } | null>(null);
+  // Bấm lần 1 giảm dần, lần 2 tăng dần, lần 3 về mặc định (như bảng Hóa đơn).
+  const handleSort = (key: "date" | "amount") => {
+    setSort((current) =>
+      current?.key !== key
+        ? { key, dir: "desc" }
+        : current.dir === "desc"
+          ? { key, dir: "asc" }
+          : null,
+    );
+    setPage(1);
+  };
   const [limit, setLimit, limitOptions] = usePageSize(
     "warehouseExpensePageSize",
   );
@@ -74,6 +91,7 @@ function WarehouseExpenseScreen() {
   const [markingId, setMarkingId] = useState<number | null>(null);
   const [notesRow, setNotesRow] = useState<InternalFinanceEntry | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [showPayerSummary, setShowPayerSummary] = useState(false);
   const isMobile = useIsMobile(768);
   const [openedCode, setOpenedCode] = useState("");
   const markIssued = useMarkWarehouseExpenseIssued();
@@ -127,10 +145,16 @@ function WarehouseExpenseScreen() {
             fromDate: filters.fromDate,
             toDate: filters.toDate,
             search: debouncedSearch || undefined,
+            ...(sort
+              ? {
+                  orderBy: sort.key === "amount" ? "amount" : "occurredAt",
+                  orderDirection: sort.dir,
+                }
+              : {}),
             page,
             limit,
           },
-    [codeParam, debouncedSearch, filters, limit, page],
+    [codeParam, debouncedSearch, filters, limit, page, sort],
   );
   const expenses = useWarehouseExpenses(query);
   const rows = expenses.data?.data || [];
@@ -281,6 +305,36 @@ function WarehouseExpenseScreen() {
     />
   ) : null;
 
+  // Báo cáo theo người chi: cùng bộ lọc với danh sách, bỏ trang và sắp xếp.
+  const payerSummaryQuery = useMemo<WarehouseExpenseQuery>(() => {
+    const rest = { ...query };
+    delete rest.page;
+    delete rest.limit;
+    delete rest.orderBy;
+    delete rest.orderDirection;
+    return rest;
+  }, [query]);
+  const { data: branchList } = useBranches();
+  const payerScopeLabel = useMemo(() => {
+    const payload = branchList as unknown;
+    const list: Array<{ id: number; name: string }> = Array.isArray(payload)
+      ? payload
+      : ((payload as { data?: Array<{ id: number; name: string }> } | null)
+          ?.data ?? []);
+    const day = (value?: string) =>
+      value ? value.split("-").reverse().join("/") : "";
+    const parts = [
+      filters.branchId
+        ? list.find((branch) => branch.id === filters.branchId)?.name
+        : "Tất cả chi nhánh",
+      filters.fromDate || filters.toDate
+        ? `${day(filters.fromDate) || "…"} – ${day(filters.toDate) || "…"}`
+        : "Toàn thời gian",
+      debouncedSearch && `Tìm "${debouncedSearch}"`,
+    ].filter(Boolean);
+    return `${parts.join(" · ")} · theo bộ lọc đang chọn`;
+  }, [branchList, debouncedSearch, filters]);
+
   const activeFilterCount = [
     filters.branchId,
     filters.category,
@@ -363,6 +417,8 @@ function WarehouseExpenseScreen() {
             onOpenFilter={() => setShowFilters(true)}
             total={total}
             pageAmount={pageAmount}
+            totals={expenses.data?.totals}
+            onOpenPayerSummary={() => setShowPayerSummary(true)}
             page={page}
             totalPages={totalPages}
             onPageChange={setPage}
@@ -454,6 +510,13 @@ function WarehouseExpenseScreen() {
                     Tạo khoản chi khác
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setShowPayerSummary(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  <Users className="h-4 w-4" />
+                  Theo người chi
+                </button>
                 <Link
                   href="/tai-chinh/approval-tuan"
                   className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
@@ -492,6 +555,9 @@ function WarehouseExpenseScreen() {
                   onCancel={handleCancel}
                   onOpenNotes={setNotesRow}
                   shows={shows}
+                  sort={sort}
+                  onSort={handleSort}
+                  totals={expenses.data?.totals}
                   selection={
                     showSelection
                       ? {
@@ -540,6 +606,17 @@ function WarehouseExpenseScreen() {
           branchId={editingExpense.branchId}
           expense={editingExpense}
           onClose={() => setEditingExpense(null)}
+        />
+      )}
+      {showPayerSummary && (
+        <PayerSummaryModal
+          query={payerSummaryQuery}
+          scopeLabel={payerScopeLabel}
+          onClose={() => setShowPayerSummary(false)}
+          onSelectPayer={(payerId) => {
+            setShowPayerSummary(false);
+            handleFiltersChange({ payerId });
+          }}
         />
       )}
       {notesRow && (

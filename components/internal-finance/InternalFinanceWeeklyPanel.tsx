@@ -3,12 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, ChevronRight, Loader2, Plus, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { displayDescription } from "@/lib/internal-finance/display";
 import { useBranches } from "@/lib/hooks/useBranches";
 import {
   useCreateWarehouseExpenseApproval,
   usePrepareWarehouseExpenseBatch,
   useWarehouseExpenseBatch,
   useWarehouseExpenseBatches,
+  useWarehouseExpenseCarryOver,
+  useAddWeeklyBatchEntries,
+  useRemoveWeeklyBatchEntries,
 } from "@/lib/hooks/useInternalFinance";
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { FilterSearchableSelect } from "@/components/ui/filters";
@@ -74,8 +78,17 @@ export function InternalFinanceWeeklyPanel({
     initialBatchId || null,
   );
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [showCarryOver, setShowCarryOver] = useState(false);
 
   const canPrepare = can("prepare", branchId);
+  const carryOver = useWarehouseExpenseCarryOver(
+    branchId,
+    weekStart,
+    canPrepare,
+  );
+  const carryOverCount = carryOver.data?.data.length || 0;
+  const addEntries = useAddWeeklyBatchEntries();
+  const removeEntries = useRemoveWeeklyBatchEntries();
   const batches = useWarehouseExpenseBatches({
     branchIds: [branchId],
     fromDate: weekStart,
@@ -83,6 +96,14 @@ export function InternalFinanceWeeklyPanel({
     limit: 20,
   });
   const selectedBatch = useWarehouseExpenseBatch(selectedBatchId);
+  // Batch của đúng khoảng ngày đang chọn, chưa gửi Lark: nơi thêm phiếu sót.
+  const targetBatch = (batches.data || []).find(
+    (batch) =>
+      batch.status === "READY" &&
+      !batch.approvalRequestId &&
+      vnDateKey(batch.weekStart) === weekStart &&
+      vnDateKey(batch.weekEnd) === weekEnd,
+  );
   const prepare = usePrepareWarehouseExpenseBatch();
   const createApproval = useCreateWarehouseExpenseApproval();
 
@@ -191,6 +212,87 @@ export function InternalFinanceWeeklyPanel({
               />
             </div>
           </div>
+          {carryOverCount > 0 && (
+            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              <button
+                type="button"
+                onClick={() => setShowCarryOver((current) => !current)}
+                className="flex w-full items-center justify-between gap-2 text-left">
+                <span>
+                  Phiếu sót tuần trước: <strong>{carryOverCount}</strong> phiếu
+                  ·{" "}
+                  <strong>{formatCurrency(carryOver.data?.total || 0)}</strong>
+                </span>
+                <ChevronRight
+                  className={`h-4 w-4 shrink-0 transition-transform ${
+                    showCarryOver ? "rotate-90" : ""
+                  }`}
+                />
+              </button>
+              <p className="mt-1 text-xs text-amber-800">
+                Đã đủ hai tick nhưng chưa nằm trong Approval tuần nào.
+                {targetBatch
+                  ? " Thêm từng phiếu hoặc thêm tất cả vào batch tuần này."
+                  : " Bấm “Chuẩn bị tổng hợp tuần” trước, rồi thêm phiếu sót."}
+              </p>
+              {showCarryOver && (
+                <ul className="mt-2 max-h-40 divide-y divide-amber-100 overflow-y-auto rounded border border-amber-100 bg-white text-xs text-gray-700">
+                  {carryOver.data?.data.map((row) => (
+                    <li
+                      key={row.id}
+                      className="flex items-center justify-between gap-2 px-2 py-1.5">
+                      <span className="min-w-0">
+                        <span className="block font-mono">{row.code}</span>
+                        <span className="block truncate text-gray-500">
+                          {vnDateKey(row.occurredAt)
+                            .split("-")
+                            .reverse()
+                            .join("/")}{" "}
+                          · {displayDescription(row.description) || "-"}
+                        </span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        <span className="font-medium text-red-600">
+                          {formatCurrency(row.amount)}
+                        </span>
+                        {targetBatch && (
+                          <button
+                            type="button"
+                            disabled={addEntries.isPending}
+                            onClick={() =>
+                              addEntries.mutate({
+                                batchId: targetBatch.id,
+                                entryIds: [row.id],
+                              })
+                            }
+                            className="whitespace-nowrap rounded border border-brand px-2 py-1 text-[11px] font-medium text-brand hover:bg-brand-soft disabled:opacity-50">
+                            Thêm vào approval
+                          </button>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {targetBatch && (
+                <button
+                  type="button"
+                  disabled={addEntries.isPending}
+                  onClick={() =>
+                    addEntries.mutate({
+                      batchId: targetBatch.id,
+                      entryIds: carryOver.data?.data.map((row) => row.id) || [],
+                    })
+                  }
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50">
+                  {addEntries.isPending && (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  )}
+                  Thêm tất cả vào approval
+                </button>
+              )}
+            </div>
+          )}
           <button
             type="button"
             onClick={prepareBatch}
@@ -302,8 +404,15 @@ export function InternalFinanceWeeklyPanel({
                     key={entry.id}
                     className="flex items-center justify-between gap-3 px-3 py-2.5">
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium text-gray-900">
+                      <span className="flex items-center gap-1.5 truncate text-sm font-medium text-gray-900">
                         {entry.code}
+                        {/* Phiếu ngày trước tuần: được gộp từ phiếu sót. */}
+                        {vnDateKey(entry.occurredAt) <
+                          vnDateKey(selectedBatch.data!.weekStart) && (
+                          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                            Sót tuần trước
+                          </span>
+                        )}
                       </span>
                       <span className="block truncate text-xs text-gray-500">
                         {[
@@ -315,8 +424,34 @@ export function InternalFinanceWeeklyPanel({
                           .join(" · ")}
                       </span>
                     </span>
-                    <span className="shrink-0 text-sm font-semibold text-red-600">
-                      -{formatCurrency(entry.amount)}
+                    <span className="flex shrink-0 flex-col items-end gap-1">
+                      <span className="text-sm font-semibold text-red-600">
+                        -{formatCurrency(entry.amount)}
+                      </span>
+                      {/* Thêm nhầm: bỏ ra khi batch chưa gửi Lark, giữ tick. */}
+                      {selectedBatch.data!.status === "READY" &&
+                        !selectedBatch.data!.approvalRequestId &&
+                        can("prepare", selectedBatch.data!.branchId) && (
+                          <button
+                            type="button"
+                            disabled={removeEntries.isPending}
+                            onClick={() => {
+                              const batchId = selectedBatch.data!.id;
+                              const last =
+                                (selectedBatch.data!.entries?.length || 0) <= 1;
+                              removeEntries.mutate(
+                                { batchId, entryIds: [entry.id] },
+                                {
+                                  onSuccess: () => {
+                                    if (last) setSelectedBatchId(null);
+                                  },
+                                },
+                              );
+                            }}
+                            className="whitespace-nowrap rounded border border-red-200 px-2 py-0.5 text-[11px] font-medium text-red-600 hover:bg-red-50 disabled:opacity-50">
+                            Bỏ khỏi approval
+                          </button>
+                        )}
                     </span>
                   </div>
                 ))}
