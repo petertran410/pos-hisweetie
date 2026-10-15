@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   internalFinanceApi,
+  type InternalFinanceEntry,
+  type InternalFinanceResponse,
   type InternalFinanceQuery,
   type VehicleEntryQuery,
   type VehicleEntryUpdateInput,
@@ -57,6 +59,14 @@ export function useWarehouseExpenseBatches(params: InternalFinanceQuery) {
   return useQuery({
     queryKey: ["warehouse-expenses", "weekly-batches", params],
     queryFn: () => internalFinanceApi.warehouseExpenseBatches(params),
+  });
+}
+
+export function useWarehouseExpenseBatchPage(params: InternalFinanceQuery) {
+  return useQuery({
+    queryKey: ["warehouse-expenses", "weekly-batch-pages", params],
+    queryFn: () => internalFinanceApi.warehouseExpenseBatchPage(params),
+    placeholderData: (previous) => previous,
   });
 }
 
@@ -249,10 +259,55 @@ export function useCheckWarehouseExpense() {
       role: "manager" | "accountant";
       checked: boolean;
     }) => internalFinanceApi.checkWarehouseExpense(id, role, checked),
-    onSuccess: () => invalidateInternalFinance(queryClient),
-    onError: (error) =>
-      toast.error(errorMessage(error, "Cập nhật tick kiểm tra thất bại")),
+    // Tick hiện ngay trên dòng, không chờ tải lại cả bảng.
+    onMutate: async ({ id, role, checked }) => {
+      await queryClient.cancelQueries({ queryKey: ["warehouse-expenses"] });
+      const at = checked ? new Date().toISOString() : null;
+      replaceWarehouseExpenseRow(queryClient, id, (row) =>
+        role === "manager"
+          ? { ...row, managerReviewedAt: at }
+          : { ...row, accountantReviewedAt: at },
+      );
+    },
+    onSuccess: (entry) => {
+      replaceWarehouseExpenseRow(queryClient, entry.id, (row) => ({
+        ...row,
+        ...entry,
+      }));
+      invalidateInternalFinance(queryClient);
+    },
+    onError: (error) => {
+      // Trả tick về đúng dữ liệu máy chủ.
+      queryClient.invalidateQueries({ queryKey: ["warehouse-expenses"] });
+      toast.error(errorMessage(error, "Cập nhật tick kiểm tra thất bại"));
+    },
   });
+}
+
+/** Sửa một dòng trong mọi trang danh sách phiếu chi kho đang lưu cache. */
+function replaceWarehouseExpenseRow(
+  queryClient: ReturnType<typeof useQueryClient>,
+  id: number,
+  update: (row: InternalFinanceEntry) => InternalFinanceEntry,
+) {
+  queryClient.setQueriesData<InternalFinanceResponse<InternalFinanceEntry>>(
+    {
+      // Chỉ danh sách phiếu ["warehouse-expenses", params]; bỏ qua batch, ghi chú.
+      predicate: (query) =>
+        query.queryKey[0] === "warehouse-expenses" &&
+        query.queryKey.length === 2 &&
+        typeof query.queryKey[1] === "object",
+    },
+    (current) =>
+      current && Array.isArray(current.data)
+        ? {
+            ...current,
+            data: current.data.map((row) =>
+              row.id === id ? update(row) : row,
+            ),
+          }
+        : current,
+  );
 }
 
 export function invalidateInternalFinance(

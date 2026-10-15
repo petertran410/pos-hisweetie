@@ -1,5 +1,6 @@
 "use client";
 
+import { usePageSize } from "@/lib/hooks/usePageSize";
 import Link from "next/link";
 import { CalendarRange, Truck } from "lucide-react";
 import { useState } from "react";
@@ -23,7 +24,6 @@ import {
   useHeaderBranchId,
 } from "@/lib/internal-finance/header-branch";
 
-const PAGE_SIZE = 50;
 const FINANCE_BRANCH_IDS = [1, 4, 6, 7];
 const STORAGE_KEY = "internal-finance-sidebar-filters";
 
@@ -32,10 +32,11 @@ export default function TaiChinhNoiBoPage() {
   const headerBranchId = useHeaderBranchId(FINANCE_BRANCH_IDS, (id) =>
     access.can("cash_flows", "view", id),
   );
+  const [pageSize, setPageSize] = usePageSize("internalFinancePageSize");
   const [filters, setFilters] = useState<InternalFinanceQuery>(() => ({
     ...loadInternalFinanceFilters(STORAGE_KEY, headerBranchId),
     page: 1,
-    limit: PAGE_SIZE,
+    limit: pageSize,
   }));
 
   const query = useInternalFinance(filters);
@@ -43,7 +44,6 @@ export default function TaiChinhNoiBoPage() {
   const rows = query.data?.data || [];
   const total = query.data?.total || 0;
   const page = query.data?.page || filters.page || 1;
-  const pageSize = query.data?.limit || filters.limit || PAGE_SIZE;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const summaryData = summary.data;
 
@@ -72,7 +72,7 @@ export default function TaiChinhNoiBoPage() {
       ...current,
       ...patch,
       page: patch.page ?? 1,
-      limit: current.limit || PAGE_SIZE,
+      limit: current.limit || pageSize,
     }));
   };
 
@@ -98,7 +98,8 @@ export default function TaiChinhNoiBoPage() {
   );
 
   return (
-    <FinancePageGuard permissions={[{ resource: "cash_flows", action: "view" }]}>
+    <FinancePageGuard
+      permissions={[{ resource: "cash_flows", action: "view" }]}>
       <div
         className="flex h-full min-h-0 overflow-hidden border-t"
         style={{ borderColor: "var(--dt-border)" }}>
@@ -123,13 +124,14 @@ export default function TaiChinhNoiBoPage() {
           pageSize={pageSize}
           totalPages={totalPages}
           onPageChange={(nextPage) => updateFilters({ page: nextPage })}
-          onPageSizeChange={(nextSize) =>
+          onPageSizeChange={(nextSize) => {
+            setPageSize(nextSize);
             setFilters((current) => ({
               ...current,
               limit: nextSize,
               page: 1,
-            }))
-          }
+            }));
+          }}
           summary={summaryItems}
           toolbar={actions}
         />

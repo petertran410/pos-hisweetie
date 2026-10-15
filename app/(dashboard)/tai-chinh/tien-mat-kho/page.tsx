@@ -1,5 +1,6 @@
 "use client";
 
+import { usePageSize } from "@/lib/hooks/usePageSize";
 import { useCallback, useState } from "react";
 import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
 import {
@@ -20,17 +21,24 @@ function WarehouseCashScreen() {
     selectedBranch && WAREHOUSE_IDS.includes(selectedBranch.id)
       ? selectedBranch.id
       : null;
-  const [filters, setFilters] = useState<WarehouseReceiptQuery>(() =>
-    loadWarehouseCashFilters(headerBranchId),
+  const [pageSize, setPageSize] = usePageSize("warehouseCashPageSize", 20);
+  const [filters, setFilters] = useState<WarehouseReceiptQuery>(() => ({
+    ...loadWarehouseCashFilters(headerBranchId),
+    limit: pageSize,
+  }));
+  const updateFilters = useCallback(
+    (patch: Partial<WarehouseReceiptQuery>) => {
+      if (patch.limit) setPageSize(patch.limit);
+      setFilters((current) => ({
+        ...current,
+        ...patch,
+        page: patch.page ?? 1,
+        // Đổi số dòng/trang phải lấy giá trị mới (trước đây bị giữ 20).
+        limit: patch.limit || current.limit || pageSize,
+      }));
+    },
+    [pageSize, setPageSize],
   );
-  const updateFilters = useCallback((patch: Partial<WarehouseReceiptQuery>) => {
-    setFilters((current) => ({
-      ...current,
-      ...patch,
-      page: patch.page ?? 1,
-      limit: current.limit || 20,
-    }));
-  }, []);
 
   return (
     <div

@@ -1,16 +1,12 @@
 "use client";
 
+import { TablePagination } from "@/components/shared/TablePagination";
+import { PAGE_SIZE_OPTIONS } from "@/lib/hooks/usePageSize";
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
 import { useColumnToggle } from "@/lib/hooks/useColumnToggle";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-} from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 import type { InternalFinanceEntry } from "@/lib/api/internal-finance";
 import { formatCurrency } from "@/lib/utils";
@@ -87,24 +83,24 @@ export interface InternalFinanceSummaryItem {
 }
 
 const FINANCE_COLUMNS: Array<{
-    key: string;
-    label: string;
-    width: string;
-    align?: "left" | "right";
-  }> = [
-    { key: "code", label: "Mã", width: "150px" },
-    { key: "date", label: "Thời gian", width: "160px" },
-    { key: "branch", label: "Chi nhánh", width: "150px" },
-    { key: "category", label: "Nghiệp vụ", width: "220px" },
-    { key: "invoice", label: "Hóa đơn", width: "150px" },
-    { key: "amount", label: "Số tiền", width: "140px", align: "right" },
-    { key: "evidence", label: "Chứng từ", width: "140px" },
-    { key: "reviewer", label: "Người kiểm tra", width: "170px" },
-    { key: "status", label: "Trạng thái", width: "150px" },
-    { key: "weekly", label: "Approval tuần", width: "170px" },
-    { key: "cashIssued", label: "Đã chi", width: "110px" },
-    { key: "cashFlow", label: "CashFlow", width: "140px" },
-    { key: "source", label: "Nguồn", width: "140px" },
+  key: string;
+  label: string;
+  width: string;
+  align?: "left" | "right";
+}> = [
+  { key: "code", label: "Mã", width: "150px" },
+  { key: "date", label: "Thời gian", width: "160px" },
+  { key: "branch", label: "Chi nhánh", width: "150px" },
+  { key: "category", label: "Nghiệp vụ", width: "220px" },
+  { key: "invoice", label: "Hóa đơn", width: "150px" },
+  { key: "amount", label: "Số tiền", width: "140px", align: "right" },
+  { key: "evidence", label: "Chứng từ", width: "140px" },
+  { key: "reviewer", label: "Người kiểm tra", width: "170px" },
+  { key: "status", label: "Trạng thái", width: "150px" },
+  { key: "weekly", label: "Approval tuần", width: "170px" },
+  { key: "cashIssued", label: "Đã chi", width: "110px" },
+  { key: "cashFlow", label: "CashFlow", width: "140px" },
+  { key: "source", label: "Nguồn", width: "140px" },
 ];
 
 export function InternalFinanceTable({
@@ -160,21 +156,14 @@ export function InternalFinanceTable({
     return "text-gray-900";
   };
 
-  const { columns: toggleColumns, toggleColumn, shows } = useColumnToggle(
-    "internalFinanceTableColumns",
-    FINANCE_COLUMNS,
-  );
+  const {
+    columns: toggleColumns,
+    toggleColumn,
+    shows,
+  } = useColumnToggle("internalFinanceTableColumns", FINANCE_COLUMNS);
   const columns = FINANCE_COLUMNS.filter((column) => shows(column.key));
   const colSpan = columns.length + 1;
   const displayTotalPages = Math.max(totalPages, 1);
-  const pageNumbers = Array.from(
-    { length: Math.min(5, displayTotalPages) },
-    (_, index) =>
-      Math.min(
-        Math.max(page - 2 + index, index + 1),
-        displayTotalPages - (Math.min(5, displayTotalPages) - 1 - index),
-      ),
-  );
 
   return (
     <div className="mb-4 mr-4 mt-4 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-white">
@@ -220,9 +209,12 @@ export function InternalFinanceTable({
                 <td colSpan={colSpan} className="px-4 py-2.5">
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
                     {summary.map((item) => (
-                      <span key={item.label} className="whitespace-nowrap text-sm">
+                      <span
+                        key={item.label}
+                        className="whitespace-nowrap text-sm">
                         <span className="mr-2 text-gray-500">{item.label}</span>
-                        <span className={`font-semibold ${toneClass(item.tone)}`}>
+                        <span
+                          className={`font-semibold ${toneClass(item.tone)}`}>
                           {formatCurrency(item.value)}
                         </span>
                       </span>
@@ -242,7 +234,9 @@ export function InternalFinanceTable({
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={colSpan} className="py-20 text-center text-gray-400">
+                <td
+                  colSpan={colSpan}
+                  className="py-20 text-center text-gray-400">
                   <div className="text-sm">Không có dòng tài chính nào</div>
                 </td>
               </tr>
@@ -331,18 +325,21 @@ export function InternalFinanceTable({
                               EVIDENCE_COLORS[row.evidenceStatus] ||
                               "bg-gray-100 text-gray-600"
                             }`}>
-                            {EVIDENCE_LABELS[row.evidenceStatus] || row.evidenceStatus}
+                            {EVIDENCE_LABELS[row.evidenceStatus] ||
+                              row.evidenceStatus}
                           </span>
                         </td>
                       )}
                       {shows("reviewer") && (
                         <td className={`px-4 py-2.5 text-gray-900 ${edge}`}>
                           {row.direction === "EXPENSE" &&
-                          (row.managerReviewedAt || row.accountantReviewedAt) ? (
+                          (row.managerReviewedAt ||
+                            row.accountantReviewedAt) ? (
                             <div className="space-y-0.5 text-xs">
                               {row.managerReviewedAt && (
                                 <div>
-                                  QL kho: {row.managerReviewer?.name || "đã tick"}
+                                  QL kho:{" "}
+                                  {row.managerReviewer?.name || "đã tick"}
                                 </div>
                               )}
                               {row.accountantReviewedAt && (
@@ -372,7 +369,8 @@ export function InternalFinanceTable({
                         <td className={`px-4 py-2.5 ${edge}`}>
                           <span
                             className={`rounded px-2 py-0.5 text-xs font-medium ${
-                              STATUS_COLORS[row.status] || "bg-gray-100 text-gray-600"
+                              STATUS_COLORS[row.status] ||
+                              "bg-gray-100 text-gray-600"
                             }`}>
                             {STATUS_LABELS[row.status] || row.status}
                           </span>
@@ -416,9 +414,13 @@ export function InternalFinanceTable({
                       )}
                       {shows("source") && (
                         <td className={`px-4 py-2.5 text-gray-900 ${edge}`}>
-                          <div>{displaySource(row.sourceType, row.category)}</div>
+                          <div>
+                            {displaySource(row.sourceType, row.category)}
+                          </div>
                           {row.packingSlip && (
-                            <div className="text-brand">{row.packingSlip.code}</div>
+                            <div className="text-brand">
+                              {row.packingSlip.code}
+                            </div>
                           )}
                         </td>
                       )}
@@ -434,10 +436,7 @@ export function InternalFinanceTable({
                       </td>
                     </tr>
                     {expanded && (
-                      <InternalFinanceDetailRow
-                        row={row}
-                        colSpan={colSpan}
-                      />
+                      <InternalFinanceDetailRow row={row} colSpan={colSpan} />
                     )}
                   </Fragment>
                 );
@@ -447,69 +446,16 @@ export function InternalFinanceTable({
         </table>
       </div>
 
-      <div className="flex shrink-0 items-center justify-between border-t bg-white px-4 py-2.5">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">Hiển thị</span>
-          <select
-            value={pageSize}
-            onChange={(event) => onPageSizeChange?.(Number(event.target.value))}
-            className="rounded border bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand">
-            {[10, 15, 20, 50].map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
-          <span className="text-xs text-gray-500">/ trang</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => onPageChange?.(1)}
-            disabled={!onPageChange || page <= 1}
-            className="rounded border p-1 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">
-            <ChevronsLeft className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onPageChange?.(Math.max(1, page - 1))}
-            disabled={!onPageChange || page <= 1}
-            className="rounded border p-1 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          {pageNumbers.map((pageNumber) => (
-            <button
-              key={pageNumber}
-              type="button"
-              onClick={() => onPageChange?.(pageNumber)}
-              className={`h-7 w-7 rounded border text-xs font-medium transition-colors ${
-                pageNumber === page
-                  ? "border-brand bg-brand text-white"
-                  : "border-gray-200 text-gray-600 hover:bg-gray-50"
-              }`}>
-              {pageNumber}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => onPageChange?.(Math.min(displayTotalPages, page + 1))}
-            disabled={!onPageChange || page >= displayTotalPages}
-            className="rounded border p-1 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">
-            <ChevronRight className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onPageChange?.(displayTotalPages)}
-            disabled={!onPageChange || page >= displayTotalPages}
-            className="rounded border p-1 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">
-            <ChevronsRight className="h-4 w-4" />
-          </button>
-        </div>
-        <span className="text-xs text-gray-400">
-          Trang {page}/{displayTotalPages}
-          {total > 0 ? ` · ${total.toLocaleString("vi-VN")} dòng` : ""}
-        </span>
-      </div>
+      <TablePagination
+        page={page}
+        totalPages={displayTotalPages}
+        total={total}
+        limit={pageSize}
+        limitOptions={PAGE_SIZE_OPTIONS}
+        unit="dòng"
+        onPageChange={(next) => onPageChange?.(next)}
+        onLimitChange={(next) => onPageSizeChange?.(next)}
+      />
     </div>
   );
 }

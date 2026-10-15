@@ -1,13 +1,11 @@
 "use client";
 
+import { TablePagination } from "@/components/shared/TablePagination";
+import { PAGE_SIZE_OPTIONS } from "@/lib/hooks/usePageSize";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Ban,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   Loader2,
   Check,
   Paperclip,
@@ -101,8 +99,7 @@ function WarehouseCashRowMenu({
         />
       </button>
       {open && (
-        <div
-          className="absolute right-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-xl border border-gray-200 bg-white py-1.5 shadow-xl">
+        <div className="absolute right-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-xl border border-gray-200 bg-white py-1.5 shadow-xl">
           {canEdit && (
             <button
               type="button"
@@ -155,7 +152,6 @@ function WarehouseCashRowMenu({
   );
 }
 
-
 const dateLabel = (value?: string | null) => {
   if (!value) return "-";
   return new Date(value).toLocaleDateString("vi-VN", {
@@ -177,18 +173,17 @@ const isWarehouseSale = (row: WarehouseReceipt) =>
   row.sourceSnapshot?.receiptKind === "WAREHOUSE_SALE";
 
 const statusLabel = (row: WarehouseReceipt) => {
-  if (row.status === "CANCELLED") return { text: "Đã hủy", className: "bg-red-100 text-red-700" };
-  if (row.status === "POSTING") return { text: "Đang lập", className: "bg-blue-100 text-blue-700" };
-  if (isPosted(row)) return { text: "Đã lập phiếu", className: "bg-green-100 text-green-700" };
+  if (row.status === "CANCELLED")
+    return { text: "Đã hủy", className: "bg-red-100 text-red-700" };
+  if (row.status === "POSTING")
+    return { text: "Đang lập", className: "bg-blue-100 text-blue-700" };
+  if (isPosted(row))
+    return { text: "Đã lập phiếu", className: "bg-green-100 text-green-700" };
   return { text: "Chưa lập phiếu", className: "bg-amber-100 text-amber-700" };
 };
 
 const receiptCustomers = (row: WarehouseReceipt): WarehouseCustomer[] =>
-  row.customers?.length
-    ? row.customers
-    : row.customer
-      ? [row.customer]
-      : [];
+  row.customers?.length ? row.customers : row.customer ? [row.customer] : [];
 
 const receiptCashFlows = (row: WarehouseReceipt): WarehouseCashFlowRef[] =>
   row.postedCashFlows?.length
@@ -206,7 +201,9 @@ const createWarehouseColumns = (
     visible: true,
     width: "150px",
     render: (row) => (
-      <div className="font-mono text-xs leading-5 text-gray-900">{row.code}</div>
+      <div className="font-mono text-xs leading-5 text-gray-900">
+        {row.code}
+      </div>
     ),
   },
   {
@@ -239,7 +236,9 @@ const createWarehouseColumns = (
       return (
         <div className="space-y-0.5 leading-5">
           {customers.map((customer) => (
-            <div key={`${customer.id}-${customer.name}`} className="break-words">
+            <div
+              key={`${customer.id}-${customer.name}`}
+              className="break-words">
               {customer.name}
             </div>
           ))}
@@ -363,11 +362,13 @@ export function WarehouseCashTable({
   onFiltersChange,
 }: WarehouseCashTableProps) {
   const [search, setSearch] = useState(filters.search || "");
-  const [formReceipt, setFormReceipt] = useState<WarehouseReceipt | null | undefined>(
-    undefined,
-  );
+  const [formReceipt, setFormReceipt] = useState<
+    WarehouseReceipt | null | undefined
+  >(undefined);
   const [allocatingId, setAllocatingId] = useState<number | null>(null);
-  const [attachmentRow, setAttachmentRow] = useState<WarehouseReceipt | null>(null);
+  const [attachmentRow, setAttachmentRow] = useState<WarehouseReceipt | null>(
+    null,
+  );
   const defaultColumns = useMemo(
     () => createWarehouseColumns(setAttachmentRow),
     [],
@@ -515,7 +516,9 @@ export function WarehouseCashTable({
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={colSpan} className="py-20 text-center text-sm text-gray-400">
+                <td
+                  colSpan={colSpan}
+                  className="py-20 text-center text-sm text-gray-400">
                   Không có phiếu tiền mặt
                 </td>
               </tr>
@@ -538,7 +541,9 @@ export function WarehouseCashTable({
                 const hasRowActions = canEditRow || canPostRow || canCancelRow;
 
                 return (
-                  <tr key={row.id} className="border-b transition-colors hover:bg-gray-50">
+                  <tr
+                    key={row.id}
+                    className="border-b transition-colors hover:bg-gray-50">
                     {visibleColumns.map((col) => (
                       <td
                         key={col.key}
@@ -549,7 +554,9 @@ export function WarehouseCashTable({
                           wordWrap: "break-word",
                         }}
                         className={`px-4 py-2.5 align-middle ${
-                          col.key === "amount" ? "text-right whitespace-nowrap" : "whitespace-normal"
+                          col.key === "amount"
+                            ? "text-right whitespace-nowrap"
+                            : "whitespace-normal"
                         }`}>
                         {col.render(row)}
                       </td>
@@ -568,7 +575,10 @@ export function WarehouseCashTable({
                           onEdit={() => setFormReceipt(row)}
                           onPost={() =>
                             sale
-                              ? postReceipt.mutate({ id: row.id, allocations: [] })
+                              ? postReceipt.mutate({
+                                  id: row.id,
+                                  allocations: [],
+                                })
                               : setAllocatingId(row.id)
                           }
                           onCancel={() => void handleCancelReceipt(row)}
@@ -583,62 +593,16 @@ export function WarehouseCashTable({
         </table>
       </div>
 
-      <div className="flex shrink-0 items-center justify-between border-t bg-white px-4 py-2.5">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">Hiển thị</span>
-          <select
-            value={pageSize}
-            onChange={(event) =>
-              onFiltersChange({ limit: Number(event.target.value), page: 1 })
-            }
-            className="rounded border bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand">
-            {[10, 15, 20, 50].map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
-          <span className="text-xs text-gray-500">/ trang</span>
-        </div>
-
-        <div className="flex items-center gap-1">
-          <span className="mr-1 text-xs text-gray-500">
-            {page}/{totalPages}
-          </span>
-          <button
-            type="button"
-            title="Trang đầu"
-            disabled={page <= 1}
-            onClick={() => onFiltersChange({ page: 1 })}
-            className="rounded border p-1 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">
-            <ChevronsLeft className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            title="Trang trước"
-            disabled={page <= 1}
-            onClick={() => onFiltersChange({ page: page - 1 })}
-            className="rounded border p-1 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            title="Trang sau"
-            disabled={page >= totalPages}
-            onClick={() => onFiltersChange({ page: page + 1 })}
-            className="rounded border p-1 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">
-            <ChevronRight className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            title="Trang cuối"
-            disabled={page >= totalPages}
-            onClick={() => onFiltersChange({ page: totalPages })}
-            className="rounded border p-1 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">
-            <ChevronsRight className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        limit={pageSize}
+        limitOptions={PAGE_SIZE_OPTIONS}
+        unit="phiếu"
+        onPageChange={(next) => onFiltersChange({ page: next })}
+        onLimitChange={(next) => onFiltersChange({ limit: next, page: 1 })}
+      />
 
       {formReceipt !== undefined && (
         <WarehouseCashForm

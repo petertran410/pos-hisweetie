@@ -23,7 +23,7 @@ import { InternalFinanceWeeklyPanel } from "@/components/internal-finance/Intern
 import { useBranches } from "@/lib/hooks/useBranches";
 import {
   useCreateWarehouseExpenseApproval,
-  useWarehouseExpenseBatches,
+  useWarehouseExpenseBatchPage,
 } from "@/lib/hooks/useInternalFinance";
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import {
@@ -42,6 +42,8 @@ import type {
 import { CancelWeeklyBatchDialog } from "@/components/internal-finance/CancelWeeklyBatchDialog";
 import { canCancelBatch } from "@/lib/internal-finance/weekly-batch";
 import { formatCurrency } from "@/lib/utils";
+import { TablePagination } from "@/components/shared/TablePagination";
+import { usePageSize } from "@/lib/hooks/usePageSize";
 import { isoWeekRange } from "@/lib/internal-finance/dates";
 
 const BRANCH_IDS = [6, 1];
@@ -182,16 +184,26 @@ export default function ApprovalTuanPage() {
       fromDate: weekRange?.from || fromDate || yearRange.from,
       toDate: weekRange?.to || toDate || yearRange.to,
       status: status || undefined,
-      limit: 100,
     };
   }, [branchId, can, fromDate, status, toDate, week, year]);
 
-  const batches = useWarehouseExpenseBatches(filters);
-  const rows = batches.data || [];
-  const totalAmount = rows.reduce(
-    (sum, row) => sum + Number(row.totalAmount || 0),
-    0,
+  const [page, setPage] = useState(1);
+  const [limit, setLimit, limitOptions] = usePageSize(
+    "approvalWeekPageSize",
+    20,
   );
+  // Đổi bộ lọc thì về trang 1.
+  const filterKey = JSON.stringify(filters);
+  const [seenFilterKey, setSeenFilterKey] = useState(filterKey);
+  if (filterKey !== seenFilterKey) {
+    setSeenFilterKey(filterKey);
+    setPage(1);
+  }
+  const batches = useWarehouseExpenseBatchPage({ ...filters, page, limit });
+  const rows = batches.data?.data || [];
+  const total = batches.data?.total || 0;
+  const totalAmount = batches.data?.totalAmount || 0;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
 
   const clearTime = () => {
     time.reset();
@@ -315,7 +327,7 @@ export default function ApprovalTuanPage() {
           </div>
           <div className="flex shrink-0 items-center justify-end gap-4 border-b px-4 py-2 text-sm">
             <span className="text-gray-500">
-              Số batch: <strong className="text-gray-900">{rows.length}</strong>
+              Số batch: <strong className="text-gray-900">{total}</strong>
             </span>
             <span className="text-gray-500">
               Tổng chi:{" "}
@@ -461,6 +473,19 @@ export default function ApprovalTuanPage() {
               </tbody>
             </table>
           </div>
+          <TablePagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            limit={limit}
+            limitOptions={limitOptions}
+            unit="batch"
+            onPageChange={setPage}
+            onLimitChange={(next) => {
+              setLimit(next);
+              setPage(1);
+            }}
+          />
         </div>
       </div>
       {showPanel && (

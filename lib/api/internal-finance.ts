@@ -481,6 +481,20 @@ export const internalFinanceApi = {
   ): Promise<InternalFinanceEntry> =>
     apiClient.patch(`/internal-finance/warehouse-expenses/${id}`, payload),
 
+  warehouseExpenseBatchPage: (
+    params?: InternalFinanceQuery,
+  ): Promise<{
+    data: WeeklyBatch[];
+    total: number;
+    totalAmount: number;
+    page: number;
+    limit: number;
+  }> =>
+    apiClient.get(
+      "/internal-finance/warehouse-expenses/weekly-batch-pages",
+      params,
+    ),
+
   warehouseExpenseBatches: (
     params?: InternalFinanceQuery,
   ): Promise<WeeklyBatch[]> =>

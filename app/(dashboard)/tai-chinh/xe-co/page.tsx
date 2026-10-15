@@ -1,17 +1,12 @@
 "use client";
 
+import { TablePagination } from "@/components/shared/TablePagination";
+import { usePageSize } from "@/lib/hooks/usePageSize";
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
 import { useColumnToggle } from "@/lib/hooks/useColumnToggle";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import {
-  CarFront,
-  ChevronLeft,
-  ChevronRight,
-  ListChecks,
-  Plus,
-  SlidersHorizontal,
-} from "lucide-react";
+import { CarFront, ListChecks, Plus, SlidersHorizontal } from "lucide-react";
 import Swal from "sweetalert2";
 import { VehicleFinanceForm } from "@/components/internal-finance/VehicleFinanceForm";
 import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
@@ -56,7 +51,6 @@ import { loadSavedDates } from "@/lib/internal-finance/time-range";
 import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
 
-const PAGE_SIZE = 50;
 const BRANCH_FALLBACK: Record<number, string> = {
   6: "Kho Hà Nội",
   1: "Kho Sài Gòn",
@@ -145,6 +139,7 @@ function VehicleScreen() {
     router.replace(rest ? `${pathname}?${rest}` : pathname);
   };
   const [page, setPage] = useState(1);
+  const [limit, setLimit, limitOptions] = usePageSize("vehicleEntryPageSize");
   const [showFilters, setShowFilters] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showVehicles, setShowVehicles] = useState(false);
@@ -190,7 +185,7 @@ function VehicleScreen() {
     () =>
       // Mở theo mã từ link: chỉ tìm đúng mã đó, bỏ qua bộ lọc đã lưu.
       codeParam && debouncedSearch === codeParam
-        ? { category: kind, search: codeParam, page: 1, limit: PAGE_SIZE }
+        ? { category: kind, search: codeParam, page: 1, limit }
         : {
             category: kind,
             branchId: filters.branchId,
@@ -203,9 +198,9 @@ function VehicleScreen() {
             toDate: filters.toDate,
             search: debouncedSearch || undefined,
             page,
-            limit: PAGE_SIZE,
+            limit,
           },
-    [codeParam, debouncedSearch, filters, kind, page],
+    [codeParam, debouncedSearch, filters, kind, limit, page],
   );
   const entries = useVehicleEntries(query, canView);
   const vehicles = useVehicles(
@@ -214,7 +209,7 @@ function VehicleScreen() {
   );
   const rows = entries.data?.data || [];
   const total = entries.data?.total || 0;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / limit));
   const pageAmount = rows.reduce(
     (sum, row) =>
       sum + (row.status === "CANCELLED" ? 0 : Number(row.amount || 0)),
@@ -407,33 +402,19 @@ function VehicleScreen() {
                     shows={columnToggle.shows}
                   />
                 )}
-                <div className="flex shrink-0 items-center justify-between border-t px-4 py-3 text-sm">
-                  <span className="text-gray-500">
-                    Trang {page}/{totalPages}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      title="Trang trước"
-                      disabled={page <= 1}
-                      onClick={() =>
-                        setPage((current) => Math.max(1, current - 1))
-                      }
-                      className="rounded border p-2 text-gray-600 hover:bg-gray-50 disabled:opacity-40">
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      title="Trang sau"
-                      disabled={page >= totalPages}
-                      onClick={() =>
-                        setPage((current) => Math.min(totalPages, current + 1))
-                      }
-                      className="rounded border p-2 text-gray-600 hover:bg-gray-50 disabled:opacity-40">
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
+                <TablePagination
+                  page={page}
+                  totalPages={totalPages}
+                  total={total}
+                  limit={limit}
+                  limitOptions={limitOptions}
+                  unit="phiếu"
+                  onPageChange={setPage}
+                  onLimitChange={(next) => {
+                    setLimit(next);
+                    setPage(1);
+                  }}
+                />
               </div>
             </>
           )}

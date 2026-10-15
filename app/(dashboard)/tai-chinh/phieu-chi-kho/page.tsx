@@ -1,17 +1,13 @@
 "use client";
 
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
+import { TablePagination } from "@/components/shared/TablePagination";
+import { usePageSize } from "@/lib/hooks/usePageSize";
 import { useColumnToggle } from "@/lib/hooks/useColumnToggle";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import {
-  CalendarRange,
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-  WalletCards,
-} from "lucide-react";
+import { CalendarRange, Plus, WalletCards } from "lucide-react";
 import Swal from "sweetalert2";
 import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
 import { WarehouseCashAttachmentsModal } from "@/components/warehouse-cash/WarehouseCashAttachmentsModal";
@@ -43,8 +39,6 @@ import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
 
-const PAGE_SIZE = 50;
-
 function WarehouseExpenseScreen() {
   const router = useRouter();
   const pathname = usePathname();
@@ -63,6 +57,9 @@ function WarehouseExpenseScreen() {
   const [search, setSearch] = useState(codeParam);
   const [debouncedSearch, setDebouncedSearch] = useState(codeParam);
   const [page, setPage] = useState(1);
+  const [limit, setLimit, limitOptions] = usePageSize(
+    "warehouseExpensePageSize",
+  );
   const [showForm, setShowForm] = useState(false);
   const [editingExpense, setEditingExpense] =
     useState<InternalFinanceEntry | null>(null);
@@ -107,7 +104,7 @@ function WarehouseExpenseScreen() {
     () =>
       // Mở theo mã từ link: chỉ tìm đúng mã đó, bỏ qua bộ lọc đã lưu.
       codeParam && debouncedSearch === codeParam
-        ? { search: codeParam, page: 1, limit: PAGE_SIZE }
+        ? { search: codeParam, page: 1, limit }
         : {
             branchId: filters.branchId,
             category: filters.category,
@@ -120,14 +117,14 @@ function WarehouseExpenseScreen() {
             toDate: filters.toDate,
             search: debouncedSearch || undefined,
             page,
-            limit: PAGE_SIZE,
+            limit,
           },
-    [codeParam, debouncedSearch, filters, page],
+    [codeParam, debouncedSearch, filters, limit, page],
   );
   const expenses = useWarehouseExpenses(query);
   const rows = expenses.data?.data || [];
   const total = expenses.data?.total || 0;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / limit));
   const pageAmount = rows.reduce(
     (sum, row) => sum + Number(row.amount || 0),
     0,
@@ -290,7 +287,9 @@ function WarehouseExpenseScreen() {
             ) : (
               <WarehouseExpenseTable
                 rows={rows}
-                isLoading={expenses.isLoading || expenses.isFetching}
+                // Chỉ hiện "Đang tải" lần đầu; tải lại nền (sau tick, Đã chi…)
+                // giữ nguyên bảng, trang và vị trí cuộn.
+                isLoading={expenses.isLoading}
                 canCheck={(row, role) =>
                   isExpenseCheckOpen(row) &&
                   canAction(`check_${role}`, row.branchId)
@@ -317,31 +316,19 @@ function WarehouseExpenseScreen() {
                 shows={shows}
               />
             )}
-            <div className="flex shrink-0 items-center justify-between border-t px-4 py-3 text-sm">
-              <span className="text-gray-500">
-                Trang {page}/{totalPages}
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  title="Trang trước"
-                  disabled={page <= 1}
-                  onClick={() => setPage((current) => Math.max(1, current - 1))}
-                  className="rounded border p-2 text-gray-600 hover:bg-gray-50 disabled:opacity-40">
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  title="Trang sau"
-                  disabled={page >= totalPages}
-                  onClick={() =>
-                    setPage((current) => Math.min(totalPages, current + 1))
-                  }
-                  className="rounded border p-2 text-gray-600 hover:bg-gray-50 disabled:opacity-40">
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
+            <TablePagination
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              limit={limit}
+              limitOptions={limitOptions}
+              unit="phiếu"
+              onPageChange={setPage}
+              onLimitChange={(next) => {
+                setLimit(next);
+                setPage(1);
+              }}
+            />
           </div>
         </main>
       </div>
