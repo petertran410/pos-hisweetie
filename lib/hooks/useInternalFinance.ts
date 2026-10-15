@@ -297,8 +297,8 @@ export function useCreateWarehouseExpenseNote() {
 export function useCancelWarehouseExpenseBatch() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) =>
-      internalFinanceApi.cancelWarehouseExpenseBatch(id),
+    mutationFn: ({ id, reason }: { id: number; reason: string }) =>
+      internalFinanceApi.cancelWarehouseExpenseBatch(id, reason),
     onSuccess: () => {
       invalidateInternalFinance(queryClient);
       toast.success("Đã hủy tổng hợp tuần");

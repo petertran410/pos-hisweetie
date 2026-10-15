@@ -116,6 +116,8 @@ export interface InternalFundQuery {
   search?: string;
   page?: number;
   limit?: number;
+  orderBy?: "occurredAt" | "amount";
+  orderDirection?: "asc" | "desc";
 }
 
 export interface InternalFundReceiptInput {
@@ -193,6 +195,8 @@ export const internalFundApi = {
     total: number;
     page: number;
     limit: number;
+    /** Tổng toàn bộ dòng khớp bộ lọc: tiền vào / tiền ra. */
+    totals?: { receipt: number; expense: number };
   }> => apiClient.get("/internal-fund/transactions", params),
 
   createReceiptApproval: (

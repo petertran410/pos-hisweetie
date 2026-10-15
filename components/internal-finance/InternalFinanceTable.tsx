@@ -21,6 +21,8 @@ import {
   displayDescription,
 } from "@/lib/internal-finance/display";
 import { InternalFinanceDetailRow } from "./InternalFinanceDetailRow";
+import { AmountTotal } from "./AmountTotal";
+import { SortIcon, type SortState } from "@/components/shared/SortIcon";
 
 const CATEGORY_LABELS: Record<string, string> = {
   DELIVERY_FEE: "Chi phí giao hàng",
@@ -110,12 +112,22 @@ const FINANCE_COLUMNS: Array<{
   { key: "source", label: "Nguồn", width: "140px" },
 ];
 
+export type InternalFinanceSortKey = "occurredAt" | "amount";
+// Cột bấm được để sắp xếp → trường sắp xếp phía máy chủ.
+const SORT_KEYS: Record<string, InternalFinanceSortKey> = {
+  date: "occurredAt",
+  amount: "amount",
+};
+
 export function InternalFinanceTable({
   rows,
   isLoading,
   title,
   toolbar,
   summary,
+  totals,
+  sort,
+  onSort,
   search = "",
   onSearchChange,
   total = rows.length,
@@ -136,7 +148,12 @@ export function InternalFinanceTable({
   isLoading: boolean;
   title: string;
   toolbar?: ReactNode;
+  /** Chỉ dùng trên điện thoại; máy tính hiện tổng ở dòng dưới tên cột. */
   summary?: InternalFinanceSummaryItem[];
+  /** Tổng thu / tổng chi của toàn bộ phiếu khớp bộ lọc (dòng dưới tên cột). */
+  totals?: { receipt: number; expense: number };
+  sort?: SortState<InternalFinanceSortKey>;
+  onSort?: (key: InternalFinanceSortKey) => void;
   search?: string;
   onSearchChange?: (search: string) => void;
   total?: number;
@@ -319,39 +336,51 @@ export function InternalFinanceTable({
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10 bg-gray-50">
             <tr>
-              {columns.map((column) => (
-                <th
-                  key={column.key}
-                  className={`whitespace-nowrap px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-gray-500 ${
-                    column.align === "right" ? "text-right" : "text-left"
-                  }`}
-                  style={{ width: column.width, minWidth: column.width }}>
-                  {column.label}
-                </th>
-              ))}
+              {columns.map((column) => {
+                const sortKey = SORT_KEYS[column.key];
+                const sortable = Boolean(onSort && sortKey);
+                return (
+                  <th
+                    key={column.key}
+                    onClick={sortable ? () => onSort?.(sortKey) : undefined}
+                    className={`whitespace-nowrap px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-gray-500 ${
+                      column.align === "right" ? "text-right" : "text-left"
+                    } ${sortable ? "cursor-pointer select-none hover:bg-gray-100" : ""}`}
+                    style={{ width: column.width, minWidth: column.width }}>
+                    <span className="inline-flex items-center gap-1">
+                      {column.label}
+                      {sortable && (
+                        <SortIcon
+                          dir={sort?.key === sortKey ? sort.dir : null}
+                        />
+                      )}
+                    </span>
+                  </th>
+                );
+              })}
               <th className="w-8 px-4 py-2.5" />
             </tr>
-          </thead>
-          <tbody>
-            {summary && summary.length > 0 && (
+            {totals && shows("amount") && (
               <tr className="border-b bg-gray-50/60">
-                <td colSpan={colSpan} className="px-4 py-2.5">
-                  <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
-                    {summary.map((item) => (
-                      <span
-                        key={item.label}
-                        className="whitespace-nowrap text-sm">
-                        <span className="mr-2 text-gray-500">{item.label}</span>
-                        <span
-                          className={`font-semibold ${toneClass(item.tone)}`}>
-                          {formatCurrency(item.value)}
-                        </span>
-                      </span>
-                    ))}
-                  </div>
-                </td>
+                {columns.map((column) => (
+                  <td
+                    key={column.key}
+                    className={`whitespace-nowrap px-4 py-2 ${
+                      column.align === "right" ? "text-right" : ""
+                    }`}>
+                    {column.key === "amount" && (
+                      <AmountTotal
+                        receipt={totals.receipt}
+                        expense={totals.expense}
+                      />
+                    )}
+                  </td>
+                ))}
+                <td className="px-4 py-2" />
               </tr>
             )}
+          </thead>
+          <tbody>
             {isLoading ? (
               <tr>
                 <td colSpan={colSpan} className="py-16 text-center">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle, Loader2, X } from "lucide-react";
 import type { WeeklyBatch } from "@/lib/api/internal-finance";
 import { useCancelWarehouseExpenseBatch } from "@/lib/hooks/useInternalFinance";
@@ -16,6 +16,7 @@ export function CancelWeeklyBatchDialog({
   onCancelled?: () => void;
 }) {
   const cancel = useCancelWarehouseExpenseBatch();
+  const [reason, setReason] = useState("");
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -30,12 +31,15 @@ export function CancelWeeklyBatchDialog({
   }, [onClose]);
 
   const confirm = () =>
-    cancel.mutate(batch.id, {
-      onSuccess: () => {
-        onCancelled?.();
-        onClose();
+    cancel.mutate(
+      { id: batch.id, reason: reason.trim() },
+      {
+        onSuccess: () => {
+          onCancelled?.();
+          onClose();
+        },
       },
-    });
+    );
 
   return (
     <div
@@ -73,11 +77,28 @@ export function CancelWeeklyBatchDialog({
               <li>Approval Lark của batch này đã hủy/từ chối.</li>
             )}
             <li>
+              Batch được giữ lại với trạng thái Đã hủy, vẫn xem được phiếu và lý
+              do hủy.
+            </li>
+            <li>
               Các phiếu chi trả về Phiếu chi kho, giữ nguyên tick Quản lý kho và
               Kế toán kho.
             </li>
             <li>Có thể sửa phiếu rồi tổng hợp tuần lại.</li>
           </ul>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-gray-700">
+              Lý do hủy <span className="text-red-500">*</span>
+            </span>
+            <textarea
+              autoFocus
+              rows={3}
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              placeholder="VD: Lark từ chối do trùng phiếu tuần 37"
+              className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+            />
+          </label>
         </div>
         <div className="flex justify-end gap-3 border-t bg-gray-50 p-4">
           <button
@@ -89,7 +110,7 @@ export function CancelWeeklyBatchDialog({
           <button
             type="button"
             onClick={confirm}
-            disabled={cancel.isPending}
+            disabled={cancel.isPending || !reason.trim()}
             className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
             {cancel.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
             Có, hủy batch

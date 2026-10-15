@@ -9,6 +9,12 @@ import {
   FinanceMobileShell,
 } from "@/components/internal-finance/mobile/FinanceMobileShell";
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
+import {
+  nextSort,
+  SortIcon,
+  type SortState,
+} from "@/components/shared/SortIcon";
+import { AmountTotal } from "@/components/internal-finance/AmountTotal";
 import { useColumnToggle } from "@/lib/hooks/useColumnToggle";
 import { useState } from "react";
 import Link from "next/link";
@@ -115,6 +121,12 @@ const LEDGER_COLUMNS = [
   { key: "status", label: "Trạng thái" },
 ];
 const STORAGE_KEY = "internal-fund-sidebar-filters";
+type LedgerSortKey = "occurredAt" | "amount";
+// Cột bấm được để sắp xếp → trường sắp xếp phía máy chủ.
+const LEDGER_SORT_KEYS: Record<string, LedgerSortKey> = {
+  date: "occurredAt",
+  amount: "amount",
+};
 
 function FundScreen() {
   const ledgerColumns = useColumnToggle(
@@ -152,6 +164,7 @@ function FundScreen() {
   const fromDate = dates.fromDate || "";
   const toDate = dates.toDate || "";
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<SortState<LedgerSortKey>>(null);
   const [limit, setLimit, limitOptions] = usePageSize(
     "internalFundLedgerPageSize",
     30,
@@ -174,6 +187,8 @@ function FundScreen() {
     toDate: toDate || undefined,
     page,
     limit,
+    orderBy: sort?.key,
+    orderDirection: sort?.dir,
   };
   const ready = branches.length > 0;
   const transactions = useInternalFundTransactions(query, ready);
@@ -197,6 +212,10 @@ function FundScreen() {
   const [reason, setReason] = useState("");
   const [description, setDescription] = useState("");
   const rows = transactions.data?.data || [];
+  const ledgerTotals = transactions.data?.totals;
+  const visibleLedgerColumns = LEDGER_COLUMNS.filter((column) =>
+    ledgerColumns.shows(column.key),
+  );
   const closingRows = closings.data?.data || [];
   const summary = useInternalFundSummary(
     {
@@ -520,50 +539,64 @@ function FundScreen() {
                   : "Không tải được quyền quỹ"}
               </div>
             )}
-            {summary.data?.[0] && (
-              <div className="flex shrink-0 flex-wrap gap-x-6 gap-y-1 border-b bg-gray-50 px-4 py-2 text-sm">
-                <span>Ngày {today()}</span>
-                <span>
-                  Đầu kỳ{" "}
-                  <strong>{formatCurrency(summary.data[0].opening)}</strong>
-                </span>
-                <span>
-                  Thu{" "}
-                  <strong className="text-green-700">
-                    {formatCurrency(summary.data[0].receipt)}
-                  </strong>
-                </span>
-                <span>
-                  Chi{" "}
-                  <strong className="text-red-600">
-                    {formatCurrency(summary.data[0].expense)}
-                  </strong>
-                </span>
-                <span>
-                  Cuối kỳ{" "}
-                  <strong>{formatCurrency(summary.data[0].closing)}</strong>
-                </span>
-              </div>
-            )}
             {view === "transactions" ? (
               <>
                 <div className="min-h-0 flex-1 overflow-auto">
                   <table className="w-full text-sm">
                     <thead className="sticky top-0 z-10 bg-gray-50">
                       <tr>
-                        {[
-                          ...LEDGER_COLUMNS.filter((column) =>
-                            ledgerColumns.shows(column.key),
-                          ).map((column) => column.label),
-                          "",
-                        ].map((heading) => (
-                          <th
-                            key={heading}
-                            className="whitespace-nowrap px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                            {heading}
-                          </th>
-                        ))}
+                        {visibleLedgerColumns.map((column) => {
+                          const sortKey = LEDGER_SORT_KEYS[column.key];
+                          return (
+                            <th
+                              key={column.key}
+                              onClick={
+                                sortKey
+                                  ? () => {
+                                      setSort((current) =>
+                                        nextSort(current, sortKey),
+                                      );
+                                      setPage(1);
+                                    }
+                                  : undefined
+                              }
+                              className={`whitespace-nowrap px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-gray-500 ${
+                                column.key === "amount"
+                                  ? "text-right"
+                                  : "text-left"
+                              } ${sortKey ? "cursor-pointer select-none hover:bg-gray-100" : ""}`}>
+                              <span className="inline-flex items-center gap-1">
+                                {column.label}
+                                {sortKey && (
+                                  <SortIcon
+                                    dir={
+                                      sort?.key === sortKey ? sort.dir : null
+                                    }
+                                  />
+                                )}
+                              </span>
+                            </th>
+                          );
+                        })}
+                        <th className="px-4 py-2.5" />
                       </tr>
+                      {ledgerTotals && ledgerColumns.shows("amount") && (
+                        <tr className="border-b bg-gray-50/60">
+                          {visibleLedgerColumns.map((column) => (
+                            <td
+                              key={column.key}
+                              className="whitespace-nowrap px-3 py-2 text-right">
+                              {column.key === "amount" && (
+                                <AmountTotal
+                                  receipt={ledgerTotals?.receipt || 0}
+                                  expense={ledgerTotals?.expense || 0}
+                                />
+                              )}
+                            </td>
+                          ))}
+                          <td className="px-3 py-2" />
+                        </tr>
+                      )}
                     </thead>
                     <tbody>
                       {transactions.isLoading ? (

@@ -13,7 +13,8 @@ const ENDED_APPROVAL_STATUSES = [
 export function canCancelBatch(
   batch: Pick<WeeklyBatch, "status" | "approvalRequest">,
 ) {
-  if (["IN_APPROVAL", "APPROVED"].includes(batch.status)) return false;
+  if (["IN_APPROVAL", "APPROVED", "CANCELLED"].includes(batch.status))
+    return false;
   const approvalStatus = batch.approvalRequest?.status;
   return !approvalStatus || ENDED_APPROVAL_STATUSES.includes(approvalStatus);
 }
@@ -27,3 +28,38 @@ export function hasEndedApproval(batch: Pick<WeeklyBatch, "approvalRequest">) {
     ENDED_APPROVAL_STATUSES.includes(approvalStatus),
   );
 }
+
+// Tên thao tác trong lịch sử duyệt Lark.
+const APPROVAL_STEP_LABELS: Record<string, string> = {
+  START: "Gửi duyệt",
+  PASS: "Đồng ý",
+  APPROVED: "Đồng ý",
+  REJECT: "Từ chối",
+  CANCEL: "Thu hồi",
+  DELETE: "Xóa đơn",
+  REVERTED: "Hoàn tác duyệt",
+  TRANSFER: "Chuyển duyệt",
+  ADD_APPROVER_BEFORE: "Thêm người duyệt",
+  ADD_APPROVER: "Thêm người duyệt",
+  ADD_APPROVER_AFTER: "Thêm người duyệt",
+  DELETE_APPROVER: "Bỏ người duyệt",
+  ROLLBACK_SELECTED: "Trả về bước trước",
+  ROLLBACK: "Trả về bước trước",
+  CC: "Gửi CC",
+  REMOVE_REPEAT: "Tự bỏ qua (trùng người duyệt)",
+};
+
+export const approvalStepLabel = (type: string) =>
+  APPROVAL_STEP_LABELS[type] || "Thao tác khác";
+
+export const approvalStepTime = (value?: string | null) =>
+  value
+    ? new Date(value).toLocaleString("vi-VN", {
+        timeZone: "Asia/Ho_Chi_Minh",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";

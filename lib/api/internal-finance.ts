@@ -128,6 +128,8 @@ export interface InternalFinanceQuery {
   search?: string;
   page?: number;
   limit?: number;
+  orderBy?: "occurredAt" | "amount";
+  orderDirection?: "asc" | "desc";
 }
 
 export interface InternalFinanceResponse<T = InternalFinanceEntry> {
@@ -373,6 +375,21 @@ export interface WeeklyBatch {
   _count?: { entries: number };
   cashIssuedCount?: number;
   entries?: InternalFinanceEntry[];
+  /** Batch đã hủy (giữ lại dữ liệu); canceller null = tự hủy khi Lark từ chối. */
+  cancelledAt?: string | null;
+  cancelReason?: string | null;
+  canceller?: { id: number; name: string } | null;
+  /** Bước làm đơn Lark kết thúc không duyệt (từ chối / thu hồi / xóa). */
+  approvalNote?: ApprovalHistoryItem | null;
+  /** Chi tiết batch: toàn bộ lịch sử duyệt Lark. */
+  approvalHistory?: ApprovalHistoryItem[];
+}
+
+export interface ApprovalHistoryItem {
+  type: string;
+  time: string | null;
+  comment: string | null;
+  userName: string | null;
 }
 
 export type LarkFormKind =
@@ -590,6 +607,8 @@ export const internalFinanceApi = {
   ): Promise<{
     data: WeeklyBatch[];
     total: number;
+    /** Số batch / tổng tiền không tính batch đã hủy (trừ khi lọc "Đã hủy"). */
+    batchCount?: number;
     totalAmount: number;
     page: number;
     limit: number;
@@ -657,9 +676,11 @@ export const internalFinanceApi = {
 
   cancelWarehouseExpenseBatch: (
     id: number,
+    reason: string,
   ): Promise<{ id: number; code: string; released: number }> =>
     apiClient.post(
       `/internal-finance/warehouse-expenses/weekly-batches/${id}/cancel`,
+      { reason },
     ),
 
   markWarehouseExpenseIssued: (

@@ -14,8 +14,10 @@ import {
 } from "@/components/internal-finance/InternalFinanceSidebar";
 import {
   InternalFinanceTable,
+  type InternalFinanceSortKey,
   type InternalFinanceSummaryItem,
 } from "@/components/internal-finance/InternalFinanceTable";
+import { nextSort } from "@/components/shared/SortIcon";
 import {
   useInternalFinance,
   useInternalFinanceSummary,
@@ -94,6 +96,17 @@ export default function TaiChinhNoiBoPage() {
     }));
   };
 
+  const sort = filters.orderBy
+    ? { key: filters.orderBy, dir: filters.orderDirection || "desc" }
+    : null;
+  const handleSort = (key: InternalFinanceSortKey) => {
+    const next = nextSort(sort, key);
+    updateFilters({
+      orderBy: next?.key,
+      orderDirection: next?.dir,
+    });
+  };
+
   useFollowHeaderBranch(headerBranchId, filters.branchIds || [], (id) =>
     updateFilters({ branchIds: id ? [id] : undefined }),
   );
@@ -169,6 +182,13 @@ export default function TaiChinhNoiBoPage() {
             }));
           }}
           summary={summaryItems}
+          totals={
+            summaryData
+              ? { receipt: summaryData.receipt, expense: summaryData.expense }
+              : undefined
+          }
+          sort={sort}
+          onSort={handleSort}
           toolbar={actions}
         />
       </div>

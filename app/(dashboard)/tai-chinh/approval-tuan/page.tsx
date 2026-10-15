@@ -47,6 +47,10 @@ import type {
 } from "@/lib/api/internal-finance";
 import { CancelWeeklyBatchDialog } from "@/components/internal-finance/CancelWeeklyBatchDialog";
 import { canCancelBatch } from "@/lib/internal-finance/weekly-batch";
+import {
+  ApprovalEndNote,
+  CancelledNote,
+} from "@/components/internal-finance/WeeklyBatchNotes";
 import { formatCurrency } from "@/lib/utils";
 import { TablePagination } from "@/components/shared/TablePagination";
 import { usePageSize } from "@/lib/hooks/usePageSize";
@@ -87,6 +91,7 @@ const STATUS_OPTIONS = [
   ["IN_APPROVAL", "Đang duyệt"],
   ["APPROVED", "Đã duyệt"],
   ["REJECTED", "Từ chối"],
+  ["CANCELLED", "Đã hủy"],
 ];
 
 const STATUS_LABELS: Record<string, string> = Object.fromEntries(
@@ -211,6 +216,8 @@ export default function ApprovalTuanPage() {
   const rows = batches.data?.data || [];
   const total = batches.data?.total || 0;
   const totalAmount = batches.data?.totalAmount || 0;
+  // Số batch / tổng chi không tính batch đã hủy.
+  const batchCount = batches.data?.batchCount ?? total;
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
   const clearTime = () => {
@@ -325,7 +332,7 @@ export default function ApprovalTuanPage() {
             summary={
               <div className="flex items-center justify-between text-gray-500">
                 <span>
-                  <strong className="text-gray-900">{total}</strong> batch
+                  <strong className="text-gray-900">{batchCount}</strong> batch
                 </span>
                 <span>
                   Tổng chi:{" "}
@@ -373,7 +380,11 @@ export default function ApprovalTuanPage() {
                         {row.approvalRequest.status === "PENDING" &&
                           row.approvalRequest.currentNode &&
                           ` · ${row.approvalRequest.currentNode}`}
+                        <ApprovalEndNote note={row.approvalNote} />
                       </div>
+                    )}
+                    {row.status === "CANCELLED" && (
+                      <CancelledNote batch={row} />
                     )}
                   </>
                 }
@@ -442,7 +453,8 @@ export default function ApprovalTuanPage() {
             </div>
             <div className="flex shrink-0 items-center justify-end gap-4 border-b px-4 py-2 text-sm">
               <span className="text-gray-500">
-                Số batch: <strong className="text-gray-900">{total}</strong>
+                Số batch:{" "}
+                <strong className="text-gray-900">{batchCount}</strong>
               </span>
               <span className="text-gray-500">
                 Tổng chi:{" "}
@@ -495,7 +507,9 @@ export default function ApprovalTuanPage() {
                           setSelectedBatchId(row.id);
                           setShowPanel(true);
                         }}
-                        className="cursor-pointer hover:bg-brand-soft">
+                        className={`cursor-pointer hover:bg-brand-soft ${
+                          row.status === "CANCELLED" ? "opacity-60" : ""
+                        }`}>
                         {shows("code") && (
                           <td className="px-4 py-3 font-medium text-brand">
                             {row.code}
@@ -530,9 +544,17 @@ export default function ApprovalTuanPage() {
                         )}
                         {shows("status") && (
                           <td className="px-4 py-3">
-                            <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700">
+                            <span
+                              className={`rounded px-2 py-1 text-xs ${
+                                row.status === "CANCELLED"
+                                  ? "bg-red-50 text-red-700"
+                                  : "bg-gray-100 text-gray-700"
+                              }`}>
                               {STATUS_LABELS[row.status] || row.status}
                             </span>
+                            {row.status === "CANCELLED" && (
+                              <CancelledNote batch={row} />
+                            )}
                           </td>
                         )}
                         {shows("approval") && (
@@ -561,14 +583,15 @@ export default function ApprovalTuanPage() {
                                   Tạo approval
                                 </button>
                               ) : row.approvalRequest ? (
-                                <span className="text-xs text-gray-600">
+                                <div className="text-xs text-gray-600">
                                   {APPROVAL_STATUS_LABELS[
                                     row.approvalRequest.status
                                   ] || row.approvalRequest.status}
                                   {row.approvalRequest.status === "PENDING" &&
                                     row.approvalRequest.currentNode &&
                                     ` · ${row.approvalRequest.currentNode}`}
-                                </span>
+                                  <ApprovalEndNote note={row.approvalNote} />
+                                </div>
                               ) : (
                                 <span className="text-xs text-gray-400">-</span>
                               )}

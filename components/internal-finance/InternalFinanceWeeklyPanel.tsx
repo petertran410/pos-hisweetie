@@ -18,7 +18,11 @@ import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { FilterSearchableSelect } from "@/components/ui/filters";
 import { InternalFinanceDateField } from "./InternalFinanceDateField";
 import { CancelWeeklyBatchDialog } from "./CancelWeeklyBatchDialog";
-import { canCancelBatch } from "@/lib/internal-finance/weekly-batch";
+import {
+  approvalStepTime,
+  canCancelBatch,
+} from "@/lib/internal-finance/weekly-batch";
+import { ApprovalHistoryList } from "./WeeklyBatchNotes";
 import {
   endOfWeek,
   startOfWeek,
@@ -34,6 +38,7 @@ const STATUS_LABELS: Record<string, string> = {
   IN_APPROVAL: "Đang duyệt",
   APPROVED: "Đã duyệt",
   REJECTED: "Từ chối",
+  CANCELLED: "Đã hủy",
   POSTED: "Đã xử lý",
 };
 
@@ -105,6 +110,9 @@ export function InternalFinanceWeeklyPanel({
       vnDateKey(batch.weekEnd) === weekEnd,
   );
   const prepare = usePrepareWarehouseExpenseBatch();
+  // Đang xem batch đã hủy: chỉ xem, ẩn phần tổng hợp tuần để không nhầm là
+  // thao tác trên batch đó. Muốn gom lại thì bấm "Tổng hợp lại tuần này".
+  const viewingCancelled = selectedBatch.data?.status === "CANCELLED";
   const createApproval = useCreateWarehouseExpenseApproval();
 
   // Mở/chọn một batch thì chi nhánh và khoảng ngày theo batch đó, để hủy xong
@@ -173,139 +181,144 @@ export function InternalFinanceWeeklyPanel({
           </button>
         </div>
 
-        <div className="border-b p-5">
-          <div className="space-y-3">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Chi nhánh
-              </label>
-              <FilterSearchableSelect
-                options={branches.map((branch) => ({
-                  value: String(branch.id),
-                  label: branch.name,
-                }))}
-                value={String(branchId)}
-                onChange={(value) => {
-                  if (!value) return;
-                  setBranchId(Number(value));
-                  setSelectedBatchId(null);
-                }}
-                searchable={false}
-                allowDeselect={false}
-                showClearOption={false}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <InternalFinanceDateField
-                variant="filter"
-                label="Từ ngày"
-                value={weekStart}
-                maxDate={weekEnd}
-                onChange={(value) => value && setWeekStart(value)}
-              />
-              <InternalFinanceDateField
-                variant="filter"
-                label="Đến ngày"
-                value={weekEnd}
-                minDate={weekStart}
-                onChange={(value) => value && setWeekEnd(value)}
-              />
-            </div>
-          </div>
-          {carryOverCount > 0 && (
-            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-              <button
-                type="button"
-                onClick={() => setShowCarryOver((current) => !current)}
-                className="flex w-full items-center justify-between gap-2 text-left">
-                <span>
-                  Phiếu sót tuần trước: <strong>{carryOverCount}</strong> phiếu
-                  ·{" "}
-                  <strong>{formatCurrency(carryOver.data?.total || 0)}</strong>
-                </span>
-                <ChevronRight
-                  className={`h-4 w-4 shrink-0 transition-transform ${
-                    showCarryOver ? "rotate-90" : ""
-                  }`}
+        {!viewingCancelled && (
+          <div className="border-b p-5">
+            <div className="space-y-3">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Chi nhánh
+                </label>
+                <FilterSearchableSelect
+                  options={branches.map((branch) => ({
+                    value: String(branch.id),
+                    label: branch.name,
+                  }))}
+                  value={String(branchId)}
+                  onChange={(value) => {
+                    if (!value) return;
+                    setBranchId(Number(value));
+                    setSelectedBatchId(null);
+                  }}
+                  searchable={false}
+                  allowDeselect={false}
+                  showClearOption={false}
                 />
-              </button>
-              <p className="mt-1 text-xs text-amber-800">
-                Đã đủ hai tick nhưng chưa nằm trong Approval tuần nào.
-                {targetBatch
-                  ? " Thêm từng phiếu hoặc thêm tất cả vào batch tuần này."
-                  : " Bấm “Chuẩn bị tổng hợp tuần” trước, rồi thêm phiếu sót."}
-              </p>
-              {showCarryOver && (
-                <ul className="mt-2 max-h-40 divide-y divide-amber-100 overflow-y-auto rounded border border-amber-100 bg-white text-xs text-gray-700">
-                  {carryOver.data?.data.map((row) => (
-                    <li
-                      key={row.id}
-                      className="flex items-center justify-between gap-2 px-2 py-1.5">
-                      <span className="min-w-0">
-                        <span className="block font-mono">{row.code}</span>
-                        <span className="block truncate text-gray-500">
-                          {vnDateKey(row.occurredAt)
-                            .split("-")
-                            .reverse()
-                            .join("/")}{" "}
-                          · {displayDescription(row.description) || "-"}
-                        </span>
-                      </span>
-                      <span className="flex shrink-0 items-center gap-2">
-                        <span className="font-medium text-red-600">
-                          {formatCurrency(row.amount)}
-                        </span>
-                        {targetBatch && (
-                          <button
-                            type="button"
-                            disabled={addEntries.isPending}
-                            onClick={() =>
-                              addEntries.mutate({
-                                batchId: targetBatch.id,
-                                entryIds: [row.id],
-                              })
-                            }
-                            className="whitespace-nowrap rounded border border-brand px-2 py-1 text-[11px] font-medium text-brand hover:bg-brand-soft disabled:opacity-50">
-                            Thêm vào approval
-                          </button>
-                        )}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {targetBatch && (
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <InternalFinanceDateField
+                  variant="filter"
+                  label="Từ ngày"
+                  value={weekStart}
+                  maxDate={weekEnd}
+                  onChange={(value) => value && setWeekStart(value)}
+                />
+                <InternalFinanceDateField
+                  variant="filter"
+                  label="Đến ngày"
+                  value={weekEnd}
+                  minDate={weekStart}
+                  onChange={(value) => value && setWeekEnd(value)}
+                />
+              </div>
+            </div>
+            {carryOverCount > 0 && (
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                 <button
                   type="button"
-                  disabled={addEntries.isPending}
-                  onClick={() =>
-                    addEntries.mutate({
-                      batchId: targetBatch.id,
-                      entryIds: carryOver.data?.data.map((row) => row.id) || [],
-                    })
-                  }
-                  className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50">
-                  {addEntries.isPending && (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  )}
-                  Thêm tất cả vào approval
+                  onClick={() => setShowCarryOver((current) => !current)}
+                  className="flex w-full items-center justify-between gap-2 text-left">
+                  <span>
+                    Phiếu sót tuần trước: <strong>{carryOverCount}</strong>{" "}
+                    phiếu ·{" "}
+                    <strong>
+                      {formatCurrency(carryOver.data?.total || 0)}
+                    </strong>
+                  </span>
+                  <ChevronRight
+                    className={`h-4 w-4 shrink-0 transition-transform ${
+                      showCarryOver ? "rotate-90" : ""
+                    }`}
+                  />
                 </button>
-              )}
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={prepareBatch}
-            disabled={!canPrepare || prepare.isPending}
-            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white disabled:opacity-50">
-            {prepare.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4" />
+                <p className="mt-1 text-xs text-amber-800">
+                  Đã đủ hai tick nhưng chưa nằm trong Approval tuần nào.
+                  {targetBatch
+                    ? " Thêm từng phiếu hoặc thêm tất cả vào batch tuần này."
+                    : " Bấm “Chuẩn bị tổng hợp tuần” trước, rồi thêm phiếu sót."}
+                </p>
+                {showCarryOver && (
+                  <ul className="mt-2 max-h-40 divide-y divide-amber-100 overflow-y-auto rounded border border-amber-100 bg-white text-xs text-gray-700">
+                    {carryOver.data?.data.map((row) => (
+                      <li
+                        key={row.id}
+                        className="flex items-center justify-between gap-2 px-2 py-1.5">
+                        <span className="min-w-0">
+                          <span className="block font-mono">{row.code}</span>
+                          <span className="block truncate text-gray-500">
+                            {vnDateKey(row.occurredAt)
+                              .split("-")
+                              .reverse()
+                              .join("/")}{" "}
+                            · {displayDescription(row.description) || "-"}
+                          </span>
+                        </span>
+                        <span className="flex shrink-0 items-center gap-2">
+                          <span className="font-medium text-red-600">
+                            {formatCurrency(row.amount)}
+                          </span>
+                          {targetBatch && (
+                            <button
+                              type="button"
+                              disabled={addEntries.isPending}
+                              onClick={() =>
+                                addEntries.mutate({
+                                  batchId: targetBatch.id,
+                                  entryIds: [row.id],
+                                })
+                              }
+                              className="whitespace-nowrap rounded border border-brand px-2 py-1 text-[11px] font-medium text-brand hover:bg-brand-soft disabled:opacity-50">
+                              Thêm vào approval
+                            </button>
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {targetBatch && (
+                  <button
+                    type="button"
+                    disabled={addEntries.isPending}
+                    onClick={() =>
+                      addEntries.mutate({
+                        batchId: targetBatch.id,
+                        entryIds:
+                          carryOver.data?.data.map((row) => row.id) || [],
+                      })
+                    }
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50">
+                    {addEntries.isPending && (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    )}
+                    Thêm tất cả vào approval
+                  </button>
+                )}
+              </div>
             )}
-            Chuẩn bị tổng hợp tuần
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={prepareBatch}
+              disabled={!canPrepare || prepare.isPending}
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white disabled:opacity-50">
+              {prepare.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+              Chuẩn bị tổng hợp tuần
+            </button>
+          </div>
+        )}
 
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
           <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -337,7 +350,12 @@ export function InternalFinanceWeeklyPanel({
                     </span>
                   </span>
                   <span className="ml-3 flex shrink-0 items-center gap-2">
-                    <span className="rounded bg-gray-100 px-2 py-1 text-[11px] text-gray-600">
+                    <span
+                      className={`rounded px-2 py-1 text-[11px] ${
+                        batch.status === "CANCELLED"
+                          ? "bg-red-50 text-red-700"
+                          : "bg-gray-100 text-gray-600"
+                      }`}>
                       {STATUS_LABELS[batch.status] || batch.status}
                     </span>
                     <ChevronRight className="h-4 w-4 text-gray-400" />
@@ -396,6 +414,45 @@ export function InternalFinanceWeeklyPanel({
                 <div className="mt-3 flex items-center gap-2 rounded-lg bg-green-50 p-3 text-sm text-green-800">
                   <Check className="h-4 w-4 shrink-0" />
                   Approval đã duyệt. Các phiếu trong tuần đã tự động ghi Đã chi.
+                </div>
+              )}
+              {selectedBatch.data.status === "CANCELLED" && (
+                <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                  <div>
+                    Batch đã hủy
+                    {selectedBatch.data.cancelledAt &&
+                      ` lúc ${approvalStepTime(selectedBatch.data.cancelledAt)}`}{" "}
+                    bởi{" "}
+                    {selectedBatch.data.canceller?.name ||
+                      "hệ thống (Lark từ chối)"}
+                    .
+                  </div>
+                  {selectedBatch.data.cancelReason && (
+                    <div className="mt-1 whitespace-pre-wrap break-words">
+                      Lý do: {selectedBatch.data.cancelReason}
+                    </div>
+                  )}
+                  <div className="mt-1 text-xs text-red-700">
+                    Danh sách dưới là các phiếu lúc hủy; phiếu đã trả về Phiếu
+                    chi kho để tổng hợp lại.
+                  </div>
+                  {canPrepare && (
+                    <button
+                      type="button"
+                      // Giữ chi nhánh và khoảng ngày của batch vừa xem.
+                      onClick={() => setSelectedBatchId(null)}
+                      className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-brand bg-white px-3 py-1.5 text-xs font-medium text-brand hover:bg-brand-soft">
+                      <Plus className="h-3.5 w-3.5" />
+                      Tổng hợp lại tuần này
+                    </button>
+                  )}
+                </div>
+              )}
+              {!!selectedBatch.data.approvalHistory?.length && (
+                <div className="mt-3">
+                  <ApprovalHistoryList
+                    items={selectedBatch.data.approvalHistory}
+                  />
                 </div>
               )}
               <div className="mt-4 divide-y rounded-lg border">
