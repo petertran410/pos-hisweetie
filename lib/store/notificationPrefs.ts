@@ -93,33 +93,20 @@ export function initNotificationPrefsCrossTabSync(): () => void {
   if (typeof window === "undefined") return () => {};
 
   const handler = (e: StorageEvent) => {
-    if (e.key !== NOTIFICATION_PREFS_STORAGE_KEY) return;
+    // key === null: tab khác gọi localStorage.clear().
+    if (e.key !== null && e.key !== NOTIFICATION_PREFS_STORAGE_KEY) return;
 
     // Bị clear ở tab khác → coi như bật lại thông báo.
-    if (!e.newValue) {
+    if (localStorage.getItem(NOTIFICATION_PREFS_STORAGE_KEY) === null) {
       if (useNotificationPrefsStore.getState().mutedUntil !== null) {
         useNotificationPrefsStore.getState().unmute();
       }
       return;
     }
 
-    let next: number | null = null;
-    try {
-      // zustand persist bọc dữ liệu trong { state, version }.
-      const parsed = JSON.parse(e.newValue);
-      const raw = parsed?.state?.mutedUntil;
-      next = typeof raw === "number" && Number.isFinite(raw) ? raw : null;
-    } catch {
-      return;
-    }
-
-    if (useNotificationPrefsStore.getState().mutedUntil === next) return;
-
-    if (next === null) {
-      useNotificationPrefsStore.getState().unmute();
-    } else {
-      useNotificationPrefsStore.getState().muteUntil(next);
-    }
+    // Đọc giá trị mới nhất, không ghi ngược storage (tránh các tab dội event
+    // cho nhau — xem initBranchCrossTabSync).
+    void useNotificationPrefsStore.persist.rehydrate();
   };
 
   window.addEventListener("storage", handler);

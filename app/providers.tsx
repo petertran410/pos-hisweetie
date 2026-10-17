@@ -49,10 +49,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
+    // Debounce: gom nhiều lần đổi chi nhánh liên tiếp thành 1 lần refetch, và
+    // chạy sau khi React đã render lại với chi nhánh mới (nếu invalidate ngay,
+    // query còn giữ key chi nhánh cũ → fetch thừa cho cả chi nhánh cũ).
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const cleanup = initBranchCrossTabSync(() => {
-      queryClient.invalidateQueries();
+      clearTimeout(timer);
+      timer = setTimeout(() => queryClient.invalidateQueries(), 300);
     });
-    return cleanup;
+    return () => {
+      clearTimeout(timer);
+      cleanup();
+    };
   }, [queryClient]);
 
   // Đồng bộ trạng thái "tắt thông báo" (mute chuông) giữa các tab.

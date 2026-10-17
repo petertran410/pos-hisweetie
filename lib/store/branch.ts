@@ -47,36 +47,31 @@ export function initBranchCrossTabSync(
   if (typeof window === "undefined") return () => {};
 
   const handler = (e: StorageEvent) => {
-    if (e.key !== BRANCH_STORAGE_KEY) return;
+    // key === null: tab khác gọi localStorage.clear().
+    if (e.key !== null && e.key !== BRANCH_STORAGE_KEY) return;
 
-    // Bị clear (logout ở tab khác) → xóa branch cục bộ.
-    if (!e.newValue) {
-      if (useBranchStore.getState().selectedBranch !== null) {
+    const prevId = useBranchStore.getState().selectedBranch?.id ?? null;
+
+    // Bị clear (logout ở tab khác) → rehydrate không reset state nên tự xóa.
+    if (localStorage.getItem(BRANCH_STORAGE_KEY) === null) {
+      if (prevId !== null) {
         useBranchStore.getState().clearSelectedBranch();
         onChange?.(null);
       }
       return;
     }
 
-    let nextBranch: Branch | null = null;
-    try {
-      // zustand persist bọc dữ liệu trong { state, version }.
-      const parsed = JSON.parse(e.newValue);
-      nextBranch = parsed?.state?.selectedBranch ?? null;
-    } catch {
-      return;
-    }
+    // Đọc lại giá trị MỚI NHẤT trong storage (không dùng e.newValue — event
+    // có thể đến trễ, đã cũ) và KHÔNG ghi ngược: rehydrate dùng `set` gốc,
+    // không qua persist.setItem. Nếu ghi ngược (như setSelectedBranch), giá
+    // trị cũ bị đưa lại vào storage → các tab dội event cho nhau vô hạn
+    // (chi nhánh lật 1↔6 liên tục, mỗi lần lật refetch toàn bộ query).
+    // localStorage đồng bộ nên rehydrate xong ngay trong lời gọi này.
+    void useBranchStore.persist.rehydrate();
 
-    const current = useBranchStore.getState().selectedBranch;
-    // Chỉ cập nhật khi thật sự khác để tránh re-render thừa.
-    if (current?.id === nextBranch?.id) return;
-
-    if (nextBranch) {
-      useBranchStore.getState().setSelectedBranch(nextBranch);
-    } else {
-      useBranchStore.getState().clearSelectedBranch();
-    }
-    onChange?.(nextBranch);
+    const next = useBranchStore.getState().selectedBranch;
+    if ((next?.id ?? null) === prevId) return;
+    onChange?.(next);
   };
 
   window.addEventListener("storage", handler);
