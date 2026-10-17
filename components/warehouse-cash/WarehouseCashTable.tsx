@@ -90,11 +90,6 @@ function PostedReceipts({
         <div key={flow.id} className="whitespace-nowrap">
           <span className="text-gray-500">Phiếu </span>
           <CodeLink entity="cashflow" code={flow.code} />
-          {typeof flow.amount === "number" && flow.amount > 0 && (
-            <span className="ml-1 font-medium text-green-700">
-              {formatCurrency(flow.amount)}
-            </span>
-          )}
           {flows.length > 1 &&
             flow.customerId &&
             names.get(Number(flow.customerId)) && (
