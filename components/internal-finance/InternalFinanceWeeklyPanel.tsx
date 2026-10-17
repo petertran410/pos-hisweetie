@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronRight, Loader2, Plus, X } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Plus,
+  X,
+} from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { displayDescription } from "@/lib/internal-finance/display";
 import { useBranches } from "@/lib/hooks/useBranches";
@@ -16,7 +23,6 @@ import {
 } from "@/lib/hooks/useInternalFinance";
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { FilterSearchableSelect } from "@/components/ui/filters";
-import { InternalFinanceDateField } from "./InternalFinanceDateField";
 import { CancelWeeklyBatchDialog } from "./CancelWeeklyBatchDialog";
 import {
   approvalStepTime,
@@ -24,11 +30,19 @@ import {
 } from "@/lib/internal-finance/weekly-batch";
 import { ApprovalHistoryList } from "./WeeklyBatchNotes";
 import {
-  endOfWeek,
-  startOfWeek,
+  isoWeekOf,
+  isoWeekRange,
+  isoWeeksInYear,
   toDateInput,
   vnDateKey,
 } from "@/lib/internal-finance/dates";
+
+const shortDate = (dateKey: string) => dateKey.split("-").reverse().join("/");
+
+const nextDayKey = (dateKey: string) =>
+  new Date(Date.parse(`${dateKey}T00:00:00Z`) + 86_400_000)
+    .toISOString()
+    .slice(0, 10);
 
 const BRANCH_IDS = [6, 1];
 
@@ -77,8 +91,21 @@ export function InternalFinanceWeeklyPanel({
   const [pickedBranchId, setBranchId] = useState<number | null>(null);
   // Mặc định là kho đầu tiên user được phép.
   const branchId = pickedBranchId ?? allowedIds[0] ?? 6;
-  const [weekStart, setWeekStart] = useState(toDateInput(startOfWeek(today)));
-  const [weekEnd, setWeekEnd] = useState(toDateInput(endOfWeek(today)));
+  // Tuần tổng hợp luôn là một tuần ISO Thứ hai–Chủ nhật: người dùng chọn số
+  // tuần, khoảng ngày tự tính. Phiếu tuần trước gộp qua "Phiếu sót tuần trước".
+  const [isoWeek, setIsoWeek] = useState(() => isoWeekOf(toDateInput(today)));
+  // Đã tự chọn tuần thì không ghi đè bằng gợi ý nữa.
+  const [weekTouched, setWeekTouched] = useState(false);
+  const [weekText, setWeekText] = useState(String(isoWeek.week));
+  const { from: weekStart, to: weekEnd } = isoWeekRange(
+    isoWeek.year,
+    isoWeek.week,
+  );
+  const maxWeek = isoWeeksInYear(isoWeek.year);
+  const changeWeek = (next: { year: number; week: number }) => {
+    setIsoWeek(next);
+    setWeekText(String(next.week));
+  };
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(
     initialBatchId || null,
   );
@@ -101,6 +128,20 @@ export function InternalFinanceWeeklyPanel({
     limit: 20,
   });
   const selectedBatch = useWarehouseExpenseBatch(selectedBatchId);
+  // Gợi ý tuần kế tiếp sau batch (chưa hủy) gần nhất của chi nhánh.
+  const recentBatches = useWarehouseExpenseBatches({
+    branchIds: [branchId],
+    limit: 10,
+  });
+  const lastBatch = (recentBatches.data || []).find(
+    (batch) => batch.status !== "CANCELLED",
+  );
+  const suggestedWeek = lastBatch
+    ? isoWeekOf(nextDayKey(vnDateKey(lastBatch.weekEnd)))
+    : null;
+  const lastBatchWeek = lastBatch
+    ? isoWeekOf(vnDateKey(lastBatch.weekStart))
+    : null;
   // Batch của đúng khoảng ngày đang chọn, chưa gửi Lark: nơi thêm phiếu sót.
   const targetBatch = (batches.data || []).find(
     (batch) =>
@@ -121,11 +162,18 @@ export function InternalFinanceWeeklyPanel({
   useEffect(() => {
     if (!loadedBatch) return;
     setBranchId(loadedBatch.branchId);
-    setWeekStart(vnDateKey(loadedBatch.weekStart));
-    setWeekEnd(vnDateKey(loadedBatch.weekEnd));
-    // Chỉ đồng bộ khi đổi batch, người dùng vẫn sửa ngày tay được.
+    changeWeek(isoWeekOf(vnDateKey(loadedBatch.weekStart)));
+    setWeekTouched(true);
+    // Chỉ đồng bộ khi đổi batch, người dùng vẫn đổi tuần tay được.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadedBatch?.id]);
+
+  useEffect(() => {
+    if (weekTouched || selectedBatchId || !suggestedWeek) return;
+    changeWeek(suggestedWeek);
+    // Chỉ gợi ý khi đổi chi nhánh / có batch gần nhất mới.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchId, lastBatch?.id, weekTouched, selectedBatchId]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -205,20 +253,111 @@ export function InternalFinanceWeeklyPanel({
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <InternalFinanceDateField
-                  variant="filter"
-                  label="Từ ngày"
-                  value={weekStart}
-                  maxDate={weekEnd}
-                  onChange={(value) => value && setWeekStart(value)}
-                />
-                <InternalFinanceDateField
-                  variant="filter"
-                  label="Đến ngày"
-                  value={weekEnd}
-                  minDate={weekStart}
-                  onChange={(value) => value && setWeekEnd(value)}
-                />
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Năm
+                  </label>
+                  <FilterSearchableSelect
+                    options={[-1, 0, 1].map((offset) => {
+                      const year = today.getFullYear() + offset;
+                      return { value: String(year), label: String(year) };
+                    })}
+                    value={String(isoWeek.year)}
+                    onChange={(value) => {
+                      if (!value) return;
+                      const year = Number(value);
+                      setWeekTouched(true);
+                      changeWeek({
+                        year,
+                        week: Math.min(isoWeek.week, isoWeeksInYear(year)),
+                      });
+                    }}
+                    searchable={false}
+                    allowDeselect={false}
+                    showClearOption={false}
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Tuần số
+                  </label>
+                  {/* Cùng khung với ô chọn Năm: nhập số tuần, hai nút lùi/tới. */}
+                  <div className="flex items-center gap-1 rounded-lg border bg-white px-1 py-1 text-sm transition-colors focus-within:border-brand focus-within:ring-2 focus-within:ring-brand-soft hover:border-gray-400">
+                    <button
+                      type="button"
+                      title="Tuần trước"
+                      disabled={isoWeek.week <= 1}
+                      onClick={() => {
+                        setWeekTouched(true);
+                        changeWeek({ ...isoWeek, week: isoWeek.week - 1 });
+                      }}
+                      className="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30">
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder={`1–${maxWeek}`}
+                      value={weekText}
+                      onChange={(event) => {
+                        // Chỉ nhận chữ số; đủ hợp lệ thì đổi tuần ngay.
+                        const digits = event.target.value
+                          .replace(/\D/g, "")
+                          .slice(0, 2);
+                        setWeekText(digits);
+                        const week = Number(digits);
+                        if (digits && week >= 1 && week <= maxWeek) {
+                          setWeekTouched(true);
+                          setIsoWeek({ year: isoWeek.year, week });
+                        }
+                      }}
+                      onBlur={() => setWeekText(String(isoWeek.week))}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter")
+                          (event.target as HTMLInputElement).blur();
+                      }}
+                      className="w-full min-w-0 bg-transparent text-center font-medium text-gray-800 outline-none placeholder:text-gray-300"
+                    />
+                    <button
+                      type="button"
+                      title="Tuần sau"
+                      disabled={isoWeek.week >= maxWeek}
+                      onClick={() => {
+                        setWeekTouched(true);
+                        changeWeek({ ...isoWeek, week: isoWeek.week + 1 });
+                      }}
+                      className="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30">
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                Tuần {isoWeek.week}/{isoWeek.year}: Thứ hai{" "}
+                <strong>{shortDate(weekStart)}</strong> → Chủ nhật{" "}
+                <strong>{shortDate(weekEnd)}</strong>
+                {lastBatchWeek && (
+                  <div className="mt-0.5 text-xs text-gray-500">
+                    Batch gần nhất: tuần {lastBatchWeek.week}/
+                    {lastBatchWeek.year}
+                    {suggestedWeek &&
+                      (suggestedWeek.week !== isoWeek.week ||
+                        suggestedWeek.year !== isoWeek.year) && (
+                        <>
+                          {" · "}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setWeekTouched(true);
+                              changeWeek(suggestedWeek);
+                            }}
+                            className="font-medium text-brand hover:underline">
+                            Chọn tuần kế tiếp ({suggestedWeek.week})
+                          </button>
+                        </>
+                      )}
+                  </div>
+                )}
               </div>
             </div>
             {carryOverCount > 0 && (

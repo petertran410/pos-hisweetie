@@ -33,6 +33,21 @@ export const isoWeekRange = (year: number, week: number) => {
   };
 };
 
+/** Tuần ISO (Thứ hai–Chủ nhật) của ngày yyyy-mm-dd, cùng công thức với backend. */
+export const isoWeekOf = (dateKey: string) => {
+  const date = new Date(`${dateKey}T00:00:00Z`);
+  // Thứ năm cùng tuần quyết định tuần thuộc năm nào.
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+  const year = date.getUTCFullYear();
+  const week = Math.ceil(
+    ((date.getTime() - Date.UTC(year, 0, 1)) / 86_400_000 + 1) / 7,
+  );
+  return { year, week };
+};
+
+/** Số tuần ISO của năm (52 hoặc 53): tuần chứa ngày 28/12. */
+export const isoWeeksInYear = (year: number) => isoWeekOf(`${year}-12-28`).week;
+
 /** Giá trị cho <input type="datetime-local"> theo giờ máy người dùng. */
 export const toDateTimeInput = (value: Date) => {
   const offset = value.getTimezoneOffset() * 60_000;
