@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   internalFinanceApi,
+  type InternalFinanceAttachment,
   type InternalFinanceEntry,
   type InternalFinanceResponse,
   type InternalFinanceQuery,
@@ -785,6 +786,26 @@ export function usePostInternalFinanceEntry() {
     },
     onError: (error) =>
       toast.error(errorMessage(error, "Ghi nhận dòng tài chính thất bại")),
+  });
+}
+
+export function useReplaceWarehouseExpenseAttachments() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      attachments,
+    }: {
+      id: number;
+      attachments: InternalFinanceAttachment[];
+    }) =>
+      internalFinanceApi.replaceWarehouseExpenseAttachments(id, attachments),
+    onSuccess: () => {
+      invalidateInternalFinance(queryClient);
+      toast.success("Đã lưu chứng từ");
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, "Lưu chứng từ thất bại")),
   });
 }
 

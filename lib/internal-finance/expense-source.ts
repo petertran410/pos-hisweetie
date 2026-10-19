@@ -3,6 +3,7 @@ import type { InternalFinanceEntry } from "@/lib/api/internal-finance";
 export type ExpenseSourceAction =
   | { kind: "link"; label: string; href: string }
   | { kind: "edit"; label: string }
+  | { kind: "evidence"; label: string }
   | { kind: "none"; label: string };
 
 /**
@@ -35,6 +36,10 @@ export function expenseSourceAction(
   }
   if (entry.sourceType === "MANUAL_EXPENSE") {
     return { kind: "edit", label: "Sửa phiếu" };
+  }
+  // Phiếu đồng bộ từ Lark không có báo đơn / phiếu xe: sửa chứng từ tại chỗ.
+  if (entry.sourceType === "LARK_IMPORT") {
+    return { kind: "evidence", label: "Sửa chứng từ" };
   }
   return { kind: "none", label: "Dữ liệu cũ, không sửa chứng từ" };
 }

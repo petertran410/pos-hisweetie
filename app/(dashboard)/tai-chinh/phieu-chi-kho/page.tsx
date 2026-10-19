@@ -19,6 +19,8 @@ import Swal from "sweetalert2";
 import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
 import { WarehouseCashAttachmentsModal } from "@/components/warehouse-cash/WarehouseCashAttachmentsModal";
 import { WarehouseExpenseForm } from "@/components/warehouse-expense/WarehouseExpenseForm";
+import { ExpenseEvidenceModal } from "@/components/warehouse-expense/ExpenseEvidenceModal";
+import { expenseSourceAction } from "@/lib/internal-finance/expense-source";
 import { WarehouseExpenseNotesPanel } from "@/components/warehouse-expense/WarehouseExpenseNotesPanel";
 import {
   isExpenseCancellable,
@@ -346,8 +348,9 @@ function WarehouseExpenseScreen() {
     filters.fromDate || filters.toDate,
   ].filter(Boolean).length;
 
+  // Phiếu tay sửa cả phiếu; phiếu đồng bộ từ Lark chỉ sửa chứng từ.
   const canEditRow = (row: InternalFinanceEntry) =>
-    row.sourceType === "MANUAL_EXPENSE" &&
+    ["edit", "evidence"].includes(expenseSourceAction(row).kind) &&
     isExpenseOpenForEdit(row) &&
     canAction("update", row.branchId);
 
@@ -601,13 +604,19 @@ function WarehouseExpenseScreen() {
           onClose={() => setShowForm(false)}
         />
       )}
-      {editingExpense && (
-        <WarehouseExpenseForm
-          branchId={editingExpense.branchId}
-          expense={editingExpense}
-          onClose={() => setEditingExpense(null)}
-        />
-      )}
+      {editingExpense &&
+        (expenseSourceAction(editingExpense).kind === "evidence" ? (
+          <ExpenseEvidenceModal
+            expense={editingExpense}
+            onClose={() => setEditingExpense(null)}
+          />
+        ) : (
+          <WarehouseExpenseForm
+            branchId={editingExpense.branchId}
+            expense={editingExpense}
+            onClose={() => setEditingExpense(null)}
+          />
+        ))}
       {showPayerSummary && (
         <PayerSummaryModal
           query={payerSummaryQuery}

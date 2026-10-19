@@ -776,4 +776,13 @@ export const internalFinanceApi = {
     attachments: InternalFinanceAttachment[],
   ): Promise<InternalFinanceEntry> =>
     apiClient.post(`/internal-finance/${id}/attachments`, { attachments }),
+
+  /** Phiếu chi đồng bộ từ Lark: thay cả danh sách chứng từ (thêm / bỏ file sai). */
+  replaceWarehouseExpenseAttachments: (
+    id: number,
+    attachments: InternalFinanceAttachment[],
+  ): Promise<InternalFinanceEntry> =>
+    apiClient.put(`/internal-finance/warehouse-expenses/${id}/attachments`, {
+      attachments,
+    }),
 };

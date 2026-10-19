@@ -171,7 +171,7 @@ export function WarehouseExpenseNotesPanel({
                 <ExternalLink className="h-3.5 w-3.5" />
                 {source.label}
               </Link>
-            ) : source.kind === "edit" ? (
+            ) : source.kind === "edit" || source.kind === "evidence" ? (
               canEdit && (
                 <button
                   type="button"
