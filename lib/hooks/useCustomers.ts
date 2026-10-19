@@ -74,9 +74,7 @@ export interface ShippingFeeHistoryItem {
   source: "field" | "item";
 }
 
-export function useCustomerShippingFeeHistory(
-  customerId: number | undefined,
-) {
+export function useCustomerShippingFeeHistory(customerId: number | undefined) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const hasHydrated = useAuthStore((state) => state._hasHydrated);
 
@@ -111,7 +109,7 @@ export function useCustomerGroups() {
 
 export function useCustomerDebtTimeline(
   customerId: number,
-  includeChildren = false
+  includeChildren = false,
 ) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const hasHydrated = useAuthStore((state) => state._hasHydrated);
@@ -208,10 +206,7 @@ export function useSearchCustomers(
       }>("/customers/search", params);
       return response;
     },
-    enabled:
-      (options?.enabled ?? true) &&
-      hasHydrated &&
-      isAuthenticated,
+    enabled: (options?.enabled ?? true) && hasHydrated && isAuthenticated,
   });
 }
 
@@ -255,7 +250,7 @@ export function useExportCustomerDebtTimeline() {
     setIsExporting(true);
     try {
       const url = new URL(
-        `${API_URL}/customers/${customerId}/export-debt-timeline`
+        `${API_URL}/customers/${customerId}/export-debt-timeline`,
       );
       if (includeChildren) url.searchParams.set("includeChildren", "true");
       await downloadExcelFromUrl(url, `LichSuThanhToan_KH${customerId}.xlsx`);
@@ -285,7 +280,7 @@ export function useExportCustomerDebt() {
       showDiscount?: boolean;
       showTotal?: boolean;
       showNote?: boolean;
-    } = {}
+    } = {},
   ) => {
     setIsExporting(true);
     try {
@@ -322,7 +317,11 @@ export function useExportCustomers() {
 
       const url = new URL(`${API_URL}/customers/export`);
       Object.entries(exportFilters).forEach(([k, v]) => {
-        if (v !== undefined && v !== null) {
+        if (v === undefined || v === null) return;
+        // Mảng (vd groupIds) → lặp param, giống apiClient.get
+        if (Array.isArray(v)) {
+          v.forEach((item) => url.searchParams.append(k, String(item)));
+        } else {
           url.searchParams.append(k, String(v));
         }
       });

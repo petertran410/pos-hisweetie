@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Check, Search, X } from "lucide-react";
 import { useDropdownPosition } from "./useDropdownPosition";
@@ -23,6 +23,8 @@ interface FilterMultiSelectProps {
   multiLabel?: (count: number) => string;
   /** Chiều rộng mong muốn của panel, tự co lại theo viewport. */
   panelWidth?: number;
+  /** Nút phụ ở cuối mỗi dòng (vd nút sửa). Click vào không toggle chọn. */
+  renderOptionAction?: (option: FilterOption) => ReactNode;
 }
 
 /**
@@ -38,6 +40,7 @@ export function FilterMultiSelect({
   searchPlaceholder = "Tìm kiếm...",
   multiLabel = (n) => `Đã chọn ${n}`,
   panelWidth,
+  renderOptionAction,
 }: FilterMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -78,12 +81,12 @@ export function FilterMultiSelect({
 
   const selectedLabels = useMemo(
     () => options.filter((o) => values.includes(o.value)).map((o) => o.label),
-    [options, values]
+    [options, values],
   );
 
   const toggle = (v: string) => {
     onChange(
-      values.includes(v) ? values.filter((x) => x !== v) : [...values, v]
+      values.includes(v) ? values.filter((x) => x !== v) : [...values, v],
     );
   };
 
@@ -168,7 +171,8 @@ export function FilterMultiSelect({
               ) : (
                 filtered.map((opt, idx) => {
                   const checked = values.includes(opt.value);
-                  const showGroup = opt.group && opt.group !== filtered[idx - 1]?.group;
+                  const showGroup =
+                    opt.group && opt.group !== filtered[idx - 1]?.group;
                   return (
                     <div key={opt.value}>
                       {showGroup && (
@@ -176,36 +180,42 @@ export function FilterMultiSelect({
                           {opt.group}
                         </div>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => toggle(opt.value)}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors ${
+                      <div
+                        className={`flex items-center transition-colors ${
                           checked ? "bg-brand-soft" : "hover:bg-gray-50"
                         } ${idx > 0 && !showGroup ? "border-t border-gray-50" : ""}`}>
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => {}}
-                          className="w-3.5 h-3.5 accent-brand flex-shrink-0"
-                        />
-                        <span
-                          title={opt.label}
-                          className={`flex-1 truncate ${
-                            checked ? "text-brand-dark font-medium" : "text-gray-700"
-                          }`}>
-                          {opt.label}
-                        </span>
-                        {checked && (
-                          <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
-                        )}
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => toggle(opt.value)}
+                          className="flex-1 min-w-0 flex items-center gap-2.5 px-3 py-2 text-sm text-left">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {}}
+                            className="w-3.5 h-3.5 accent-brand flex-shrink-0"
+                          />
+                          <span
+                            title={opt.label}
+                            className={`flex-1 truncate ${
+                              checked
+                                ? "text-brand-dark font-medium"
+                                : "text-gray-700"
+                            }`}>
+                            {opt.label}
+                          </span>
+                          {checked && (
+                            <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
+                          )}
+                        </button>
+                        {renderOptionAction?.(opt)}
+                      </div>
                     </div>
                   );
                 })
               )}
             </div>
           </div>,
-          document.body
+          document.body,
         )}
     </div>
   );

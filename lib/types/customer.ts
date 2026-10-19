@@ -97,6 +97,7 @@ export interface CustomerFilters {
   includeCustomerGroup?: boolean;
   birthDate?: string;
   groupId?: number;
+  groupIds?: number[];
   includeCustomerSocial?: boolean;
   customerType?: "all" | "individual" | "company";
   gender?: "all" | "male" | "female";

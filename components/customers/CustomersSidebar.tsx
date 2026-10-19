@@ -16,6 +16,7 @@ import {
 import { CustomerGroupForm } from "./CustomerGroupForm";
 import { createPortal } from "react-dom";
 import { normalizeRectForFixed } from "@/lib/utils/zoom";
+import { FilterMultiSelect } from "@/components/ui/filters";
 
 interface CustomersSidebarProps {
   filters: CustomerFilters;
@@ -53,7 +54,7 @@ function SimpleDropdown({
 
   const filtered = search
     ? options.filter((o) =>
-        o.label.toLowerCase().includes(search.toLowerCase())
+        o.label.toLowerCase().includes(search.toLowerCase()),
       )
     : options;
 
@@ -64,9 +65,7 @@ function SimpleDropdown({
       <div
         onClick={() => setOpen(!open)}
         className={`flex items-center justify-between px-2 py-1 border rounded-lg text-sm cursor-pointer transition-all ${
-          open
-            ? "border-brand ring-2 ring-brand-soft"
-            : "hover:border-gray-400"
+          open ? "border-brand ring-2 ring-brand-soft" : "hover:border-gray-400"
         } bg-white`}>
         <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
           {selected ? selected.label : placeholder}
@@ -133,10 +132,10 @@ function SimpleDropdown({
   );
 }
 
-// ─── GroupDropdown (searchable + edit button, riêng Customer) ──────────────────
+// ─── GroupDropdown (multi-select + edit button, riêng Customer) ───────────────
 function GroupDropdown({
   groups,
-  value,
+  values,
   onChange,
   onEdit,
   onCreate,
@@ -147,34 +146,18 @@ function GroupDropdown({
     discount?: number;
     description?: string;
   }[];
-  value: number | undefined;
-  onChange: (id: number | undefined) => void;
+  values: number[];
+  onChange: (ids: number[]) => void;
   onEdit: (e: React.MouseEvent, group: any) => void;
   onCreate: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-        setSearch("");
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const filtered = search
-    ? groups.filter((g) => g.name.toLowerCase().includes(search.toLowerCase()))
-    : groups;
-
-  const selected = groups.find((g) => g.id === value);
+  const options = useMemo(
+    () => groups.map((g) => ({ value: String(g.id), label: g.name })),
+    [groups],
+  );
 
   return (
-    <div ref={ref} className="relative">
+    <div>
       <div className="flex items-center justify-between mb-2">
         <label className="text-sm font-medium text-gray-700">
           Nhóm khách hàng
@@ -187,97 +170,25 @@ function GroupDropdown({
         </button>
       </div>
 
-      <div
-        onClick={() => setOpen(!open)}
-        className={`flex items-center justify-between px-2 py-1 border rounded-lg text-sm cursor-pointer transition-all ${
-          open
-            ? "border-brand ring-2 ring-brand-soft"
-            : "hover:border-gray-400"
-        } bg-white`}>
-        <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
-          {selected ? selected.name : "Tất cả các nhóm"}
-        </span>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {selected && (
+      <FilterMultiSelect
+        options={options}
+        values={values.map(String)}
+        onChange={(vals) => onChange(vals.map(Number))}
+        placeholder="Tất cả các nhóm"
+        multiLabel={(n) => `${n} nhóm`}
+        renderOptionAction={(opt) => {
+          const group = groups.find((g) => String(g.id) === opt.value);
+          if (!group) return null;
+          return (
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onChange(undefined);
-              }}
-              className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
-              <X className="w-3 h-3" />
+              onClick={(e) => onEdit(e, group)}
+              className="px-3 py-2 text-gray-400 hover:text-brand">
+              <Pencil className="w-3.5 h-3.5" />
             </button>
-          )}
-          <ChevronDown
-            className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
-          />
-        </div>
-      </div>
-
-      {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-60">
-          <div className="p-2 border-b border-gray-200">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Tìm kiếm..."
-                className="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-brand"
-              />
-            </div>
-          </div>
-          <div className="overflow-y-auto max-h-48">
-            <button
-              type="button"
-              onClick={() => {
-                onChange(undefined);
-                setOpen(false);
-                setSearch("");
-              }}
-              className={`w-full px-3 py-2.5 text-left text-sm transition-colors ${
-                !value
-                  ? "bg-brand-soft text-brand-dark font-medium"
-                  : "hover:bg-gray-50 text-gray-700"
-              }`}>
-              Tất cả các nhóm
-            </button>
-            {filtered.map((group) => (
-              <div
-                key={group.id}
-                className={`flex items-center justify-between hover:bg-gray-50 ${
-                  value === group.id
-                    ? "bg-brand-soft text-brand-dark"
-                    : "text-gray-700"
-                }`}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onChange(value === group.id ? undefined : group.id);
-                    setOpen(false);
-                    setSearch("");
-                  }}
-                  className="flex-1 px-3 py-2.5 text-left text-sm">
-                  {group.name}
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => onEdit(e, group)}
-                  className="px-3 py-2 text-gray-400 hover:text-brand">
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
-            {filtered.length === 0 && (
-              <div className="px-3 py-2 text-gray-500 text-center text-sm">
-                Không tìm thấy
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+          );
+        }}
+      />
     </div>
   );
 }
@@ -475,7 +386,7 @@ const PRESET_GROUPS = [
 ];
 
 const PRESET_LABELS: Record<string, string> = Object.fromEntries(
-  PRESET_GROUPS.flatMap((g) => g.options.map((o) => [o.value, o.label]))
+  PRESET_GROUPS.flatMap((g) => g.options.map((o) => [o.value, o.label])),
 );
 
 const MONTH_NAMES = [
@@ -621,7 +532,7 @@ function PresetPanel({
         </div>
       ))}
     </div>,
-    document.body
+    document.body,
   );
 }
 
@@ -810,7 +721,7 @@ function DateFilterBlock({
               setShowPresetPanel(false);
             } else {
               setPanelAnchorRect(
-                presetRowRef.current?.getBoundingClientRect() ?? null
+                presetRowRef.current?.getBoundingClientRect() ?? null,
               );
               setShowPresetPanel(true);
             }
@@ -891,7 +802,7 @@ function DateFilterBlock({
                               day: "2-digit",
                               month: "2-digit",
                               year: "numeric",
-                            }
+                            },
                           )
                         : "Chọn ngày"}
                     </span>
@@ -937,7 +848,7 @@ export function CustomersSidebar({
   const { data: groupsData } = useCustomerGroups();
 
   // ─── Local state ───
-  const [groupId, setGroupId] = useState<number | undefined>(filters.groupId);
+  const [groupIds, setGroupIds] = useState<number[]>(filters.groupIds ?? []);
   const [customerType, setCustomerType] = useState("all");
   const [gender, setGender] = useState("all");
   const [isActive, setIsActive] = useState("true"); // "true" | "false" | "all"
@@ -958,7 +869,7 @@ export function CustomersSidebar({
 
   // ─── Date filter: Ngày tạo KH ───
   const [createdDateMode, setCreatedDateMode] = useState<"preset" | "custom">(
-    "preset"
+    "preset",
   );
   const [createdPreset, setCreatedPreset] = useState("all_time");
   const [createdFromDate, setCreatedFromDate] = useState("");
@@ -967,14 +878,14 @@ export function CustomersSidebar({
   const [createdPanelAnchorRect, setCreatedPanelAnchorRect] =
     useState<DOMRect | null>(null);
   const [openCreatedCal, setOpenCreatedCal] = useState<"from" | "to" | null>(
-    null
+    null,
   );
   const createdPresetRowRef = useRef<HTMLDivElement>(null);
   const createdCustomDateRef = useRef<HTMLDivElement>(null);
 
   // ─── Date filter: Ngày giao dịch cuối ───
   const [lastTxDateMode, setLastTxDateMode] = useState<"preset" | "custom">(
-    "preset"
+    "preset",
   );
   const [lastTxPreset, setLastTxPreset] = useState("all_time");
   const [lastTxFromDate, setLastTxFromDate] = useState("");
@@ -983,12 +894,12 @@ export function CustomersSidebar({
   const [lastTxPanelAnchorRect, setLastTxPanelAnchorRect] =
     useState<DOMRect | null>(null);
   const [openLastTxCal, setOpenLastTxCal] = useState<"from" | "to" | null>(
-    null
+    null,
   );
 
   // ─── Sort ───
   const [purchasedSort, setPurchasedSort] = useState<"none" | "desc" | "asc">(
-    "none"
+    "none",
   );
   const [debtSort, setDebtSort] = useState<"none" | "desc" | "asc">("none");
 
@@ -1008,7 +919,7 @@ export function CustomersSidebar({
   // ─── Active filter count ───
   const activeFilterCount = useMemo(() => {
     let count = 0;
-    if (groupId) count++;
+    if (groupIds.length > 0) count++;
     if (customerType !== "all") count++;
     if (gender !== "all") count++;
     if (isActive !== "true") count++;
@@ -1022,7 +933,7 @@ export function CustomersSidebar({
     if (debtSort !== "none") count++;
     return count;
   }, [
-    groupId,
+    groupIds,
     customerType,
     gender,
     isActive,
@@ -1061,7 +972,7 @@ export function CustomersSidebar({
         includeCustomerGroup: true,
       };
 
-      if (groupId) f.groupId = groupId;
+      if (groupIds.length > 0) f.groupIds = groupIds;
       if (isActive === "true") f.isActive = true;
       else if (isActive === "false") f.isActive = false;
       else f.includeInactive = true; // "all" → lấy cả KH hoạt động & ngừng HĐ
@@ -1084,8 +995,12 @@ export function CustomersSidebar({
         createdFromDate &&
         createdToDate
       ) {
-        f.createdDateFrom = new Date(createdFromDate + "T00:00:00").toISOString();
-        f.createdDateTo = new Date(createdToDate + "T23:59:59.999").toISOString();
+        f.createdDateFrom = new Date(
+          createdFromDate + "T00:00:00",
+        ).toISOString();
+        f.createdDateTo = new Date(
+          createdToDate + "T23:59:59.999",
+        ).toISOString();
       }
 
       // ── Ngày giao dịch cuối ──
@@ -1100,15 +1015,19 @@ export function CustomersSidebar({
         lastTxFromDate &&
         lastTxToDate
       ) {
-        f.lastTransactionFrom = new Date(lastTxFromDate + "T00:00:00").toISOString();
-        f.lastTransactionTo = new Date(lastTxToDate + "T23:59:59.999").toISOString();
+        f.lastTransactionFrom = new Date(
+          lastTxFromDate + "T00:00:00",
+        ).toISOString();
+        f.lastTransactionTo = new Date(
+          lastTxToDate + "T23:59:59.999",
+        ).toISOString();
       }
 
       onFiltersChange(f);
     }, 300);
     return () => clearTimeout(timer);
   }, [
-    groupId,
+    groupIds,
     customerType,
     gender,
     isActive,
@@ -1132,7 +1051,7 @@ export function CustomersSidebar({
 
   // ─── Clear all ───
   const clearAll = () => {
-    setGroupId(undefined);
+    setGroupIds([]);
     setCustomerType("all");
     setGender("all");
     setIsActive("true");
@@ -1181,8 +1100,8 @@ export function CustomersSidebar({
           {/* ── Nhóm khách hàng ── */}
           <GroupDropdown
             groups={groupsData?.data || []}
-            value={groupId}
-            onChange={setGroupId}
+            values={groupIds}
+            onChange={setGroupIds}
             onEdit={handleEditGroup}
             onCreate={() => {
               setEditingGroup(null);
@@ -1283,7 +1202,7 @@ export function CustomersSidebar({
                 value={totalPurchasedFrom ?? ""}
                 onChange={(e) =>
                   setTotalPurchasedFrom(
-                    e.target.value ? Number(e.target.value) : undefined
+                    e.target.value ? Number(e.target.value) : undefined,
                   )
                 }
               />
@@ -1294,7 +1213,7 @@ export function CustomersSidebar({
                 value={totalPurchasedTo ?? ""}
                 onChange={(e) =>
                   setTotalPurchasedTo(
-                    e.target.value ? Number(e.target.value) : undefined
+                    e.target.value ? Number(e.target.value) : undefined,
                   )
                 }
               />
@@ -1319,7 +1238,7 @@ export function CustomersSidebar({
                 value={debtFrom ?? ""}
                 onChange={(e) =>
                   setDebtFrom(
-                    e.target.value ? Number(e.target.value) : undefined
+                    e.target.value ? Number(e.target.value) : undefined,
                   )
                 }
               />
