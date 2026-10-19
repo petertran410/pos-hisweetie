@@ -118,6 +118,7 @@ export function InvoicesMobileDetailSheet({
 
   const hasPermCancel = useCan("invoices", "cancel");
   const hasPermUpdate = useCan("invoices", "update");
+  const hasPermUpdateFinalized = useCan("invoices", "update_finalized");
   const hasPermPrint = useCan("invoices", "print");
   const isAdmin = useIsAdmin();
   const {
@@ -168,8 +169,15 @@ export function InvoicesMobileDetailSheet({
     !isAdmin &&
     (isCheckingCashPacking || cashPackingCheckFailed || hasActiveCashPackingSlip);
 
+  // Hóa đơn đã Giao thành công / Hoàn thành: sửa nội dung cần thêm quyền
+  // invoices:update_finalized.
+  const isFinalized =
+    invoice?.status === INVOICE_STATUS.DELIVERED ||
+    invoice?.status === INVOICE_STATUS.COMPLETED;
+
   const showProcessButton =
     hasPermUpdate &&
+    (!isFinalized || hasPermUpdateFinalized) &&
     !isSaving &&
     invoice?.status !== INVOICE_STATUS.CANCELLED &&
     !cashPackingLockApplies;

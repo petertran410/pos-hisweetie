@@ -642,6 +642,7 @@ export default function BanHangPage() {
   const canCreateOrder = useCan("orders", "create");
   const canCreateInvoice = useCan("invoices", "create");
   const canEditInvoice = useCan("invoices", "update");
+  const canEditFinalizedInvoice = useCan("invoices", "update_finalized");
   const canEditPrice = useCan("pos_price", "update");
   const canEditDiscount = useCan("pos_discount", "update");
   const canEditSeller = useCan("pos_seller", "update");
@@ -2137,6 +2138,19 @@ export default function BanHangPage() {
         } để xem/sửa hóa đơn này`,
       );
       router.replace("/don-hang/dat-hang");
+      return;
+    }
+
+    // Guard: hóa đơn đã Giao thành công / Hoàn thành cần quyền update_finalized
+    if (
+      !canEditFinalizedInvoice &&
+      (existingInvoice.status === INVOICE_STATUS.DELIVERED ||
+        existingInvoice.status === INVOICE_STATUS.COMPLETED)
+    ) {
+      toast.error(
+        "Bạn không có quyền sửa hóa đơn đã giao thành công / hoàn thành",
+      );
+      router.replace("/don-hang/hoa-don");
       return;
     }
 

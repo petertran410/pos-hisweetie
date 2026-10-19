@@ -91,6 +91,7 @@ export function InvoiceDetailRow({
 
   const hasPermCancel = useCan("invoices", "cancel");
   const hasPermUpdate = useCan("invoices", "update");
+  const hasPermUpdateFinalized = useCan("invoices", "update_finalized");
   const hasPermPrint = useCan("invoices", "print");
   const hasPermExport = useCan("invoices", "export");
 
@@ -364,7 +365,14 @@ export function InvoiceDetailRow({
 
   // Có quyền Hủy thì được hủy mọi trạng thái chưa hủy.
   const canCancel = invoice.status !== INVOICE_STATUS.CANCELLED;
-  const canProcess = invoice.status !== INVOICE_STATUS.CANCELLED;
+  // Hóa đơn đã Giao thành công / Hoàn thành: sửa nội dung cần thêm quyền
+  // invoices:update_finalized (Lưu ghi chú / Kết thúc / Báo đơn không cần).
+  const isFinalized =
+    invoice.status === INVOICE_STATUS.DELIVERED ||
+    invoice.status === INVOICE_STATUS.COMPLETED;
+  const canProcess =
+    invoice.status !== INVOICE_STATUS.CANCELLED &&
+    (!isFinalized || hasPermUpdateFinalized);
   const cashPackingLockApplies =
     !isAdmin &&
     (isCheckingCashPacking || cashPackingCheckFailed || hasActiveCashPackingSlip);
