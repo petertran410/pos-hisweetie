@@ -200,6 +200,7 @@ const RESOURCE_ACTION_LABELS: Record<string, string> = {
   "internal-use:view_cost_price": "Xem giá",
   "warehouse_expense:cancel": "Hủy phiếu chi",
   "warehouse_expense:request_review": "Ghi chú & tag người xem lại",
+  "warehouse_expense:export": "Xuất file Excel",
   "warehouse_cash:confirm_amount": "Xác nhận số tiền thực nhận",
   "cash_advance:confirm": "Xác nhận giao tiền",
   "cash_advance:cancel": "Hủy phiếu tạm ứng",

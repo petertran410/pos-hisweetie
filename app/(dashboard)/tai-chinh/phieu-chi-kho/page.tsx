@@ -141,6 +141,11 @@ function WarehouseExpenseScreen() {
   const access = useFinanceAccess();
   const canAction = (action: string, targetBranchId = branchId) =>
     access.can("warehouse_expense", action, targetBranchId);
+  // Lọc một kho: cần quyền xuất ở kho đó; tất cả kho: có quyền ở ít nhất một
+  // kho (file chỉ gồm các kho được xuất).
+  const canExport = filters.branchId
+    ? canAction("export", filters.branchId)
+    : access.any("warehouse_expense", "export");
 
   const query = useMemo<WarehouseExpenseQuery>(
     () =>
@@ -445,7 +450,7 @@ function WarehouseExpenseScreen() {
             pageAmount={pageAmount}
             totals={expenses.data?.totals}
             onOpenPayerSummary={() => setShowPayerSummary(true)}
-            onExport={() => void exportFile(query)}
+            onExport={canExport ? () => void exportFile(query) : undefined}
             isExporting={isExporting}
             page={page}
             totalPages={totalPages}
@@ -545,19 +550,21 @@ function WarehouseExpenseScreen() {
                   <Users className="h-4 w-4" />
                   Theo người chi
                 </button>
-                <button
-                  type="button"
-                  onClick={() => void exportFile(query)}
-                  disabled={isExporting}
-                  title="Xuất Excel toàn bộ phiếu theo bộ lọc đang chọn"
-                  className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
-                  {isExporting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4" />
-                  )}
-                  Xuất file
-                </button>
+                {canExport && (
+                  <button
+                    type="button"
+                    onClick={() => void exportFile(query)}
+                    disabled={isExporting}
+                    title="Xuất Excel toàn bộ phiếu theo bộ lọc đang chọn"
+                    className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    {isExporting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    Xuất file
+                  </button>
+                )}
                 <Link
                   href="/tai-chinh/approval-tuan"
                   className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
