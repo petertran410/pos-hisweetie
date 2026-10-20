@@ -136,6 +136,8 @@ export function DashboardHeader() {
       { label: "Tiền mặt kho", href: "/tai-chinh/tien-mat-kho" },
       { label: "Phiếu chi kho", href: "/tai-chinh/phieu-chi-kho" },
       { label: "Quỹ nội bộ", href: "/tai-chinh/quy-noi-bo" },
+      { label: "Tạm ứng", href: "/tai-chinh/tam-ung" },
+      { label: "Hoàn ứng", href: "/tai-chinh/hoan-ung" },
       { label: "Approval tuần", href: "/tai-chinh/approval-tuan" },
       { label: "Đơn Lark Approval", href: "/tai-chinh/don-lark-approval" },
       { label: "Xăng dầu & chăm sóc xe", href: "/tai-chinh/xe-co" },

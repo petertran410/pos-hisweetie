@@ -57,9 +57,14 @@ export function WarehouseExpenseMobileList({
   selectMode = false,
   onToggleSelectMode,
   onOpenPayerSummary,
+  onExport,
+  isExporting = false,
 }: {
   /** Mở báo cáo chi tiêu theo người chi. */
   onOpenPayerSummary?: () => void;
+  /** Xuất Excel toàn bộ phiếu theo bộ lọc. */
+  onExport?: () => void;
+  isExporting?: boolean;
   /** Chế độ chọn để tick hàng loạt (nút "Chọn" ở đầu danh sách). */
   selection?: {
     selected: Set<number>;
@@ -152,6 +157,15 @@ export function WarehouseExpenseMobileList({
               Người chi
             </button>
           )}
+          {onExport && (
+            <button
+              type="button"
+              onClick={onExport}
+              disabled={isExporting}
+              className="rounded-lg border px-2.5 py-1.5 text-xs font-medium text-gray-700 disabled:opacity-50">
+              {isExporting ? "Đang xuất..." : "Xuất file"}
+            </button>
+          )}
           {onToggleSelectMode && (
             <button
               type="button"
@@ -235,7 +249,7 @@ export function WarehouseExpenseMobileList({
                 </span>
               ) : row.cashIssued ? (
                 <span className="rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700">
-                  Đã chi
+                  {row.advanceAllocations?.length ? "Chi từ tạm ứng" : "Đã chi"}
                 </span>
               ) : row.weeklyBatch ? (
                 <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">

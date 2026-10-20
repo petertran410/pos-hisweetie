@@ -14,7 +14,15 @@ import { useColumnToggle } from "@/lib/hooks/useColumnToggle";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { CalendarRange, Plus, Users, WalletCards, X } from "lucide-react";
+import {
+  CalendarRange,
+  Download,
+  Loader2,
+  Plus,
+  Users,
+  WalletCards,
+  X,
+} from "lucide-react";
 import Swal from "sweetalert2";
 import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
 import { WarehouseCashAttachmentsModal } from "@/components/warehouse-cash/WarehouseCashAttachmentsModal";
@@ -41,6 +49,7 @@ import {
   useBulkCheckWarehouseExpenses,
   useCancelWarehouseExpense,
   useCheckWarehouseExpense,
+  useExportWarehouseExpenses,
   useMarkWarehouseExpenseIssued,
   useWarehouseExpenses,
 } from "@/lib/hooks/useInternalFinance";
@@ -48,6 +57,7 @@ import { isExpenseOpenForEdit } from "@/lib/internal-finance/vehicle-constants";
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
+import { cashAdvancesApi } from "@/lib/api/cash-advances";
 
 function WarehouseExpenseScreen() {
   const router = useRouter();
@@ -102,6 +112,7 @@ function WarehouseExpenseScreen() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [selectMode, setSelectMode] = useState(false);
   const cancel = useCancelWarehouseExpense();
+  const { exportFile, isExporting } = useExportWarehouseExpenses();
 
   // Link mới (đang ở trang mà bấm link khác): tìm theo mã mới ngay.
   const [seenCode, setSeenCode] = useState(codeParam);
@@ -359,10 +370,22 @@ function WarehouseExpenseScreen() {
 
   const handleMarkIssued = async (row: InternalFinanceEntry) => {
     let reason: string | undefined;
+    // Phiếu nằm trong kỳ của tạm ứng đã giao tiền: phần đó chi từ tạm ứng,
+    // không trừ quỹ lần hai.
+    const coverage = await cashAdvancesApi.coverage(row.id).catch(() => null);
+    const fundText = coverage?.covered
+      ? `chi từ tạm ứng <strong>${coverage.parts
+          .map((part) => part.code)
+          .join(", ")}</strong> ${formatCurrency(coverage.covered)}${
+          coverage.uncovered
+            ? `, trừ quỹ nội bộ <strong>${formatCurrency(coverage.uncovered)}</strong>`
+            : " (không trừ quỹ nội bộ)"
+        }`
+      : `trừ quỹ nội bộ <strong>${formatCurrency(row.amount)}</strong>`;
     if (inApprovedBatch(row)) {
       const result = await Swal.fire({
         title: "Xác nhận đã chi?",
-        text: "Xác nhận khoản chi và ghi vào quỹ nội bộ.",
+        html: `<p class="text-sm text-gray-600">Xác nhận khoản chi: ${fundText}.</p>`,
         icon: "question",
         showCancelButton: true,
         confirmButtonText: "Xác nhận Đã chi",
@@ -374,7 +397,7 @@ function WarehouseExpenseScreen() {
       // Phiếu chưa nằm trong Approval tuần đã duyệt: bắt buộc ghi lý do.
       const result = await Swal.fire({
         title: "Đánh dấu Đã chi ngoài Approval tuần",
-        html: `<p class="text-sm text-gray-600">Phiếu này chưa nằm trong Approval tuần đã duyệt. Nhập lý do để ghi Đã chi và trừ quỹ nội bộ <strong>${formatCurrency(row.amount)}</strong>.</p>`,
+        html: `<p class="text-sm text-gray-600">Phiếu này chưa nằm trong Approval tuần đã duyệt. Nhập lý do để ghi Đã chi: ${fundText}.</p>`,
         input: "textarea",
         inputPlaceholder: "Lý do đánh dấu Đã chi",
         inputValidator: (value) =>
@@ -422,6 +445,8 @@ function WarehouseExpenseScreen() {
             pageAmount={pageAmount}
             totals={expenses.data?.totals}
             onOpenPayerSummary={() => setShowPayerSummary(true)}
+            onExport={() => void exportFile(query)}
+            isExporting={isExporting}
             page={page}
             totalPages={totalPages}
             onPageChange={setPage}
@@ -519,6 +544,19 @@ function WarehouseExpenseScreen() {
                   className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                   <Users className="h-4 w-4" />
                   Theo người chi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void exportFile(query)}
+                  disabled={isExporting}
+                  title="Xuất Excel toàn bộ phiếu theo bộ lọc đang chọn"
+                  className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                  {isExporting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  Xuất file
                 </button>
                 <Link
                   href="/tai-chinh/approval-tuan"

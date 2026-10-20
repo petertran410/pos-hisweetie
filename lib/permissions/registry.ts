@@ -96,6 +96,8 @@ export const ROUTE_PERMISSIONS: Record<
     { resource: "warehouse_expense", action: "view" },
   ],
   "/tai-chinh/quy-noi-bo": [{ resource: "internal_fund", action: "view" }],
+  "/tai-chinh/tam-ung": [{ resource: "cash_advance", action: "view" }],
+  "/tai-chinh/hoan-ung": [{ resource: "cash_advance_refund", action: "view" }],
   "/tai-chinh/approval-tuan": { resource: "weekly_approval", action: "view" },
   "/tai-chinh/don-lark-approval": {
     resource: "lark_approval",
@@ -360,6 +362,18 @@ export const NAV_CONFIG: NavSection[] = [
         label: "Quỹ nội bộ",
         href: "/tai-chinh/quy-noi-bo",
         permission: [{ resource: "internal_fund", action: "view" }],
+      },
+      {
+        key: "cash-advances",
+        label: "Tạm ứng",
+        href: "/tai-chinh/tam-ung",
+        permission: [{ resource: "cash_advance", action: "view" }],
+      },
+      {
+        key: "cash-advance-refunds",
+        label: "Hoàn ứng",
+        href: "/tai-chinh/hoan-ung",
+        permission: [{ resource: "cash_advance_refund", action: "view" }],
       },
       {
         key: "internal-finance-weekly-approvals",

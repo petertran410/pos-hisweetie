@@ -1,5 +1,9 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { API_URL } from "@/lib/config/api";
+import { useAuthStore } from "@/lib/store/auth";
+import { useBranchStore } from "@/lib/store/branch";
 import {
   internalFinanceApi,
   type InternalFinanceAttachment,
@@ -67,6 +71,60 @@ export function useWarehouseExpensePayerSummary(
     queryFn: () => internalFinanceApi.warehouseExpensePayerSummary(params),
     enabled,
   });
+}
+
+/** Xuất Excel toàn bộ phiếu chi kho khớp bộ lọc (bỏ phân trang). */
+export function useExportWarehouseExpenses() {
+  const [isExporting, setIsExporting] = useState(false);
+  const exportFile = async (params: WarehouseExpenseQuery) => {
+    setIsExporting(true);
+    try {
+      const url = new URL(
+        `${API_URL}/internal-finance/warehouse-expenses/export`,
+      );
+      for (const [key, value] of Object.entries(params)) {
+        if (key === "page" || key === "limit") continue;
+        if (value !== undefined && value !== null && value !== "")
+          url.searchParams.append(key, String(value));
+      }
+      const token = useAuthStore.getState().token;
+      const branch = useBranchStore.getState().selectedBranch;
+      const res = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(branch?.id ? { "X-Branch-Id": String(branch.id) } : {}),
+        },
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        let message = text;
+        try {
+          const body = JSON.parse(text);
+          message = Array.isArray(body.message)
+            ? body.message.join(", ")
+            : body.message || text;
+        } catch {}
+        throw new Error(message || "Xuất file thất bại");
+      }
+      const blob = await res.blob();
+      const match = (res.headers.get("Content-Disposition") || "").match(
+        /filename=([^;]+)/,
+      );
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = match ? match[1].trim() : "PhieuChiKho.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+      toast.success("Xuất file thành công");
+    } catch (error) {
+      toast.error(errorMessage(error, "Xuất file thất bại"));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+  return { exportFile, isExporting };
 }
 
 export function useWarehouseExpenseBatches(params: InternalFinanceQuery) {
@@ -323,7 +381,7 @@ export function useMarkWarehouseExpenseIssued() {
     }) => internalFinanceApi.markWarehouseExpenseIssued(id, cashIssued, reason),
     onSuccess: () => {
       invalidateInternalFinance(queryClient);
-      toast.success("Đã xác nhận chi và ghi sổ quỹ");
+      toast.success("Đã xác nhận Đã chi");
     },
     onError: (error) =>
       toast.error(errorMessage(error, "Xác nhận Đã chi thất bại")),
@@ -435,6 +493,9 @@ export function invalidateInternalFinance(
   queryClient.invalidateQueries({ queryKey: ["cashflows"] });
   queryClient.invalidateQueries({ queryKey: ["approval-requests"] });
   queryClient.invalidateQueries({ queryKey: ["invoices"] });
+  // Phiếu chi kho / Đã chi đổi thì phần đã dùng của tạm ứng đổi theo.
+  queryClient.invalidateQueries({ queryKey: ["cash-advances"] });
+  queryClient.invalidateQueries({ queryKey: ["cash-advance-refunds"] });
 }
 
 export function useCreateManualReceipt() {

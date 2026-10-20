@@ -18,6 +18,7 @@ import {
   displayDescription,
 } from "@/lib/internal-finance/display";
 import { formatCurrency } from "@/lib/utils";
+import { AdvanceAllocationNote } from "@/components/cash-advances/AdvanceAllocationNote";
 
 const CATEGORY_LABELS: Record<string, string> = {
   DELIVERY_FEE: "Chi phí giao hàng",
@@ -550,6 +551,7 @@ export function WarehouseExpenseTable({
                           Đã hủy giao dịch quỹ
                         </div>
                       )}
+                      <AdvanceAllocationNote row={row} />
                       {row.cashIssuedReason && (
                         <div
                           className="mt-0.5 max-w-[150px] break-words text-xs text-gray-500"

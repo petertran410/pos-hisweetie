@@ -82,10 +82,30 @@ const labels: Record<string, string> = {
 const sourceLabels: Record<string, string> = {
   WAREHOUSE_CASH_RECEIPT: "Thu tiền khách",
   LARK_PAYMENT_VOUCHER: "Phiếu chi theo đơn duyệt",
+  CASH_ADVANCE: "Tạm ứng",
+  CASH_ADVANCE_REFUND: "Hoàn ứng",
 };
 // Các nguồn này phải hủy tại màn hình gốc để hai bên không lệch nhau;
 // bút toán lịch sử thì chỉ đọc.
-const originOwnedSources = ["WAREHOUSE_CASH_RECEIPT", "LEDGER_HISTORY"];
+const originOwnedSources = [
+  "WAREHOUSE_CASH_RECEIPT",
+  "LEDGER_HISTORY",
+  "CASH_ADVANCE",
+  "CASH_ADVANCE_REFUND",
+];
+// Mã phiếu gốc (link sang trang gốc) của dòng quỹ tạm ứng / hoàn ứng.
+const advanceLink = (row: InternalFundTransaction) =>
+  row.cashAdvance
+    ? {
+        code: row.cashAdvance.code,
+        href: `/tai-chinh/tam-ung?Code=${encodeURIComponent(row.cashAdvance.code)}`,
+      }
+    : row.cashAdvanceRefund
+      ? {
+          code: row.cashAdvanceRefund.code,
+          href: `/tai-chinh/hoan-ung?Code=${encodeURIComponent(row.cashAdvanceRefund.code)}`,
+        }
+      : null;
 // Tên hiển thị của loại giao dịch; chuyển quỹ lịch sử vẫn hiện "Chuyển đến/đi".
 const typeLabel = (row: { sourceType: string; transactionType: string }) =>
   row.sourceType === "LEDGER_HISTORY"
@@ -156,7 +176,8 @@ function FundScreen() {
       : "transactions",
   );
   const [creatingClosing, setCreatingClosing] = useState(false);
-  const [search, setSearch] = useState("");
+  // Link từ trang Tạm ứng: ?search=<mã phiếu>.
+  const [search, setSearch] = useState(() => params.get("search") || "");
   const [status, setStatus] = useState<"" | "POSTED" | "CANCELLED">("");
   const [dates, setDates] = useState<DateRange>(() =>
     loadSavedDates(STORAGE_KEY),
@@ -426,7 +447,9 @@ function FundScreen() {
                   return (
                     <FinanceMobileCard
                       key={row.id}
-                      code={row.entry?.code || row.code}
+                      code={
+                        row.entry?.code || advanceLink(row)?.code || row.code
+                      }
                       muted={row.status === "CANCELLED"}
                       badge={
                         <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
@@ -628,6 +651,13 @@ function FundScreen() {
                                     title={`Mã giao dịch quỹ: ${row.code}`}
                                     className="text-brand hover:underline">
                                     {row.entry.code}
+                                  </Link>
+                                ) : advanceLink(row) ? (
+                                  <Link
+                                    href={advanceLink(row)!.href}
+                                    title={`Mã giao dịch quỹ: ${row.code}`}
+                                    className="text-brand hover:underline">
+                                    {advanceLink(row)!.code}
                                   </Link>
                                 ) : (
                                   row.code
