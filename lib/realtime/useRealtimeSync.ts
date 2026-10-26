@@ -7,6 +7,8 @@ import { useAuthStore } from "@/lib/store/auth";
 
 /** Gom các sự kiện đến dồn dập (vd ra hóa đơn hàng loạt) rồi mới refetch 1 lần. */
 const INVALIDATE_DEBOUNCE_MS = 400;
+/** Bị server từ chối/ngắt → thử lại sau 60s. */
+const UNAUTHORIZED_RETRY_MS = 60_000;
 
 const ORDER_QUERY_KEYS = [
   ["orders"],
@@ -70,22 +72,51 @@ export function useRealtimeSync() {
       reconnectionDelayMax: 10_000,
     });
 
-    // Server từ chối token (hết hạn/bị khóa/đổi quyền) → dừng thử lại;
-    // token mới sau khi đăng nhập lại sẽ tạo kết nối mới.
+    // Server từ chối / chủ động ngắt (token hết hạn, bị khóa, đổi quyền, deploy
+    // lỗi...) → socket.io KHÔNG tự thử lại. Thử lại chậm sau 60s để tự hồi phục
+    // mà không spam server; đăng nhập lại (token mới) sẽ tạo kết nối mới ngay.
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRetry = () => {
+      if (retryTimer) return;
+      retryTimer = setTimeout(() => {
+        retryTimer = null;
+        if (!socket.connected) socket.connect();
+      }, UNAUTHORIZED_RETRY_MS);
+    };
+
     socket.on("connect_error", (err) => {
-      if (err.message === "unauthorized") socket.disconnect();
+      console.info("[realtime] Lỗi kết nối:", err.message);
+      if (err.message === "unauthorized") {
+        socket.disconnect();
+        scheduleRetry();
+      }
     });
 
     let hasConnected = false;
     socket.on("connect", () => {
-      // Kết nối lại (sau deploy/mất mạng) → bắt kịp thay đổi bị lỡ.
+      console.info("[realtime] Đã kết nối");
+      // Kết nối lại (sau deploy/mất mạng/điện thoại ngủ) → bắt kịp thay đổi bị lỡ.
       if (hasConnected) scheduleInvalidate();
       hasConnected = true;
     });
+    socket.on("disconnect", (reason) => {
+      console.info("[realtime] Mất kết nối:", reason);
+      if (reason === "io server disconnect") scheduleRetry();
+    });
     socket.on("order.changed", scheduleInvalidate);
+
+    // Điện thoại mở lại app/tab → kết nối lại ngay, không chờ backoff.
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && !socket.connected) {
+        socket.connect();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
 
     return () => {
       if (timer) clearTimeout(timer);
+      if (retryTimer) clearTimeout(retryTimer);
+      document.removeEventListener("visibilitychange", onVisible);
       socket.off();
       socket.disconnect();
     };
