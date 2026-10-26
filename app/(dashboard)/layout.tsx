@@ -5,11 +5,8 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { RouteGuard } from "@/components/layout/RouteGuard";
 import { DashboardHeader } from "@/components/layout/DashboardHeader";
 import { SepayPendingNotifier } from "@/components/sepay/SepayPendingNotifier";
-<<<<<<< HEAD
 import { RealtimeSync } from "@/lib/realtime/useRealtimeSync";
-=======
 import { ZaloChatSidebar } from "@/components/chat/ZaloChatSidebar";
->>>>>>> build_report
 
 export default function DashboardLayout({
   children,

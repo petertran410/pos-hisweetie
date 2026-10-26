@@ -13,11 +13,8 @@ import {
   CreditCard,
   FileSignature,
   KeyRound,
-<<<<<<< HEAD
   MonitorSmartphone,
-=======
   MessageCircle,
->>>>>>> build_report
 } from "lucide-react";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import "@/app/dashboard.css";
