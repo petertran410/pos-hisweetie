@@ -40,8 +40,6 @@ export const RESOURCE_LABELS: Record<string, string> = {
   weekly_approval: "Approval tuần",
   lark_approval: "Đơn Lark Approval",
   internal_fund: "Quỹ nội bộ",
-  cash_advance: "Tạm ứng",
-  cash_advance_refund: "Hoàn ứng",
   vehicles: "Xe cộ",
   reports: "Báo cáo",
   users: "Người dùng",
@@ -202,10 +200,6 @@ const RESOURCE_ACTION_LABELS: Record<string, string> = {
   "warehouse_expense:request_review": "Ghi chú & tag người xem lại",
   "warehouse_expense:export": "Xuất file Excel",
   "warehouse_cash:confirm_amount": "Xác nhận số tiền thực nhận",
-  "cash_advance:confirm": "Xác nhận giao tiền",
-  "cash_advance:cancel": "Hủy phiếu tạm ứng",
-  "cash_advance_refund:confirm": "Xác nhận nhận tiền",
-  "cash_advance_refund:cancel": "Hủy phiếu hoàn ứng",
 };
 
 /** Nhãn action, có xét nhãn riêng theo resource (RESOURCE_ACTION_LABELS). */

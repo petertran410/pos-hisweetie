@@ -7,8 +7,7 @@ export type UploadSubfolder =
   | "dong-hang"
   | "loading"
   | "bao-don/chi-phi"
-  | "ky-gui"
-  | "tai-chinh/tam-ung";
+  | "ky-gui";
 
 export interface UploadSession {
   id: string;

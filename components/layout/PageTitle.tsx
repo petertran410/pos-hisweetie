@@ -60,8 +60,6 @@ const TITLE_MAP: Array<{ prefix: string; title: string }> = [
   { prefix: "/tai-chinh/tien-mat-kho", title: "Tiền mặt kho" },
   { prefix: "/tai-chinh/phieu-chi-kho", title: "Phiếu chi kho" },
   { prefix: "/tai-chinh/quy-noi-bo", title: "Quỹ nội bộ" },
-  { prefix: "/tai-chinh/tam-ung", title: "Tạm ứng" },
-  { prefix: "/tai-chinh/hoan-ung", title: "Hoàn ứng" },
   { prefix: "/tai-chinh/approval-tuan", title: "Approval tuần" },
   { prefix: "/tai-chinh/don-lark-approval", title: "Đơn Lark Approval" },
   { prefix: "/tai-chinh/xe-co", title: "Xăng dầu & chăm sóc xe" },

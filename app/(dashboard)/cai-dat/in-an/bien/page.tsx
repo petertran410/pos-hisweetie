@@ -22,8 +22,6 @@ const TABS: Array<{ key: string; label: string }> = [
   { key: "internal_use", label: "Xuất dùng nội bộ" },
   { key: "cash_flow_receipt", label: "Phiếu thu" },
   { key: "cash_flow_payment", label: "Phiếu chi" },
-  { key: "cash_advance", label: "Phiếu tạm ứng" },
-  { key: "cash_advance_refund", label: "Phiếu hoàn ứng" },
   { key: "consignment", label: "Ký gửi" },
 ];
 

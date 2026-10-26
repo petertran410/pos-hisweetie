@@ -87,24 +87,24 @@ export function MiniCalendar({
     vm === 11 ? (setVm(0), setVy((y) => y + 1)) : setVm((m) => m + 1);
 
   return (
-    <div
-      className="mt-2 bg-white border rounded-xl p-3 shadow-sm select-none"
-      style={{ borderColor: "var(--dt-border)" }}>
+    // Màu dùng class Tailwind (biến toàn cục) như lịch ở sidebar Hóa đơn: lịch
+    // mở qua portal ra ngoài .dt-dash vẫn hiện đúng ngày đang chọn.
+    <div className="mt-2 bg-white border border-gray-200 rounded-xl p-3 shadow-sm select-none">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <button
           type="button"
           onClick={prev}
-          className="dt-icon-btn p-1 rounded-lg transition-colors">
+          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500">
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <span className="text-sm font-semibold" style={{ color: "var(--dt-text)" }}>
+        <span className="text-sm font-semibold text-gray-800">
           {MONTH_NAMES[vm]} {vy}
         </span>
         <button
           type="button"
           onClick={next}
-          className="dt-icon-btn p-1 rounded-lg transition-colors">
+          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500">
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
@@ -114,8 +114,7 @@ export function MiniCalendar({
         {DAY_NAMES.map((d) => (
           <div
             key={d}
-            className="text-center text-[10px] font-medium py-0.5"
-            style={{ color: "var(--dt-text-muted)" }}>
+            className="text-center text-[10px] font-medium text-gray-400 py-0.5">
             {d}
           </div>
         ))}
@@ -143,21 +142,16 @@ export function MiniCalendar({
                 emit(ds);
                 if (!withTime) onClose();
               }}
-              className="dt-cal-cell aspect-square text-xs rounded-lg flex items-center justify-center transition-colors"
-              data-plain={!isSel && !isToday && !isDisabled}
-              style={
+              className={[
+                "aspect-square text-xs rounded-lg flex items-center justify-center transition-colors",
                 isSel
-                  ? { background: "var(--dt-primary)", color: "#fff", fontWeight: 700 }
+                  ? "bg-brand text-white font-bold"
                   : isToday
-                    ? {
-                        border: "1px solid var(--dt-primary)",
-                        color: "var(--dt-primary)",
-                        fontWeight: 600,
-                      }
+                    ? "border border-brand text-brand font-semibold hover:bg-brand-soft"
                     : isDisabled
-                      ? { color: "var(--dt-border)", cursor: "not-allowed" }
-                      : { color: "var(--dt-text-secondary)", cursor: "pointer" }
-              }>
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-gray-700 hover:bg-brand-soft cursor-pointer",
+              ].join(" ")}>
               {day}
             </button>
           );
@@ -166,10 +160,8 @@ export function MiniCalendar({
 
       {/* Time picker */}
       {withTime && (
-        <div
-          className="flex items-center justify-center gap-2 mt-3 pt-3 border-t"
-          style={{ borderColor: "var(--dt-border)" }}>
-          <span className="text-xs" style={{ color: "var(--dt-text-muted)" }}>
+        <div className="flex items-center justify-center gap-2 mt-3 pt-3 border-t border-gray-100">
+          <span className="text-xs text-gray-500">
             Giờ:
           </span>
           <input
@@ -195,17 +187,14 @@ export function MiniCalendar({
       )}
 
       {/* Footer */}
-      <div
-        className="flex justify-between mt-2 pt-2 border-t"
-        style={{ borderColor: "var(--dt-border)" }}>
+      <div className="flex justify-between mt-2 pt-2 border-t border-gray-100">
         <button
           type="button"
           onClick={() => {
             onChange("");
             onClose();
           }}
-          className="dt-icon-btn text-xs px-2 py-1 rounded transition-colors"
-          style={{ color: "var(--dt-text-muted)" }}>
+          className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100">
           Xóa
         </button>
         <div className="flex gap-1">
@@ -227,16 +216,14 @@ export function MiniCalendar({
                 onClose();
               }
             }}
-            className="text-xs font-medium px-2 py-1 rounded transition-colors"
-            style={{ color: "var(--dt-primary)" }}>
+            className="text-xs text-brand hover:text-brand-dark font-medium px-2 py-1 rounded hover:bg-brand-soft">
             {withTime ? "Bây giờ" : "Hôm nay"}
           </button>
           {withTime && (
             <button
               type="button"
               onClick={onClose}
-              className="text-xs font-medium px-3 py-1 rounded transition-colors text-white"
-              style={{ background: "var(--dt-primary)" }}>
+              className="text-xs font-medium px-3 py-1 rounded transition-colors text-white bg-brand hover:bg-brand-dark">
               Xong
             </button>
           )}

@@ -57,7 +57,6 @@ import { isExpenseOpenForEdit } from "@/lib/internal-finance/vehicle-constants";
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
-import { cashAdvancesApi } from "@/lib/api/cash-advances";
 
 function WarehouseExpenseScreen() {
   const router = useRouter();
@@ -375,22 +374,10 @@ function WarehouseExpenseScreen() {
 
   const handleMarkIssued = async (row: InternalFinanceEntry) => {
     let reason: string | undefined;
-    // Phiếu nằm trong kỳ của tạm ứng đã giao tiền: phần đó chi từ tạm ứng,
-    // không trừ quỹ lần hai.
-    const coverage = await cashAdvancesApi.coverage(row.id).catch(() => null);
-    const fundText = coverage?.covered
-      ? `chi từ tạm ứng <strong>${coverage.parts
-          .map((part) => part.code)
-          .join(", ")}</strong> ${formatCurrency(coverage.covered)}${
-          coverage.uncovered
-            ? `, trừ quỹ nội bộ <strong>${formatCurrency(coverage.uncovered)}</strong>`
-            : " (không trừ quỹ nội bộ)"
-        }`
-      : `trừ quỹ nội bộ <strong>${formatCurrency(row.amount)}</strong>`;
     if (inApprovedBatch(row)) {
       const result = await Swal.fire({
         title: "Xác nhận đã chi?",
-        html: `<p class="text-sm text-gray-600">Xác nhận khoản chi: ${fundText}.</p>`,
+        text: "Xác nhận khoản chi và ghi vào quỹ nội bộ.",
         icon: "question",
         showCancelButton: true,
         confirmButtonText: "Xác nhận Đã chi",
@@ -402,7 +389,7 @@ function WarehouseExpenseScreen() {
       // Phiếu chưa nằm trong Approval tuần đã duyệt: bắt buộc ghi lý do.
       const result = await Swal.fire({
         title: "Đánh dấu Đã chi ngoài Approval tuần",
-        html: `<p class="text-sm text-gray-600">Phiếu này chưa nằm trong Approval tuần đã duyệt. Nhập lý do để ghi Đã chi: ${fundText}.</p>`,
+        html: `<p class="text-sm text-gray-600">Phiếu này chưa nằm trong Approval tuần đã duyệt. Nhập lý do để ghi Đã chi và trừ quỹ nội bộ <strong>${formatCurrency(row.amount)}</strong>.</p>`,
         input: "textarea",
         inputPlaceholder: "Lý do đánh dấu Đã chi",
         inputValidator: (value) =>

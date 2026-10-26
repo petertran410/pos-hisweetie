@@ -102,12 +102,6 @@ export interface InternalFinanceEntry {
   } | null;
   cashFlow?: { id: number; code: string; status: number } | null;
   fundTransaction?: { id: number; code: string; status: string } | null;
-  /** Phần phiếu chi đã chi từ tạm ứng (không trừ quỹ lần hai). */
-  advanceAllocations?: Array<{
-    id: number;
-    amount: number | string;
-    advance: { id: number; code: string };
-  }>;
   attachments: InternalFinanceAttachment[];
   invoiceLinks: Array<{
     invoice: { id: number; code: string };

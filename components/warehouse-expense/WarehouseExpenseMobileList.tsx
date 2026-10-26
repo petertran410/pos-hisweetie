@@ -249,7 +249,7 @@ export function WarehouseExpenseMobileList({
                 </span>
               ) : row.cashIssued ? (
                 <span className="rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700">
-                  {row.advanceAllocations?.length ? "Chi từ tạm ứng" : "Đã chi"}
+                  Đã chi
                 </span>
               ) : row.weeklyBatch ? (
                 <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">

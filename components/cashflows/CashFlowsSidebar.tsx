@@ -279,6 +279,8 @@ function PresetPanel({
   if (!anchorRect) return null;
 
   const r = normalizeRectForFixed(anchorRect);
+  // Panel mở qua portal ra ngoài .dt-dash: dùng class Tailwind (biến toàn cục)
+  // như sidebar Hóa đơn, không dùng biến --dt-* chỉ có trong .dt-dash.
   return createPortal(
     <div
       ref={panelRef}
@@ -288,14 +290,11 @@ function PresetPanel({
         left: r.left,
         width: r.width,
         zIndex: 50,
-        borderColor: "var(--dt-border)",
       }}
-      className="bg-white border rounded-xl shadow-lg p-2 space-y-2">
+      className="bg-white border border-gray-200 rounded-xl shadow-lg p-2 space-y-2">
       {groups.map((g) => (
         <div key={g.label}>
-          <div
-            className="text-[10px] font-semibold uppercase tracking-wider px-1 mb-1"
-            style={{ color: "var(--dt-text-muted)" }}>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 px-1 mb-1">
             {g.label}
           </div>
           <div className="flex flex-wrap gap-1">
@@ -307,8 +306,11 @@ function PresetPanel({
                   onSelect(opt.value);
                   onClose();
                 }}
-                className="dt-chip px-2 py-0.5 text-xs rounded-full border transition-colors"
-                data-on={selected === opt.value}>
+                className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
+                  selected === opt.value
+                    ? "bg-brand text-white border-brand font-semibold"
+                    : "border-gray-200 text-gray-700 hover:border-brand hover:bg-brand-soft"
+                }`}>
                 {opt.label}
               </button>
             ))}
@@ -452,7 +454,6 @@ function MiniCalendar({
     </div>
   );
 }
-
 
 export function CashFlowsSidebar({
   filters,

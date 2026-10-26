@@ -33,9 +33,6 @@ export interface InternalFundTransaction {
     sourceType: string;
     weeklyBatch?: { code: string } | null;
   } | null;
-  /** Dòng quỹ của phiếu tạm ứng / hoàn ứng (mở trang gốc theo mã). */
-  cashAdvance?: { id: number; code: string } | null;
-  cashAdvanceRefund?: { id: number; code: string; advanceCode: string } | null;
 }
 
 export interface InternalFundDailyClosing {

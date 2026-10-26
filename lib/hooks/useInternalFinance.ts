@@ -381,7 +381,7 @@ export function useMarkWarehouseExpenseIssued() {
     }) => internalFinanceApi.markWarehouseExpenseIssued(id, cashIssued, reason),
     onSuccess: () => {
       invalidateInternalFinance(queryClient);
-      toast.success("Đã xác nhận Đã chi");
+      toast.success("Đã xác nhận chi và ghi sổ quỹ");
     },
     onError: (error) =>
       toast.error(errorMessage(error, "Xác nhận Đã chi thất bại")),
@@ -493,9 +493,6 @@ export function invalidateInternalFinance(
   queryClient.invalidateQueries({ queryKey: ["cashflows"] });
   queryClient.invalidateQueries({ queryKey: ["approval-requests"] });
   queryClient.invalidateQueries({ queryKey: ["invoices"] });
-  // Phiếu chi kho / Đã chi đổi thì phần đã dùng của tạm ứng đổi theo.
-  queryClient.invalidateQueries({ queryKey: ["cash-advances"] });
-  queryClient.invalidateQueries({ queryKey: ["cash-advance-refunds"] });
 }
 
 export function useCreateManualReceipt() {
