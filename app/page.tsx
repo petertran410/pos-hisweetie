@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/lib/store/auth";
 import { useCan, useIsAdmin } from "@/lib/hooks/useCan";
 import { DashboardHeader } from "@/components/layout/DashboardHeader";
+import { RouteGuard } from "@/components/layout/RouteGuard";
 import { branchesApi } from "@/lib/api/branches";
 import {
   dashboardApi,
@@ -65,7 +66,21 @@ const TOP_METRICS: { key: TopMetric; label: string }[] = [
 
 const dir = (n: number): DeltaDir => (n > 0 ? "up" : n < 0 ? "down" : "flat");
 
+/**
+ * Trang "/" nằm NGOÀI layout (dashboard) nên phải tự bọc RouteGuard: access
+ * token và hồ sơ/quyền chỉ nằm trong bộ nhớ, reload trang là mất — RouteGuard
+ * lấy lại token (refresh cookie) + /auth/profile rồi mới hiển thị. Thiếu nó,
+ * user = null → header thiếu menu và trang trống cho tới khi chuyển trang.
+ */
 export default function Home() {
+  return (
+    <RouteGuard>
+      <HomeContent />
+    </RouteGuard>
+  );
+}
+
+function HomeContent() {
   const router = useRouter();
   const { isAuthenticated, _hasHydrated } = useAuthStore();
   const canViewDashboard = useCan("dashboard", "view");
