@@ -23,6 +23,7 @@ import {
   Settings,
   LogOut,
   ShoppingCart,
+  MonitorSmartphone,
 } from "lucide-react";
 
 export function DashboardHeader() {
@@ -400,6 +401,11 @@ export function DashboardHeader() {
                       className="px-4 py-2 text-sm hover:bg-gray-100">
                       Cài Đặt
                     </Link>
+                    <Link
+                      href="/cai-dat/thiet-bi"
+                      className="px-4 py-2 text-sm hover:bg-gray-100">
+                      Thiết bị đăng nhập
+                    </Link>
                     <button
                       onClick={handleLogout}
                       className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
@@ -652,6 +658,13 @@ export function DashboardHeader() {
                   </div>
                 </div>
 
+                <Link
+                  href="/cai-dat/thiet-bi"
+                  onClick={closeMobileMenu}
+                  className="mb-2 flex items-center justify-center gap-1.5 px-3 py-2 text-sm text-white border border-brand-dark rounded-lg hover:bg-brand-dark transition-colors">
+                  <MonitorSmartphone className="w-4 h-4" />
+                  Thiết bị đăng nhập
+                </Link>
                 <div className="flex gap-2">
                   <Link
                     href="/cai-dat"

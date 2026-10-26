@@ -10,6 +10,8 @@ const REVOKE_MESSAGES: Record<string, string> = {
   permission: "Quyền của bạn đã được thay đổi. Vui lòng đăng nhập lại.",
   password: "Mật khẩu đã được thay đổi. Vui lòng đăng nhập lại.",
   disabled: "Tài khoản đã bị vô hiệu hóa.",
+  remote_logout: "Bạn đã bị đăng xuất khỏi thiết bị này.",
+  reuse: "Phát hiện phiên đăng nhập bất thường. Vui lòng đăng nhập lại.",
   default: "Phiên đăng nhập không còn hiệu lực. Vui lòng đăng nhập lại.",
 };
 

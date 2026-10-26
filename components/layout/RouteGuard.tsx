@@ -10,7 +10,6 @@ import {
   endSession,
   ensureAccessToken,
   installSessionListeners,
-  isLegacyToken,
 } from "@/lib/auth/session";
 
 const SUPER_ADMIN_ROLE = "Super Admin";
@@ -33,14 +32,14 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   const lastSyncedKey = useRef<string | null>(null);
 
   // Mở trang: access token chỉ nằm trong bộ nhớ nên lấy lại bằng refresh
-  // token (cookie HttpOnly), hoặc chuyển phiên cũ sang cơ chế mới.
+  // token (cookie HttpOnly).
   useEffect(() => {
     installSessionListeners();
   }, []);
 
   useEffect(() => {
     if (!_hasHydrated || !isAuthenticated) return;
-    if (token && !isLegacyToken(token)) return;
+    if (token) return;
     void ensureAccessToken();
   }, [_hasHydrated, isAuthenticated, token]);
 
@@ -52,8 +51,6 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   // backend trả 401 → clearAuth + redirect /login.
   useEffect(() => {
     if (!_hasHydrated || !isAuthenticated || !token) return;
-    // Phiên cũ đang được chuyển sang token mới → đợi token mới.
-    if (isLegacyToken(token)) return;
 
     const branchId = selectedBranch?.id;
     const key = `${token}:${branchId ?? ""}`;

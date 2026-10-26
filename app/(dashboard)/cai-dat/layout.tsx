@@ -13,6 +13,7 @@ import {
   CreditCard,
   FileSignature,
   KeyRound,
+  MonitorSmartphone,
 } from "lucide-react";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import "@/app/dashboard.css";
@@ -24,7 +25,13 @@ export default function SettingsLayout({
 }) {
   const pathname = usePathname();
 
-  const menuItems = [
+  const menuItems: {
+    href: string;
+    label: string;
+    icon: typeof Users;
+    /** Không có → ai đăng nhập cũng thấy. */
+    permission?: { resource: string; action: string };
+  }[] = [
     {
       href: "/cai-dat/nguoi-dung",
       label: "Người dùng",
@@ -85,6 +92,11 @@ export default function SettingsLayout({
       icon: RefreshCw,
       permission: { resource: "settings", action: "update" },
     },
+    {
+      href: "/cai-dat/thiet-bi",
+      label: "Thiết bị đăng nhập",
+      icon: MonitorSmartphone,
+    },
   ];
 
   return (
@@ -92,19 +104,21 @@ export default function SettingsLayout({
       <div
         className="w-64 border-r bg-white"
         style={{ borderColor: "var(--dt-border)" }}>
-        <div className="p-4 border-b" style={{ borderColor: "var(--dt-border)" }}>
+        <div
+          className="p-4 border-b"
+          style={{ borderColor: "var(--dt-border)" }}>
           <h2 className="text-xl font-bold">Cài đặt</h2>
-          <p className="text-sm mt-1" style={{ color: "var(--dt-text-secondary)" }}>
+          <p
+            className="text-sm mt-1"
+            style={{ color: "var(--dt-text-secondary)" }}>
             Quản lý hệ thống
           </p>
         </div>
         <nav className="p-2">
-          {menuItems.map((item) => (
-            <PermissionGate
-              key={item.href}
-              resource={item.permission.resource}
-              action={item.permission.action}>
+          {menuItems.map((item) => {
+            const link = (
               <Link
+                key={item.href}
                 href={item.href}
                 className={`dt-menu-item flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-colors ${
                   pathname === item.href
@@ -114,8 +128,18 @@ export default function SettingsLayout({
                 <item.icon className="w-5 h-5" />
                 <span>{item.label}</span>
               </Link>
-            </PermissionGate>
-          ))}
+            );
+            return item.permission ? (
+              <PermissionGate
+                key={item.href}
+                resource={item.permission.resource}
+                action={item.permission.action}>
+                {link}
+              </PermissionGate>
+            ) : (
+              link
+            );
+          })}
         </nav>
       </div>
       <div className="flex-1 overflow-auto">{children}</div>

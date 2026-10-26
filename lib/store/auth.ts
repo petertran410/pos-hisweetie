@@ -90,11 +90,15 @@ export const useAuthStore = create<AuthState>()(
       storage: createJSONStorage(() => localStorage),
       // CHỈ lưu cờ isAuthenticated. Token và hồ sơ/quyền KHÔNG được lưu
       // xuống localStorage (ai mở DevTools/extension/XSS đều đọc được).
-      // Bản cũ từng lưu token + user: lần rehydrate đầu, token cũ được nạp vào
-      // bộ nhớ để lib/auth/session.ts chuyển sang phiên mới, lần ghi kế tiếp
-      // sẽ xóa chúng khỏi localStorage.
-      version: 2,
-      migrate: (persisted) => persisted as AuthState,
+      // Bản cũ từng lưu token 7 ngày + user: bỏ hẳn khi nạp lại (server không
+      // còn nhận token kiểu cũ), phiên được lấy lại bằng refresh token cookie.
+      version: 3,
+      migrate: (persisted) =>
+        ({
+          isAuthenticated: Boolean(
+            (persisted as Partial<AuthState> | null)?.isAuthenticated,
+          ),
+        }) as AuthState,
       partialize: (state) => ({
         isAuthenticated: state.isAuthenticated,
       }),

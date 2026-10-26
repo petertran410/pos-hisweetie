@@ -47,21 +47,6 @@ function scheduleRefresh(expiresAt: number) {
   }, delay);
 }
 
-/** Đọc payload JWT (chỉ để biết token có `sid` hay chưa — không dùng để tin quyền). */
-function readTokenPayload(token: string): { sid?: number } | null {
-  try {
-    const part = token.split(".")[1];
-    const json = atob(part.replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
-}
-
-/** Token định dạng cũ (7 ngày, lưu localStorage trước đây) — chưa gắn phiên refresh. */
-export const isLegacyToken = (token: string) =>
-  readTokenPayload(token)?.sid === undefined;
-
 /**
  * Kết thúc phiên ở tab này (và báo các tab khác), chuyển về trang đăng nhập.
  */
@@ -139,33 +124,6 @@ export function refreshAccessToken(): Promise<boolean> {
 }
 
 /**
- * Chuyển phiên cũ (token 7 ngày còn sót trong localStorage) sang refresh
- * token cookie — người dùng không phải đăng nhập lại.
- */
-async function migrateLegacySession(legacyToken: string): Promise<boolean> {
-  try {
-    const res = await fetch(`${API_URL}/auth/session/migrate`, {
-      method: "POST",
-      credentials: "include",
-      headers: { Authorization: `Bearer ${legacyToken}` },
-    });
-    if (res.ok) {
-      const data = (await res.json()) as {
-        accessToken: string;
-        expiresIn: number;
-      };
-      applyAccessToken(data.accessToken, data.expiresIn);
-      return true;
-    }
-  } catch {
-    // rơi xuống refresh bên dưới
-  }
-  // Token cũ không dùng được → bỏ, thử refresh cookie (có thể đã có).
-  useAuthStore.getState().setAccessToken(null, null);
-  return refreshAccessToken();
-}
-
-/**
  * Gọi khi mở trang: đảm bảo có access token trong bộ nhớ.
  * Trả true nếu đã có phiên hợp lệ.
  */
@@ -175,7 +133,6 @@ export function ensureAccessToken(): Promise<boolean> {
   if (ensuring) return ensuring;
   ensuring = (async () => {
     const { token, tokenExpiresAt } = useAuthStore.getState();
-    if (token && isLegacyToken(token)) return migrateLegacySession(token);
     if (token && tokenExpiresAt && tokenExpiresAt - Date.now() > 5_000) {
       return true;
     }

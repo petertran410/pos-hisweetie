@@ -7,6 +7,8 @@ import { useBranches } from "@/lib/hooks/useBranches";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import { useAuthStore } from "@/lib/store/auth";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { PermissionGate } from "@/components/permissions/PermissionGate";
+import { UserDevicesSection } from "@/components/sessions/UserDevicesSection";
 
 interface UserFormModalProps {
   userId: number | null;
@@ -42,10 +44,7 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
     orderBy: "name",
     orderDirection: "asc",
   });
-  const suppliers = useMemo(
-    () => suppliersResp?.data || [],
-    [suppliersResp]
-  );
+  const suppliers = useMemo(() => suppliersResp?.data || [], [suppliersResp]);
   const supplierOptions = useMemo(
     () =>
       suppliers.map((s: any) => ({
@@ -53,11 +52,11 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
         label: s.name,
         sublabel: s.code || undefined,
       })),
-    [suppliers]
+    [suppliers],
   );
   const activeBranches = useMemo(
     () => (branches || []).filter((b: any) => b.isActive),
-    [branches]
+    [branches],
   );
 
   useEffect(() => {
@@ -215,7 +214,6 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
                   </button>
                 </div>
               </div>
-
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -282,9 +280,7 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
                 <SearchableSelect
                   value={formData.supplierId}
                   options={supplierOptions}
-                  onChange={(v) =>
-                    setFormData({ ...formData, supplierId: v })
-                  }
+                  onChange={(v) => setFormData({ ...formData, supplierId: v })}
                   placeholder="Nhân viên nội bộ (không giới hạn)"
                   emptyLabel="Nhân viên nội bộ (không giới hạn)"
                   searchPlaceholder="Tìm nhà cung cấp theo tên / mã..."
@@ -338,6 +334,12 @@ export function UserFormModal({ userId, onClose }: UserFormModalProps) {
                 Kích hoạt tài khoản
               </label>
             </div>
+
+            {userId && (
+              <PermissionGate resource="users" action="update">
+                <UserDevicesSection userId={userId} userName={user?.name} />
+              </PermissionGate>
+            )}
           </div>
 
           <div className="flex items-center justify-end gap-3 p-6 border-t bg-gray-50 flex-shrink-0">
