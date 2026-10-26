@@ -13,6 +13,7 @@ import {
   CreditCard,
   FileSignature,
   KeyRound,
+  MessageCircle,
 } from "lucide-react";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import "@/app/dashboard.css";
@@ -77,6 +78,12 @@ export default function SettingsLayout({
       href: "/cai-dat/tich-hop-api",
       label: "Tích hợp API",
       icon: KeyRound,
+      permission: { resource: "settings", action: "update" },
+    },
+    {
+      href: "/cai-dat/smax",
+      label: "Smax",
+      icon: MessageCircle,
       permission: { resource: "settings", action: "update" },
     },
     {

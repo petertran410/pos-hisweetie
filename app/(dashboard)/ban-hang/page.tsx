@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useRegisterCustomerInView } from "@/lib/store/customersInView";
+import { useRegisterPosInView } from "@/lib/store/posInView";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProductSearchDropdown } from "@/components/pos/ProductSearchDropdown";
 import { OrderItemsList } from "@/components/pos/OrderItemsList";
@@ -672,6 +674,27 @@ export default function BanHangPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId) || tabs[0];
+  useRegisterCustomerInView(activeTab?.selectedCustomer, "Bán hàng (tab đang mở)");
+  // Giỏ của tab đang mở → gợi ý "Báo giá" trong menu "/" của chat Zalo
+  useRegisterPosInView(
+    activeTab?.cartItems?.length
+      ? {
+          type: "cart",
+          id: activeTab.id,
+          label: activeTab.code || activeTab.label,
+          lines: activeTab.cartItems.map((item) => ({
+            name: item.product?.name ?? "",
+            code: item.product?.code,
+            unit: item.product?.unit,
+            quantity: Number(item.quantity),
+            price: Number(item.price),
+            // discount là giảm/đơn vị (thành tiền = (giá − giảm) × SL)
+            discount: Number(item.discount || 0) * Number(item.quantity),
+            isGift: item.isPromoGift && item.promoLineType === "gift",
+          })),
+        }
+      : null
+  );
 
   // ── Cảnh báo lệch giá: so đơn giá hiện tại với giá bán gần nhất (hóa đơn) ──
   const activeProductIds = useMemo(

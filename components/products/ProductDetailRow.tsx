@@ -1,6 +1,7 @@
 // components/products/ProductDetailRow.tsx
 "use client";
 
+import { useRegisterPosInView } from "@/lib/store/posInView";
 import { useLayoutEffect, useRef, useState } from "react";
 import {
   useProduct,
@@ -125,6 +126,9 @@ export function ProductDetailRow({
   colSpan,
 }: ProductDetailRowProps) {
   const { data: product, isLoading } = useProduct(productId);
+  useRegisterPosInView(
+    product ? { type: "product", id: product.id, code: product.code, name: product.name } : null
+  );
   const updateProduct = useUpdateProduct();
   const { selectedBranch } = useBranchStore();
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { useRegisterPosInView } from "@/lib/store/posInView";
+import { useRegisterCustomerInView } from "@/lib/store/customersInView";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -104,6 +106,8 @@ export function InvoicesMobileDetailSheet({
 }: InvoicesMobileDetailSheetProps) {
   const router = useRouter();
   const { data: invoice, isLoading } = useInvoice(invoiceId);
+  useRegisterCustomerInView(invoice?.customer, `Hóa đơn ${invoice?.code ?? ""}`);
+  useRegisterPosInView(invoice ? { type: "invoice", id: invoice.id, code: invoice.code } : null);
   const updateInvoice = useUpdateInvoice();
   const cancelInvoice = useCancelInvoice();
 

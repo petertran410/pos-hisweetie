@@ -1,5 +1,6 @@
 "use client";
 
+import { useRegisterCustomerInView } from "@/lib/store/customersInView";
 import { useState, useEffect, useMemo } from "react";
 import { useCustomers } from "@/lib/hooks/useCustomers";
 import { useCustomerGroups } from "@/lib/hooks/useCustomers";
@@ -515,6 +516,7 @@ export function CustomersMobileView({
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
   );
+  useRegisterCustomerInView(selectedCustomer, "Chi tiết khách hàng");
   const [showFilter, setShowFilter] = useState(false);
   const limit = 20;
 

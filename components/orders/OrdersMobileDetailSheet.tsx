@@ -1,5 +1,7 @@
 "use client";
 
+import { useRegisterPosInView } from "@/lib/store/posInView";
+import { useRegisterCustomerInView } from "@/lib/store/customersInView";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -83,6 +85,8 @@ export function OrdersMobileDetailSheet({
 }: OrdersMobileDetailSheetProps) {
   const router = useRouter();
   const { data: order, isLoading } = useOrder(orderId);
+  useRegisterCustomerInView(order?.customer, `Đặt hàng ${order?.code ?? ""}`);
+  useRegisterPosInView(order ? { type: "order", id: order.id, code: order.code } : null);
   const updateOrder = useUpdateOrder();
   const cancelOrder = useCancelOrder();
 
