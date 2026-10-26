@@ -11,6 +11,8 @@ export interface ZaloContact {
 export interface ChatChannel {
   pagePid: string;
   name: string;
+  // Ảnh đại diện tài khoản Zalo của kênh
+  avatar: string | null;
   platform: "zalo" | "zaloweb" | string;
   connectionError: { at: string | null; note: string | null } | null;
   // Đã liên kết nhưng kênh không còn trên Smax
@@ -107,6 +109,11 @@ export interface RecentChat {
   lastMessage: string;
   lastMessageAt: string | null;
   unread: boolean;
+  // Tổng số tin của thread — "tin mới" = chênh lệch so với lần xem gần nhất trên POS
+  messageCount: number;
+  avatar: string | null;
+  memberPreview: { name: string | null; avatar: string | null }[];
+  smaxUrl: string;
   // linked: đã lưu ID Zalo cho khách; byCode: đoán theo mã khách trong tên nhóm
   match:
     | { type: "linked"; customer: { id: number; code: string | null; name: string }; contactId: number; kind: ZaloContactKind }

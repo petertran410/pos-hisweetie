@@ -636,7 +636,8 @@ export function ChatComposer({
         </div>
       )}
 
-      <div className="flex items-end gap-2">
+      {/* stretch: ô soạn cao bằng cột nút bên phải, không chừa khoảng trống */}
+      <div className="flex items-stretch gap-2">
         <input
           ref={inputRef}
           type="file"
@@ -695,7 +696,7 @@ export function ChatComposer({
           }}
           disabled={disabled}
           rows={2}
-          style={{ height: composerHeight }}
+          style={{ minHeight: composerHeight }}
           maxLength={2000}
           placeholder={
             disabled
@@ -705,7 +706,7 @@ export function ChatComposer({
           className="flex-1 resize-none border rounded-md px-3 py-2 text-sm outline-none focus:border-brand disabled:bg-gray-100"
         />
         {/* Cột phải: đính kèm, emoji/sticker xếp dọc trên nút Gửi */}
-        <div className="flex shrink-0 flex-col items-center gap-1">
+        <div className="flex shrink-0 flex-col items-center justify-end gap-1">
           <div className="flex flex-col gap-0.5">
             <button
               onClick={() => inputRef.current?.click()}

@@ -6,6 +6,7 @@ import { useSearchCustomers } from "@/lib/hooks/useCustomers";
 import { useCustomersInViewStore } from "@/lib/store/customersInView";
 import type { ChatCustomerRef } from "@/lib/store/chatSidebar";
 import { RecentChatsList, type RecentChatTarget } from "./RecentChatsList";
+import { useActiveChannel } from "@/lib/chat/channels";
 
 interface Props {
   // target: mở đúng kênh / trực tiếp / nhóm (từ "Đang chat gần đây")
@@ -15,6 +16,7 @@ interface Props {
 /** Chọn khách: khách đang hiển thị trên màn hình, đang chat gần đây, hoặc tìm khách khác. */
 export function ChatCustomerPicker({ onSelect }: Props) {
   const entries = useCustomersInViewStore((s) => s.entries);
+  const { channel } = useActiveChannel();
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
 
@@ -116,7 +118,7 @@ export function ChatCustomerPicker({ onSelect }: Props) {
         )}
       </section>
 
-      <RecentChatsList onOpen={(c, target) => onSelect(c, target)} />
+      <RecentChatsList pagePid={channel?.pagePid} onOpen={(c, target) => onSelect(c, target)} />
     </div>
   );
 }

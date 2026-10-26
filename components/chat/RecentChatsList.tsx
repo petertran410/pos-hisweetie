@@ -1,13 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, RotateCw, User, UsersRound } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Loader2, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { smaxChatApi } from "@/lib/api/smaxChat";
 import { useCan } from "@/lib/hooks/useCan";
 import { useRecentChats } from "@/lib/hooks/useSmaxChat";
 import type { ChatCustomerRef } from "@/lib/store/chatSidebar";
 import type { RecentChat, ZaloContactKind } from "@/lib/types/smaxChat";
+import { openExternal } from "@/lib/chat/confirm";
+import { markSeen, newCount } from "@/lib/chat/seen";
+import { ZaloAvatar } from "./ZaloAvatar";
 
 const COLLAPSED = 8;
 
@@ -20,6 +24,8 @@ export interface RecentChatTarget {
 
 interface Props {
   onOpen: (customer: ChatCustomerRef, target: RecentChatTarget | null) => void;
+  // Kênh đang chọn (hội thoại gần đây theo kênh)
+  pagePid?: string | null;
 }
 
 function ago(iso: string | null) {
@@ -32,18 +38,18 @@ function ago(iso: string | null) {
   return new Date(iso).toLocaleDateString("vi-VN");
 }
 
-/** Hội thoại mới nhất trên kênh Zalo của tôi, khớp với khách POS để mở nhanh. */
-export function RecentChatsList({ onOpen }: Props) {
-  const { data, isLoading, isFetching, error, refetch } = useRecentChats(true);
+/** Mở hội thoại gần đây: đã gắn khách → mở thẳng; khớp mã khách → gắn nhóm rồi mở; chưa gắn → mở Smax. */
+export function useOpenRecentChat(onOpen: Props["onOpen"]) {
   const canManage = useCan("smax_chat", "manage_contacts");
+  const queryClient = useQueryClient();
   const [linking, setLinking] = useState<string | null>(null);
-  const [showAll, setShowAll] = useState(false);
-  const items = data?.items ?? [];
-  const matched = items.filter((i) => i.match);
-  const unmatched = items.length - matched.length;
 
   const open = async (c: RecentChat) => {
-    if (!c.match) return;
+    markSeen(c.tid, c.messageCount);
+    if (!c.match) {
+      openExternal(c.smaxUrl);
+      return;
+    }
     const kind: ZaloContactKind = c.isGroup ? "group" : "user";
     if (c.match.type === "linked") {
       onOpen(c.match.customer, {
@@ -53,7 +59,6 @@ export function RecentChatsList({ onOpen }: Props) {
       });
       return;
     }
-    // Khớp theo mã khách trong tên nhóm: lưu ID Zalo cho khách rồi mở (cần quyền quản lý ID Zalo)
     if (!canManage) {
       onOpen(c.match.customer, null);
       return;
@@ -66,7 +71,7 @@ export function RecentChatsList({ onOpen }: Props) {
         name: c.name || undefined,
       });
       toast.success(`Đã gắn ${c.isGroup ? "nhóm" : "Zalo"} "${c.name}" cho ${c.match.customer.code ?? c.match.customer.name}`);
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ["smaxRecentChats"] });
       onOpen(c.match.customer, {
         pagePid: c.pagePid,
         kind,
@@ -78,6 +83,17 @@ export function RecentChatsList({ onOpen }: Props) {
       setLinking(null);
     }
   };
+  return { open, linking, canManage };
+}
+
+/** Hội thoại mới nhất trên kênh Zalo đang chọn, khớp với khách POS để mở nhanh. */
+export function RecentChatsList({ onOpen, pagePid }: Props) {
+  const { data, isLoading, isFetching, error, refetch } = useRecentChats(true, pagePid);
+  const { open, linking, canManage } = useOpenRecentChat(onOpen);
+  const [showAll, setShowAll] = useState(false);
+  const items = data?.items ?? [];
+  const matched = items.filter((i) => i.match);
+  const unmatched = items.length - matched.length;
 
   return (
     <section>
@@ -101,14 +117,17 @@ export function RecentChatsList({ onOpen }: Props) {
         <ul className="flex flex-col gap-1">
           {(showAll ? matched : matched.slice(0, COLLAPSED)).map((c) => {
             const m = c.match!;
-            const Icon = c.isGroup ? UsersRound : User;
+            const unseen = newCount(c.tid, c.messageCount);
             return (
               <li key={c.tid}>
                 <button
                   onClick={() => open(c)}
                   disabled={linking === c.tid}
                   className="w-full flex items-start gap-2 rounded-md px-3 py-2 text-left hover:bg-cyan-bg border border-transparent hover:border-brand-border disabled:opacity-60">
-                  <Icon className="w-4 h-4 mt-0.5 text-brand shrink-0" />
+                  <span className="relative shrink-0">
+                    <ZaloAvatar avatar={c.avatar} isGroup={c.isGroup} members={c.isGroup ? c.memberPreview : [{ name: c.name, avatar: null }]} size={28} />
+                    {unseen > 0 && <UnseenBadge count={unseen} />}
+                  </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
                       <span className={`truncate text-sm ${c.unread ? "font-semibold" : "font-medium"}`}>
@@ -156,5 +175,14 @@ export function RecentChatsList({ onOpen }: Props) {
         </p>
       )}
     </section>
+  );
+}
+
+/** Số tin mới (so với lần xem gần nhất trên POS). */
+export function UnseenBadge({ count }: { count: number }) {
+  return (
+    <span className="absolute -right-1.5 -top-1.5 min-w-[16px] rounded-full bg-red-500 px-1 text-center text-[10px] font-semibold leading-4 text-white ring-2 ring-white">
+      {count > 99 ? "99+" : count}
+    </span>
   );
 }
