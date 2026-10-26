@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useBranchStore } from "@/lib/store/branch";
 import { useAuthStore } from "@/lib/store/auth";
+import { endSession } from "@/lib/auth/session";
 import { authApi } from "@/lib/api/auth";
 import { Branch, branchesApi } from "@/lib/api/branches";
 import { useQuery } from "@tanstack/react-query";
@@ -87,7 +88,7 @@ export function BranchSelector({
           branchIds: profile.branchIds || currentUser.branchIds,
           roles: profile.roles || currentUser.roles,
         },
-        token
+        token,
       );
     } catch (err: unknown) {
       console.error("[BranchSelector] fetch profile failed:", err);
@@ -102,18 +103,9 @@ export function BranchSelector({
         msg.includes("quyền của bạn đã được thay đổi");
 
       if (isAuthErr) {
-        useAuthStore.getState().clearAuth();
-        if (typeof window !== "undefined") {
-          sessionStorage.setItem(
-            "auth-error",
-            "Quyền của bạn đã được thay đổi. Vui lòng đăng nhập lại."
-          );
-          window.location.href = "/login";
-        }
+        endSession("Quyền của bạn đã được thay đổi. Vui lòng đăng nhập lại.");
       } else {
-        toast.error(
-          "Không thể tải quyền cho chi nhánh này. Vui lòng thử lại."
-        );
+        toast.error("Không thể tải quyền cho chi nhánh này. Vui lòng thử lại.");
         // Để RouteGuard tự retry sync ở lần render kế tiếp.
         useAuthStore.getState().setProfileSynced(false);
       }

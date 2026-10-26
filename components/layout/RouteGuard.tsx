@@ -6,6 +6,12 @@ import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
 import { getRoutePermission } from "@/lib/permissions/registry";
 import { authApi } from "@/lib/api/auth";
+import {
+  endSession,
+  ensureAccessToken,
+  installSessionListeners,
+  isLegacyToken,
+} from "@/lib/auth/session";
 
 const SUPER_ADMIN_ROLE = "Super Admin";
 
@@ -26,6 +32,18 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   // Tránh fetch chồng chéo cho cùng một (token, branchId).
   const lastSyncedKey = useRef<string | null>(null);
 
+  // Mở trang: access token chỉ nằm trong bộ nhớ nên lấy lại bằng refresh
+  // token (cookie HttpOnly), hoặc chuyển phiên cũ sang cơ chế mới.
+  useEffect(() => {
+    installSessionListeners();
+  }, []);
+
+  useEffect(() => {
+    if (!_hasHydrated || !isAuthenticated) return;
+    if (token && !isLegacyToken(token)) return;
+    void ensureAccessToken();
+  }, [_hasHydrated, isAuthenticated, token]);
+
   // Refetch /auth/profile khi:
   // - Vừa rehydrate xong và có token nhưng chưa sync trong session này.
   // - selectedBranch thay đổi (permissions phụ thuộc branch).
@@ -33,7 +51,9 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   // quá 1 lần load trang. Nếu token đã invalidate (permissionVersion lệch),
   // backend trả 401 → clearAuth + redirect /login.
   useEffect(() => {
-    if (!_hasHydrated || !isAuthenticated || !token || !user) return;
+    if (!_hasHydrated || !isAuthenticated || !token) return;
+    // Phiên cũ đang được chuyển sang token mới → đợi token mới.
+    if (isLegacyToken(token)) return;
 
     const branchId = selectedBranch?.id;
     const key = `${token}:${branchId ?? ""}`;
@@ -61,14 +81,9 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
             msg.includes("token") ||
             msg.includes("quyền của bạn đã được thay đổi")
           ) {
-            clearAuth();
-            if (typeof window !== "undefined") {
-              sessionStorage.setItem(
-                "auth-error",
-                "Quyền của bạn đã được thay đổi. Vui lòng đăng nhập lại."
-              );
-              window.location.href = "/login";
-            }
+            endSession(
+              message || "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+            );
             return;
           }
         }
@@ -105,21 +120,23 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
 
     if (Array.isArray(required)) {
       const hasAny = required.some((def) =>
-        user.permissions?.includes(`${def.resource}:${def.action}`)
+        user.permissions?.includes(`${def.resource}:${def.action}`),
       );
       if (!hasAny) router.replace("/");
     } else {
       const key = `${required.resource}:${required.action}`;
       if (!user.permissions?.includes(key)) router.replace("/");
     }
-  }, [
-    pathname,
-    user,
-    isAuthenticated,
-    _hasHydrated,
-    isProfileSynced,
-    router,
-  ]);
+  }, [pathname, user, isAuthenticated, _hasHydrated, isProfileSynced, router]);
+
+  // Hồ sơ/quyền không còn lưu ở localStorage → chờ tải xong mới hiển thị.
+  if (_hasHydrated && isAuthenticated && !user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
+      </div>
+    );
+  }
 
   return <>{children}</>;
 }

@@ -1,5 +1,6 @@
 import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "../store/branch";
+import { endSession, refreshAccessToken } from "@/lib/auth/session";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -37,7 +38,7 @@ const DEFAULT_TIMEOUT_MS = 30000;
 const fetchWithTimeout = async (
   input: string,
   init: RequestInit = {},
-  timeoutMs: number = DEFAULT_TIMEOUT_MS
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
 ): Promise<Response> => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -47,7 +48,7 @@ const fetchWithTimeout = async (
     if (e instanceof DOMException && e.name === "AbortError") {
       throw createApiError(
         "Kết nối tới máy chủ quá thời gian, vui lòng thử lại",
-        0
+        0,
       );
     }
     if (e instanceof TypeError) {
@@ -61,11 +62,7 @@ const fetchWithTimeout = async (
 
 const handleApiError = async (res: Response) => {
   if (res.status === 401) {
-    const token = useAuthStore.getState().token;
-    if (token === "test-token" || token === "mock-token-for-testing") {
-      // Mock mode cho test browser — không clear auth
-      return;
-    }
+    // Đã thử làm mới token (authedFetch) mà vẫn 401 → phiên hết hiệu lực.
     let errorMessage = "Phiên đăng nhập đã hết hạn";
 
     try {
@@ -78,13 +75,7 @@ const handleApiError = async (res: Response) => {
       }
     } catch {}
 
-    useAuthStore.getState().clearAuth();
-
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("auth-error", errorMessage);
-      window.location.href = "/login";
-    }
-
+    endSession(errorMessage);
     throw createApiError(errorMessage, 401);
   }
 
@@ -121,10 +112,32 @@ const handleApiError = async (res: Response) => {
   throw createApiError(errorMessage, res.status);
 };
 
+/**
+ * Gọi API kèm access token (bộ nhớ). Gặp 401 → làm mới token bằng refresh
+ * cookie 1 lần rồi gọi lại (token có thể vừa hết hạn 15 phút).
+ */
+const authedFetch = async (
+  url: string,
+  init: RequestInit,
+  timeoutMs?: number,
+  opts: { form?: boolean } = {},
+): Promise<Response> => {
+  const withAuth = (): RequestInit => {
+    const headers = getAuthHeaders();
+    if (opts.form) delete headers["Content-Type"];
+    return { ...init, headers };
+  };
+  let res = await fetchWithTimeout(url, withAuth(), timeoutMs);
+  if (res.status === 401 && (await refreshAccessToken())) {
+    res = await fetchWithTimeout(url, withAuth(), timeoutMs);
+  }
+  return res;
+};
+
 export const apiClient = {
   get: async <T = any>(
     endpoint: string,
-    params?: Record<string, any>
+    params?: Record<string, any>,
   ): Promise<T> => {
     const url = new URL(`${API_URL}${endpoint}`);
     if (params) {
@@ -142,9 +155,7 @@ export const apiClient = {
       });
     }
 
-    const res = await fetchWithTimeout(url.toString(), {
-      headers: getAuthHeaders(),
-    });
+    const res = await authedFetch(url.toString(), {});
 
     if (!res.ok) {
       await handleApiError(res);
@@ -154,13 +165,12 @@ export const apiClient = {
   },
 
   postForm: async <T = any>(endpoint: string, data: FormData): Promise<T> => {
-    const headers = getAuthHeaders();
-    delete headers["Content-Type"];
-    const res = await fetchWithTimeout(`${API_URL}${endpoint}`, {
-      method: "POST",
-      headers,
-      body: data,
-    });
+    const res = await authedFetch(
+      `${API_URL}${endpoint}`,
+      { method: "POST", body: data },
+      undefined,
+      { form: true },
+    );
 
     if (!res.ok) {
       await handleApiError(res);
@@ -174,13 +184,9 @@ export const apiClient = {
     data?: any,
     timeoutMs?: number,
   ): Promise<T> => {
-    const res = await fetchWithTimeout(
+    const res = await authedFetch(
       `${API_URL}${endpoint}`,
-      {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-      },
+      { method: "POST", body: JSON.stringify(data) },
       timeoutMs,
     );
 
@@ -202,9 +208,8 @@ export const apiClient = {
   },
 
   put: async <T = any>(endpoint: string, data?: any): Promise<T> => {
-    const res = await fetchWithTimeout(`${API_URL}${endpoint}`, {
+    const res = await authedFetch(`${API_URL}${endpoint}`, {
       method: "PUT",
-      headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
 
@@ -226,9 +231,8 @@ export const apiClient = {
   },
 
   patch: async <T = any>(endpoint: string, data?: any): Promise<T> => {
-    const res = await fetchWithTimeout(`${API_URL}${endpoint}`, {
+    const res = await authedFetch(`${API_URL}${endpoint}`, {
       method: "PATCH",
-      headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
 
@@ -250,15 +254,12 @@ export const apiClient = {
   },
 
   delete: async <T = any>(endpoint: string, data?: any): Promise<T> => {
-    const options: RequestInit = {
-      method: "DELETE",
-      headers: getAuthHeaders(),
-    };
+    const options: RequestInit = { method: "DELETE" };
     if (data) {
       options.body = JSON.stringify(data);
     }
 
-    const res = await fetchWithTimeout(`${API_URL}${endpoint}`, options);
+    const res = await authedFetch(`${API_URL}${endpoint}`, options);
 
     if (!res.ok) {
       await handleApiError(res);

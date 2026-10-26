@@ -17,8 +17,12 @@ export interface User {
 }
 
 interface AuthState {
+  /** Hồ sơ + quyền: CHỈ trong bộ nhớ, tải lại từ /auth/profile mỗi lần mở trang. */
   user: User | null;
+  /** Access token 15 phút: CHỈ trong bộ nhớ (không lưu localStorage). */
   token: string | null;
+  tokenExpiresAt: number | null;
+  /** Gợi ý "có phiên" (được lưu) để biết lúc mở trang có nên gọi /auth/refresh. */
   isAuthenticated: boolean;
   _hasHydrated: boolean;
   // Đánh dấu permissions/roles đã được đồng bộ với backend trong session hiện tại.
@@ -28,6 +32,7 @@ interface AuthState {
   // dựa trên cache cũ trước khi backend kịp xác nhận.
   isProfileSynced: boolean;
   setAuth: (user: User, token: string) => void;
+  setAccessToken: (token: string | null, expiresAt: number | null) => void;
   updateUser: (patch: Partial<User>) => void;
   clearAuth: () => void;
   setHasHydrated: (hasHydrated: boolean) => void;
@@ -39,6 +44,7 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       token: null,
+      tokenExpiresAt: null,
       isAuthenticated: false,
       _hasHydrated: false,
       isProfileSynced: false,
@@ -51,6 +57,12 @@ export const useAuthStore = create<AuthState>()(
           // refetch profile, đổi branch) → coi như đã sync.
           isProfileSynced: true,
         }),
+      setAccessToken: (token, expiresAt) =>
+        set({
+          token,
+          tokenExpiresAt: expiresAt,
+          ...(token ? { isAuthenticated: true } : {}),
+        }),
       updateUser: (patch) => {
         const current = get().user;
         if (!current) return;
@@ -60,6 +72,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           user: null,
           token: null,
+          tokenExpiresAt: null,
           isAuthenticated: false,
           isProfileSynced: false,
         }),
@@ -75,12 +88,14 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "auth-storage",
       storage: createJSONStorage(() => localStorage),
-      // Chỉ persist user + token + isAuthenticated.
-      // KHÔNG persist isProfileSynced/_hasHydrated — đây là state runtime,
-      // mỗi lần load trang mới phải re-sync với backend trước khi tin cache.
+      // CHỈ lưu cờ isAuthenticated. Token và hồ sơ/quyền KHÔNG được lưu
+      // xuống localStorage (ai mở DevTools/extension/XSS đều đọc được).
+      // Bản cũ từng lưu token + user: lần rehydrate đầu, token cũ được nạp vào
+      // bộ nhớ để lib/auth/session.ts chuyển sang phiên mới, lần ghi kế tiếp
+      // sẽ xóa chúng khỏi localStorage.
+      version: 2,
+      migrate: (persisted) => persisted as AuthState,
       partialize: (state) => ({
-        user: state.user,
-        token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),
       onRehydrateStorage: () => (state) => {
@@ -89,6 +104,6 @@ export const useAuthStore = create<AuthState>()(
         // phải gọi /auth/profile để xác nhận permissions còn đúng.
         state?.setHasHydrated(true);
       },
-    }
-  )
+    },
+  ),
 );

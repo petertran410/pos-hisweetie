@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth";
+import { logout } from "@/lib/auth/session";
 import { toast } from "sonner";
 import { BranchSelector } from "./BranchSelector";
 import { SepayNotificationBell } from "../sepay/SepayNotificationBell";
@@ -35,14 +36,14 @@ export function DashboardHeader() {
     string | null
   >(null);
 
-  const { user, clearAuth } = useAuthStore();
+  const { user } = useAuthStore();
   const posActions = useFilteredPosActions();
   const { anyReport } = useReportAccess();
 
-  const handleLogout = () => {
-    clearAuth();
+  const handleLogout = async () => {
+    // Thu hồi refresh token phía server + đăng xuất mọi tab.
     toast.success("Đã đăng xuất");
-    router.push("/login");
+    await logout();
   };
 
   const closeMobileMenu = () => setShowMobileMenu(false);
@@ -65,7 +66,10 @@ export function DashboardHeader() {
         items: [
           { label: "Kiểm kho", href: "/san-pham/kiem-kho" },
           { label: "Chuyển loại tồn", href: "/san-pham/chuyen-loai-ton" },
-          { label: "Chất lượng hàng hóa", href: "/san-pham/chat-luong-hang-hoa" },
+          {
+            label: "Chất lượng hàng hóa",
+            href: "/san-pham/chat-luong-hang-hoa",
+          },
         ],
       },
       {
@@ -113,7 +117,7 @@ export function DashboardHeader() {
         ],
       },
     ],
-    []
+    [],
   );
 
   const orderSubmenu = useMemo(
@@ -126,7 +130,7 @@ export function DashboardHeader() {
       { label: "Cấn trừ công nợ", href: "/don-hang/can-tru-cong-no" },
       { label: "Báo đơn", href: "/don-hang/bao-don" },
     ],
-    []
+    [],
   );
 
   const financeSubmenu = useMemo(
@@ -141,35 +145,38 @@ export function DashboardHeader() {
       { label: "Xăng dầu & chăm sóc xe", href: "/tai-chinh/xe-co" },
       { label: "Biến động số dư", href: "/tai-chinh/bien-dong-so-du" },
     ],
-    []
+    [],
   );
 
   const customerSubmenu = useMemo(
     () => [
       { label: "Danh sách khách hàng", href: "/khach-hang" },
       { label: "Khuyến mãi", href: "/khach-hang/khuyen-mai" },
-      { label: "Demand khách hàng (OEM/đặt hộ)", href: "/khach-hang/demand-oem" },
+      {
+        label: "Demand khách hàng (OEM/đặt hộ)",
+        href: "/khach-hang/demand-oem",
+      },
       { label: "Hợp đồng", href: "/khach-hang/hop-dong" },
       { label: "Theo dõi công nợ", href: "/khach-hang/theo-doi-cong-no" },
     ],
-    []
+    [],
   );
 
   const filteredProductSubmenu = useFilteredSections(
     productSubmenu,
-    ROUTE_PERMISSIONS
+    ROUTE_PERMISSIONS,
   );
   const filteredOrderSubmenu = useFilteredMenuItems(
     orderSubmenu,
-    ROUTE_PERMISSIONS
+    ROUTE_PERMISSIONS,
   );
   const filteredFinanceSubmenu = useFilteredMenuItems(
     financeSubmenu,
-    ROUTE_PERMISSIONS
+    ROUTE_PERMISSIONS,
   );
   const filteredCustomerSubmenu = useFilteredMenuItems(
     customerSubmenu,
-    ROUTE_PERMISSIONS
+    ROUTE_PERMISSIONS,
   );
 
   useEffect(() => {

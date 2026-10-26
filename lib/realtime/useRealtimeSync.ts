@@ -4,6 +4,14 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { io, type Socket } from "socket.io-client";
 import { useAuthStore } from "@/lib/store/auth";
+import { endSession, refreshAccessToken } from "@/lib/auth/session";
+
+const REVOKE_MESSAGES: Record<string, string> = {
+  permission: "Quyền của bạn đã được thay đổi. Vui lòng đăng nhập lại.",
+  password: "Mật khẩu đã được thay đổi. Vui lòng đăng nhập lại.",
+  disabled: "Tài khoản đã bị vô hiệu hóa.",
+  default: "Phiên đăng nhập không còn hiệu lực. Vui lòng đăng nhập lại.",
+};
 
 /** Gom các sự kiện đến dồn dập (vd ra hóa đơn hàng loạt) rồi mới refetch 1 lần. */
 const INVALIDATE_DEBOUNCE_MS = 400;
@@ -72,9 +80,9 @@ export function useRealtimeSync() {
       reconnectionDelayMax: 10_000,
     });
 
-    // Server từ chối / chủ động ngắt (token hết hạn, bị khóa, đổi quyền, deploy
-    // lỗi...) → socket.io KHÔNG tự thử lại. Thử lại chậm sau 60s để tự hồi phục
-    // mà không spam server; đăng nhập lại (token mới) sẽ tạo kết nối mới ngay.
+    // Server từ chối token (access token 15 phút vừa hết hạn...) → xin token
+    // mới bằng refresh cookie; token đổi sẽ tạo kết nối mới (effect theo token).
+    // Server chủ động ngắt (hết hạn/thu hồi) → socket.io KHÔNG tự thử lại.
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     const scheduleRetry = () => {
       if (retryTimer) return;
@@ -88,8 +96,18 @@ export function useRealtimeSync() {
       console.info("[realtime] Lỗi kết nối:", err.message);
       if (err.message === "unauthorized") {
         socket.disconnect();
-        scheduleRetry();
+        void refreshAccessToken().then((ok) => {
+          if (!ok) scheduleRetry();
+        });
       }
+    });
+
+    // Bị đổi quyền / đổi mật khẩu / khóa tài khoản → đăng xuất ngay.
+    socket.on("auth.revoked", (payload: { reason?: string }) => {
+      endSession(
+        REVOKE_MESSAGES[payload?.reason ?? ""] ?? REVOKE_MESSAGES.default,
+        "revoked",
+      );
     });
 
     let hasConnected = false;
@@ -101,7 +119,11 @@ export function useRealtimeSync() {
     });
     socket.on("disconnect", (reason) => {
       console.info("[realtime] Mất kết nối:", reason);
-      if (reason === "io server disconnect") scheduleRetry();
+      if (reason === "io server disconnect") {
+        void refreshAccessToken().then((ok) => {
+          if (!ok) scheduleRetry();
+        });
+      }
     });
     socket.on("order.changed", scheduleInvalidate);
 

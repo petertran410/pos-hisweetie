@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/lib/store/auth";
+import { applyAccessToken, refreshAccessToken } from "@/lib/auth/session";
 import { toast } from "sonner";
 import { EyeOff, Eye, QrCode } from "lucide-react";
 import "@/app/dashboard.css";
@@ -48,23 +49,36 @@ function LoginContent() {
 
   const setupPasswordValue = watch("password");
 
-  const applySession = async (accessToken: string, user?: any) => {
-    if (user?.branchId) {
-      const profile = await authApi.getProfile(accessToken, user.branchId);
-      setAuth(profile, accessToken);
-      return;
-    }
-    if (user) {
-      setAuth(user, accessToken);
-      return;
-    }
-    const profile = await authApi.getProfile(accessToken);
-    if (profile.branchId) {
-      const withBranch = await authApi.getProfile(accessToken, profile.branchId);
+  // Access token chỉ nằm trong bộ nhớ; refresh token đã được backend đặt vào
+  // cookie HttpOnly. Sau đó tải hồ sơ/quyền (không lưu localStorage).
+  const applySession = async (
+    accessToken: string,
+    expiresIn: number,
+    user?: any,
+  ) => {
+    applyAccessToken(accessToken, expiresIn);
+    const branchId = user?.branchId;
+    const profile = await authApi.getProfile(accessToken, branchId);
+    if (!branchId && profile.branchId) {
+      const withBranch = await authApi.getProfile(
+        accessToken,
+        profile.branchId,
+      );
       setAuth(withBranch, accessToken);
       return;
     }
     setAuth(profile, accessToken);
+  };
+
+  /** Lark: backend đã đặt cookie refresh token → đổi lấy access token. */
+  const applyLarkSession = async () => {
+    const ok = await refreshAccessToken();
+    const { token, tokenExpiresAt } = useAuthStore.getState();
+    if (!ok || !token) throw new Error("Đăng nhập Lark thất bại");
+    await applySession(
+      token,
+      Math.max(1, Math.round(((tokenExpiresAt ?? 0) - Date.now()) / 1000)),
+    );
   };
 
   useEffect(() => {
@@ -78,12 +92,12 @@ function LoginContent() {
     window.history.replaceState(
       null,
       "",
-      window.location.pathname + window.location.search
+      window.location.pathname + window.location.search,
     );
 
     const error = params.get("lark_error");
     const setup = params.get("lark_setup");
-    const token = params.get("lark_token");
+    const larkOk = params.get("lark_ok");
     const nextReturn = params.get("return_to");
     if (nextReturn) setHashReturnUrl(nextReturn);
     if (error) {
@@ -94,9 +108,9 @@ function LoginContent() {
       setSetupToken(setup);
       return;
     }
-    if (token) {
+    if (larkOk) {
       setIsLoading(true);
-      applySession(token)
+      applyLarkSession()
         .then(() => {
           toast.success("Đăng nhập thành công!");
           router.replace(nextReturn || queryReturnUrl);
@@ -127,7 +141,11 @@ function LoginContent() {
     setIsLoading(true);
     try {
       const response = await authApi.login(data);
-      await applySession(response.accessToken, response.user);
+      await applySession(
+        response.accessToken,
+        response.expiresIn,
+        response.user,
+      );
       toast.success("Đăng nhập thành công!");
       router.replace(returnUrl);
     } catch (error: any) {
@@ -145,7 +163,11 @@ function LoginContent() {
         password: data.password,
         confirmPassword: data.confirmPassword,
       });
-      await applySession(response.accessToken, response.user);
+      await applySession(
+        response.accessToken,
+        response.expiresIn,
+        response.user,
+      );
       toast.success("Đã tạo mật khẩu, đăng nhập thành công!");
       router.replace(returnUrl);
     } catch (error: any) {

@@ -6,7 +6,9 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
+  /** Access token 15 phút — chỉ giữ trong bộ nhớ. Refresh token nằm ở cookie HttpOnly. */
   accessToken: string;
+  expiresIn: number;
   user: {
     id: number;
     name: string;
@@ -34,39 +36,14 @@ const LOGIN_TIMEOUT_MS = 25000;
 
 export const authApi = {
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
-    if (
-      credentials.email === "admin@hisweetievietnam.com.vn" ||
-      credentials.email === "admin@gmail.com" ||
-      credentials.password === "admin123" ||
-      credentials.password === "123456"
-    ) {
-      return {
-        accessToken: "test-token",
-        user: {
-          id: 1,
-          name: "Admin Tester",
-          email: credentials.email || "admin@hisweetievietnam.com.vn",
-          roles: ["admin", "Super Admin"],
-          permissions: [
-            "transfers:view",
-            "transfers:create",
-            "transfers:update",
-            "transfers:delete",
-            "transfers:export",
-            "products:view",
-          ],
-          branchId: 1,
-          branchName: "Kho Hà Nội",
-        },
-      };
-    }
-
     const doFetch = async (): Promise<Response> => {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), LOGIN_TIMEOUT_MS);
       try {
         return await fetch(`${API_URL}/auth/login`, {
           method: "POST",
+          // Bắt buộc để trình duyệt lưu cookie refresh token (HttpOnly).
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -90,7 +67,9 @@ export const authApi = {
         res = await doFetch();
       } catch (e2) {
         if (e2 instanceof DOMException && e2.name === "AbortError") {
-          throw new Error("Kết nối tới máy chủ quá thời gian, vui lòng thử lại");
+          throw new Error(
+            "Kết nối tới máy chủ quá thời gian, vui lòng thử lại",
+          );
         }
         throw new Error("Không thể kết nối tới máy chủ, vui lòng thử lại");
       }
@@ -109,17 +88,6 @@ export const authApi = {
       ? `${API_URL}/auth/profile?branchId=${branchId}`
       : `${API_URL}/auth/profile`;
 
-    if (token === "test-token" || token === "mock-token-for-testing") {
-      return {
-        id: 1,
-        name: "Admin Tester",
-        email: "admin@hisweetievietnam.com.vn",
-        roles: ["admin", "Super Admin"],
-        permissions: ["transfers:view", "transfers:create", "transfers:update", "transfers:delete", "transfers:export", "products:view"],
-        branchId: branchId || 1,
-      };
-    }
-
     const res = await fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -132,7 +100,7 @@ export const authApi = {
       // để RouteGuard phân biệt với lỗi mạng/5xx.
       if (res.status === 401 || res.status === 403) {
         throw new Error(
-          body.message || "Phiên đăng nhập đã hết hạn (unauthorized)"
+          body.message || "Phiên đăng nhập đã hết hạn (unauthorized)",
         );
       }
       throw new Error(body.message || "Không thể lấy thông tin người dùng");
@@ -154,6 +122,7 @@ export const authApi = {
   }): Promise<LoginResponse> => {
     const res = await fetch(`${API_URL}/auth/lark/setup-password`, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
