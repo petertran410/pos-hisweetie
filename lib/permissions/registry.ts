@@ -116,6 +116,7 @@ export const ROUTE_PERMISSIONS: Record<
   "/cai-dat/so-quy": { resource: "bank_accounts", action: "view" },
   "/cai-dat/lich-su": { resource: "audit_logs", action: "view" },
   "/cai-dat/tich-hop-api": { resource: "settings", action: "update" },
+  "/cai-dat/smax": { resource: "settings", action: "update" },
   "/san-pham/kiem-kho": { resource: "stock_audits", action: "view" },
   "/cai-dat/in-an": { resource: "print_templates", action: "view" },
 };

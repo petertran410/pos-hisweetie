@@ -5,7 +5,11 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { RouteGuard } from "@/components/layout/RouteGuard";
 import { DashboardHeader } from "@/components/layout/DashboardHeader";
 import { SepayPendingNotifier } from "@/components/sepay/SepayPendingNotifier";
+<<<<<<< HEAD
 import { RealtimeSync } from "@/lib/realtime/useRealtimeSync";
+=======
+import { ZaloChatSidebar } from "@/components/chat/ZaloChatSidebar";
+>>>>>>> build_report
 
 export default function DashboardLayout({
   children,
@@ -20,7 +24,10 @@ export default function DashboardLayout({
             className="flex flex-col"
             style={{ height: "calc(100vh / 0.85)" }}>
             <DashboardHeader />
-            <main className="flex-1 overflow-hidden">{children}</main>
+            <div className="flex flex-1 min-h-0">
+              <main className="flex-1 min-w-0 overflow-hidden">{children}</main>
+              <ZaloChatSidebar />
+            </div>
           </div>
           <SepayPendingNotifier />
           <RealtimeSync />

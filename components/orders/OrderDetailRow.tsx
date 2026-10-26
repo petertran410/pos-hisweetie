@@ -1,5 +1,7 @@
 "use client";
 
+import { useRegisterPosInView } from "@/lib/store/posInView";
+import { useRegisterCustomerInView } from "@/lib/store/customersInView";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -62,9 +64,14 @@ interface OrderDetailRowProps {
 export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   const router = useRouter();
   const { data: order, isLoading } = useOrder(orderId);
+  useRegisterCustomerInView(order?.customer, `Đặt hàng ${order?.code ?? ""}`);
+  useRegisterPosInView(
+    order ? { type: "order", id: order.id, code: order.code } : null
+  );
+  console.log(order);
   const updateOrder = useUpdateOrder();
   const [selectedStatus, setSelectedStatus] = useState<number>(
-    ORDER_STATUS.PENDING,
+    ORDER_STATUS.PENDING
   );
   const [isSaving, setIsSaving] = useState(false);
   const [description, setDescription] = useState("");
@@ -151,7 +158,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
     // Kiểm tra có hóa đơn không
     if (order.invoices && order.invoices.some((inv) => inv.status !== 2)) {
       toast.error(
-        "Đơn hàng có hóa đơn. Vui lòng hủy tất cả hóa đơn trước khi hủy đơn hàng",
+        "Đơn hàng có hóa đơn. Vui lòng hủy tất cả hóa đơn trước khi hủy đơn hàng"
       );
       return;
     }
@@ -320,7 +327,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
         ws,
         header.length,
         itemRows.length + 2,
-        summaryRows.length,
+        summaryRows.length
       );
 
       const wb = XLSX.utils.book_new();
@@ -329,7 +336,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
       const now = new Date();
       const pad = (n: number) => String(n).padStart(2, "0");
       const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(
-        now.getDate(),
+        now.getDate()
       )}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
       XLSX.writeFile(wb, `ChiTietDatHang_${order.code}_${stamp}.xlsx`);
     } catch (e: any) {
@@ -339,7 +346,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
 
   const handleUpdateDeliveryAddress = async (
     wardName: string,
-    cityName: string,
+    cityName: string
   ) => {
     if (!order?.delivery) return;
     try {
@@ -539,7 +546,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                             <div className="px-2.5 py-1.5 border border-gray-200 rounded bg-gray-50">
                               <span
                                 className={`px-2 py-0.5 rounded text-xs font-medium ${getOrderStatusBadgeColor(
-                                  order.status,
+                                  order.status
                                 )}`}>
                                 {ORDER_STATUS_LABELS[
                                   order.status as keyof typeof ORDER_STATUS_LABELS
@@ -558,7 +565,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                   className={`px-2 py-0.5 rounded text-xs font-medium ${getOrderStatusBadgeColor(
                                     isManualEditable
                                       ? selectedStatus
-                                      : order.status,
+                                      : order.status
                                   )}`}>
                                   {isManualEditable
                                     ? ORDER_STATUS_LABELS[
@@ -649,7 +656,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                           selectedAddressId={
                             findAddressFromDelivery(
                               order.customer?.addresses,
-                              order.delivery,
+                              order.delivery
                             )?.id ?? null
                           }
                           onUpdateToNewAddress={handleUpdateDeliveryAddress}
@@ -728,7 +735,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
 
                                         {(() => {
                                           const label = getConditionLabel(
-                                            item.conditionType,
+                                            item.conditionType
                                           );
                                           if (!label) return null;
                                           const expiryMonth =
@@ -736,7 +743,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                               "near_expiry" &&
                                             item.soldExpiryDate
                                               ? formatMonthYear(
-                                                  item.soldExpiryDate,
+                                                  item.soldExpiryDate
                                                 )
                                               : "";
                                           return (
@@ -798,7 +805,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                   <td className="px-[10px] py-2 text-right">
                                     <span className="text-sm font-medium text-gray-900">
                                       {formatCurrency(
-                                        Number(item.appliedPrice),
+                                        Number(item.appliedPrice)
                                       )}
                                     </span>
                                   </td>
@@ -869,7 +876,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                                       ? Math.round(
                                           ((effective / total) * 100 +
                                             Number.EPSILON) *
-                                            100,
+                                            100
                                         ) / 100
                                       : 0;
                                 return (

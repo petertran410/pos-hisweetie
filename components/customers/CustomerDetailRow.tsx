@@ -13,6 +13,8 @@ import { CustomerDebtsTab } from "./CustomerDebtsTab";
 import { CustomerAddressesTab } from "../pos/CustomerAddressesTab";
 import { useCan } from "@/lib/hooks/useCan";
 import { CodeLink } from "../shared/CodeLink";
+import { ZaloContactsManager } from "../chat/ZaloContactsManager";
+import { useRegisterCustomerInView } from "@/lib/store/customersInView";
 
 interface CustomerDetailRowProps {
   customerId: number;
@@ -38,11 +40,14 @@ export function CustomerDetailRow({
     | "debts"
     | "debts_total"
     | "debts_own"
+    | "zalo"
   >("info");
 
   const canUpdateCustomer = useCan("customers", "update");
   const canDeleteCustomer = useCan("customers", "delete");
   const canViewDebt = useCan("customers", "view_debt");
+  const canViewZalo = useCan("smax_chat", "view");
+  useRegisterCustomerInView(customer, "Chi tiết khách hàng");
 
   // ─── Sticky width trick (giống OrderDetailRow) ───
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -162,6 +167,7 @@ export function CustomerDetailRow({
           ]
         : [{ key: "debts", label: "Công nợ" }]
       : []),
+    ...(canViewZalo ? [{ key: "zalo", label: "Zalo" }] : []),
   ] as const;
 
   const groups =
@@ -420,6 +426,11 @@ export function CustomerDetailRow({
               )}
               {activeTab === "consignments" && (
                 <CustomerConsignmentsTab customerId={customer.id} />
+              )}
+              {activeTab === "zalo" && (
+                <div className="max-w-md">
+                  <ZaloContactsManager customerId={customer.id} />
+                </div>
               )}
               {activeTab === "debts" && (
                 <CustomerDebtsTab

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRegisterPosInView } from "@/lib/store/posInView";
 import { useEffect, useState } from "react";
 import { useProduct } from "@/lib/hooks/useProducts";
 import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
@@ -103,6 +104,9 @@ export function ProductMobileDetailSheet({
   onClose,
 }: ProductMobileDetailSheetProps) {
   const { data: product, isLoading } = useProduct(productId);
+  useRegisterPosInView(
+    product ? { type: "product", id: product.id, code: product.code, name: product.name } : null
+  );
   const { selectedBranch } = useBranchStore();
   const [activeTab, setActiveTab] = useState<
     "info" | "description" | "inventory"

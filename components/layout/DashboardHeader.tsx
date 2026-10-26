@@ -8,6 +8,7 @@ import { logout } from "@/lib/auth/session";
 import { toast } from "sonner";
 import { BranchSelector } from "./BranchSelector";
 import { SepayNotificationBell } from "../sepay/SepayNotificationBell";
+import { ChatSidebarToggle } from "../chat/ZaloChatSidebar";
 import {
   useFilteredPosActions,
   useFilteredSections,
@@ -427,6 +428,7 @@ export function DashboardHeader() {
           </Link>
           <div className="flex items-center gap-1">
             <SepayNotificationBell />
+            <ChatSidebarToggle />
             {posActions.length > 0 && (
               <Link
                 href={posActions[0]?.href ?? "/ban-hang"}
