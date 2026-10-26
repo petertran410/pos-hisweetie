@@ -9,12 +9,15 @@ import type {
   ChatDraft,
   ChatMessage,
   ChatMessagesPage,
+  RecentChat,
   ZaloContact,
 } from "@/lib/types/smaxChat";
 import { ChatComposer } from "./ChatComposer";
 import { ChatThreadHeader } from "./ChatThreadHeader";
 import { ZaloAvatar } from "./ZaloAvatar";
 import { stickerUrl } from "@/lib/chat/stickers";
+import { markSeen } from "@/lib/chat/seen";
+import { useQueryClient } from "@tanstack/react-query";
 import { SendConfirmDialog } from "./SendConfirmDialog";
 import {
   AttachmentPreviewModal,
@@ -32,6 +35,9 @@ interface Props {
   confirmBeforeSend: boolean;
   sendDisabledReason: string | null;
   ctx: ChatContext;
+  // Nút Trực tiếp/Nhóm… đặt cùng hàng avatar + tên Zalo; chọn nhóm (nếu nhiều) ở dưới
+  headerActions?: React.ReactNode;
+  headerExtra?: React.ReactNode;
 }
 
 interface Pending {
@@ -57,6 +63,8 @@ export function ChatThread({
   confirmBeforeSend,
   sendDisabledReason,
   ctx,
+  headerActions,
+  headerExtra,
 }: Props) {
   const latest = useChatMessages(customerId, pagePid, contact.id, true);
   const send = useSendChatMessage(customerId);
@@ -78,6 +86,16 @@ export function ChatThread({
   }, [older, latest.data]);
 
   const items = useMemo(() => groupAlbums(messages), [messages]);
+
+  // Đang mở hội thoại → coi như đã xem: cập nhật mốc "tin mới" theo số tin Smax đếm
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const tid = `zlw${contact.zaloId}`;
+    for (const [, d] of queryClient.getQueriesData<{ items: RecentChat[] }>({ queryKey: ["smaxRecentChats"] })) {
+      const hit = d?.items.find((i) => i.tid === tid);
+      if (hit) markSeen(tid, hit.messageCount);
+    }
+  }, [latest.data, contact.zaloId, queryClient]);
   // Tên + avatar người gửi: gộp dần qua các lần poll (tin cũ tải thêm không kèm bảng này)
   const [senders, setSenders] = useState<NonNullable<ChatMessagesPage["senders"]>>({});
   const latestSenders = latest.data?.senders;
@@ -170,7 +188,14 @@ export function ChatThread({
 
   return (
     <div className="relative flex flex-1 min-h-0 flex-col">
-      <ChatThreadHeader customerId={customerId} pagePid={pagePid} contact={contact} channelName={channelName} />
+      <ChatThreadHeader
+        customerId={customerId}
+        pagePid={pagePid}
+        contact={contact}
+        channelName={channelName}
+        actions={headerActions}
+        extra={headerExtra}
+      />
       <div
         ref={scrollRef}
         onScroll={(e) => {

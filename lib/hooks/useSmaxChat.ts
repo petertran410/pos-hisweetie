@@ -87,10 +87,10 @@ export function useSharedGroups(customerId: number, pagePid: string | undefined,
 }
 
 /** Hội thoại mới nhất trên kênh Zalo của tôi (backend cache 30s). */
-export function useRecentChats(enabled: boolean) {
+export function useRecentChats(enabled: boolean, pagePid?: string | null) {
   return useQuery({
-    queryKey: ["smaxRecentChats"],
-    queryFn: () => smaxChatApi.getRecent(),
+    queryKey: ["smaxRecentChats", pagePid ?? null],
+    queryFn: () => smaxChatApi.getRecent(pagePid ?? undefined),
     enabled,
     staleTime: 30_000,
     refetchInterval: 60_000,
@@ -108,6 +108,17 @@ export function useZaloProfile(customerId: number, pagePid: string | undefined, 
     staleTime: 60_000,
     refetchInterval: 60_000,
     refetchIntervalInBackground: false,
+    retry: false,
+  });
+}
+
+/** Kênh Zalo đã liên kết với tài khoản đang đăng nhập (kèm avatar, tình trạng). */
+export function useMyChannels(enabled: boolean) {
+  return useQuery({
+    queryKey: ["smaxMyChannels"],
+    queryFn: () => smaxChatApi.getChannels(),
+    enabled,
+    staleTime: 60_000,
     retry: false,
   });
 }

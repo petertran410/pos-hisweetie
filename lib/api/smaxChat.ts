@@ -1,5 +1,6 @@
 import { apiClient } from "@/lib/config/api";
 import type {
+  ChatChannel,
   ChatContext,
   ChatMessagesPage,
   OutgoingAttachment,
@@ -13,7 +14,10 @@ import type {
 const base = (customerId: number) => `/smax/chat/customers/${customerId}`;
 
 export const smaxChatApi = {
-  getRecent: (): Promise<{ items: RecentChat[] }> => apiClient.get("/smax/chat/recent"),
+  getChannels: (): Promise<ChatChannel[]> => apiClient.get("/smax/chat/channels"),
+
+  getRecent: (pagePid?: string): Promise<{ items: RecentChat[] }> =>
+    apiClient.get("/smax/chat/recent", { pagePid }),
 
   getZaloProfile: (customerId: number, pagePid: string, contactId: number): Promise<ZaloProfile> =>
     apiClient.get(`${base(customerId)}/zalo-profile`, { pagePid, contactId }),

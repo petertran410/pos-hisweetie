@@ -16,10 +16,13 @@ interface Props {
   pagePid: string;
   contact: ZaloContact;
   channelName: string;
+  // Hiện cùng hàng bên phải (vd Trực tiếp/Nhóm) và dòng phụ bên dưới (chọn nhóm)
+  actions?: React.ReactNode;
+  extra?: React.ReactNode;
 }
 
 /** Thanh đầu hội thoại: avatar + tên Zalo của khách/nhóm, dòng trạng thái kết bạn. */
-export function ChatThreadHeader({ customerId, pagePid, contact, channelName }: Props) {
+export function ChatThreadHeader({ customerId, pagePid, contact, channelName, actions, extra }: Props) {
   const { data: p, isLoading } = useZaloProfile(customerId, pagePid, contact.id);
   const canSend = useCan("smax_chat", "send");
   const queryClient = useQueryClient();
@@ -81,7 +84,9 @@ export function ChatThreadHeader({ customerId, pagePid, contact, channelName }: 
             <ExternalLink className="h-4 w-4" />
           </a>
         )}
+        {actions}
       </div>
+      {extra && <div className="px-3 pb-1.5">{extra}</div>}
 
       {!isGroup && f && !f.isFriend && (
         <div className="flex items-center gap-2 border-t bg-amber-50 px-3 py-1.5 text-xs text-amber-900">
