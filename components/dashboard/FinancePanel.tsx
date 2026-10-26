@@ -1,14 +1,16 @@
 "use client";
 
-import type { FinanceData, PeriodKey } from "@/lib/api/dashboard";
+import type { CustomDates, FinanceData, PeriodKey } from "@/lib/api/dashboard";
 import { PERIOD_LABEL, FINANCE_PERIODS } from "@/lib/api/dashboard";
+import { DashSelect, customLabel } from "./DashSelect";
 import { money, vi } from "@/lib/dashboard/format";
 import { Wallet, FileText, Truck } from "lucide-react";
 
 interface Props {
   data?: FinanceData;
   finRange: PeriodKey;
-  onFinRangeChange: (r: PeriodKey) => void;
+  finCustom?: CustomDates;
+  onFinRangeChange: (r: PeriodKey, custom?: CustomDates) => void;
 }
 
 // Phụ đề mô tả mốc đang chọn.
@@ -20,6 +22,7 @@ const FIN_RANGE_SUBTITLE: Record<PeriodKey, string> = {
   thisWeek: "tuần này",
   thisMonth: "tháng này",
   lastMonth: "tháng trước",
+  custom: "",
   all: "toàn bộ công nợ",
 };
 
@@ -30,13 +33,21 @@ function MiniBar({ pct, gradient }: { pct: number; gradient: string }) {
       style={{ background: "var(--dt-border)" }}>
       <span
         className="block h-full rounded-[7px] dt-bar-fill"
-        style={{ width: `${Math.min(100, Math.max(0, pct))}%`, background: gradient }}
+        style={{
+          width: `${Math.min(100, Math.max(0, pct))}%`,
+          background: gradient,
+        }}
       />
     </div>
   );
 }
 
-export function FinancePanel({ data, finRange, onFinRangeChange }: Props) {
+export function FinancePanel({
+  data,
+  finRange,
+  finCustom,
+  onFinRangeChange,
+}: Props) {
   const debt = data?.debt ?? 0;
   const overdue = data?.overdue ?? 0;
   const aging = data?.aging ?? { inTerm: 0, d1to30: 0, over30: 0 };
@@ -84,23 +95,32 @@ export function FinancePanel({ data, finRange, onFinRangeChange }: Props) {
 
   return (
     <div className="dt-panel flex flex-col">
-      <div className="flex items-center gap-3 p-[17px_20px] border-b" style={{ borderColor: "var(--dt-border)" }}>
+      <div
+        className="flex items-center gap-3 p-[17px_20px] border-b"
+        style={{ borderColor: "var(--dt-border)" }}>
         <div>
           <h3 className="text-[15.5px] font-bold">Công nợ &amp; COD</h3>
-          <div className="text-[12.5px] mt-0.5" style={{ color: "var(--dt-text-muted)" }}>
-            Dòng tiền cần thu hồi · {FIN_RANGE_SUBTITLE[finRange]}
+          <div
+            className="text-[12.5px] mt-0.5"
+            style={{ color: "var(--dt-text-muted)" }}>
+            Dòng tiền cần thu hồi ·{" "}
+            {finRange === "custom"
+              ? customLabel(finCustom)
+              : FIN_RANGE_SUBTITLE[finRange]}
           </div>
         </div>
-        <select
-          className="dt-select dt-select-sm ml-auto"
+        <DashSelect
+          className="ml-auto"
+          ariaLabel="Thời gian công nợ & COD"
+          options={FINANCE_PERIODS.map((p) => ({
+            key: p,
+            label: PERIOD_LABEL[p],
+          }))}
           value={finRange}
-          onChange={(e) => onFinRangeChange(e.target.value as PeriodKey)}>
-          {FINANCE_PERIODS.map((p) => (
-            <option key={p} value={p}>
-              {PERIOD_LABEL[p]}
-            </option>
-          ))}
-        </select>
+          custom={finCustom}
+          allowCustom
+          onChange={onFinRangeChange}
+        />
       </div>
 
       <div className="p-[18px_20px] flex-1">
@@ -109,7 +129,10 @@ export function FinancePanel({ data, finRange, onFinRangeChange }: Props) {
             <div
               key={c.label}
               className="rounded-[8px] border p-4"
-              style={{ background: "var(--dt-bg-soft)", borderColor: "var(--dt-border)" }}>
+              style={{
+                background: "var(--dt-bg-soft)",
+                borderColor: "var(--dt-border)",
+              }}>
               <div
                 className="text-[12.5px] flex items-center gap-[7px] mb-2"
                 style={{ color: "var(--dt-text-secondary)" }}>
@@ -121,7 +144,9 @@ export function FinancePanel({ data, finRange, onFinRangeChange }: Props) {
                 style={{ fontFamily: "var(--font-montserrat), sans-serif" }}>
                 {c.value}
               </div>
-              <div className="text-[12px] mt-[5px]" style={{ color: "var(--dt-text-muted)" }}>
+              <div
+                className="text-[12px] mt-[5px]"
+                style={{ color: "var(--dt-text-muted)" }}>
                 {c.meta}
               </div>
               <MiniBar pct={c.pct} gradient={c.gradient} />
@@ -133,11 +158,18 @@ export function FinancePanel({ data, finRange, onFinRangeChange }: Props) {
           className="mt-[18px] mb-2 text-[13px] font-semibold uppercase tracking-wider flex items-center gap-[10px]"
           style={{ color: "var(--dt-text-muted)" }}>
           Phân tuổi nợ
-          <span className="flex-1 h-px" style={{ background: "var(--dt-border)" }} />
+          <span
+            className="flex-1 h-px"
+            style={{ background: "var(--dt-border)" }}
+          />
         </div>
         {agingRows.map((r) => (
-          <div key={r.label} className="flex items-center gap-[10px] py-2 text-[13px]">
-            <span className="flex-1" style={{ color: "var(--dt-text-secondary)" }}>
+          <div
+            key={r.label}
+            className="flex items-center gap-[10px] py-2 text-[13px]">
+            <span
+              className="flex-1"
+              style={{ color: "var(--dt-text-secondary)" }}>
               {r.label}
             </span>
             <span
@@ -145,7 +177,10 @@ export function FinancePanel({ data, finRange, onFinRangeChange }: Props) {
               style={{ background: "var(--dt-cyan-bg)" }}>
               <span
                 className="block h-full rounded-full dt-bar-fill"
-                style={{ width: `${(r.val / total) * 100}%`, background: r.color }}
+                style={{
+                  width: `${(r.val / total) * 100}%`,
+                  background: r.color,
+                }}
               />
             </span>
             <span className="dt-mono font-semibold min-w-[74px] text-right text-[12.5px]">
@@ -153,7 +188,9 @@ export function FinancePanel({ data, finRange, onFinRangeChange }: Props) {
             </span>
           </div>
         ))}
-        <p className="text-[11px] mt-3" style={{ color: "var(--dt-text-muted)" }}>
+        <p
+          className="text-[11px] mt-3"
+          style={{ color: "var(--dt-text-muted)" }}>
           * Tuổi nợ tính theo ngày tạo đơn (hệ thống chưa lưu hạn thanh toán).
         </p>
       </div>

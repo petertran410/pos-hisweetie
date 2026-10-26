@@ -13,7 +13,9 @@ import {
   PERIOD_LABEL,
   BRANCH_PERIODS,
   type TaskRow,
+  type CustomDates,
 } from "@/lib/api/dashboard";
+import { CustomRangeBody, customLabel } from "../DashSelect";
 import { money, vi, deltaPct, BRANCH_PALETTE } from "@/lib/dashboard/format";
 import { INVOICE_STATUS, INVOICE_STATUS_LABELS } from "@/lib/types/invoice";
 import { MobileSheet } from "./MobileSheet";
@@ -36,6 +38,7 @@ import {
   BarChart3,
   ShoppingCart,
   ChevronRight,
+  Calendar,
 } from "lucide-react";
 
 const RANGES: { key: RangeKey; label: string; word: string }[] = [
@@ -43,13 +46,16 @@ const RANGES: { key: RangeKey; label: string; word: string }[] = [
   { key: "yesterday", label: "Hôm qua", word: "hôm qua" },
   { key: "week", label: "7 ngày", word: "7 ngày qua" },
   { key: "month", label: "Tháng này", word: "tháng này" },
+  { key: "lastMonth", label: "Tháng trước", word: "tháng trước" },
 ];
 
 const RANGE_SUB: Record<RangeKey, string> = {
   today: "Theo giờ · hôm nay",
   yesterday: "Theo giờ · hôm qua",
   week: "Theo ngày · 7 ngày qua",
-  month: "Theo tuần · tháng này",
+  month: "Theo ngày · tháng này",
+  lastMonth: "Theo ngày · tháng trước",
+  custom: "",
 };
 
 // Map khoảng thời gian chung (RangeKey) sang PeriodKey — mốc mặc định của
@@ -59,6 +65,8 @@ const RANGE_TO_PERIOD: Record<RangeKey, PeriodKey> = {
   yesterday: "yesterday",
   week: "d7",
   month: "thisMonth",
+  lastMonth: "lastMonth",
+  custom: "custom",
 };
 
 type TaskType = "orders" | "debt" | "cod" | "stock";
@@ -94,7 +102,10 @@ const LINK: Record<TaskType, string> = {
   stock: "/san-pham/danh-sach",
 };
 
-function statusInfo(r: TaskRow, type: TaskType): { cls: string; label: string } {
+function statusInfo(
+  r: TaskRow,
+  type: TaskType,
+): { cls: string; label: string } {
   if (type === "debt") {
     const cls =
       r.status === "overdue" ? "err" : r.status === "due" ? "warn" : "info";
@@ -229,16 +240,20 @@ export function DashboardMobileView() {
   const canSeeProfit = isAdmin;
 
   const [range, setRange] = useState<RangeKey>("today");
+  const [rangeCustom, setRangeCustom] = useState<CustomDates>();
+  const [branchCustom, setBranchCustom] = useState<CustomDates>();
+  // Sheet chọn ngày cụ thể: cho bộ lọc chung ("range") hoặc So sánh chi nhánh ("branch").
+  const [dateSheet, setDateSheet] = useState<"range" | "branch" | null>(null);
   const [branchId, setBranchId] = useState<number | undefined>(undefined);
   const [branchMetric, setBranchMetric] = useState<"rev" | "profit">("rev");
   const [branchPeriod, setBranchPeriod] = useState<PeriodKey>(
-    RANGE_TO_PERIOD["today"]
+    RANGE_TO_PERIOD["today"],
   );
   const [topProductMetric, setTopProductMetric] = useState<TopMetric>("rev");
   const [taskTab, setTaskTab] = useState<TaskType>("orders");
   const [branchSheet, setBranchSheet] = useState(false);
   const [detail, setDetail] = useState<{ row: TaskRow; type: TaskType } | null>(
-    null
+    null,
   );
 
   const { data: branches } = useQuery({
@@ -246,17 +261,24 @@ export function DashboardMobileView() {
     queryFn: () => branchesApi.getMyBranches(),
   });
 
+  const rc = range === "custom" ? rangeCustom : undefined;
+  const bc = branchPeriod === "custom" ? branchCustom : undefined;
+  const rangeWord =
+    range === "custom"
+      ? customLabel(rangeCustom)
+      : RANGES.find((r) => r.key === range)?.word;
   const stats = useQuery({
-    queryKey: ["dash-stats", range, branchId],
-    queryFn: () => dashboardApi.getStats(range, branchId),
+    queryKey: ["dash-stats", range, branchId, rc],
+    queryFn: () => dashboardApi.getStats(range, branchId, rc),
   });
   const trend = useQuery({
-    queryKey: ["dash-trend", range, branchId],
-    queryFn: () => dashboardApi.getRevenueTrend(range, branchId),
+    queryKey: ["dash-trend", range, branchId, rc],
+    queryFn: () => dashboardApi.getRevenueTrend(range, branchId, rc),
   });
   const branchCmp = useQuery({
-    queryKey: ["dash-branchcmp-m", branchPeriod, branchMetric],
-    queryFn: () => dashboardApi.getBranchComparison(branchPeriod, branchMetric),
+    queryKey: ["dash-branchcmp-m", branchPeriod, branchMetric, bc],
+    queryFn: () =>
+      dashboardApi.getBranchComparison(branchPeriod, branchMetric, bc),
   });
   const tasks = useQuery({
     queryKey: ["dash-tasks-m", taskTab, branchId],
@@ -267,11 +289,12 @@ export function DashboardMobileView() {
     queryFn: () => dashboardApi.getTaskCounts(branchId),
   });
   const topProducts = useQuery({
-    queryKey: ["dash-top-products-m", range, branchId, topProductMetric],
+    queryKey: ["dash-top-products-m", range, branchId, topProductMetric, rc],
     queryFn: () =>
       dashboardApi.getTopProducts({
         limit: 10,
         range,
+        custom: rc,
         branchId,
         metric: topProductMetric,
       }),
@@ -286,9 +309,9 @@ export function DashboardMobileView() {
         ? p.totalQuantity
         : topProductMetric === "profit"
           ? p.totalProfit
-          : p.totalRevenue
+          : p.totalRevenue,
     ),
-    1
+    1,
   );
   const activities = useQuery({
     queryKey: ["dash-acts"],
@@ -375,10 +398,30 @@ export function DashboardMobileView() {
   ).filter((k) => k.show);
 
   const QUICK = [
-    { href: "/ban-hang", cls: "dt-ic-cy", icon: <Plus className="w-[21px] h-[21px]" />, label: "Tạo đơn" },
-    { href: "/khach-hang", cls: "dt-ic-go", icon: <Wallet className="w-[21px] h-[21px]" />, label: "Thu nợ" },
-    { href: "/san-pham/nhap-hang", cls: "dt-ic-te", icon: <Boxes className="w-[21px] h-[21px]" />, label: "Nhập kho" },
-    { href: "/bao-cao/khach-hang", cls: "dt-ic-de", icon: <BarChart3 className="w-[21px] h-[21px]" />, label: "Báo cáo" },
+    {
+      href: "/ban-hang",
+      cls: "dt-ic-cy",
+      icon: <Plus className="w-[21px] h-[21px]" />,
+      label: "Tạo đơn",
+    },
+    {
+      href: "/khach-hang",
+      cls: "dt-ic-go",
+      icon: <Wallet className="w-[21px] h-[21px]" />,
+      label: "Thu nợ",
+    },
+    {
+      href: "/san-pham/nhap-hang",
+      cls: "dt-ic-te",
+      icon: <Boxes className="w-[21px] h-[21px]" />,
+      label: "Nhập kho",
+    },
+    {
+      href: "/bao-cao/khach-hang",
+      cls: "dt-ic-de",
+      icon: <BarChart3 className="w-[21px] h-[21px]" />,
+      label: "Báo cáo",
+    },
   ];
 
   return (
@@ -402,13 +445,20 @@ export function DashboardMobileView() {
             {r.label}
           </button>
         ))}
+        <button
+          className="dt-m-pill"
+          data-on={range === "custom"}
+          onClick={() => setDateSheet("range")}>
+          <Calendar className="w-[14px] h-[14px]" />
+          {range === "custom" ? customLabel(rangeCustom) : "Tùy chọn"}
+        </button>
       </div>
 
       <div className="dt-m-body">
         {/* Hero */}
         <div className="dt-m-hero">
           <div className="lab">
-            <i /> Doanh thu {RANGES.find((r) => r.key === range)?.word}
+            <i /> Doanh thu {rangeWord}
           </div>
           <div className="big">{money(s?.currentRevenue ?? 0)}</div>
           <span className="delta">
@@ -424,7 +474,9 @@ export function DashboardMobileView() {
             <div className="pf">
               <TrendingUp className="w-4 h-4" style={{ color: "#FFE9B0" }} />
               Lợi nhuận
-              <span className="pm">biên {Math.round((s?.marginAvg ?? 0) * 100)}%</span>
+              <span className="pm">
+                biên {Math.round((s?.marginAvg ?? 0) * 100)}%
+              </span>
               <span className="pv">{money(s?.profit ?? 0)}</span>
             </div>
           )}
@@ -459,11 +511,18 @@ export function DashboardMobileView() {
           <div className="ch">
             <div>
               <h3>Doanh thu{canSeeProfit ? " / lợi nhuận" : ""}</h3>
-              <div className="sub">{RANGE_SUB[range]}</div>
+              <div className="sub">
+                {range === "custom"
+                  ? customLabel(rangeCustom)
+                  : RANGE_SUB[range]}
+              </div>
             </div>
           </div>
           <div className="cb">
-            <MobileTrendChart data={trend.data ?? []} showProfit={canSeeProfit} />
+            <MobileTrendChart
+              data={trend.data ?? []}
+              showProfit={canSeeProfit}
+            />
           </div>
         </div>
 
@@ -475,19 +534,29 @@ export function DashboardMobileView() {
               <div className="sub">
                 {branchMetric === "profit" ? "Lợi nhuận" : "Doanh thu"} ·{" "}
                 <span className="dt-m-subsel">
-                  {PERIOD_LABEL[branchPeriod]}
+                  {branchPeriod === "custom"
+                    ? customLabel(branchCustom)
+                    : PERIOD_LABEL[branchPeriod]}
                   <ChevronDown className="w-3 h-3" />
                   <select
                     aria-label="Thời gian so sánh chi nhánh"
                     value={branchPeriod}
-                    onChange={(e) =>
-                      setBranchPeriod(e.target.value as PeriodKey)
-                    }>
+                    onChange={(e) => {
+                      const v = e.target.value as PeriodKey;
+                      // "Tùy chọn ngày" → mở sheet chọn ngày, chỉ áp dụng khi bấm Áp dụng.
+                      if (v === "custom") setDateSheet("branch");
+                      else setBranchPeriod(v);
+                    }}>
                     {BRANCH_PERIODS.map((p) => (
                       <option key={p} value={p}>
                         {PERIOD_LABEL[p]}
                       </option>
                     ))}
+                    <option value="custom">
+                      {branchPeriod === "custom"
+                        ? customLabel(branchCustom)
+                        : "Tùy chọn ngày…"}
+                    </option>
                   </select>
                 </span>
               </div>
@@ -563,11 +632,11 @@ export function DashboardMobileView() {
               <div className="sub">
                 Theo{" "}
                 {topProductMetric === "qty"
-                  ? "sản lượng"
+                  ? "số lượng"
                   : topProductMetric === "profit"
                     ? "lợi nhuận"
                     : "doanh thu"}{" "}
-                · {RANGES.find((r) => r.key === range)?.word}
+                · {rangeWord}
               </div>
             </div>
             <div className="dt-m-miniseg ml-auto">
@@ -613,7 +682,7 @@ export function DashboardMobileView() {
                       : p.totalRevenue;
                 const barPct = Math.min(
                   100,
-                  Math.max(0, (val / topProductMax) * 100)
+                  Math.max(0, (val / topProductMax) * 100),
                 );
                 const rankColor =
                   idx === 0
@@ -693,7 +762,10 @@ export function DashboardMobileView() {
                     <span
                       className="dt-mono font-bold text-[12px] w-[20px] shrink-0"
                       style={{
-                        color: idx < 3 ? "var(--dt-primary)" : "var(--dt-text-muted)",
+                        color:
+                          idx < 3
+                            ? "var(--dt-primary)"
+                            : "var(--dt-text-muted)",
                       }}>
                       #{idx + 1}
                     </span>
@@ -704,11 +776,14 @@ export function DashboardMobileView() {
                       <div
                         className="text-[11px] font-normal"
                         style={{ color: "var(--dt-text-muted)" }}>
-                        {c.orderCount} đơn {c.customerType ? `· ${c.customerType}` : ""}
+                        {c.orderCount} đơn{" "}
+                        {c.customerType ? `· ${c.customerType}` : ""}
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <div className="bv">{money(Number(c.totalPurchased))}</div>
+                      <div className="bv">
+                        {money(Number(c.totalPurchased))}
+                      </div>
                       {Number(c.totalDebt) > 0 && (
                         <div
                           className="text-[11px] font-medium"
@@ -802,8 +877,8 @@ export function DashboardMobileView() {
                   </span>
                   <div className="ab">
                     <div className="txt">
-                      <b style={{ fontWeight: 600 }}>{a.customerName}</b> đặt hàng{" "}
-                      <span className="tg">{a.code}</span> ·{" "}
+                      <b style={{ fontWeight: 600 }}>{a.customerName}</b> đặt
+                      hàng <span className="tg">{a.code}</span> ·{" "}
                       <b style={{ fontWeight: 600 }}>{money(a.grandTotal)}</b>
                     </div>
                     <div className="meta">
@@ -827,6 +902,31 @@ export function DashboardMobileView() {
         <Plus className="w-[26px] h-[26px]" />
       </Link>
 
+      {/* Sheet chọn ngày cụ thể */}
+      <MobileSheet
+        open={!!dateSheet}
+        onClose={() => setDateSheet(null)}
+        title="Chọn ngày cụ thể"
+        subtitle="Chọn 1 ngày hoặc một khoảng ngày">
+        {dateSheet && (
+          <CustomRangeBody
+            key={dateSheet}
+            initial={dateSheet === "range" ? rangeCustom : branchCustom}
+            onCancel={() => setDateSheet(null)}
+            onApply={(c) => {
+              if (dateSheet === "range") {
+                setRange("custom");
+                setRangeCustom(c);
+              }
+              // Đổi bộ lọc chung cũng kéo theo So sánh chi nhánh (như các mốc khác).
+              setBranchPeriod("custom");
+              setBranchCustom(c);
+              setDateSheet(null);
+            }}
+          />
+        )}
+      </MobileSheet>
+
       {/* Branch sheet */}
       <MobileSheet
         open={branchSheet}
@@ -839,7 +939,10 @@ export function DashboardMobileView() {
             width: "100%",
             marginBottom: 10,
             ...(branchId === undefined
-              ? { borderColor: "var(--dt-primary)", background: "var(--dt-cyan-bg)" }
+              ? {
+                  borderColor: "var(--dt-primary)",
+                  background: "var(--dt-cyan-bg)",
+                }
               : {}),
           }}
           onClick={() => {
@@ -865,7 +968,10 @@ export function DashboardMobileView() {
               width: "100%",
               marginBottom: 10,
               ...(branchId === b.id
-                ? { borderColor: "var(--dt-primary)", background: "var(--dt-cyan-bg)" }
+                ? {
+                    borderColor: "var(--dt-primary)",
+                    background: "var(--dt-cyan-bg)",
+                  }
                 : {}),
             }}
             onClick={() => {
@@ -879,7 +985,10 @@ export function DashboardMobileView() {
               <b>{b.name}</b>
             </div>
             {branchId === b.id && (
-              <Check className="w-5 h-5" style={{ color: "var(--dt-primary)" }} />
+              <Check
+                className="w-5 h-5"
+                style={{ color: "var(--dt-primary)" }}
+              />
             )}
           </button>
         ))}

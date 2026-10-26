@@ -220,7 +220,7 @@ function PresetPanel({
 }
 
 // ─── MiniCalendar ────────────────────────────────────────────────────────────
-function MiniCalendar({
+export function MiniCalendar({
   value,
   onChange,
   onClose,

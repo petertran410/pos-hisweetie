@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/config/api";
 
-export type RangeKey = "today" | "yesterday" | "week" | "month";
+export type RangeKey =
+  "today" | "yesterday" | "week" | "month" | "lastMonth" | "custom";
 export type TopMetric = "rev" | "qty" | "profit";
 export type CategoryDimension = "parent" | "middle" | "child";
 
@@ -13,7 +14,26 @@ export type PeriodKey =
   | "thisWeek"
   | "thisMonth"
   | "lastMonth"
+  | "custom"
   | "all";
+
+/**
+ * Khoảng ngày tùy chọn (khi range/period = "custom"), dạng "YYYY-MM-DD".
+ * Đổi sang ISO theo giờ máy người dùng trước khi gửi backend.
+ */
+export interface CustomDates {
+  from: string;
+  to: string;
+}
+
+/** Params from/to (ISO) gửi kèm khi chọn "custom"; undefined ở các mốc khác. */
+function customParams(key: string, custom?: CustomDates) {
+  if (key !== "custom" || !custom?.from || !custom?.to) return {};
+  return {
+    from: new Date(custom.from + "T00:00:00").toISOString(),
+    to: new Date(custom.to + "T23:59:59.999").toISOString(),
+  };
+}
 
 // Nhãn ngắn (dropdown) và nhãn phụ đề cho từng mốc.
 export const PERIOD_LABEL: Record<PeriodKey, string> = {
@@ -24,6 +44,7 @@ export const PERIOD_LABEL: Record<PeriodKey, string> = {
   thisWeek: "Tuần này",
   thisMonth: "Tháng này",
   lastMonth: "Tháng trước",
+  custom: "Tùy chọn ngày",
   all: "Tất cả",
 };
 
@@ -145,6 +166,15 @@ export interface TopCustomer {
   customerType: string;
 }
 
+/** Khách mua nhiều nhất trong kỳ (theo tổng tiền hóa đơn). */
+export interface TopBuyer {
+  id: number;
+  code: string;
+  name: string;
+  totalRevenue: number;
+  invoiceCount: number;
+}
+
 export interface TopProduct {
   productId: number;
   code: string;
@@ -187,8 +217,16 @@ export interface RecentActivity {
 }
 
 export const dashboardApi = {
-  getStats: (range: RangeKey = "month", branchId?: number): Promise<DashboardStats> => {
-    return apiClient.get("/dashboard/stats", { range, branchId });
+  getStats: (
+    range: RangeKey = "month",
+    branchId?: number,
+    custom?: CustomDates,
+  ): Promise<DashboardStats> => {
+    return apiClient.get("/dashboard/stats", {
+      range,
+      branchId,
+      ...customParams(range, custom),
+    });
   },
 
   getTodayStats: (): Promise<TodayStats> => {
@@ -199,48 +237,73 @@ export const dashboardApi = {
     return apiClient.get("/dashboard/revenue-chart", { months });
   },
 
-  getRevenueTrend: (range: RangeKey = "today", branchId?: number): Promise<TrendPoint[]> => {
-    return apiClient.get("/dashboard/revenue-trend", { range, branchId });
+  getRevenueTrend: (
+    range: RangeKey = "today",
+    branchId?: number,
+    custom?: CustomDates,
+  ): Promise<TrendPoint[]> => {
+    return apiClient.get("/dashboard/revenue-trend", {
+      range,
+      branchId,
+      ...customParams(range, custom),
+    });
   },
 
   getCategoryBreakdown: (
     range: RangeKey = "month",
     branchId?: number,
-    dimension: CategoryDimension = "parent"
+    dimension: CategoryDimension = "parent",
+    custom?: CustomDates,
   ): Promise<CategorySlice[]> => {
     return apiClient.get("/dashboard/category-breakdown", {
       range,
       branchId,
       dimension,
+      ...customParams(range, custom),
     });
   },
 
-  getCategoryOptions: (dimension: CategoryDimension = "parent"): Promise<string[]> => {
+  getCategoryOptions: (
+    dimension: CategoryDimension = "parent",
+  ): Promise<string[]> => {
     return apiClient.get("/dashboard/category-options", { dimension });
   },
 
   getBranchComparison: (
     period: PeriodKey = "d7",
-    metric: "rev" | "profit" = "rev"
+    metric: "rev" | "profit" = "rev",
+    custom?: CustomDates,
   ): Promise<BranchComparison> => {
-    return apiClient.get("/dashboard/branch-comparison", { period, metric });
+    return apiClient.get("/dashboard/branch-comparison", {
+      period,
+      metric,
+      ...customParams(period, custom),
+    });
   },
 
-  getFinance: (period: PeriodKey = "all", branchId?: number): Promise<FinanceData> => {
-    return apiClient.get("/dashboard/finance", { period, branchId });
+  getFinance: (
+    period: PeriodKey = "all",
+    branchId?: number,
+    custom?: CustomDates,
+  ): Promise<FinanceData> => {
+    return apiClient.get("/dashboard/finance", {
+      period,
+      branchId,
+      ...customParams(period, custom),
+    });
   },
 
   getTasks: (
     type: "orders" | "debt" | "cod" | "stock" = "orders",
     branchId?: number,
     limit = 20,
-    status?: string
+    status?: string,
   ): Promise<TaskRow[]> => {
     return apiClient.get("/dashboard/tasks", { type, branchId, limit, status });
   },
 
   getTaskCounts: (
-    branchId?: number
+    branchId?: number,
   ): Promise<{ orders: number; debt: number; cod: number; stock: number }> => {
     return apiClient.get("/dashboard/task-counts", { branchId });
   },
@@ -256,14 +319,31 @@ export const dashboardApi = {
     metric?: TopMetric;
     dimension?: CategoryDimension;
     categoryValue?: string;
+    custom?: CustomDates;
   }): Promise<TopProduct[]> => {
     return apiClient.get("/dashboard/top-products", {
+      ...customParams(params?.range ?? "month", params?.custom),
       limit: params?.limit ?? 10,
       range: params?.range ?? "month",
       branchId: params?.branchId,
       metric: params?.metric ?? "rev",
       dimension: params?.dimension,
       categoryValue: params?.categoryValue,
+    });
+  },
+
+  getTopBuyers: (params?: {
+    limit?: number;
+    range?: RangeKey;
+    branchId?: number;
+    custom?: CustomDates;
+  }): Promise<TopBuyer[]> => {
+    const range = params?.range ?? "month";
+    return apiClient.get("/dashboard/top-buyers", {
+      limit: params?.limit ?? 10,
+      range,
+      branchId: params?.branchId,
+      ...customParams(range, params?.custom),
     });
   },
 

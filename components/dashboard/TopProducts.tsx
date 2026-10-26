@@ -1,77 +1,53 @@
 "use client";
 
 import type { TopProduct, TopMetric } from "@/lib/api/dashboard";
-import { money, vi } from "@/lib/dashboard/format";
+import { money, moneyAxis, vi } from "@/lib/dashboard/format";
+import { HBarChart } from "./HBarChart";
 
 interface Props {
   items: TopProduct[];
   metric: TopMetric;
+  loading?: boolean;
 }
 
-const METRIC_GRAD: Record<TopMetric, string> = {
-  rev: "linear-gradient(90deg,#00B7CC,#2E8B8F)",
-  qty: "linear-gradient(90deg,#1A5F6A,#00B7CC)",
+const METRIC_COLOR: Record<TopMetric, string> = {
+  rev: "var(--dt-primary)",
+  qty: "var(--dt-primary)",
   profit: "linear-gradient(90deg,#E8C96A,#C9A84C)",
 };
 
-const METRIC_SUB: Record<TopMetric, string> = {
-  rev: "doanh thu",
-  qty: "sản lượng",
-  profit: "lợi nhuận",
-};
+/** Trục số lượng: 600, 1,2k, 3,6k. */
+export const qtyAxis = (n: number) =>
+  n >= 1000
+    ? (n / 1000).toLocaleString("vi-VN", { maximumFractionDigits: 1 }) + "k"
+    : vi(n);
 
-export function TopProducts({ items, metric }: Props) {
-  if (!items.length) {
-    return (
-      <div className="text-center py-7 text-[13.5px]" style={{ color: "var(--dt-text-muted)" }}>
-        Nhóm hàng này chưa có dữ liệu trong kỳ đã chọn.
-      </div>
-    );
-  }
+/** Số lượng gọn: 912, 2,8k. */
+const qtyShort = (n: number) => (n >= 10000 ? qtyAxis(n) : vi(n));
 
+/** Top hàng bán chạy — biểu đồ thanh ngang. */
+export function TopProducts({ items, metric, loading }: Props) {
   const valOf = (p: TopProduct) =>
-    metric === "qty" ? p.totalQuantity : metric === "profit" ? p.totalProfit : p.totalRevenue;
-
-  const total = items.reduce((s, p) => s + valOf(p), 0) || 1;
-  const max = Math.max(...items.map(valOf)) || 1;
+    metric === "qty"
+      ? p.totalQuantity
+      : metric === "profit"
+        ? p.totalProfit
+        : p.totalRevenue;
+  const fmt = metric === "qty" ? qtyShort : money;
 
   return (
-    <div className="grid gap-[14px] grid-cols-[repeat(auto-fill,minmax(190px,1fr))]">
-      {items.map((p, i) => {
-        const v = valOf(p);
-        const pct = ((v / total) * 100).toFixed(1);
-        const rankColor = metric === "profit" ? "#9A7A2A" : "var(--dt-primary)";
-        return (
-          <div
-            key={p.productId}
-            className="rounded-[8px] border p-4 transition hover:-translate-y-[2px]"
-            style={{ background: "var(--dt-bg-soft)", borderColor: "var(--dt-border)" }}>
-            <div className="dt-mono font-bold text-[13px]" style={{ color: rankColor }}>
-              #{i + 1}
-            </div>
-            <div className="font-semibold text-[13.5px] my-2 min-h-[40px] leading-snug">
-              {p.name}
-              <small className="block font-normal text-[11.5px] mt-[3px]" style={{ color: "var(--dt-text-muted)" }}>
-                {p.code}
-              </small>
-            </div>
-            <div className="dt-mono font-bold text-[18px]">
-              {metric === "qty" ? vi(p.totalQuantity) : money(v)}
-            </div>
-            <div
-              className="h-[6px] rounded-[6px] overflow-hidden my-[9px]"
-              style={{ background: "var(--dt-cyan-bg)" }}>
-              <span
-                className="block h-full rounded-[6px] dt-bar-fill"
-                style={{ width: `${(v / max) * 100}%`, background: METRIC_GRAD[metric] }}
-              />
-            </div>
-            <div className="text-[11.5px]" style={{ color: "var(--dt-text-muted)" }}>
-              {pct}% {METRIC_SUB[metric]}
-            </div>
-          </div>
-        );
-      })}
-    </div>
+    <HBarChart
+      loading={loading}
+      items={items.map((p) => ({
+        id: p.productId,
+        label: p.name,
+        value: valOf(p),
+        title: `${p.name} (${p.code}) — ${metric === "qty" ? vi(valOf(p)) : money(valOf(p))}`,
+      }))}
+      formatValue={fmt}
+      formatAxis={metric === "qty" ? qtyAxis : moneyAxis}
+      integer={metric === "qty"}
+      barColor={METRIC_COLOR[metric]}
+    />
   );
 }
