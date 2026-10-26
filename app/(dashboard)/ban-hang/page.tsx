@@ -31,7 +31,11 @@ import {
 import { priceBooksApi } from "@/lib/api";
 import { ordersApi } from "@/lib/api/orders";
 import { INVOICE_STATUS } from "@/lib/types/invoice";
-import { ORDER_STATUS } from "@/lib/types/order";
+import {
+  ORDER_STATUS,
+  ORDER_STATUS_LABELS,
+  isOrderInvoiceable,
+} from "@/lib/types/order";
 import { promotionsApi } from "@/lib/api/promotions";
 import { paymentNotesApi } from "@/lib/api/paymentNotes";
 import type { AppliedPromotion } from "@/lib/types/promotion";
@@ -463,9 +467,7 @@ const mapDocumentLinesToCartItems = (
         quantityUnit: normalizeQuantityUnit(
           item.quantityUnit,
           item.product,
-          item.conversionValueSnapshot ??
-            item.product?.conversionValue ??
-            1,
+          item.conversionValueSnapshot ?? item.product?.conversionValue ?? 1,
         ),
         conversionValueSnapshot:
           Number(item.conversionValueSnapshot) > 0
@@ -503,9 +505,7 @@ const mapDocumentLinesToCartItems = (
       quantityUnit: normalizeQuantityUnit(
         item.quantityUnit,
         item.product,
-        item.conversionValueSnapshot ??
-          item.product?.conversionValue ??
-          1,
+        item.conversionValueSnapshot ?? item.product?.conversionValue ?? 1,
       ),
       conversionValueSnapshot:
         Number(item.conversionValueSnapshot) > 0
@@ -839,9 +839,7 @@ export default function BanHangPage() {
           items: normalItems.map((it) => {
             const pid = Number(it.product.id);
             const merged = new Set(it.promoEnabledIds || []);
-            (cumMatchByRow.get(it.rowId) || []).forEach((id) =>
-              merged.add(id),
-            );
+            (cumMatchByRow.get(it.rowId) || []).forEach((id) => merged.add(id));
             return {
               productId: pid,
               quantity: Number(it.quantity),
@@ -1271,7 +1269,7 @@ export default function BanHangPage() {
             // → badge hiện đồng nhất trên mọi dòng + BE re-validate đúng khi lưu.
             const merged: CartItem[] = [];
             const allGifts = [...newGifts, ...preservedGifts];
-            for (let i = 0; i < normals.length; ) {
+            for (let i = 0; i < normals.length;) {
               const productId = normals[i].product?.id;
               let runEnd = i + 1;
               while (
@@ -1326,7 +1324,8 @@ export default function BanHangPage() {
               }
               allGifts
                 .filter(
-                  (g) => g.triggerRowId != null && runRowIds.has(g.triggerRowId),
+                  (g) =>
+                    g.triggerRowId != null && runRowIds.has(g.triggerRowId),
                 )
                 .forEach((g) => merged.push(g));
               i = runEnd;
@@ -2746,8 +2745,13 @@ export default function BanHangPage() {
    * - Không có hóa đơn chưa hủy → true.
    * - Có hóa đơn chưa hủy → false (đã toast cảnh báo).
    * - Lỗi mạng/không đọc được → true (chặn mềm, tránh kẹt thao tác).
+   * - `requireInvoiceable`: thêm điều kiện đơn phải "Đã xác nhận"/"Đã ra 1 phần HĐ"
+   *   (dùng khi chuyển sang tạo hóa đơn).
    */
-  const assertOrderNotInvoiced = async (orderId: number): Promise<boolean> => {
+  const assertOrderNotInvoiced = async (
+    orderId: number,
+    options?: { requireInvoiceable?: boolean },
+  ): Promise<boolean> => {
     try {
       const fresh = await ordersApi.getOrder(orderId);
       const hasActiveInvoice = (fresh.invoices || []).some(
@@ -2759,12 +2763,26 @@ export default function BanHangPage() {
         );
         return false;
       }
+      if (options?.requireInvoiceable && !isOrderInvoiceable(fresh.status)) {
+        warnOrderNotConfirmed(fresh);
+        return false;
+      }
       return true;
     } catch (error) {
       // Lỗi mạng → không chặn cứng (BE vẫn là tuyến phòng thủ cuối).
       console.error("assertOrderNotInvoiced error:", error);
       return true;
     }
+  };
+
+  // Chỉ cho tạo hóa đơn khi đơn "Đã xác nhận" (hoặc đã ra 1 phần HĐ).
+  const warnOrderNotConfirmed = (order: { code?: string; status: number }) => {
+    const label =
+      ORDER_STATUS_LABELS[order.status as keyof typeof ORDER_STATUS_LABELS] ||
+      "Không xác định";
+    toast.warning(
+      `Đơn ${order.code ?? ""} đang ở trạng thái "${label}". Vui lòng chuyển sang "Đã xác nhận" ở trang Đặt hàng trước khi tạo hóa đơn.`,
+    );
   };
 
   const handleConvertToInvoice = async () => {
@@ -2783,7 +2801,12 @@ export default function BanHangPage() {
       return;
     }
 
-    if (!(await assertOrderNotInvoiced(activeTab.documentId))) return;
+    if (
+      !(await assertOrderNotInvoiced(activeTab.documentId, {
+        requireInvoiceable: true,
+      }))
+    )
+      return;
 
     const order = existingOrder;
     if (!order) return;
@@ -2907,24 +2930,27 @@ export default function BanHangPage() {
       const proceed = await confirmPriceMismatch("hóa đơn");
       if (!proceed) return;
 
-       // Chặn race: đơn đã Hoàn thành/Hủy (đóng) thì không thể xuất thêm hóa đơn.
-       // Không chặn theo "có hóa đơn" vì luồng "Ra 1 phần HĐ" hợp lệ có HĐ trước đó.
-       try {
-         const fresh = await ordersApi.getOrder(activeTab.sourceOrderId);
-         if (
-           fresh.status === ORDER_STATUS.COMPLETED ||
-           fresh.status === ORDER_STATUS.CANCELLED
-         ) {
-           toast.error(
-             "Đơn hàng đã kết thúc, không thể xuất thêm hóa đơn. Vui lòng tải lại để xem trạng thái mới nhất.",
-           );
-           return;
-         }
-       } catch (error) {
-         console.error("handlePayment status check error:", error);
-         // Lỗi mạng → chặn mềm, để BE xử lý tuyến cuối.
-       }
-
+      // Chặn race: đơn đã Hoàn thành/Hủy (đóng) thì không thể xuất thêm hóa đơn.
+      // Không chặn theo "có hóa đơn" vì luồng "Ra 1 phần HĐ" hợp lệ có HĐ trước đó.
+      try {
+        const fresh = await ordersApi.getOrder(activeTab.sourceOrderId);
+        if (
+          fresh.status === ORDER_STATUS.COMPLETED ||
+          fresh.status === ORDER_STATUS.CANCELLED
+        ) {
+          toast.error(
+            "Đơn hàng đã kết thúc, không thể xuất thêm hóa đơn. Vui lòng tải lại để xem trạng thái mới nhất.",
+          );
+          return;
+        }
+        if (!isOrderInvoiceable(fresh.status)) {
+          warnOrderNotConfirmed(fresh);
+          return;
+        }
+      } catch (error) {
+        console.error("handlePayment status check error:", error);
+        // Lỗi mạng → chặn mềm, để BE xử lý tuyến cuối.
+      }
 
       // Phát hiện có mã xuất thiếu so với số lượng đặt (gộp theo productId, khớp với backend).
       const sourceOrder = activeTab.sourceOrder;
@@ -3832,13 +3858,13 @@ export default function BanHangPage() {
           const price = isGift ? 0 : Number(item.price);
           const quantity = Number(item.quantity);
           const discount = item.isPromoGift ? 0 : Number(item.discount) || 0;
-            return {
-              productId: Number(item.product.id),
-              productCode: item.product.code,
-              productName: item.product.name,
-              quantity: quantity,
-              ...getQuantityPersistence(item),
-              price: price,
+          return {
+            productId: Number(item.product.id),
+            productCode: item.product.code,
+            productName: item.product.name,
+            quantity: quantity,
+            ...getQuantityPersistence(item),
+            price: price,
             discount: discount,
             discountRatio: 0,
             totalPrice: (price - discount) * quantity,
@@ -4399,31 +4425,27 @@ export default function BanHangPage() {
           onClick={() => setActiveTabId(tab.id)}
           className={`flex items-center gap-1.5 lg:gap-2 px-2 lg:px-3 py-1 lg:py-2 rounded cursor-pointer flex-shrink-0 ${
             tab.id === activeTabId ? "bg-white/30" : "hover:bg-white/20"
-          }`}
-        >
+          }`}>
           <span className="text-white font-medium text-sm">{tab.label}</span>
           <button
             onClick={(e) => {
               e.stopPropagation();
               handleCloseTab(tab.id);
             }}
-            className="hover:bg-white/20 p-1 rounded"
-          >
+            className="hover:bg-white/20 p-1 rounded">
             <X className="w-4 h-4 text-white" />
           </button>
         </div>
       ))}
       <button
         onClick={handleAddTab}
-        className="px-2 lg:px-3 py-1 lg:py-2 rounded text-white hover:bg-white/20 font-medium flex-shrink-0"
-      >
+        className="px-2 lg:px-3 py-1 lg:py-2 rounded text-white hover:bg-white/20 font-medium flex-shrink-0">
         <Plus className="w-5 h-5" />
       </button>
       {canCreateOrder && canCreateInvoice && (
         <button
           onClick={handleToggleType}
-          className="px-2 lg:px-3 py-1 lg:py-2 rounded text-white hover:bg-white/20 font-medium flex-shrink-0"
-        >
+          className="px-2 lg:px-3 py-1 lg:py-2 rounded text-white hover:bg-white/20 font-medium flex-shrink-0">
           <ArrowLeftRight className="w-5 h-5" />
         </button>
       )}
@@ -4466,8 +4488,7 @@ export default function BanHangPage() {
             <div
               className={`${
                 mobilePosView === "items" ? "flex" : "hidden"
-              } lg:flex flex-col w-full lg:w-[60%] min-h-0 flex-1 lg:flex-none`}
-            >
+              } lg:flex flex-col w-full lg:w-[60%] min-h-0 flex-1 lg:flex-none`}>
               <OrderItemsList
                 cartItems={activeTab.cartItems}
                 onUpdateItem={updateCartItem}
@@ -4501,8 +4522,7 @@ export default function BanHangPage() {
                       <LoadingButton
                         onClick={handleConvertToInvoice}
                         disabled={activeTab.cartItems.length === 0}
-                        className="w-full bg-brand text-white py-2 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs"
-                      >
+                        className="w-full bg-brand text-white py-2 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
                         TẠO HÓA ĐƠN
                       </LoadingButton>
                     )}
@@ -4510,8 +4530,7 @@ export default function BanHangPage() {
                       onClick={() => handleSaveOrder()}
                       loading={isSubmitting}
                       disabled={activeTab.cartItems.length === 0}
-                      className="w-full bg-orange-400 text-white py-2 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs"
-                    >
+                      className="w-full bg-orange-400 text-white py-2 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
                       LƯU
                     </LoadingButton>
                   </div>
@@ -4520,8 +4539,7 @@ export default function BanHangPage() {
                     onClick={() => handleCreateDocument()}
                     loading={isSubmitting}
                     disabled={activeTab.cartItems.length === 0}
-                    className="w-full bg-brand text-white py-2 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs"
-                  >
+                    className="w-full bg-brand text-white py-2 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
                     Tạo đơn hàng
                   </LoadingButton>
                 )}
@@ -4532,8 +4550,7 @@ export default function BanHangPage() {
             <div
               className={`${
                 mobilePosView === "cart" ? "flex" : "hidden"
-              } lg:flex flex-col w-full lg:w-[40%] min-h-0 border-l flex-1 lg:flex-none`}
-            >
+              } lg:flex flex-col w-full lg:w-[40%] min-h-0 border-l flex-1 lg:flex-none`}>
               <OrderCart
                 key={activeTab.id}
                 cartItems={activeTab.cartItems}
@@ -4606,8 +4623,7 @@ export default function BanHangPage() {
             <div
               className={`${
                 mobilePosView === "items" ? "flex" : "hidden"
-              } lg:flex flex-col w-full lg:w-[60%] min-h-0 flex-1 lg:flex-none`}
-            >
+              } lg:flex flex-col w-full lg:w-[60%] min-h-0 flex-1 lg:flex-none`}>
               <InvoiceItemsList
                 cartItems={activeTab.cartItems}
                 onUpdateItem={updateCartItem}
@@ -4639,8 +4655,7 @@ export default function BanHangPage() {
                     onClick={handlePayment}
                     loading={isSubmitting}
                     disabled={activeTab.cartItems.length === 0}
-                    className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs"
-                  >
+                    className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
                     THANH TOÁN
                   </LoadingButton>
                 ) : activeTab.documentId ? (
@@ -4648,8 +4663,7 @@ export default function BanHangPage() {
                     onClick={() => handleSaveInvoice()}
                     loading={isSubmitting}
                     disabled={activeTab.cartItems.length === 0}
-                    className="w-full bg-orange-400 text-white py-2 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs"
-                  >
+                    className="w-full bg-orange-400 text-white py-2 rounded-lg hover:bg-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
                     LƯU
                   </LoadingButton>
                 ) : (
@@ -4657,8 +4671,7 @@ export default function BanHangPage() {
                     onClick={() => handleCreateDocument()}
                     loading={isSubmitting}
                     disabled={activeTab.cartItems.length === 0}
-                    className="w-full bg-brand text-white py-2 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs"
-                  >
+                    className="w-full bg-brand text-white py-2 rounded-lg hover:bg-brand-dark disabled:bg-gray-300 disabled:cursor-not-allowed font-medium text-xs">
                     Tạo hóa đơn
                   </LoadingButton>
                 )}
@@ -4669,8 +4682,7 @@ export default function BanHangPage() {
             <div
               className={`${
                 mobilePosView === "cart" ? "flex" : "hidden"
-              } lg:flex flex-col w-full lg:w-[40%] min-h-0 border-l flex-1 lg:flex-none`}
-            >
+              } lg:flex flex-col w-full lg:w-[40%] min-h-0 border-l flex-1 lg:flex-none`}>
               <InvoiceCart
                 key={activeTab.id}
                 cartItems={activeTab.cartItems}
@@ -4743,8 +4755,7 @@ export default function BanHangPage() {
             mobilePosView === "items"
               ? "text-brand border-t-2 border-brand"
               : "text-gray-500"
-          }`}
-        >
+          }`}>
           <List className="w-5 h-5" />
           <span className="text-xs font-medium">Hàng hóa</span>
         </button>
@@ -4755,8 +4766,7 @@ export default function BanHangPage() {
             mobilePosView === "cart"
               ? "text-brand border-t-2 border-brand"
               : "text-gray-500"
-          }`}
-        >
+          }`}>
           <div className="relative">
             <ShoppingCart className="w-5 h-5" />
             {activeTab.cartItems.length > 0 && (

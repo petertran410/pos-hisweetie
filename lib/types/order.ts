@@ -18,6 +18,11 @@ export const ORDER_STATUS_LABELS = {
   [ORDER_STATUS.PARTIALLY_INVOICED]: "Đã ra 1 phần hóa đơn",
 } as const;
 
+/** Đơn chỉ được tạo hóa đơn khi "Đã xác nhận" hoặc "Đã ra 1 phần hóa đơn". */
+export const isOrderInvoiceable = (status?: number | null) =>
+  status === ORDER_STATUS.CONFIRMED ||
+  status === ORDER_STATUS.PARTIALLY_INVOICED;
+
 export const ORDER_STATUS_NUMBER_TO_STRING: Record<number, string> = {
   [ORDER_STATUS.PENDING]: "pending",
   [ORDER_STATUS.CONFIRMED]: "confirmed",

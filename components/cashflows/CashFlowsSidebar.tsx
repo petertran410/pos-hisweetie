@@ -9,7 +9,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  X,
   Check,
   Calendar,
 } from "lucide-react";

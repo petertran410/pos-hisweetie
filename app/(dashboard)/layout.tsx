@@ -5,6 +5,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { RouteGuard } from "@/components/layout/RouteGuard";
 import { DashboardHeader } from "@/components/layout/DashboardHeader";
 import { SepayPendingNotifier } from "@/components/sepay/SepayPendingNotifier";
+import { RealtimeSync } from "@/lib/realtime/useRealtimeSync";
 
 export default function DashboardLayout({
   children,
@@ -15,11 +16,14 @@ export default function DashboardLayout({
     <Suspense fallback={null}>
       <ProtectedRoute>
         <RouteGuard>
-          <div className="flex flex-col" style={{ height: "calc(100vh / 0.85)" }}>
+          <div
+            className="flex flex-col"
+            style={{ height: "calc(100vh / 0.85)" }}>
             <DashboardHeader />
             <main className="flex-1 overflow-hidden">{children}</main>
           </div>
           <SepayPendingNotifier />
+          <RealtimeSync />
         </RouteGuard>
       </ProtectedRoute>
     </Suspense>
