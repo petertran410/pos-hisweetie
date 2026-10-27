@@ -30,8 +30,8 @@ export const smaxChatApi = {
 
   getChannels: (): Promise<ChatChannel[]> => apiClient.get("/smax/chat/channels"),
 
-  getRecent: (pagePid?: string): Promise<{ items: RecentChat[] }> =>
-    apiClient.get("/smax/chat/recent", { pagePid }),
+  getRecent: (pagePid?: string, limit?: number): Promise<{ items: RecentChat[] }> =>
+    apiClient.get("/smax/chat/recent", { pagePid, limit }),
 
   getZaloProfile: (customerId: number, pagePid: string, contactId: number): Promise<ZaloProfile> =>
     apiClient.get(`${base(customerId)}/zalo-profile`, { pagePid, contactId }),

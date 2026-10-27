@@ -94,44 +94,11 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
         <p className="text-sm text-gray-500">Chưa có hội thoại gần đây trên kênh này.</p>
       ) : (
         <ul className="flex flex-col gap-1">
-          {(showAll ? items : items.slice(0, COLLAPSED)).map((c) => {
-            const m = c.match;
-            const unseen = newCount(c.tid, c.messageCount);
-            return (
-              <li key={c.tid}>
-                <button
-                  onClick={() => open(c)}
-                  className="w-full flex items-start gap-2 rounded-md px-3 py-2 text-left hover:bg-cyan-bg border border-transparent hover:border-brand-border">
-                  <span className="relative shrink-0">
-                    <ZaloAvatar avatar={c.avatar} isGroup={c.isGroup} members={c.isGroup ? c.memberPreview : [{ name: c.name, avatar: null }]} size={28} />
-                    {unseen > 0 && <UnseenBadge count={unseen} />}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2">
-                      <span className={`truncate text-sm ${c.unread ? "font-semibold" : "font-medium"}`}>
-                        {m?.type === "linked"
-                          ? `${m.customer.code ? `${m.customer.code} · ` : ""}${m.customer.name}`
-                          : c.name || c.zaloId}
-                      </span>
-                      <span className="ml-auto shrink-0 text-[11px] text-gray-400">{ago(c.lastMessageAt)}</span>
-                      {c.unread && <span className="h-2 w-2 shrink-0 rounded-full bg-brand" title="Chưa đọc" />}
-                    </span>
-                    <span className="block truncate text-xs text-gray-500">
-                      {c.isGroup && m?.type === "linked" ? `${c.name}: ` : ""}
-                      {c.lastMessage || "…"}
-                    </span>
-                    {m?.type !== "linked" && (
-                      <span className="block text-[11px] text-amber-700">
-                        {m?.type === "byCode"
-                          ? `Chưa gắn khách POS — gợi ý ${m.customer.code ?? m.customer.name}`
-                          : "Chưa gắn khách POS"}
-                      </span>
-                    )}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
+          {(showAll ? items : items.slice(0, COLLAPSED)).map((c) => (
+            <li key={c.tid}>
+              <RecentChatRow c={c} onClick={() => open(c)} />
+            </li>
+          ))}
         </ul>
       )}
       {items.length > COLLAPSED && (
@@ -142,6 +109,44 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
         </button>
       )}
     </section>
+  );
+}
+
+/** 1 dòng hội thoại gần đây (dùng ở danh sách chọn khách và dropdown "…" của thanh thu gọn). */
+export function RecentChatRow({ c, onClick }: { c: RecentChat; onClick: () => void }) {
+  const m = c.match;
+  const unseen = newCount(c.tid, c.messageCount);
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-start gap-2 rounded-md px-3 py-2 text-left hover:bg-cyan-bg border border-transparent hover:border-brand-border">
+      <span className="relative shrink-0">
+        <ZaloAvatar avatar={c.avatar} isGroup={c.isGroup} members={c.isGroup ? c.memberPreview : [{ name: c.name, avatar: null }]} size={28} />
+        {unseen > 0 && <UnseenBadge count={unseen} />}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-2">
+          <span className={`truncate text-sm ${c.unread ? "font-semibold" : "font-medium"}`}>
+            {m?.type === "linked"
+              ? `${m.customer.code ? `${m.customer.code} · ` : ""}${m.customer.name}`
+              : c.name || c.zaloId}
+          </span>
+          <span className="ml-auto shrink-0 text-[11px] text-gray-400">{ago(c.lastMessageAt)}</span>
+          {c.unread && <span className="h-2 w-2 shrink-0 rounded-full bg-brand" title="Chưa đọc" />}
+        </span>
+        <span className="block truncate text-xs text-gray-500">
+          {c.isGroup && m?.type === "linked" ? `${c.name}: ` : ""}
+          {c.lastMessage || "…"}
+        </span>
+        {m?.type !== "linked" && (
+          <span className="block text-[11px] text-amber-700">
+            {m?.type === "byCode"
+              ? `Chưa gắn khách POS — gợi ý ${m.customer.code ?? m.customer.name}`
+              : "Chưa gắn khách POS"}
+          </span>
+        )}
+      </span>
+    </button>
   );
 }
 

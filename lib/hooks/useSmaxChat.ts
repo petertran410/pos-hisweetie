@@ -54,10 +54,13 @@ export function useSharedGroups(customerId: number, pagePid: string | undefined,
 }
 
 /** Hội thoại mới nhất trên kênh Zalo của tôi (backend cache 30s). */
-export function useRecentChats(enabled: boolean, pagePid?: string | null) {
+// limit: số hội thoại gần nhất (mặc định 30; thanh thu gọn xin thêm khi bấm "…")
+export function useRecentChats(enabled: boolean, pagePid?: string | null, limit = 30) {
   return useQuery({
-    queryKey: ["smaxRecentChats", pagePid ?? null],
-    queryFn: () => smaxChatApi.getRecent(pagePid ?? undefined),
+    queryKey: ["smaxRecentChats", pagePid ?? null, limit],
+    queryFn: () => smaxChatApi.getRecent(pagePid ?? undefined, limit),
+    // Đổi limit: giữ danh sách cũ trong lúc tải thêm (không nháy trống)
+    placeholderData: (prev) => prev,
     enabled,
     staleTime: 30_000,
     refetchInterval: 60_000,
