@@ -1,15 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, RotateCw } from "lucide-react";
-import { toast } from "sonner";
-import { smaxChatApi } from "@/lib/api/smaxChat";
-import { useCan } from "@/lib/hooks/useCan";
+import { RotateCw } from "lucide-react";
 import { useRecentChats } from "@/lib/hooks/useSmaxChat";
 import type { ChatCustomerRef } from "@/lib/store/chatSidebar";
-import type { RecentChat, ZaloContactKind } from "@/lib/types/smaxChat";
-import { openExternal } from "@/lib/chat/confirm";
+import type { LooseThread, RecentChat, ZaloContactKind } from "@/lib/types/smaxChat";
 import { markSeen, newCount } from "@/lib/chat/seen";
 import { ZaloAvatar } from "./ZaloAvatar";
 
@@ -24,6 +19,8 @@ export interface RecentChatTarget {
 
 interface Props {
   onOpen: (customer: ChatCustomerRef, target: RecentChatTarget | null) => void;
+  // Hội thoại chưa gắn khách POS
+  onOpenThread: (thread: LooseThread) => void;
   // Kênh đang chọn (hội thoại gần đây theo kênh)
   pagePid?: string | null;
 }
@@ -38,20 +35,26 @@ function ago(iso: string | null) {
   return new Date(iso).toLocaleDateString("vi-VN");
 }
 
-/** Mở hội thoại gần đây: đã gắn khách → mở thẳng; khớp mã khách → gắn nhóm rồi mở; chưa gắn → mở Smax. */
-export function useOpenRecentChat(onOpen: Props["onOpen"]) {
-  const canManage = useCan("smax_chat", "manage_contacts");
-  const queryClient = useQueryClient();
-  const [linking, setLinking] = useState<string | null>(null);
+/** Hội thoại gần đây → trạng thái "chưa gắn khách POS" (kèm gợi ý nếu khớp mã trong tên nhóm). */
+export function toLooseThread(c: RecentChat): LooseThread {
+  return {
+    pagePid: c.pagePid,
+    tid: c.tid,
+    zaloId: c.zaloId,
+    isGroup: c.isGroup,
+    name: c.name,
+    suggestion: c.match?.type === "byCode" ? c.match.customer : null,
+  };
+}
 
-  const open = async (c: RecentChat) => {
+/**
+ * Mở hội thoại gần đây: đã gắn khách → chat theo khách; chưa gắn (kể cả chỉ khớp
+ * mã khách trong tên nhóm) → mở hội thoại, thanh "Gắn khách POS" ở trên cùng.
+ */
+export function useOpenRecentChat(onOpen: Props["onOpen"], onOpenThread: (t: LooseThread) => void) {
+  const open = (c: RecentChat) => {
     markSeen(c.tid, c.messageCount);
-    if (!c.match) {
-      openExternal(c.smaxUrl);
-      return;
-    }
-    const kind: ZaloContactKind = c.isGroup ? "group" : "user";
-    if (c.match.type === "linked") {
+    if (c.match?.type === "linked") {
       onOpen(c.match.customer, {
         pagePid: c.pagePid,
         kind: c.match.kind,
@@ -59,41 +62,17 @@ export function useOpenRecentChat(onOpen: Props["onOpen"]) {
       });
       return;
     }
-    if (!canManage) {
-      onOpen(c.match.customer, null);
-      return;
-    }
-    setLinking(c.tid);
-    try {
-      const contact = await smaxChatApi.createContact(c.match.customer.id, {
-        kind,
-        zaloId: c.zaloId,
-        name: c.name || undefined,
-      });
-      toast.success(`Đã gắn ${c.isGroup ? "nhóm" : "Zalo"} "${c.name}" cho ${c.match.customer.code ?? c.match.customer.name}`);
-      queryClient.invalidateQueries({ queryKey: ["smaxRecentChats"] });
-      onOpen(c.match.customer, {
-        pagePid: c.pagePid,
-        kind,
-        groupId: kind === "group" ? contact.id : null,
-      });
-    } catch (e) {
-      toast.error((e as Error).message || "Không gắn được hội thoại cho khách");
-    } finally {
-      setLinking(null);
-    }
+    onOpenThread(toLooseThread(c));
   };
-  return { open, linking, canManage };
+  return { open };
 }
 
 /** Hội thoại mới nhất trên kênh Zalo đang chọn, khớp với khách POS để mở nhanh. */
-export function RecentChatsList({ onOpen, pagePid }: Props) {
+export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
   const { data, isLoading, isFetching, error, refetch } = useRecentChats(true, pagePid);
-  const { open, linking, canManage } = useOpenRecentChat(onOpen);
+  const { open } = useOpenRecentChat(onOpen, onOpenThread);
   const [showAll, setShowAll] = useState(false);
   const items = data?.items ?? [];
-  const matched = items.filter((i) => i.match);
-  const unmatched = items.length - matched.length;
 
   return (
     <section>
@@ -111,19 +90,18 @@ export function RecentChatsList({ onOpen, pagePid }: Props) {
         <p className="text-sm text-gray-500">Đang tải hội thoại…</p>
       ) : error ? (
         <p className="text-sm text-red-600">{(error as Error).message || "Không tải được hội thoại"}</p>
-      ) : matched.length === 0 ? (
-        <p className="text-sm text-gray-500">Chưa có hội thoại gần đây gắn với khách POS.</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm text-gray-500">Chưa có hội thoại gần đây trên kênh này.</p>
       ) : (
         <ul className="flex flex-col gap-1">
-          {(showAll ? matched : matched.slice(0, COLLAPSED)).map((c) => {
-            const m = c.match!;
+          {(showAll ? items : items.slice(0, COLLAPSED)).map((c) => {
+            const m = c.match;
             const unseen = newCount(c.tid, c.messageCount);
             return (
               <li key={c.tid}>
                 <button
                   onClick={() => open(c)}
-                  disabled={linking === c.tid}
-                  className="w-full flex items-start gap-2 rounded-md px-3 py-2 text-left hover:bg-cyan-bg border border-transparent hover:border-brand-border disabled:opacity-60">
+                  className="w-full flex items-start gap-2 rounded-md px-3 py-2 text-left hover:bg-cyan-bg border border-transparent hover:border-brand-border">
                   <span className="relative shrink-0">
                     <ZaloAvatar avatar={c.avatar} isGroup={c.isGroup} members={c.isGroup ? c.memberPreview : [{ name: c.name, avatar: null }]} size={28} />
                     {unseen > 0 && <UnseenBadge count={unseen} />}
@@ -131,28 +109,22 @@ export function RecentChatsList({ onOpen, pagePid }: Props) {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
                       <span className={`truncate text-sm ${c.unread ? "font-semibold" : "font-medium"}`}>
-                        {m.customer.code ? `${m.customer.code} · ` : ""}
-                        {m.customer.name}
+                        {m?.type === "linked"
+                          ? `${m.customer.code ? `${m.customer.code} · ` : ""}${m.customer.name}`
+                          : c.name || c.zaloId}
                       </span>
                       <span className="ml-auto shrink-0 text-[11px] text-gray-400">{ago(c.lastMessageAt)}</span>
                       {c.unread && <span className="h-2 w-2 shrink-0 rounded-full bg-brand" title="Chưa đọc" />}
                     </span>
                     <span className="block truncate text-xs text-gray-500">
-                      {c.isGroup ? `${c.name}: ` : ""}
+                      {c.isGroup && m?.type === "linked" ? `${c.name}: ` : ""}
                       {c.lastMessage || "…"}
                     </span>
-                    {m.type === "byCode" && (
+                    {m?.type !== "linked" && (
                       <span className="block text-[11px] text-amber-700">
-                        {linking === c.tid ? (
-                          <>
-                            <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
-                            Đang gắn nhóm cho khách…
-                          </>
-                        ) : canManage ? (
-                          "Khớp theo mã khách trong tên nhóm — bấm để gắn nhóm và mở"
-                        ) : (
-                          "Khớp theo mã khách trong tên nhóm (chưa gắn nhóm)"
-                        )}
+                        {m?.type === "byCode"
+                          ? `Chưa gắn khách POS — gợi ý ${m.customer.code ?? m.customer.name}`
+                          : "Chưa gắn khách POS"}
                       </span>
                     )}
                   </span>
@@ -162,17 +134,12 @@ export function RecentChatsList({ onOpen, pagePid }: Props) {
           })}
         </ul>
       )}
-      {matched.length > COLLAPSED && (
+      {items.length > COLLAPSED && (
         <button
           onClick={() => setShowAll((v) => !v)}
           className="mt-1 px-1 text-xs text-brand hover:underline">
-          {showAll ? "Thu gọn" : `Xem thêm ${matched.length - COLLAPSED} hội thoại`}
+          {showAll ? "Thu gọn" : `Xem thêm ${items.length - COLLAPSED} hội thoại`}
         </button>
-      )}
-      {!isLoading && unmatched > 0 && (
-        <p className="mt-1 px-1 text-[11px] text-gray-400">
-          {unmatched} hội thoại gần đây chưa gắn với khách POS (thêm ID Zalo/nhóm cho khách để hiện ở đây).
-        </p>
       )}
     </section>
   );

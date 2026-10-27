@@ -28,6 +28,16 @@ export function SendConfirmDialog({ channelName, recipient, draft, onConfirm, on
           <dd className="font-medium break-all">{recipient}</dd>
         </dl>
         <div className="rounded border bg-gray-50 p-2 mb-4 max-h-56 overflow-y-auto">
+          {draft.replyTo && (
+            <div className="mb-1.5 flex items-center gap-2 border-l-4 border-brand pl-2 text-xs text-gray-500">
+              {draft.replyTo.thumb && (
+                <img src={draft.replyTo.thumb} alt="" className="h-9 w-9 shrink-0 rounded object-cover" />
+              )}
+              <p className="line-clamp-2">
+                Trả lời {draft.replyTo.senderName ?? ""}: {draft.replyTo.preview}
+              </p>
+            </div>
+          )}
           {draft.attachments.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-2">
               {draft.attachments.map((a) =>

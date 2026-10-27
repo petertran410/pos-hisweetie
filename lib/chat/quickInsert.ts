@@ -4,13 +4,14 @@ import { productsApi } from "@/lib/api/products";
 import { priceBooksApi } from "@/lib/api/price-books";
 import { debtTrackingApi } from "@/lib/api/debt-tracking";
 import { smaxChatApi } from "@/lib/api/smaxChat";
+import { packingSlipsApi } from "@/lib/api/packing-slips";
 import type { ChatContext } from "@/lib/types/smaxChat";
 import type { CartLine } from "@/lib/store/posInView";
-import { cartText, debtText, invoiceText, orderText, productText } from "./quickTemplates";
+import { cartText, debtText, invoiceText, orderText, packingSlipText, productText } from "./quickTemplates";
 
 /** Mục gửi nhanh chọn từ menu "/" hoặc kéo từ bảng Thông tin POS. */
 export type QuickItem =
-  | { type: "invoice" | "order" | "product"; id: number }
+  | { type: "invoice" | "order" | "product" | "packingSlip"; id: number }
   | { type: "cart"; lines: CartLine[] }
   | { type: "debt" };
 
@@ -23,10 +24,15 @@ export interface QuickPerms {
 }
 
 export interface ProductImagePick {
+  // id sản phẩm, hoặc id báo đơn khi kind="packingSlip"
   productId: number;
   name: string;
   images: { id: number; url: string }[];
+  kind?: "packingSlip";
 }
+
+export const samePick = (a: Pick<ProductImagePick, "productId" | "kind">, b: Pick<ProductImagePick, "productId" | "kind">) =>
+  a.productId === b.productId && a.kind === b.kind;
 
 export interface QuickResult {
   text: string;
@@ -71,6 +77,32 @@ export async function buildQuickMessage(
       return {
         text: productText({ name: product.name, code: product.code, unit: product.unit, price, inStock }),
         productImages: images.length ? { productId: product.id, name: product.name, images } : undefined,
+      };
+    }
+    case "packingSlip": {
+      const slip = await packingSlipsApi.getPackingSlip(item.id);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const docs = (slip.invoices ?? []).map((d: any) => d.invoice ?? d.consignment).filter(Boolean);
+      const images = (slip.images ?? [])
+        .filter((i: { imageUrl: string }) => /^https:\/\//.test(i.imageUrl))
+        .map((i: { id: number; imageUrl: string }) => ({ id: i.id, url: i.imageUrl }));
+      return {
+        text: packingSlipText({
+          code: slip.code,
+          createdAt: slip.createdAt,
+          numberOfPackages: slip.numberOfPackages,
+          paymentMethod: slip.paymentMethod,
+          cashAmount: slip.cashAmount,
+          branchName: slip.branch?.name,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          documents: docs.map((d: any) => ({ code: d.code, customerName: d.customer?.name, soldByName: d.soldBy?.name })),
+          creatorName: slip.creator?.name,
+          // Cờ hàng lạnh tính sẵn ở "Báo đơn gần đây" (API chi tiết báo đơn không trả)
+          hasColdItems: ctx.recentPackingSlips?.find((r) => r.id === slip.id)?.hasColdItems,
+        }),
+        productImages: images.length
+          ? { kind: "packingSlip", productId: slip.id, name: `Báo đơn ${slip.code}`, images }
+          : undefined,
       };
     }
     case "debt": {

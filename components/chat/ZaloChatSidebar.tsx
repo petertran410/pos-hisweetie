@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -23,8 +23,10 @@ import { useChatContext, useRecentChats } from "@/lib/hooks/useSmaxChat";
 import { newCount } from "@/lib/chat/seen";
 import { UnseenBadge, useOpenRecentChat } from "./RecentChatsList";
 import { pickChannel, useActiveChannel } from "@/lib/chat/channels";
+import { customerSource } from "@/lib/chat/threadSource";
+import { LooseChat } from "./LooseChat";
 import { useFastTitle } from "@/lib/chat/useFastTitle";
-import type { ChatChannel, ChatContext } from "@/lib/types/smaxChat";
+import type { ChatChannel, ChatContext, LooseThread } from "@/lib/types/smaxChat";
 import { ChatCustomerPicker } from "./ChatCustomerPicker";
 import { ChatCustomerCard } from "./ChatCustomerCard";
 import { ChatThread } from "./ChatThread";
@@ -63,9 +65,87 @@ export function ZaloChatSidebar() {
   if (!open)
     return <CollapsedRail customer={customer} onExpand={() => setOpen(true)} />;
 
+  return <ResizableAside onClose={() => setOpen(false)} />;
+}
+
+const PANEL_MIN_WIDTH = 360;
+const PANEL_MAX_WIDTH = 1200;
+// Từ độ rộng này hiện cột "Thông tin POS" cạnh khung chat (thay cho mục thu gọn)
+const PANEL_WIDE_WIDTH = 700;
+// Khung chat đủ rộng để hiện cột Thông tin POS riêng
+const PanelWideContext = createContext(false);
+
+/** Khung chat kéo mép trái để mở rộng / thu hẹp; bấm đúp mép để về mặc định. */
+function ResizableAside({ onClose }: { onClose: () => void }) {
+  const panelWidth = useChatSidebarStore((s) => s.panelWidth);
+  const setPanelWidth = useChatSidebarStore((s) => s.setPanelWidth);
+  const ref = useRef<HTMLElement>(null);
+  const [width, setWidth] = useState(0);
+  const [resizing, setResizing] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setWidth(el.offsetWidth));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const startResize = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    e.preventDefault();
+    const handle = e.currentTarget;
+    handle.setPointerCapture(e.pointerId);
+    const startX = e.clientX;
+    const startW = el.offsetWidth;
+    // Toạ độ con trỏ theo px màn hình, độ rộng theo px CSS (html có zoom) → quy đổi
+    const scale = el.getBoundingClientRect().width / el.offsetWidth || 1;
+    setResizing(true);
+    const onMove = (ev: PointerEvent) =>
+      setPanelWidth(
+        Math.round(
+          Math.min(PANEL_MAX_WIDTH, Math.max(PANEL_MIN_WIDTH, startW + (startX - ev.clientX) / scale)),
+        ),
+      );
+    const onUp = () => {
+      setResizing(false);
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onUp);
+      handle.removeEventListener("pointercancel", onUp);
+    };
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
+    handle.addEventListener("pointercancel", onUp);
+  };
+
   return (
-    <aside className="w-[420px] min-[1440px]:w-[720px] shrink-0 border-l bg-white flex min-h-0">
-      <ChatPanel onClose={() => setOpen(false)} />
+    <aside
+      ref={ref}
+      className={`relative shrink-0 border-l bg-white flex min-h-0 ${
+        panelWidth ? "" : "w-[420px] min-[1440px]:w-[720px]"
+      } ${resizing ? "select-none" : ""}`}
+      // Chừa tối thiểu 480px cho màn hình POS bên trái (html zoom 0.85 → bù viewport)
+      style={{ ...(panelWidth ? { width: panelWidth } : {}), maxWidth: "calc(100vw / 0.85 - 480px)" }}
+    >
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Kéo để đổi chiều rộng khung chat"
+        title="Kéo để mở rộng / thu hẹp · bấm đúp để về mặc định"
+        onPointerDown={startResize}
+        onDoubleClick={() => setPanelWidth(null)}
+        className="group absolute inset-y-0 -left-1.5 z-20 flex w-3 cursor-col-resize touch-none items-center justify-center"
+      >
+        <span
+          className={`h-10 w-1 rounded-full transition-colors group-hover:bg-brand ${
+            resizing ? "bg-brand" : "bg-transparent"
+          }`}
+        />
+      </div>
+      <PanelWideContext.Provider value={width >= PANEL_WIDE_WIDTH}>
+        <ChatPanel onClose={onClose} />
+      </PanelWideContext.Provider>
     </aside>
   );
 }
@@ -89,16 +169,23 @@ function CollapsedRail({
     !!channel && !channel.missing,
     channel?.pagePid,
   );
-  const { open, linking } = useOpenRecentChat((c, target) => {
-    selectCustomer(c, userId);
-    if (target) {
-      const st = useChatSidebarStore.getState();
-      st.setPagePid(target.pagePid);
-      st.setKind(target.kind);
-      st.setGroupId(target.groupId);
-    }
-    onExpand();
-  });
+  const openLoose = useChatSidebarStore((s) => s.openLoose);
+  const { open } = useOpenRecentChat(
+    (c, target) => {
+      selectCustomer(c, userId);
+      if (target) {
+        const st = useChatSidebarStore.getState();
+        st.setPagePid(target.pagePid);
+        st.setKind(target.kind);
+        st.setGroupId(target.groupId);
+      }
+      onExpand();
+    },
+    (thread) => {
+      openLoose(thread, userId);
+      onExpand();
+    },
+  );
 
   // title hiện sau 200ms thay vì ~1s của trình duyệt
   const railRef = useRef<HTMLElement>(null);
@@ -149,7 +236,6 @@ function CollapsedRail({
               <button
                 key={c.tid}
                 onClick={() => open(c)}
-                disabled={linking === c.tid}
                 title={`${who}\n${c.isGroup ? `${c.name}: ` : ""}${c.lastMessage}`}
                 className={`relative shrink-0 rounded-full ${c.match ? "" : "opacity-50 hover:opacity-80"} disabled:opacity-40`}
               >
@@ -293,6 +379,14 @@ function useCurrentChatCustomer(): ChatCustomerRef | null {
   return ownerId === userId ? customer : null;
 }
 
+/** Hội thoại chưa gắn khách POS đang mở (nếu có). */
+function useCurrentLooseThread(): LooseThread | null {
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+  const ownerId = useChatSidebarStore((s) => s.ownerId);
+  const loose = useChatSidebarStore((s) => s.loose);
+  return ownerId === userId ? loose : null;
+}
+
 /** Đầu sidebar: avatar + chọn kênh Zalo của tôi + tình trạng kênh (thay chữ "Chat Zalo"). */
 function ChannelSwitcher() {
   const { usable, channel } = useActiveChannel();
@@ -370,9 +464,11 @@ function ChatPanel({
 }) {
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const customer = useCurrentChatCustomer();
+  const loose = useCurrentLooseThread();
   const selectCustomer = useChatSidebarStore((s) => s.selectCustomer);
+  const openLoose = useChatSidebarStore((s) => s.openLoose);
   const [picking, setPicking] = useState(false);
-  const showPicker = picking || !customer;
+  const showPicker = picking || (!customer && !loose);
 
   return (
     <div className="flex flex-1 min-w-0 min-h-0 flex-col">
@@ -380,14 +476,19 @@ function ChatPanel({
         <ChannelSwitcher />
         {/* Khách đang chat: căn phải, sát các nút */}
         <p className="min-w-0 flex-1 truncate text-right text-xs text-gray-500">
-          {customer && !showPicker && (
-            <>
-              {customer.code ? `${customer.code} · ` : ""}
-              {customer.name}
-            </>
-          )}
+          {!showPicker &&
+            (loose ? (
+              <span className="text-amber-700">{loose.name || loose.zaloId} · chưa gắn khách POS</span>
+            ) : (
+              customer && (
+                <>
+                  {customer.code ? `${customer.code} · ` : ""}
+                  {customer.name}
+                </>
+              )
+            ))}
         </p>
-        {customer && (
+        {(customer || loose) && (
           <button
             onClick={() => setPicking(!picking)}
             title={showPicker ? "Quay lại hội thoại" : "Đổi khách"}
@@ -421,9 +522,15 @@ function ChatPanel({
             }
             setPicking(false);
           }}
+          onOpenThread={(t) => {
+            openLoose(t, userId);
+            setPicking(false);
+          }}
         />
+      ) : loose ? (
+        <LooseChat key={loose.tid} thread={loose} />
       ) : (
-        <CustomerChat key={customer.id} customerId={customer.id} />
+        customer && <CustomerChat key={customer.id} customerId={customer.id} />
       )}
     </div>
   );
@@ -436,6 +543,7 @@ function CustomerChat({ customerId }: { customerId: number }) {
     error,
     refetch,
   } = useChatContext(customerId, true);
+  const wide = useContext(PanelWideContext);
 
   if (isLoading) {
     return (
@@ -469,7 +577,8 @@ function CustomerChat({ customerId }: { customerId: number }) {
   return (
     <div className="flex flex-1 min-h-0">
       <div className="flex flex-1 min-w-0 min-h-0 flex-col">
-        <details className="border-b min-[1440px]:hidden">
+        {!wide && (
+        <details className="border-b">
           <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase text-gray-500">
             Thông tin POS
           </summary>
@@ -477,14 +586,17 @@ function CustomerChat({ customerId }: { customerId: number }) {
             <ChatCustomerCard context={ctx} />
           </div>
         </details>
+        )}
         <ChannelChat ctx={ctx} />
       </div>
-      <div className="hidden min-[1440px]:block w-[300px] shrink-0 border-l overflow-y-auto p-3">
+      {wide && (
+      <div className="w-[300px] shrink-0 border-l overflow-y-auto p-3">
         <h3 className="text-xs font-semibold uppercase text-gray-500 mb-2">
           Thông tin POS
         </h3>
         <ChatCustomerCard context={ctx} />
       </div>
+      )}
     </div>
   );
 }
@@ -644,10 +756,8 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
       ) : contact ? (
         <ChatThread
           key={`${channel.pagePid}-${contact.id}`}
-          customerId={ctx.customer.id}
-          pagePid={channel.pagePid}
+          source={customerSource(ctx.customer.id, channel.pagePid, contact)}
           channelName={channel.name}
-          contact={contact}
           recipientLabel={recipientLabel}
           confirmBeforeSend={ctx.confirmBeforeSend}
           sendDisabledReason={sendDisabledReason}

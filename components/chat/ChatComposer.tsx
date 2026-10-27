@@ -8,6 +8,7 @@ import {
   Paperclip,
   Play,
   QrCode,
+  Reply,
   Send,
   Smile,
   X,
@@ -23,14 +24,17 @@ import {
 import {
   buildQuickMessage,
   QUICK_ITEM_MIME,
+  samePick,
   type ProductImagePick,
   type QuickItem,
 } from "@/lib/chat/quickInsert";
 import type {
   ChatContext,
   ChatDraft,
+  ChatMessage,
   OutgoingAttachment,
 } from "@/lib/types/smaxChat";
+import { messagePreview, messageThumb } from "@/lib/chat/messageActions";
 import { QuickInsertMenu, useQuickOptions } from "./QuickInsertMenu";
 import { EmojiStickerPicker } from "./EmojiStickerPicker";
 import { addRecentEmoji, addRecentSticker } from "@/lib/chat/stickers";
@@ -44,7 +48,8 @@ interface Props {
   // Lý do khóa ô soạn (mất kết nối, không có quyền…); null = được gửi
   disabledReason: string | null;
   // Ngữ cảnh khách đang chat — cho menu "/" và kéo thả từ bảng Thông tin POS
-  ctx: ChatContext;
+  // null: hội thoại chưa gắn khách POS → tắt menu "/" và kéo thả thông tin POS
+  ctx: ChatContext | null;
   onSend: (draft: ChatDraft) => void;
   // Nội dung trả lại ô soạn (vd bấm Hủy ở hộp xác nhận); đổi `nonce` để áp lại
   restore?: { draft: ChatDraft; nonce: number } | null;
@@ -52,6 +57,9 @@ interface Props {
   threadStickerIds?: string[];
   // Khóa bản nháp theo hội thoại (đổi Trực tiếp/Nhóm/khách không mất chữ đang soạn)
   draftKey: string;
+  // Đang trả lời tin này (hiện khung trích dẫn, bấm ✕ để bỏ)
+  replyTo?: ChatMessage | null;
+  onCancelReply?: () => void;
 }
 
 // Bản nháp chữ theo hội thoại, giữ trong phiên (không lưu xuống máy)
@@ -82,6 +90,8 @@ export function ChatComposer({
   restore,
   threadStickerIds = [],
   draftKey,
+  replyTo,
+  onCancelReply,
 }: Props) {
   const [text, setText] = useState(() => drafts.get(draftKey) ?? "");
   const [items, setItems] = useState<Item[]>([]);
@@ -106,7 +116,7 @@ export function ChatComposer({
   const selectedProductImages = productPicks.flatMap((p) =>
     p.images
       .filter((i) => p.selected.includes(i.id))
-      .map((i) => ({ ...i, productId: p.productId, productName: p.name })),
+      .map((i) => ({ ...i, productId: p.productId, productName: p.name, kind: p.kind })),
   );
   const canSend =
     !disabled &&
@@ -117,10 +127,10 @@ export function ChatComposer({
       !!qrImageUrl ||
       selectedProductImages.length > 0);
 
-  const toggleProductImage = (productId: number, imageId: number) =>
+  const toggleProductImage = (pick: ProductImagePick, imageId: number) =>
     setProductPicks((cur) =>
       cur.map((p) => {
-        if (p.productId !== productId) return p;
+        if (!samePick(p, pick)) return p;
         if (p.selected.includes(imageId))
           return { ...p, selected: p.selected.filter((x) => x !== imageId) };
         if (items.length + selectedProductImages.length >= MAX_FILES) {
@@ -147,17 +157,19 @@ export function ChatComposer({
       ...cur.filter((i) => i.status !== "done"),
     ]);
     // Gom lại theo sản phẩm, giữ tên để hiển thị
-    const groups = new Map<number, ProductImagePick & { selected: number[] }>();
+    const groups = new Map<string, ProductImagePick & { selected: number[] }>();
     for (const img of draft.productImages ?? []) {
-      const g = groups.get(img.productId) ?? {
+      const gk = `${img.kind ?? "product"}-${img.productId}`;
+      const g = groups.get(gk) ?? {
         productId: img.productId,
+        kind: img.kind,
         name: img.productName,
         images: [],
         selected: [],
       };
       g.images.push({ id: img.id, url: img.url });
       g.selected.push(img.id);
-      groups.set(img.productId, g);
+      groups.set(gk, g);
     }
     setProductPicks([...groups.values()]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -208,7 +220,7 @@ export function ChatComposer({
 
   const branchId = useBranchStore((s) => s.selectedBranch?.id);
   const perms = {
-    canViewDebt: ctx.debt !== null,
+    canViewDebt: ctx?.debt != null,
     canViewDebtTracking: useCan("debt_tracking", "view"),
     canViewSalePrice: useCan("products", "view_sale_price"),
     canViewPriceBooks: useCan("price_books", "view"),
@@ -221,6 +233,7 @@ export function ChatComposer({
   );
 
   const detectSlash = (value: string, caret: number) => {
+    if (!ctx) return setSlash(null);
     // Đang mở: giữ nguyên vị trí "/", chuỗi tìm là đoạn tới con trỏ (cho phép khoảng trắng)
     if (slash && value[slash.start] === "/" && caret > slash.start) {
       const query = value.slice(slash.start + 1, caret);
@@ -244,6 +257,10 @@ export function ChatComposer({
     replace?: { start: number; end: number },
   ) => {
     setSlash(null);
+    if (!ctx) {
+      toast.info("Gắn khách POS cho hội thoại này để gửi nhanh thông tin POS");
+      return;
+    }
     setInserting(true);
     try {
       const result = await buildQuickMessage(item, ctx, perms, branchId);
@@ -259,7 +276,7 @@ export function ChatComposer({
       if (pick) {
         // Mặc định chọn hết ảnh, trong giới hạn MAX_FILES tệp/ảnh mỗi lượt
         const others = productPicks.filter(
-          (p) => p.productId !== pick.productId,
+          (p) => !samePick(p, pick),
         );
         const used =
           items.length + others.reduce((n, p) => n + p.selected.length, 0);
@@ -375,6 +392,10 @@ export function ChatComposer({
 
   const submit = () => {
     if (!canSend) return;
+    if (replyTo && !text.trim()) {
+      toast.info("Trả lời tin cần có nội dung chữ");
+      return;
+    }
     onSend({
       text: text.trim(),
       attachments: ready.map((i) => i.result!),
@@ -445,6 +466,23 @@ export function ChatComposer({
         <p className="text-xs text-red-600 px-1 pb-1">{disabledReason}</p>
       )}
 
+      {replyTo && (
+        <div className="mb-2 flex items-start gap-2 rounded-md border-l-4 border-brand bg-cyan-bg px-2 py-1.5 text-xs">
+          <Reply className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand" />
+          {messageThumb(replyTo) && (
+            <img src={messageThumb(replyTo)!} alt="" className="h-9 w-9 shrink-0 rounded object-cover" />
+          )}
+          <span className="min-w-0 flex-1">
+            <span className="block font-medium text-gray-700">
+              Trả lời {replyTo.fromMe ? "tin của bạn" : replyTo.senderName || "khách"}
+            </span>
+            <span className="block truncate text-gray-500">{messagePreview(replyTo)}</span>
+          </span>
+          <button onClick={onCancelReply} aria-label="Bỏ trả lời" className="rounded p-0.5 text-gray-500 hover:bg-white">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
       {pickerOpen && !disabled && (
         <EmojiStickerPicker
           threadStickerIds={threadStickerIds}
@@ -471,7 +509,7 @@ export function ChatComposer({
         const all = p.selected.length === p.images.length;
         return (
           <div
-            key={p.productId}
+            key={`${p.kind ?? "product"}-${p.productId}`}
             className="mb-2 rounded-md border bg-gray-50 p-1.5 text-xs"
           >
             <div className="mb-1 flex items-center gap-2">
@@ -482,7 +520,7 @@ export function ChatComposer({
                   onChange={() =>
                     setProductPicks((cur) =>
                       cur.map((x) =>
-                        x.productId !== p.productId
+                        !samePick(x, p)
                           ? x
                           : {
                               ...x,
@@ -513,7 +551,7 @@ export function ChatComposer({
               <button
                 onClick={() =>
                   setProductPicks((cur) =>
-                    cur.filter((x) => x.productId !== p.productId),
+                    cur.filter((x) => !samePick(x, p)),
                   )
                 }
                 aria-label="Bỏ ảnh sản phẩm"
@@ -528,7 +566,7 @@ export function ChatComposer({
                 return (
                   <button
                     key={img.id}
-                    onClick={() => toggleProductImage(p.productId, img.id)}
+                    onClick={() => toggleProductImage(p, img.id)}
                     aria-pressed={on}
                     title={on ? "Bỏ chọn ảnh này" : "Chọn gửi kèm ảnh này"}
                     className={`relative h-14 w-14 shrink-0 overflow-hidden rounded border-2 ${
@@ -701,7 +739,9 @@ export function ChatComposer({
           placeholder={
             disabled
               ? ""
-              : "Nhập tin… gõ / để chèn sản phẩm, hóa đơn, công nợ (Enter gửi, Shift+Enter xuống dòng)"
+              : ctx
+                ? "Nhập tin… gõ / để chèn sản phẩm, hóa đơn, công nợ (Enter gửi, Shift+Enter xuống dòng)"
+                : "Nhập tin… (Enter gửi, Shift+Enter xuống dòng)"
           }
           className="flex-1 resize-none border rounded-md px-3 py-2 text-sm outline-none focus:border-brand disabled:bg-gray-100"
         />

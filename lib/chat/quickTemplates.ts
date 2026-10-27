@@ -134,3 +134,43 @@ export function debtText(
   }
   return out.join("\n");
 }
+
+/** Báo đơn giao hàng — theo mẫu tin báo đơn gửi nhóm (Giao hàng thành công). */
+export function packingSlipText(p: {
+  code: string;
+  createdAt: string;
+  numberOfPackages: number;
+  paymentMethod: string;
+  cashAmount?: number | null;
+  branchName?: string | null;
+  documents: { code: string; customerName?: string | null; soldByName?: string | null }[];
+  creatorName?: string | null;
+  hasColdItems?: boolean;
+}) {
+  const uniq = (xs: (string | null | undefined)[]) => [...new Set(xs.filter((x): x is string => !!x))];
+  const t = new Date(p.createdAt);
+  const time = `${t.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })} ${t.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })}`;
+  const payment =
+    p.paymentMethod === "cash"
+      ? `Tiền mặt${Number(p.cashAmount) > 0 ? ` ${vnd(p.cashAmount)}` : ""}`
+      : p.paymentMethod === "transfer"
+        ? "Chuyển khoản"
+        : p.paymentMethod;
+  const customers = uniq(p.documents.map((d) => d.customerName));
+  const sellers = uniq(p.documents.map((d) => d.soldByName));
+  return [
+    p.hasColdItems &&
+      "⚠️ CẢNH BÁO: ĐƠN CÓ HÀNG LẠNH. QUÝ KHÁCH LƯU Ý BẢO QUẢN TỦ ĐÔNG NGAY KHI NHẬN HÀNG.",
+    `🎉 Báo đơn ${p.code} - Giao hàng thành công`,
+    p.branchName && `🏪 Chi nhánh: ${p.branchName}`,
+    p.documents.length && `🧾 Hoá đơn: ${p.documents.map((d) => d.code).join(", ")}`,
+    customers.length && `👤 Khách hàng: ${customers.join(", ")}`,
+    `📦 Số kiện: ${p.numberOfPackages}`,
+    `⏰ Thời gian: ${time}`,
+    `💰 Thanh toán: ${payment}`,
+    sellers.length && `👨‍💼 Người bán: ${sellers.join(", ")}`,
+    p.creatorName && `👤 Nhân viên giao hàng: ${p.creatorName}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
