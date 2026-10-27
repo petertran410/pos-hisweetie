@@ -254,14 +254,14 @@ export function ChatThread({
 
   const canReact = !!latest.data?.canReact && !sendDisabledReason;
   const react = async (m: ChatMessage, icon: ReactionIcon | "NONE") => {
+    // Thu hồi không cần xác nhận; thả mới hỏi khi ở môi trường thử nghiệm
     if (
       confirmBeforeSend &&
-      !(await confirmAction(
-        icon === "NONE"
-          ? "Thu hồi cảm xúc của bạn trên tin này? Khách sẽ thấy thay đổi trên Zalo."
-          : "Môi trường thử nghiệm — cảm xúc sẽ hiện trên Zalo của khách thật.",
-        { title: icon === "NONE" ? "Thu hồi cảm xúc" : "Thả cảm xúc", confirmText: "Đồng ý" }
-      ))
+      icon !== "NONE" &&
+      !(await confirmAction("Môi trường thử nghiệm — cảm xúc sẽ hiện trên Zalo của khách thật.", {
+        title: "Thả cảm xúc",
+        confirmText: "Đồng ý",
+      }))
     )
       return;
     const base = JSON.stringify(m.reactions ?? []);

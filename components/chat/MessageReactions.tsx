@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Heart, X } from "lucide-react";
 import type { ChatMessage } from "@/lib/types/smaxChat";
+import { ZaloAvatar } from "./ZaloAvatar";
 
 export type Reactions = NonNullable<ChatMessage["reactions"]>;
 export type ReactionIcon = "LIKE" | "HEART" | "HAHA" | "WOW" | "CRY" | "ANGRY";
@@ -45,24 +46,80 @@ export function applyReaction(list: Reactions | undefined, icon: ReactionIcon | 
   return out;
 }
 
-/** Cụm cảm xúc đã thả (tối đa 3 icon + tổng số); tooltip ai đã thả. */
+/**
+ * Vị trí (px CSS) cho lớp nổi cạnh `anchor`: ưu tiên phía trên, thiếu chỗ thì lật xuống;
+ * kẹp trong viewport. position:fixed bị nhân CSS zoom của <html> → quy đổi toạ độ.
+ */
+function placeNear(anchor: HTMLElement, el: HTMLElement) {
+  const zoom = parseFloat(getComputedStyle(document.documentElement).zoom || "1") || 1;
+  const a = anchor.getBoundingClientRect();
+  const w = el.offsetWidth * zoom;
+  const h = el.offsetHeight * zoom;
+  const gap = 6;
+  let top = a.top - h - gap;
+  if (top < 8) top = Math.min(a.bottom + gap, window.innerHeight - h - 8);
+  const left = Math.min(Math.max(8, a.left + a.width / 2 - w / 2), window.innerWidth - w - 8);
+  return { left: left / zoom, top: top / zoom };
+}
+
+/**
+ * Cụm cảm xúc đã thả (tối đa 3 icon + tổng số). Rê chuột → danh sách người đã thả
+ * (popover riêng: tooltip `title` gốc không hiện trong trình duyệt nhúng).
+ */
 function ReactionBadge({ reactions }: { reactions?: Reactions }) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   if (!reactions?.length) return null;
   const total = reactions.reduce((n, r) => n + r.count, 0);
-  const tip = reactions
-    .flatMap((r) => r.users.map((u) => `${u.name ?? "Ai đó"}: ${REACTION_EMOJI[r.icon] ?? r.icon}`))
-    .join("\n");
   return (
     <span
-      title={tip}
-      className="inline-flex items-center gap-0.5 rounded-full border bg-white px-1.5 py-px text-xs leading-4 text-gray-600 shadow-sm">
+      onMouseEnter={(e) => setAnchor(e.currentTarget)}
+      onMouseLeave={() => setAnchor(null)}
+      className="inline-flex cursor-default items-center gap-0.5 rounded-full border bg-white px-1.5 py-px text-xs leading-4 text-gray-600 shadow-sm">
       {reactions.slice(0, 3).map((r) => (
         <span key={r.icon} className={r.mine ? "rounded-full ring-1 ring-brand" : ""}>
           {REACTION_EMOJI[r.icon] ?? "👍"}
         </span>
       ))}
       {total > 1 && <span className="ml-0.5">{total}</span>}
+      {anchor && <ReactorsPopover anchor={anchor} reactions={reactions} />}
     </span>
+  );
+}
+
+/** Ai đã thả cảm xúc gì — gộp theo người (1 người có thể thả nhiều icon). */
+function ReactorsPopover({ anchor, reactions }: { anchor: HTMLElement; reactions: Reactions }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+  useLayoutEffect(() => {
+    if (ref.current) setPos(placeNear(anchor, ref.current));
+  }, [anchor]);
+
+  const people = new Map<string, { name: string; avatar: string | null; icons: string[] }>();
+  for (const r of reactions) {
+    for (const u of r.users) {
+      const name = u.name ?? "Ai đó";
+      const p = people.get(name) ?? { name, avatar: u.avatar, icons: [] };
+      if (!p.icons.includes(r.icon)) p.icons.push(r.icon);
+      people.set(name, p);
+    }
+  }
+
+  return createPortal(
+    <div
+      ref={ref}
+      role="tooltip"
+      style={pos ?? { left: -9999, top: -9999 }}
+      className="pointer-events-none fixed z-[1000] max-h-64 w-56 overflow-hidden rounded-lg border bg-white py-1 text-sm shadow-xl">
+      {[...people.values()].map((p) => (
+        <div key={p.name} className="flex items-center gap-2 px-2.5 py-1">
+          {/* Ảnh Zalo lỗi / hết hạn → chữ viết tắt */}
+          <ZaloAvatar avatar={p.avatar} isGroup={false} members={[{ name: p.name, avatar: null }]} size={24} />
+          <span className="min-w-0 flex-1 truncate text-gray-800">{p.name}</span>
+          <span className="shrink-0">{p.icons.map((i) => REACTION_EMOJI[i] ?? i).join("")}</span>
+        </div>
+      ))}
+    </div>,
+    document.body
   );
 }
 
@@ -150,20 +207,9 @@ function ReactionPicker({
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
 
-  // Canh theo nút: ưu tiên phía trên, thiếu chỗ thì lật xuống dưới; kẹp trong viewport.
-  // position:fixed bị nhân CSS zoom của <html> → quy đổi toạ độ.
+  // Canh theo nút (xem placeNear)
   useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const zoom = parseFloat(getComputedStyle(document.documentElement).zoom || "1") || 1;
-    const a = anchor.getBoundingClientRect();
-    const w = el.offsetWidth * zoom;
-    const h = el.offsetHeight * zoom;
-    const gap = 6;
-    let top = a.top - h - gap;
-    if (top < 8) top = Math.min(a.bottom + gap, window.innerHeight - h - 8);
-    const left = Math.min(Math.max(8, a.left + a.width / 2 - w / 2), window.innerWidth - w - 8);
-    setPos({ left: left / zoom, top: top / zoom });
+    if (ref.current) setPos(placeNear(anchor, ref.current));
   }, [anchor]);
 
   useEffect(() => {
