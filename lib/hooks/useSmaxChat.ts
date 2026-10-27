@@ -15,39 +15,6 @@ export function useChatContext(customerId: number | undefined, enabled: boolean)
   });
 }
 
-/** Trang tin mới nhất, poll 5s khi sidebar mở và tab đang hiển thị. */
-export function useChatMessages(
-  customerId: number | undefined,
-  pagePid: string | undefined,
-  contactId: number | undefined,
-  enabled: boolean
-) {
-  return useQuery({
-    queryKey: ["smaxChatMessages", customerId, pagePid, contactId],
-    queryFn: () =>
-      smaxChatApi.getMessages(customerId!, { pagePid: pagePid!, contactId: contactId! }),
-    enabled: enabled && !!customerId && !!pagePid && !!contactId,
-    // Dừng poll khi lỗi: v5 đưa query chưa có data về pending mỗi lần fetch →
-    // kẹt skeleton + toast lỗi lặp lại. Người dùng bấm "Thử lại" để tải lại.
-    refetchInterval: (query) => (query.state.status === "error" ? false : 5_000),
-    refetchIntervalInBackground: false,
-    retry: false,
-  });
-}
-
-export function useSendChatMessage(customerId: number) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (body: Parameters<typeof smaxChatApi.send>[1]) =>
-      smaxChatApi.send(customerId, body),
-    onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({
-        queryKey: ["smaxChatMessages", customerId, vars.pagePid, vars.contactId],
-      });
-    },
-  });
-}
-
 export function useSaveZaloContact(customerId: number) {
   const queryClient = useQueryClient();
   return useMutation({

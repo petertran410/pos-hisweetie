@@ -35,6 +35,18 @@ export interface ChatContext {
     debt: number;
     status: string | null;
   }[];
+  // Báo đơn Giao hàng gần đây; null = không có quyền xem
+  recentPackingSlips: {
+    id: number;
+    code: string;
+    date: string;
+    packages: number;
+    paymentMethod: string;
+    cashAmount: number | null;
+    documents: string[];
+    // Hóa đơn trong báo đơn có hàng lạnh (sản phẩm cargoType COLD)
+    hasColdItems: boolean;
+  }[] | null;
   confirmBeforeSend: boolean;
 }
 
@@ -50,6 +62,10 @@ export interface ChatMessage {
   albumId: string | null;
   // Tin sticker Zalo (ảnh lấy theo mã, xem lib/chat/stickers.ts)
   stickerId: string | null;
+  // Tin trả lời: trích tin gốc
+  quote?: { pid: string | null; text: string; senderName: string | null } | null;
+  // Cảm xúc gộp theo icon (HEART, LIKE, HAHA, WOW, CRY, ANGRY…); mine = kênh của mình đã thả
+  reactions?: { icon: string; count: number; mine: boolean; users: { name: string | null; avatar: string | null }[] }[];
   createdAt: string;
 }
 
@@ -59,6 +75,8 @@ export interface ChatMessagesPage {
   senders?: Record<string, { name: string | null; avatar: string | null }>;
   messages: ChatMessage[];
   hasMore: boolean;
+  // Thả cảm xúc được không (backend đã cấu hình token Smax)
+  canReact?: boolean;
 }
 
 export interface SharedGroup {
@@ -93,10 +111,18 @@ export interface ChatDraft {
   attachments: OutgoingAttachment[];
   // Ảnh VietQR thanh toán (tin công nợ gửi nhanh)
   qrImageUrl?: string;
-  // Ảnh sản phẩm tick chọn gửi kèm (gửi id, backend tra URL)
-  productImages?: { id: number; url: string; productId: number; productName: string }[];
+  // Ảnh sản phẩm / Báo đơn tick chọn gửi kèm (gửi id, backend tra URL); productId = id báo đơn khi kind="packingSlip"
+  productImages?: {
+    id: number;
+    url: string;
+    productId: number;
+    productName: string;
+    kind?: "packingSlip";
+  }[];
   // Sticker Zalo — gửi thành 1 tin riêng
   stickerId?: string;
+  // Đang trả lời tin (pid + trích đoạn để hiển thị)
+  replyTo?: { pid: string; preview: string; senderName: string | null; thumb?: string | null };
 }
 
 export interface RecentChat {
@@ -132,4 +158,33 @@ export interface ZaloProfile {
   // Chỉ chat trực tiếp; null nếu không tra được
   friend: { isFriend: boolean; isRequested: boolean; isRequesting: boolean } | null;
   smaxUrl: string;
+  // Môi trường thử nghiệm: hỏi xác nhận trước khi gửi
+  confirmBeforeSend?: boolean;
+}
+
+/** Nội dung gửi của 1 lượt (dùng chung chat theo khách và hội thoại chưa gắn khách). */
+export interface SendBody {
+  text?: string;
+  attachments?: Pick<OutgoingAttachment, "path" | "kind" | "name">[];
+  qrImageUrl?: string;
+  productImageIds?: number[];
+  packingSlipImageIds?: number[];
+  // Gửi ảnh trước chữ (Báo đơn 1 ảnh)
+  imagesFirst?: boolean;
+  stickerId?: string;
+  replyToPid?: string;
+  // Chuyển tiếp ảnh/tệp đã có trên máy chủ Zalo
+  forwardMedia?: { url: string; kind: "image" | "file" }[];
+  confirmed?: boolean;
+}
+
+/** Hội thoại Zalo chưa gắn khách POS, mở từ "Đang chat gần đây". */
+export interface LooseThread {
+  pagePid: string;
+  tid: string;
+  zaloId: string;
+  isGroup: boolean;
+  name: string;
+  // Khách đoán theo mã trong tên nhóm — gợi ý gắn nhanh
+  suggestion?: { id: number; code: string | null; name: string } | null;
 }

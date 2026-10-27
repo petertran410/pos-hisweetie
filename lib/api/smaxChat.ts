@@ -5,6 +5,7 @@ import type {
   ChatMessagesPage,
   OutgoingAttachment,
   RecentChat,
+  SendBody,
   ZaloProfile,
   SharedGroupsResult,
   ZaloContact,
@@ -14,6 +15,19 @@ import type {
 const base = (customerId: number) => `/smax/chat/customers/${customerId}`;
 
 export const smaxChatApi = {
+  getThreadMessages: (pagePid: string, tid: string, before?: string): Promise<ChatMessagesPage> =>
+    apiClient.get("/smax/chat/threads/messages", { pagePid, tid, before }),
+
+  getThreadProfile: (pagePid: string, tid: string, isGroup: boolean): Promise<ZaloProfile> =>
+    apiClient.get("/smax/chat/threads/profile", { pagePid, tid, isGroup: String(isGroup) }),
+
+  sendToThread: (body: SendBody & { pagePid: string; tid: string; isGroup?: boolean }) =>
+    apiClient.post("/smax/chat/threads/messages", body, 120_000),
+
+  // reaction NONE = thu hồi cảm xúc của mình
+  react: (body: { pagePid: string; tid: string; pid: string; reaction: string; confirmed?: boolean }) =>
+    apiClient.post("/smax/chat/threads/reaction", body),
+
   getChannels: (): Promise<ChatChannel[]> => apiClient.get("/smax/chat/channels"),
 
   getRecent: (pagePid?: string): Promise<{ items: RecentChat[] }> =>
@@ -47,6 +61,8 @@ export const smaxChatApi = {
       qrImageUrl?: string;
       productImageIds?: number[];
       stickerId?: string;
+      replyToPid?: string;
+      forwardMedia?: { url: string; kind: "image" | "file" }[];
       confirmed?: boolean;
     }
   ) => apiClient.post(`${base(customerId)}/messages`, body, 120_000),

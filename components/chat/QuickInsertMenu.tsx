@@ -43,7 +43,7 @@ function useDebounced(value: string, ms = 300) {
 }
 
 /** Các lựa chọn của menu "/": gợi ý từ màn hình bên trái, sản phẩm, hóa đơn, đặt hàng, công nợ. */
-export function useQuickOptions(query: string, ctx: ChatContext, enabled: boolean) {
+export function useQuickOptions(query: string, ctx: ChatContext | null, enabled: boolean) {
   const entries = usePosInViewStore((s) => s.entries);
   const branchId = useBranchStore((s) => s.selectedBranch?.id);
   const canProducts = useCan("products", "view");
@@ -51,7 +51,8 @@ export function useQuickOptions(query: string, ctx: ChatContext, enabled: boolea
   const canOrders = useCan("orders", "view");
   const q = useDebounced(query.trim());
   const search = q.length >= 2 ? q : "";
-  const customerId = ctx.customer.id;
+  const customerId = ctx?.customer.id ?? 0;
+  enabled = enabled && !!ctx;
 
   const products = useProducts(
     { search, limit: 8, isActive: true, branchId },
@@ -105,7 +106,7 @@ export function useQuickOptions(query: string, ctx: ChatContext, enabled: boolea
         });
       }
     }
-    if (ctx.debt !== null && match("cong no", "no", "thanh toan", "qr"))
+    if (ctx && ctx.debt !== null && match("cong no", "no", "thanh toan", "qr"))
       push({
         key: "debt",
         group: "Công nợ",
@@ -127,7 +128,7 @@ export function useQuickOptions(query: string, ctx: ChatContext, enabled: boolea
 
     const recentInv = search
       ? (invoices.data?.data ?? []).map((i) => ({ id: i.id, code: i.code, date: i.purchaseDate, total: i.grandTotal }))
-      : ctx.recentInvoices;
+      : (ctx?.recentInvoices ?? []);
     for (const i of recentInv)
       if (search || match(i.code))
         push({
@@ -141,7 +142,7 @@ export function useQuickOptions(query: string, ctx: ChatContext, enabled: boolea
 
     const recentOrd = search
       ? (orders.data?.data ?? []).map((o) => ({ id: o.id, code: o.code, date: o.orderDate, total: o.grandTotal }))
-      : ctx.recentOrders;
+      : (ctx?.recentOrders ?? []);
     for (const o of recentOrd)
       if (search || match(o.code))
         push({

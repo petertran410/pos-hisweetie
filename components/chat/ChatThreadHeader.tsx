@@ -1,20 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
-import { smaxChatApi } from "@/lib/api/smaxChat";
 import { useCan } from "@/lib/hooks/useCan";
-import { useZaloProfile } from "@/lib/hooks/useSmaxChat";
-import type { ZaloContact } from "@/lib/types/smaxChat";
+import type { ThreadSource } from "@/lib/chat/threadSource";
 import { ZaloAvatar } from "./ZaloAvatar";
 import { confirmAction, openExternal } from "@/lib/chat/confirm";
 
 interface Props {
-  customerId: number;
-  pagePid: string;
-  contact: ZaloContact;
+  source: ThreadSource;
   channelName: string;
   // Hiện cùng hàng bên phải (vd Trực tiếp/Nhóm) và dòng phụ bên dưới (chọn nhóm)
   actions?: React.ReactNode;
@@ -22,25 +18,33 @@ interface Props {
 }
 
 /** Thanh đầu hội thoại: avatar + tên Zalo của khách/nhóm, dòng trạng thái kết bạn. */
-export function ChatThreadHeader({ customerId, pagePid, contact, channelName, actions, extra }: Props) {
-  const { data: p, isLoading } = useZaloProfile(customerId, pagePid, contact.id);
+export function ChatThreadHeader({ source, channelName, actions, extra }: Props) {
+  const profileKey = ["smaxZaloProfile", source.key];
+  const { data: p, isLoading } = useQuery({
+    queryKey: profileKey,
+    queryFn: () => source.fetchProfile(),
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
+    retry: false,
+  });
   const canSend = useCan("smax_chat", "send");
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
-  const isGroup = contact.kind === "group";
+  const isGroup = source.kind === "group";
   const f = p?.friend;
 
   const act = async (action: "request" | "accept" | "undo") => {
     const label = { request: "gửi lời mời kết bạn", accept: "đồng ý kết bạn", undo: "thu hồi lời mời kết bạn" }[action];
     const ok = await confirmAction(
-      `Xác nhận ${label} với "${p?.name ?? contact.zaloId}" qua kênh "${channelName}"?`,
+      `Xác nhận ${label} với "${p?.name ?? source.zaloId}" qua kênh "${channelName}"?`,
       { title: "Kết bạn Zalo", confirmText: action === "undo" ? "Thu hồi" : "Đồng ý" }
     );
-    if (!ok) return;
+    if (!ok || !source.friendAction) return;
     setBusy(true);
     try {
-      const res = await smaxChatApi.friendAction(customerId, { pagePid, contactId: contact.id, action });
-      queryClient.setQueryData(["smaxZaloProfile", customerId, pagePid, contact.id], p && { ...p, friend: res.friend });
+      const res = await source.friendAction(action);
+      queryClient.setQueryData(profileKey, p && { ...p, friend: res.friend });
       if (action === "accept" && !res.friend?.isFriend) {
         toast.warning("Đã gửi lại lời mời nhưng Zalo chưa ghi nhận là bạn bè — xử lý lời mời trên Smax nếu cần");
       } else {
@@ -70,7 +74,7 @@ export function ChatThreadHeader({ customerId, pagePid, contact, channelName, ac
         />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold leading-tight">
-            {isLoading ? "…" : p?.name || contact.name || contact.zaloId}
+            {isLoading ? "…" : p?.name || source.name || source.zaloId}
           </p>
           <p className="truncate text-[11px] text-gray-500">{subtitle}</p>
         </div>
@@ -99,7 +103,7 @@ export function ChatThreadHeader({ customerId, pagePid, contact, channelName, ac
                 : "Chưa kết bạn Zalo — khách có thể chặn tin từ người lạ"}
           </span>
           {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-          {canSend && f.isRequesting && (
+          {canSend && source.friendAction && f.isRequesting && (
             <>
               <button
                 onClick={() => act("accept")}
@@ -121,7 +125,7 @@ export function ChatThreadHeader({ customerId, pagePid, contact, channelName, ac
               </button>
             </>
           )}
-          {canSend && !f.isRequesting && f.isRequested && (
+          {canSend && source.friendAction && !f.isRequesting && f.isRequested && (
             <button
               onClick={() => act("undo")}
               disabled={busy}
@@ -129,7 +133,7 @@ export function ChatThreadHeader({ customerId, pagePid, contact, channelName, ac
               Thu hồi
             </button>
           )}
-          {canSend && !f.isRequesting && !f.isRequested && (
+          {canSend && source.friendAction && !f.isRequesting && !f.isRequested && (
             <button
               onClick={() => act("request")}
               disabled={busy}

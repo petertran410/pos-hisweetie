@@ -5,16 +5,19 @@ import { Search, User } from "lucide-react";
 import { useSearchCustomers } from "@/lib/hooks/useCustomers";
 import { useCustomersInViewStore } from "@/lib/store/customersInView";
 import type { ChatCustomerRef } from "@/lib/store/chatSidebar";
+import type { LooseThread } from "@/lib/types/smaxChat";
 import { RecentChatsList, type RecentChatTarget } from "./RecentChatsList";
 import { useActiveChannel } from "@/lib/chat/channels";
 
 interface Props {
   // target: mở đúng kênh / trực tiếp / nhóm (từ "Đang chat gần đây")
   onSelect: (customer: ChatCustomerRef, target?: RecentChatTarget | null) => void;
+  // Mở hội thoại chưa gắn khách POS
+  onOpenThread: (thread: LooseThread) => void;
 }
 
 /** Chọn khách: khách đang hiển thị trên màn hình, đang chat gần đây, hoặc tìm khách khác. */
-export function ChatCustomerPicker({ onSelect }: Props) {
+export function ChatCustomerPicker({ onSelect, onOpenThread }: Props) {
   const entries = useCustomersInViewStore((s) => s.entries);
   const { channel } = useActiveChannel();
   const [input, setInput] = useState("");
@@ -118,7 +121,11 @@ export function ChatCustomerPicker({ onSelect }: Props) {
         )}
       </section>
 
-      <RecentChatsList pagePid={channel?.pagePid} onOpen={(c, target) => onSelect(c, target)} />
+      <RecentChatsList
+        pagePid={channel?.pagePid}
+        onOpen={(c, target) => onSelect(c, target)}
+        onOpenThread={onOpenThread}
+      />
     </div>
   );
 }
