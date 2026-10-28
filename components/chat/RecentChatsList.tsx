@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, RotateCw, Search, X } from "lucide-react";
 import { useRecentChats } from "@/lib/hooks/useSmaxChat";
-import type { ChatCustomerRef } from "@/lib/store/chatSidebar";
+import { useChatSidebarStore, type ChatCustomerRef } from "@/lib/store/chatSidebar";
 import type { LooseThread, RecentChat, ZaloContactKind } from "@/lib/types/smaxChat";
 import { markSeen, newCount } from "@/lib/chat/seen";
 import { ZaloAvatar } from "./ZaloAvatar";
@@ -79,6 +79,12 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
   const { open } = useOpenRecentChat(onOpen, onOpenThread);
   const [showAll, setShowAll] = useState(false);
   const items = data?.items ?? [];
+  // Lọc "Chưa đọc": Smax đánh dấu chưa đọc (chấm xanh) hoặc có tin mới chưa xem trên POS (số đỏ)
+  const unreadOnly = useChatSidebarStore((s) => s.recentUnreadOnly);
+  const setUnreadOnly = useChatSidebarStore((s) => s.setRecentUnreadOnly);
+  const isUnread = (c: RecentChat) => c.unread || newCount(c.tid, c.messageCount) > 0;
+  const unreadCount = items.filter(isUnread).length;
+  const shown = unreadOnly ? items.filter(isUnread) : items;
 
   // Tìm theo tên Zalo / tên nhóm (không tìm nội dung): lọc ngay trong danh sách đã tải,
   // rồi bổ sung kết quả Smax tìm trên toàn bộ hội thoại (~2-3s)
@@ -101,6 +107,7 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
       (a, b) => new Date(b.lastMessageAt ?? 0).getTime() - new Date(a.lastMessageAt ?? 0).getTime()
     );
   })();
+  const results = unreadOnly ? found.filter(isUnread) : found;
   const remoteLoading = searching && !remoteReady && !remote.error;
   // Smax tìm phân biệt dấu (vd "cong dong" bỏ sót "CỘNG ĐỒNG") → nhắc gõ có dấu
   const noAccent = /[a-z]/i.test(term) && term === term.normalize("NFD").replace(/[\u0300-\u036f]/g, "") && !/đ/i.test(term);
@@ -109,6 +116,15 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
     <section>
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-xs font-semibold uppercase text-gray-500">Đang chat gần đây</h3>
+        <button
+          onClick={() => setUnreadOnly(!unreadOnly)}
+          aria-pressed={unreadOnly}
+          title="Chỉ hiện hội thoại chưa đọc"
+          className={`ml-auto mr-1 rounded-full border px-2 py-0.5 text-xs ${
+            unreadOnly ? "border-brand bg-brand text-white" : "text-gray-600 hover:border-brand hover:text-brand"
+          }`}>
+          Chưa đọc{unreadCount > 0 && ` (${unreadCount})`}
+        </button>
         <button
           onClick={() => refetch()}
           disabled={isFetching}
@@ -137,9 +153,9 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
       </div>
       {searching ? (
         <>
-          {found.length > 0 && (
+          {results.length > 0 && (
             <ul className="flex flex-col gap-1">
-              {found.map((c) => (
+              {results.map((c) => (
                 <li key={c.tid}>
                   <RecentChatRow c={c} onClick={() => open(c)} />
                 </li>
@@ -155,8 +171,10 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
               {(remote.error as Error).message || "Không tìm được trên Smax"}
             </p>
           ) : (
-            found.length === 0 && (
-              <p className="text-sm text-gray-500">Không có hội thoại / nhóm nào có tên khớp “{term}”.</p>
+            results.length === 0 && (
+              <p className="text-sm text-gray-500">
+                Không có hội thoại / nhóm {unreadOnly ? "chưa đọc " : ""}nào có tên khớp “{term}”.
+              </p>
             )
           )}
           {remoteReady && noAccent && (
@@ -167,22 +185,24 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
         <p className="text-sm text-gray-500">Đang tải hội thoại…</p>
       ) : error ? (
         <p className="text-sm text-red-600">{(error as Error).message || "Không tải được hội thoại"}</p>
-      ) : items.length === 0 ? (
-        <p className="text-sm text-gray-500">Chưa có hội thoại gần đây trên kênh này.</p>
+      ) : shown.length === 0 ? (
+        <p className="text-sm text-gray-500">
+          {unreadOnly ? "Không có hội thoại chưa đọc." : "Chưa có hội thoại gần đây trên kênh này."}
+        </p>
       ) : (
         <ul className="flex flex-col gap-1">
-          {(showAll ? items : items.slice(0, COLLAPSED)).map((c) => (
+          {(showAll ? shown : shown.slice(0, COLLAPSED)).map((c) => (
             <li key={c.tid}>
               <RecentChatRow c={c} onClick={() => open(c)} />
             </li>
           ))}
         </ul>
       )}
-      {!searching && items.length > COLLAPSED && (
+      {!searching && shown.length > COLLAPSED && (
         <button
           onClick={() => setShowAll((v) => !v)}
           className="mt-1 px-1 text-xs text-brand hover:underline">
-          {showAll ? "Thu gọn" : `Xem thêm ${items.length - COLLAPSED} hội thoại`}
+          {showAll ? "Thu gọn" : `Xem thêm ${shown.length - COLLAPSED} hội thoại`}
         </button>
       )}
     </section>
