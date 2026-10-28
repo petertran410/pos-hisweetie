@@ -7,6 +7,8 @@ import { useBranches } from "@/lib/hooks/useBranches";
 interface SelectBranchModalProps {
   onClose: () => void;
   onConfirm: (sourceBranchId: number, destinationBranchId: number) => void;
+  /** Phiếu gửi sản xuất ở nhà máy: đổi tiêu đề và nhãn kho cho rõ nghĩa. */
+  isExternal?: boolean;
 }
 
 // ── BranchDropdown ─────────────────────────────────────────────────────────────
@@ -80,7 +82,12 @@ function BranchDropdown({
 export function SelectBranchModal({
   onClose,
   onConfirm,
+  isExternal = false,
 }: SelectBranchModalProps) {
+  const sourceLabel = isExternal ? "Kho xuất nguyên liệu" : "Chi nhánh đầu vào";
+  const destinationLabel = isExternal
+    ? "Kho nhận thành phẩm"
+    : "Chi nhánh đầu ra";
   const { data: branchesData } = useBranches();
   const branches = (branchesData || []).filter((b) => b.isActive);
   const branchOptions = branches.map((b) => ({ value: b.id, label: b.name }));
@@ -92,7 +99,9 @@ export function SelectBranchModal({
 
   const handleConfirm = () => {
     if (!sourceBranchId || !destinationBranchId) {
-      alert("Vui lòng chọn chi nhánh đầu vào và chi nhánh đầu ra");
+      alert(
+        `Vui lòng chọn ${sourceLabel.toLowerCase()} và ${destinationLabel.toLowerCase()}`,
+      );
       return;
     }
     onConfirm(sourceBranchId, destinationBranchId);
@@ -102,7 +111,9 @@ export function SelectBranchModal({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-full max-w-md">
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Chọn kho hàng</h2>
+          <h2 className="text-lg font-semibold">
+            {isExternal ? "Gửi sản xuất — chọn kho" : "Chọn kho hàng"}
+          </h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600">
@@ -117,7 +128,7 @@ export function SelectBranchModal({
 
           <div>
             <label className="block text-sm font-medium mb-1">
-              Chi nhánh đầu vào
+              {sourceLabel}
             </label>
             <BranchDropdown
               options={branchOptions}
@@ -129,7 +140,7 @@ export function SelectBranchModal({
 
           <div>
             <label className="block text-sm font-medium mb-1">
-              Chi nhánh đầu ra
+              {destinationLabel}
             </label>
             <BranchDropdown
               options={branchOptions}

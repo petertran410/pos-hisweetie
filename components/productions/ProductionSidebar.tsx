@@ -34,6 +34,12 @@ const STATUS_OPTIONS = [
     dot: "bg-green-500",
   },
   {
+    value: 4,
+    label: "Đã gửi",
+    color: "bg-blue-100 text-blue-700",
+    dot: "bg-blue-400",
+  },
+  {
     value: 3,
     label: "Đã hủy",
     color: "bg-red-100 text-red-700",

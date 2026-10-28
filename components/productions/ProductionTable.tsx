@@ -13,6 +13,7 @@ import {
   Download,
   ChevronDown,
   Loader2,
+  Send,
 } from "lucide-react";
 import type { Production } from "@/lib/api/productions";
 import { ProductionDetailRow } from "./ProductionDetailRow";
@@ -33,6 +34,7 @@ interface ProductionTableProps {
 const STATUS_TABS = [
   { value: "all", label: "Tất cả" },
   { value: "1", label: "Phiếu tạm" },
+  { value: "4", label: "Đã gửi" },
   { value: "2", label: "Hoàn thành" },
   { value: "3", label: "Đã hủy" },
 ];
@@ -41,12 +43,14 @@ const STATUS_COLOR: Record<number, string> = {
   1: "bg-yellow-100 text-yellow-700",
   2: "bg-green-100 text-green-700",
   3: "bg-red-100 text-red-700",
+  4: "bg-blue-100 text-blue-700",
 };
 
 const STATUS_TEXT: Record<number, string> = {
   1: "Phiếu tạm",
   2: "Hoàn thành",
   3: "Đã hủy",
+  4: "Đã gửi",
 };
 
 const formatDateTime = (d?: string) =>
@@ -73,6 +77,23 @@ const DEFAULT_COLUMNS: ColumnConfig<Production>[] = [
     visible: true,
     width: "200px",
     render: (prod) => prod.productName,
+  },
+  {
+    key: "factory",
+    label: "Nơi sản xuất",
+    visible: true,
+    width: "170px",
+    render: (prod) =>
+      prod.isExternal ? (
+        <div>
+          <div>{prod.factory?.name || prod.supplier?.name || "-"}</div>
+          {prod.factory && prod.supplier && (
+            <div className="text-xs text-gray-400">{prod.supplier.name}</div>
+          )}
+        </div>
+      ) : (
+        <span className="text-gray-500">Nội bộ</span>
+      ),
   },
   {
     key: "productCode",
@@ -155,6 +176,8 @@ export function ProductionTable({ filters }: ProductionTableProps) {
 
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [showProductionForm, setShowProductionForm] = useState(false);
+  // true = phiếu Gửi sản xuất ở nhà máy ngoài
+  const [isExternalForm, setIsExternalForm] = useState(false);
   const [selectedSourceBranch, setSelectedSourceBranch] = useState<
     number | null
   >(null);
@@ -248,7 +271,10 @@ export function ProductionTable({ filters }: ProductionTableProps) {
   const toggleExpand = (id: number) =>
     setExpandedId((prev) => (prev === id ? null : id));
 
-  const handleCreateProduction = () => setShowBranchModal(true);
+  const handleCreateProduction = (external: boolean) => {
+    setIsExternalForm(external);
+    setShowBranchModal(true);
+  };
 
   const handleBranchConfirm = (srcId: number, dstId: number) => {
     setSelectedSourceBranch(srcId);
@@ -258,6 +284,7 @@ export function ProductionTable({ filters }: ProductionTableProps) {
   };
 
   const handleEditProduction = (production: Production) => {
+    setIsExternalForm(!!production.isExternal);
     setSelectedProduction(production);
     setSelectedSourceBranch(production.sourceBranchId);
     setSelectedDestinationBranch(production.destinationBranchId);
@@ -296,10 +323,16 @@ export function ProductionTable({ filters }: ProductionTableProps) {
           <div className="flex items-center gap-2 flex-shrink-0">
             <PermissionGate resource="productions" action="create">
               <button
-                onClick={handleCreateProduction}
+                onClick={() => handleCreateProduction(false)}
                 className="flex items-center gap-2 px-3 py-1.5 bg-brand text-white text-sm rounded-lg hover:bg-brand-dark transition-colors">
                 <Plus className="w-4 h-4" />
                 Sản xuất
+              </button>
+              <button
+                onClick={() => handleCreateProduction(true)}
+                className="flex items-center gap-2 px-3 py-1.5 border border-brand text-brand text-sm rounded-lg hover:bg-brand-soft transition-colors">
+                <Send className="w-4 h-4" />
+                Gửi sản xuất
               </button>
             </PermissionGate>
 
@@ -508,6 +541,7 @@ export function ProductionTable({ filters }: ProductionTableProps) {
 
       {showBranchModal && (
         <SelectBranchModal
+          isExternal={isExternalForm}
           onClose={() => setShowBranchModal(false)}
           onConfirm={handleBranchConfirm}
         />
@@ -520,6 +554,7 @@ export function ProductionTable({ filters }: ProductionTableProps) {
             sourceBranchId={selectedSourceBranch}
             destinationBranchId={selectedDestinationBranch}
             production={selectedProduction}
+            isExternal={isExternalForm}
             onClose={handleCloseForm}
           />
         )}

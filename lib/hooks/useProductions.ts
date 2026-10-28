@@ -76,6 +76,85 @@ export function useDeleteProduction() {
   });
 }
 
+// ── Gửi sản xuất ở nhà máy ngoài ────────────────────────────────────────────
+// Mỗi thao tác đổi tồn kho và/hoặc công nợ NCC nên làm mới cả hai.
+function useFactoryProductionMutation<TVars>(
+  mutationFn: (vars: TVars) => Promise<unknown>,
+  successMessage: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["productions"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["supplier-debt-timeline"] });
+      toast.success(successMessage);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Có lỗi xảy ra");
+    },
+  });
+}
+
+export const useSendProduction = () =>
+  useFactoryProductionMutation(
+    ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: Parameters<typeof productionsApi.send>[1];
+    }) => productionsApi.send(id, data),
+    "Đã gửi nguyên liệu sang nhà máy",
+  );
+
+export const useReceiveProduction = () =>
+  useFactoryProductionMutation(
+    ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: Parameters<typeof productionsApi.receive>[1];
+    }) => productionsApi.receive(id, data),
+    "Đã nhận thành phẩm vào kho",
+  );
+
+export const useApplyProductionCost = () =>
+  useFactoryProductionMutation(
+    ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: Parameters<typeof productionsApi.applyCost>[1];
+    }) => productionsApi.applyCost(id, data),
+    "Đã cập nhật giá vốn thành phẩm",
+  );
+
+export const useCancelSentProduction = () =>
+  useFactoryProductionMutation(
+    ({ id, reason }: { id: number; reason?: string }) =>
+      productionsApi.cancelSent(id, { reason }),
+    "Đã hủy phiếu gửi sản xuất",
+  );
+
+export function useProductionCostPreview(
+  id: number,
+  receivedQuantity?: number,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: ["productions", id, "cost-preview", receivedQuantity],
+    queryFn: () => productionsApi.getCostPreview(id, receivedQuantity),
+    enabled: !!id && enabled,
+    // Tồn kho và giá vốn đổi liên tục → luôn lấy số mới khi mở.
+    staleTime: 0,
+  });
+}
+
 async function downloadExcelFromUrl(url: URL, filename: string) {
   const token = useAuthStore.getState().token;
   const selectedBranch = useBranchStore.getState().selectedBranch;

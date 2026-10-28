@@ -38,6 +38,9 @@ export function SupplierDebtsTab({
     useExportSupplierDebt();
 
   const timeline = data?.data || [];
+  // Giá vốn nguyên liệu đang ở nhà máy (phiếu Gửi sản xuất "Đã gửi") —
+  // theo dõi riêng, KHÔNG nằm trong nợ cần trả.
+  const heldMaterialValue = Number(data?.heldMaterialValue ?? 0);
   const totalPages = Math.ceil(timeline.length / limit);
   const paginatedTimeline = timeline.slice((page - 1) * limit, page * limit);
 
@@ -105,6 +108,15 @@ export function SupplierDebtsTab({
           <span className="font-semibold text-red-600">
             {formatCurrency(supplierDebt)}
           </span>
+          {heldMaterialValue > 0 && (
+            <div className="text-sm text-gray-500 mt-0.5">
+              NCC đang giữ hàng gửi sản xuất:{" "}
+              <span className="font-medium text-blue-700">
+                {formatCurrency(Math.round(heldMaterialValue))}
+              </span>{" "}
+              (không tính vào nợ)
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-1.5 lg:gap-2">
           <button
@@ -176,6 +188,10 @@ export function SupplierDebtsTab({
                 const isPayment = item.type === "payment";
                 const isBalanceAdjustment = item.type === "balance_adjustment";
                 const isSupplierReturn = item.type === "supplier_return";
+                const isProductionFee = item.type === "production_fee";
+                // Phát sinh nợ phải trả NCC (cộng nợ).
+                const isDebit =
+                  isPurchase || isProductionFee || isBalanceAdjustment;
 
                 return (
                   <tr
@@ -204,6 +220,12 @@ export function SupplierDebtsTab({
                           code={item.code}
                           className="text-md font-medium text-brand hover:underline"
                         />
+                      ) : isProductionFee ? (
+                        <CodeLink
+                          entity="production"
+                          code={item.code}
+                          className="text-md font-medium text-brand hover:underline"
+                        />
                       ) : (
                         <span className="text-brand">{item.code}</span>
                       )}
@@ -216,25 +238,23 @@ export function SupplierDebtsTab({
                         ? "Nhập hàng"
                         : isPayment
                           ? "Thanh toán"
-                          : isBalanceAdjustment
-                            ? "Cân bằng nợ"
-                            : isSupplierReturn
-                              ? item.refundType === "debt_offset"
-                                ? "Cấn trừ nợ NCC"
-                                : "Trả hàng nhập"
-                              : "Khác"}
+                          : isProductionFee
+                            ? "Phí sản xuất"
+                            : isBalanceAdjustment
+                              ? "Cân bằng nợ"
+                              : isSupplierReturn
+                                ? item.refundType === "debt_offset"
+                                  ? "Cấn trừ nợ NCC"
+                                  : "Trả hàng nhập"
+                                : "Khác"}
                     </td>
                     <td className="px-4 py-3 text-md">
                       {item.branch?.name || "-"}
                     </td>
                     <td className="px-4 py-3 text-md text-right">
                       <span
-                        className={
-                          isPurchase || isBalanceAdjustment
-                            ? "text-red-600"
-                            : "text-green-600"
-                        }>
-                        {isPurchase || isBalanceAdjustment ? "+" : "-"}
+                        className={isDebit ? "text-red-600" : "text-green-600"}>
+                        {isDebit ? "+" : "-"}
                         {formatCurrency(item.amount)}
                       </span>
                     </td>

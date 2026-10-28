@@ -18,16 +18,24 @@ import { useProducts, useProduct } from "@/lib/hooks/useProducts";
 import {
   useCreateProduction,
   useProduction,
+  useSendProduction,
   useUpdateProduction,
 } from "@/lib/hooks/useProductions";
+import { useSuppliers } from "@/lib/hooks/useSuppliers";
+import { useFactories } from "@/lib/hooks/useFactories";
 import type { Production } from "@/lib/api/productions";
 import type { Product } from "@/lib/api/products";
+import { FactorySelect } from "@/components/factories/FactorySelect";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { NumericInput } from "@/components/ui/NumericInput";
 import { CancelConfirmationModal } from "./CancelConfirmationModal";
 
 interface ProductionFormProps {
   sourceBranchId: number;
   destinationBranchId: number;
   production?: Production | null;
+  /** Phiếu Gửi sản xuất ở nhà máy ngoài (thêm nhà máy, NCC, phí lô). */
+  isExternal?: boolean;
   onClose: () => void;
 }
 
@@ -279,8 +287,10 @@ export function ProductionForm({
   sourceBranchId: initialSourceBranchId,
   destinationBranchId: initialDestinationBranchId,
   production,
+  isExternal = false,
   onClose,
 }: ProductionFormProps) {
+  const external = isExternal || !!production?.isExternal;
   const [code, setCode] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   // Công thức thành phần đã chọn (undefined → công thức mặc định).
@@ -322,6 +332,13 @@ export function ProductionForm({
       : new Date();
     return d.getMinutes();
   });
+  // ── Gửi sản xuất: nhà máy, NCC (ghi công nợ), phí sản xuất cả lô ──
+  const [factoryId, setFactoryId] = useState<number | null>(null);
+  const [supplierId, setSupplierId] = useState<number | null>(null);
+  const [feeCurrency, setFeeCurrency] = useState<"VND" | "CNY">("VND");
+  const [processingFee, setProcessingFee] = useState(0);
+  const [feeForeignAmount, setFeeForeignAmount] = useState(0);
+  const [feeExchangeRate, setFeeExchangeRate] = useState(0);
   const [showCal, setShowCal] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const calRef = useRef<HTMLDivElement>(null);
@@ -336,11 +353,39 @@ export function ProductionForm({
     useCreateProduction();
   const { mutate: updateProduction, isPending: isUpdating } =
     useUpdateProduction();
+  const { mutate: sendProduction, isPending: isSending } = useSendProduction();
+  const { data: suppliersData } = useSuppliers(
+    external ? { pageSize: 500, currentItem: 0 } : undefined,
+  );
+  const factoriesData = useFactories({ includeInactive: false, limit: 500 });
 
   const isCompleted = production?.status === 2;
   const isCancelled = production?.status === 3;
-  const isSubmitting = isCreating || isUpdating;
-  const isFormDisabled = isSubmitting || isCompleted || isCancelled;
+  const isSent = production?.status === 4;
+  const isSubmitting = isCreating || isUpdating || isSending;
+  const isFormDisabled = isSubmitting || isCompleted || isCancelled || isSent;
+
+  const supplierOptions = (suppliersData?.data ?? []).map((s) => ({
+    value: String(s.id),
+    label: s.code ? `${s.code} — ${s.name}` : s.name,
+  }));
+  const selectedFactory =
+    factoriesData?.data.find((f) => f.id === factoryId) ?? null;
+  // Nhà máy đã gắn NCC thì phí sản xuất phải ghi nợ đúng NCC đó.
+  const supplierLockedByFactory = !!selectedFactory?.supplierId;
+  const feeInVnd =
+    feeCurrency === "VND"
+      ? processingFee
+      : Math.round(feeForeignAmount * feeExchangeRate);
+
+  const handleFactoryChange = (id: number | null) => {
+    setFactoryId(id);
+    const factory = factoriesData?.data.find((f) => f.id === id);
+    if (factory?.supplierId) setSupplierId(factory.supplierId);
+    if (factory?.currency === "CNY" || factory?.currency === "VND") {
+      setFeeCurrency(factory.currency);
+    }
+  };
 
   const manufacturingProducts =
     productsData?.data?.filter((p) => p.type === 4) || [];
@@ -371,6 +416,14 @@ export function ProductionForm({
       setNote(production.note || "");
       setAutoDeductComponents(production.autoDeductComponents);
       setSelectedFormulaId(production.formulaId ?? undefined);
+      if (production.isExternal) {
+        setFactoryId(production.factoryId ?? null);
+        setSupplierId(production.supplierId ?? null);
+        setFeeCurrency(production.feeCurrency ?? "VND");
+        setProcessingFee(Number(production.processingFee ?? 0));
+        setFeeForeignAmount(Number(production.feeForeignAmount ?? 0));
+        setFeeExchangeRate(Number(production.feeExchangeRate ?? 0));
+      }
       if (production.manufacturedDate) {
         const d = new Date(production.manufacturedDate);
         setManufacturedDate(d);
@@ -466,6 +519,7 @@ export function ProductionForm({
           actualUnitsToDeduct: actualG, // trừ kho đúng số thùng/chiếc
           availableStock,
           isInsufficient,
+          unitCost: inventory ? Number(inventory.cost) : 0,
         };
       }
       // ─────────────────────────────────────────────────────────────
@@ -510,11 +564,20 @@ export function ProductionForm({
         actualUnitsToDeduct,
         availableStock,
         isInsufficient,
+        unitCost: inventory ? Number(inventory.cost) : 0,
       };
     });
   };
 
   const componentRequirements = calculateComponentRequirements();
+
+  // Giá vốn nguyên liệu sẽ gửi đi (theo kho xuất) → giá thành dự kiến.
+  const materialValue = componentRequirements.reduce(
+    (sum, req) => sum + req.actualUnitsToDeduct * req.unitCost,
+    0,
+  );
+  const estimatedUnitCost =
+    quantity > 0 ? (materialValue + feeInVnd) / quantity : 0;
 
   const validateForm = () => {
     if (!selectedProduct) {
@@ -527,10 +590,23 @@ export function ProductionForm({
       return false;
     }
 
+    if (external && !supplierId) {
+      alert("Vui lòng chọn nhà cung cấp (đơn vị ghi nhận phí sản xuất)");
+      return false;
+    }
+
+    if (external && feeCurrency === "CNY" && feeExchangeRate <= 0) {
+      alert("Vui lòng nhập tỷ giá cho phí sản xuất");
+      return false;
+    }
+
     return true;
   };
 
-  const handleSubmit = (status: number) => {
+  const handleSubmit = (
+    status: number,
+    afterSave?: (saved: Production) => void,
+  ) => {
     if (!validateForm()) return;
 
     const hasInsufficientStock = componentRequirements.some(
@@ -566,13 +642,30 @@ export function ProductionForm({
       autoDeductComponents: Boolean(autoDeductComponents),
       components, // ← thêm
       formulaId: selectedFormula?.id,
+      ...(external
+        ? {
+            isExternal: true,
+            autoDeductComponents: true,
+            factoryId,
+            supplierId: supplierId ?? undefined,
+            feeCurrency,
+            processingFee: feeCurrency === "VND" ? processingFee : undefined,
+            feeForeignAmount:
+              feeCurrency === "CNY" ? feeForeignAmount : undefined,
+            feeExchangeRate:
+              feeCurrency === "CNY" ? feeExchangeRate : undefined,
+          }
+        : {}),
     };
+
+    const handleSaved = (saved: Production) =>
+      afterSave ? afterSave(saved) : onClose();
 
     if (production) {
       updateProduction(
         { id: production.id, data },
         {
-          onSuccess: () => onClose(),
+          onSuccess: handleSaved,
           onError: (error: any) => {
             alert(error?.message || "Có lỗi xảy ra khi cập nhật phiếu sản xuất");
           },
@@ -580,7 +673,7 @@ export function ProductionForm({
       );
     } else {
       createProduction(data, {
-        onSuccess: () => onClose(),
+        onSuccess: handleSaved,
         onError: (error: any) => {
           alert(error?.message || "Có lỗi xảy ra khi tạo phiếu sản xuất");
         },
@@ -590,6 +683,43 @@ export function ProductionForm({
 
   const handleSaveDraft = () => {
     handleSubmit(1);
+  };
+
+  // Gửi sản xuất: lưu phiếu tạm rồi chuyển sang Đã gửi (trừ kho nguyên liệu).
+  const handleSend = () => {
+    if (!validateForm()) return;
+    if (componentRequirements.length === 0) {
+      alert("Thành phẩm chưa có công thức nguyên liệu, không thể gửi sản xuất");
+      return;
+    }
+    if (componentRequirements.some((c) => c.isInsufficient)) {
+      alert("Một số nguyên liệu không đủ tồn kho. Vui lòng kiểm tra lại.");
+      return;
+    }
+    const factoryName =
+      selectedFactory?.name ||
+      supplierOptions.find((o) => o.value === String(supplierId))?.label ||
+      "nhà máy";
+    const sourceName =
+      branches.find((b) => b.id === sourceBranchId)?.name || "";
+    if (
+      !confirm(
+        `Gửi hàng sang ${factoryName}?\nNguyên liệu sẽ bị trừ khỏi kho ${sourceName} và phiếu không sửa được nữa.`,
+      )
+    )
+      return;
+
+    const components = componentRequirements.map((req) => ({
+      componentProductId: req.componentProductId,
+      formulaGrams: req.totalRequiredGrams,
+      actualGrams: req.actualG,
+    }));
+    handleSubmit(1, (saved) =>
+      sendProduction(
+        { id: saved.id, data: { components } },
+        { onSuccess: () => onClose() },
+      ),
+    );
   };
 
   const handleComplete = () => {
@@ -641,10 +771,16 @@ export function ProductionForm({
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-md font-semibold">
             {production
-              ? isCompleted || isCancelled
-                ? "Xem phiếu sản xuất"
-                : "Sửa phiếu sản xuất"
-              : "Tạo phiếu sản xuất"}
+              ? isCompleted || isCancelled || isSent
+                ? external
+                  ? "Xem phiếu gửi sản xuất"
+                  : "Xem phiếu sản xuất"
+                : external
+                  ? "Sửa phiếu gửi sản xuất"
+                  : "Sửa phiếu sản xuất"
+              : external
+                ? "Tạo phiếu gửi sản xuất"
+                : "Tạo phiếu sản xuất"}
           </h2>
           <button
             onClick={onClose}
@@ -660,7 +796,7 @@ export function ProductionForm({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Mã sản xuất
+                  {external ? "Mã phiếu" : "Mã sản xuất"}
                 </label>
                 <input
                   type="text"
@@ -674,7 +810,7 @@ export function ProductionForm({
 
               <div className="relative">
                 <label className="block text-sm font-medium mb-1">
-                  Sản xuất mặt hàng
+                  {external ? "Thành phẩm" : "Sản xuất mặt hàng"}
                 </label>
                 <div className="relative">
                   <input
@@ -755,7 +891,7 @@ export function ProductionForm({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Thời gian sản xuất
+                  {external ? "Ngày lập phiếu" : "Thời gian sản xuất"}
                 </label>
                 <div className="flex gap-2">
                   {/* Date trigger */}
@@ -849,7 +985,7 @@ export function ProductionForm({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Chi nhánh đầu vào
+                  {external ? "Kho xuất nguyên liệu" : "Chi nhánh đầu vào"}
                 </label>
                 <BranchDropdown
                   options={branches.map((b) => ({ value: b.id, label: b.name }))}
@@ -862,7 +998,7 @@ export function ProductionForm({
 
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Chi nhánh đầu ra
+                  {external ? "Kho nhận thành phẩm" : "Chi nhánh đầu ra"}
                 </label>
                 <BranchDropdown
                   options={branches.map((b) => ({ value: b.id, label: b.name }))}
@@ -873,6 +1009,118 @@ export function ProductionForm({
                 />
               </div>
             </div>
+
+            {/* ── Gửi sản xuất: nhà máy, NCC, phí lô ── */}
+            {external && (
+              <div className="grid grid-cols-2 gap-4 p-3 border rounded bg-gray-50">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Nhà máy
+                  </label>
+                  <FactorySelect
+                    value={factoryId}
+                    onChange={handleFactoryChange}
+                    placeholder="— Chọn nhà máy —"
+                    disabled={isFormDisabled}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Nhà cung cấp (ghi công nợ)
+                  </label>
+                  <SearchableSelect
+                    options={supplierOptions}
+                    value={supplierId ? String(supplierId) : ""}
+                    onChange={(v) => setSupplierId(v ? Number(v) : null)}
+                    placeholder="Chọn nhà cung cấp"
+                    searchPlaceholder="Tìm nhà cung cấp..."
+                    disabled={isFormDisabled || supplierLockedByFactory}
+                    size="sm"
+                  />
+                  {supplierLockedByFactory && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Theo nhà cung cấp đã gắn với nhà máy.
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Phí sản xuất lô hàng (nếu có)
+                  </label>
+                  <div className="flex gap-2">
+                    <NumericInput
+                      value={
+                        feeCurrency === "VND" ? processingFee : feeForeignAmount
+                      }
+                      onValueChange={
+                        feeCurrency === "VND"
+                          ? setProcessingFee
+                          : setFeeForeignAmount
+                      }
+                      maxFractionDigits={feeCurrency === "VND" ? 0 : 2}
+                      disabled={isFormDisabled}
+                      className="text-sm flex-1 px-2 py-1 border rounded text-right focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    />
+                    <select
+                      value={feeCurrency}
+                      onChange={(e) =>
+                        setFeeCurrency(e.target.value as "VND" | "CNY")
+                      }
+                      disabled={isFormDisabled}
+                      className="text-sm w-20 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100 disabled:cursor-not-allowed">
+                      <option value="VND">VND</option>
+                      <option value="CNY">CNY</option>
+                    </select>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Cộng vào nợ nhà cung cấp khi phiếu Hoàn thành.
+                  </p>
+                </div>
+                {feeCurrency === "CNY" ? (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Tỷ giá CNY → VND
+                    </label>
+                    <NumericInput
+                      value={feeExchangeRate}
+                      onValueChange={setFeeExchangeRate}
+                      maxFractionDigits={2}
+                      disabled={isFormDisabled}
+                      className="text-sm w-full px-2 py-1 border rounded text-right focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Phí quy đổi: {feeInVnd.toLocaleString("vi-VN")} đ
+                    </p>
+                  </div>
+                ) : (
+                  <div />
+                )}
+                <div className="col-span-2 grid grid-cols-3 gap-2 text-sm">
+                  <div className="px-3 py-2 border rounded bg-white">
+                    <div className="text-xs text-gray-500">
+                      Giá vốn nguyên liệu gửi đi
+                    </div>
+                    <div className="font-medium">
+                      {Math.round(materialValue).toLocaleString("vi-VN")} đ
+                    </div>
+                  </div>
+                  <div className="px-3 py-2 border rounded bg-white">
+                    <div className="text-xs text-gray-500">Phí sản xuất</div>
+                    <div className="font-medium">
+                      {feeInVnd.toLocaleString("vi-VN")} đ
+                    </div>
+                  </div>
+                  <div className="px-3 py-2 border rounded bg-brand-soft">
+                    <div className="text-xs text-gray-500">
+                      Giá thành dự kiến / sp
+                    </div>
+                    <div className="font-semibold text-brand">
+                      {Math.round(estimatedUnitCost).toLocaleString("vi-VN")} đ
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* ── Bảng dự tính sử dụng nguyên liệu ── */}
             <div>
@@ -1106,7 +1354,7 @@ export function ProductionForm({
             </div>
 
             {/* ── Checkbox tự động trừ ── */}
-            <div>
+            <div hidden={external}>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -1133,7 +1381,12 @@ export function ProductionForm({
             <button
               onClick={handleCancel}
               className="px-4 py-2 border border-red-600 text-red-600 rounded hover:bg-red-50"
-              hidden={isSubmitting || production.status === 3}>
+              hidden={
+                isSubmitting ||
+                production.status === 3 ||
+                // Phiếu gửi đã gửi/hoàn thành: chỉ admin hủy ở chi tiết phiếu.
+                (external && production.status !== 1)
+              }>
               {isSubmitting ? "Đang xử lý..." : "Hủy"}
             </button>
           )}
@@ -1154,12 +1407,21 @@ export function ProductionForm({
                   disabled={isSubmitting}>
                   {isSubmitting ? "Đang xử lý..." : "Lưu tạm"}
                 </button>
-                <button
-                  onClick={handleComplete}
-                  className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50"
-                  disabled={isSubmitting}>
-                  {isSubmitting ? "Đang xử lý..." : "Hoàn thành"}
-                </button>
+                {external ? (
+                  <button
+                    onClick={handleSend}
+                    className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50"
+                    disabled={isSubmitting}>
+                    {isSubmitting ? "Đang xử lý..." : "Gửi hàng"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleComplete}
+                    className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50"
+                    disabled={isSubmitting}>
+                    {isSubmitting ? "Đang xử lý..." : "Hoàn thành"}
+                  </button>
+                )}
               </>
             )}
           </div>
