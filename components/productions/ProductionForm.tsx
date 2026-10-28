@@ -494,7 +494,6 @@ export function ProductionForm({
       // CARTON: comp.quantity = 1/N → quantity × SX = số thùng tiêu hao
       // (phân số, ví dụ SX 85 → 8.5 thùng). KHÔNG làm tròn.
       if (comp.inputMode === "piece" || comp.inputMode === "carton") {
-        const isCarton = comp.inputMode === "carton";
         const requiredPiecesPerUnit = Number(comp.quantity);
         const totalRequiredPieces = requiredPiecesPerUnit * quantity;
         const actualG =
@@ -510,7 +509,8 @@ export function ProductionForm({
           componentProductId: comp.componentProductId,
           productCode: componentProduct?.code || "",
           productName: componentProduct?.name || "",
-          unit: isCarton ? "thùng" : componentProduct?.unit || "chiếc",
+          // Cả piece lẫn carton đều trừ kho theo Đơn vị tính của nguyên liệu.
+          unit: componentProduct?.unit || "chiếc",
           requiredGramsPerUnit: requiredPiecesPerUnit,
           totalRequiredGrams: totalRequiredPieces,
           weightInGrams: 0,

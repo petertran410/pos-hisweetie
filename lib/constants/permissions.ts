@@ -64,6 +64,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   pos_seller: "Người bán (POS)",
   pos_payment: "Thanh toán (POS)",
   note_templates: "Ghi chú có sẵn (POS)",
+  units: "Đơn vị tính",
   view_cost_price: "Xem giá vốn",
   view_sale_price: "Xem giá bán",
   view_publication: "Xem thông tin công bố",

@@ -2,310 +2,208 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
+import { useFactories } from "@/lib/hooks/useFactories";
+import { useSuppliers } from "@/lib/hooks/useSuppliers";
+import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useBranchStore } from "@/lib/store/branch";
+import { Check, ChevronDown, X } from "lucide-react";
 import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  X,
-  Check,
-  Calendar,
-} from "lucide-react";
-import { createPortal } from "react-dom";
-import { normalizeRectForFixed } from "@/lib/utils/zoom";
-import { FilterMultiSelect } from "@/components/ui/filters";
+  FilterMultiSelect,
+  FilterProductSearch,
+} from "@/components/ui/filters";
+import {
+  TimeRangeFilter,
+  rangeToIso,
+  type TimeRangeState,
+} from "@/components/shared/TimeRangeFilter";
+import type { ProductionQueryParams } from "@/lib/api/productions";
 
 interface ProductionSidebarProps {
-  filters: any;
-  onFiltersChange: (filters: any) => void;
+  filters: ProductionQueryParams;
+  onFiltersChange: (filters: ProductionQueryParams) => void;
 }
 
-const STATUS_OPTIONS = [
+interface SavedFilters {
+  branchIds?: number[];
+  productionType?: string;
+  statuses?: string[];
+  manufacturedRange?: TimeRangeState;
+  createdRange?: TimeRangeState;
+  productId?: number;
+  componentProductId?: number;
+  factoryIds?: string[];
+  supplierIds?: string[];
+  creatorIds?: string[];
+}
+
+interface DropdownOption {
+  value: string;
+  label: string;
+  color: string;
+  dot: string;
+}
+
+const STATUS_OPTIONS: DropdownOption[] = [
   {
-    value: 1,
+    value: "1",
     label: "Phiếu tạm",
     color: "bg-yellow-100 text-yellow-700",
     dot: "bg-yellow-400",
   },
   {
-    value: 2,
-    label: "Hoàn thành",
-    color: "bg-green-100 text-green-700",
-    dot: "bg-green-500",
-  },
-  {
-    value: 4,
+    value: "4",
     label: "Đã gửi",
     color: "bg-blue-100 text-blue-700",
     dot: "bg-blue-400",
   },
   {
-    value: 3,
+    value: "2",
+    label: "Hoàn thành",
+    color: "bg-green-100 text-green-700",
+    dot: "bg-green-500",
+  },
+  {
+    value: "3",
     label: "Đã hủy",
     color: "bg-red-100 text-red-700",
     dot: "bg-red-400",
   },
 ];
 
-const PRESET_GROUPS = [
-  {
-    label: "Hôm nay / Hôm qua",
-    options: [
-      { value: "today", label: "Hôm nay" },
-      { value: "yesterday", label: "Hôm qua" },
-    ],
-  },
-  {
-    label: "Tuần",
-    options: [
-      { value: "this_week", label: "Tuần này" },
-      { value: "last_week", label: "Tuần trước" },
-    ],
-  },
-  {
-    label: "Tháng",
-    options: [
-      { value: "this_month", label: "Tháng này" },
-      { value: "last_month", label: "Tháng trước" },
-    ],
-  },
-  {
-    label: "Khác",
-    options: [
-      { value: "last_7_days", label: "7 ngày qua" },
-      { value: "last_30_days", label: "30 ngày qua" },
-    ],
-  },
+const TYPE_OPTIONS = [
+  { value: "internal", label: "Sản xuất nội bộ" },
+  { value: "external", label: "Gửi sản xuất (nhà máy)" },
 ];
 
-const MONTH_NAMES = [
-  "Tháng 1",
-  "Tháng 2",
-  "Tháng 3",
-  "Tháng 4",
-  "Tháng 5",
-  "Tháng 6",
-  "Tháng 7",
-  "Tháng 8",
-  "Tháng 9",
-  "Tháng 10",
-  "Tháng 11",
-  "Tháng 12",
-];
-const DAY_NAMES = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
-
-const getDateRangeFromPreset = (preset: string) => {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  switch (preset) {
-    case "today":
-      return { from: today, to: now };
-    case "yesterday": {
-      const y = new Date(today.getTime() - 86400000);
-      return { from: y, to: new Date(y.getTime() + 86400000 - 1) };
-    }
-    case "this_week": {
-      const s = new Date(today);
-      s.setDate(today.getDate() - ((today.getDay() + 6) % 7));
-      return { from: s, to: now };
-    }
-    case "last_week": {
-      const e = new Date(today);
-      e.setDate(today.getDate() - ((today.getDay() + 6) % 7) - 1);
-      const s = new Date(e);
-      s.setDate(e.getDate() - 6);
-      return { from: s, to: new Date(e.getFullYear(), e.getMonth(), e.getDate(), 23, 59, 59, 999) };
-    }
-    case "last_7_days":
-      return { from: new Date(today.getTime() - 7 * 86400000), to: now };
-    case "this_month":
-      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
-    case "last_month":
-      return {
-        from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
-        to: new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59),
-      };
-    case "last_30_days":
-      return { from: new Date(today.getTime() - 30 * 86400000), to: now };
-    default:
-      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now };
-  }
+// Giữ mặc định cũ của trang: thời gian sản xuất = tháng này.
+const DEFAULT_MANUFACTURED_RANGE: TimeRangeState = {
+  dateMode: "preset",
+  selectedPreset: "this_month",
+  fromDate: "",
+  toDate: "",
+};
+const ALL_TIME: TimeRangeState = {
+  dateMode: "preset",
+  selectedPreset: "all_time",
+  fromDate: "",
+  toDate: "",
 };
 
-// ─── PresetPanel (portal) ────────────────────────────────────────────────────
-function PresetPanel({
-  groups,
-  selected,
-  onSelect,
-  onClose,
-  anchorRect,
-  triggerRef,
+const STORAGE_KEY = "productions-sidebar-filters";
+
+const isRangeActive = (r: TimeRangeState, defaultPreset: string) =>
+  r.dateMode === "custom" || r.selectedPreset !== defaultPreset;
+
+// ─── MultiStatusDropdown (cùng giao diện với sidebar Hóa đơn) ────────────────
+function MultiStatusDropdown({
+  options,
+  values,
+  placeholder,
+  onChange,
 }: {
-  groups: typeof PRESET_GROUPS;
-  selected: string;
-  onSelect: (v: string) => void;
-  onClose: () => void;
-  anchorRect: DOMRect | null;
-  triggerRef: React.RefObject<HTMLDivElement | null>;
+  options: DropdownOption[];
+  values: string[];
+  placeholder: string;
+  onChange: (v: string[]) => void;
 }) {
-  const panelRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const h = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (panelRef.current?.contains(t) || triggerRef.current?.contains(t))
-        return;
-      onClose();
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
-  }, [onClose, triggerRef]);
-
-  if (!anchorRect) return null;
-  const r = normalizeRectForFixed(anchorRect);
-  const top = r.bottom + 6;
-  const left = Math.max(8, r.right - 320);
-
-  return createPortal(
-    <div
-      ref={panelRef}
-      style={{ position: "fixed", top, left, width: 320, zIndex: 1000 }}
-      className="bg-white border border-gray-200 rounded-xl shadow-2xl p-3 space-y-2">
-      {groups.map((g) => (
-        <div key={g.label}>
-          <div className="text-[11px] font-semibold text-gray-400 uppercase mb-1.5 px-1">
-            {g.label}
-          </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            {g.options.map((opt) => (
+  }, []);
+  const selectedOptions = options.filter((o) => values.includes(o.value));
+  return (
+    <div ref={ref} className="relative">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((p) => !p)}
+        onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
+          open ? "border-brand ring-2 ring-brand-soft" : "hover:border-gray-400"
+        } bg-white`}>
+        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+          {selectedOptions.length > 0 ? (
+            selectedOptions.map((s) => (
+              <span
+                key={s.value}
+                className={`text-xs font-medium px-2 py-0.5 rounded-full truncate ${s.color}`}>
+                {s.label}
+              </span>
+            ))
+          ) : (
+            <span className="text-gray-400 text-sm">{placeholder}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {selectedOptions.length > 0 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange([]);
+              }}
+              className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </div>
+      </div>
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+          {options.map((opt, idx) => {
+            const isSelected = values.includes(opt.value);
+            return (
               <button
                 key={opt.value}
                 type="button"
-                onClick={() => {
-                  onSelect(opt.value);
-                  onClose();
-                }}
-                className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors text-left ${
-                  selected === opt.value
-                    ? "bg-brand text-white border-brand font-medium shadow-sm"
-                    : "border-gray-200 text-gray-700 hover:border-brand hover:bg-brand-soft"
-                }`}>
-                {opt.label}
+                onClick={() =>
+                  onChange(
+                    isSelected
+                      ? values.filter((v) => v !== opt.value)
+                      : [...values, opt.value],
+                  )
+                }
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left transition-colors ${
+                  isSelected ? "bg-brand-soft" : "hover:bg-gray-50"
+                } ${idx > 0 ? "border-t border-gray-50" : ""}`}>
+                <span
+                  className={`w-2 h-2 rounded-full flex-shrink-0 ${opt.dot}`}
+                />
+                <span
+                  className={`flex-1 text-xs font-medium px-2 py-0.5 rounded-full ${opt.color}`}>
+                  {opt.label}
+                </span>
+                {isSelected && (
+                  <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
+                )}
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
-      ))}
-    </div>,
-    document.body
-  );
-}
-
-// ─── MiniCalendar ────────────────────────────────────────────────────────────
-function MiniCalendar({
-  value,
-  onChange,
-  onClose,
-  minDate,
-}: {
-  value: string;
-  onChange: (d: string) => void;
-  onClose: () => void;
-  minDate?: string;
-}) {
-  const todayObj = new Date();
-  const init = value ? new Date(value + "T00:00:00") : todayObj;
-  const [vy, setVy] = useState(init.getFullYear());
-  const [vm, setVm] = useState(init.getMonth());
-
-  const daysInMonth = new Date(vy, vm + 1, 0).getDate();
-  const startOffset = (new Date(vy, vm, 1).getDay() + 6) % 7;
-  const cells: (number | null)[] = [
-    ...Array(startOffset).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-  while (cells.length % 7 !== 0) cells.push(null);
-  const fmt = (d: number) =>
-    `${vy}-${String(vm + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-  const prev = () =>
-    vm === 0 ? (setVm(11), setVy((y) => y - 1)) : setVm((m) => m - 1);
-  const next = () =>
-    vm === 11 ? (setVm(0), setVy((y) => y + 1)) : setVm((m) => m + 1);
-
-  return (
-    <div className="mt-2 bg-white border border-gray-200 rounded-xl p-3 shadow-sm select-none">
-      <div className="flex items-center justify-between mb-2">
-        <button
-          type="button"
-          onClick={prev}
-          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500">
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        <span className="text-sm font-semibold text-gray-800">
-          {MONTH_NAMES[vm]} {vy}
-        </span>
-        <button
-          type="button"
-          onClick={next}
-          className="p-1 rounded-lg hover:bg-gray-100 text-gray-500">
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
-      <div className="grid grid-cols-7 mb-1">
-        {DAY_NAMES.map((d) => (
-          <div
-            key={d}
-            className="text-center text-[10px] font-medium text-gray-400 py-0.5">
-            {d}
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-0.5">
-        {cells.map((day, i) => {
-          if (!day) return <div key={i} className="aspect-square" />;
-          const ds = fmt(day);
-          const isSel = value === ds;
-          const isToday =
-            todayObj.getFullYear() === vy &&
-            todayObj.getMonth() === vm &&
-            todayObj.getDate() === day;
-          const isDisabled = minDate ? ds < minDate : false;
-          return (
-            <button
-              key={i}
-              type="button"
-              disabled={isDisabled}
-              onClick={() => {
-                onChange(ds);
-                onClose();
-              }}
-              className={`aspect-square flex items-center justify-center text-xs rounded-lg transition-colors ${
-                isSel
-                  ? "bg-brand text-white font-semibold"
-                  : isToday
-                    ? "border border-brand text-brand font-medium hover:bg-brand-soft"
-                    : isDisabled
-                      ? "text-gray-300 cursor-not-allowed"
-                      : "hover:bg-gray-100 text-gray-700"
-              }`}>
-              {day}
-            </button>
-          );
-        })}
-      </div>
+      )}
     </div>
   );
 }
 
-// ─── SimpleDropdown (single select) ─────────────────────────────────────────
+// ─── SimpleDropdown (cùng giao diện với sidebar Hóa đơn) ─────────────────────
 function SimpleDropdown({
-  label,
-  value,
   options,
+  value,
+  placeholder,
   onChange,
 }: {
-  label: string;
-  value: string;
   options: { value: string; label: string }[];
+  value: string;
+  placeholder: string;
   onChange: (v: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -321,21 +219,36 @@ function SimpleDropdown({
   const selected = options.find((o) => o.value === value);
   return (
     <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
-          value
-            ? "border-brand bg-brand-soft text-gray-800"
-            : "border-gray-200 text-gray-400"
-        } ${open ? "ring-2 ring-brand-soft border-brand" : "hover:border-gray-300"}`}>
-        <span className="truncate">{selected?.label || label}</span>
-        <ChevronDown
-          className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
-        />
-      </button>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((p) => !p)}
+        onKeyDown={(e) => e.key === "Enter" && setOpen((p) => !p)}
+        className={`w-full flex items-center justify-between gap-2 border rounded-lg px-2 py-1 text-sm cursor-pointer transition-colors select-none ${
+          open ? "border-brand ring-2 ring-brand-soft" : "hover:border-gray-400"
+        } bg-white`}>
+        <span className={selected ? "text-gray-800 truncate" : "text-gray-400"}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {selected && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange("");
+              }}
+              className="text-gray-300 hover:text-gray-500 p-0.5 rounded">
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </div>
+      </div>
       {open && (
-        <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
           {options.map((opt, idx) => (
             <button
               key={opt.value}
@@ -361,56 +274,128 @@ function SimpleDropdown({
   );
 }
 
+function FilterLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      {children}
+    </label>
+  );
+}
+
+const Divider = () => <div className="border-t border-gray-100" />;
+
 // ─── Main ────────────────────────────────────────────────────────────────────
-export function ProductionSidebar({
-  filters,
-  onFiltersChange,
-}: ProductionSidebarProps) {
+export function ProductionSidebar({ onFiltersChange }: ProductionSidebarProps) {
   const { data: branchesData } = useBranches();
-  const branches = (branchesData || []).filter((b) => b.isActive);
   const branchOptions = useMemo(
-    () => branches.map((b: any) => ({ value: String(b.id), label: b.name })),
-    [branches]
+    () =>
+      (branchesData || [])
+        .filter((b) => b.isActive)
+        .map((b) => ({ value: String(b.id), label: b.name })),
+    [branchesData],
+  );
+  const factoriesData = useFactories({ includeInactive: false, limit: 500 });
+  const factoryOptions = useMemo(
+    () =>
+      (factoriesData?.data ?? []).map((f) => ({
+        value: String(f.id),
+        label: f.code ? `${f.code} — ${f.name}` : f.name,
+      })),
+    [factoriesData],
+  );
+  const { data: suppliersData } = useSuppliers({
+    pageSize: 500,
+    currentItem: 0,
+  });
+  const supplierOptions = useMemo(
+    () =>
+      (suppliersData?.data ?? []).map((s) => ({
+        value: String(s.id),
+        label: s.code ? `${s.code} — ${s.name}` : s.name,
+      })),
+    [suppliersData],
+  );
+  const { data: users } = useUsersForFilter();
+  const userOptions = useMemo(
+    () => (users ?? []).map((u) => ({ value: String(u.id), label: u.name })),
+    [users],
   );
   const { selectedBranch } = useBranchStore();
 
-  const [branchIds, setBranchIds] = useState<number[]>(() =>
-    selectedBranch ? [selectedBranch.id] : []
+  // Khôi phục bộ lọc đã lưu (giống sidebar Hóa đơn).
+  const saved = useRef<SavedFilters | null>(null);
+  if (saved.current === null && typeof window !== "undefined") {
+    try {
+      saved.current = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    } catch {
+      saved.current = {};
+    }
+  }
+  const s = saved.current ?? {};
+
+  const [branchIds, setBranchIds] = useState<number[]>(() => {
+    const savedIds = s.branchIds;
+    // Giữ lựa chọn nhiều chi nhánh / "tất cả" mà người dùng đã chủ động chọn;
+    // còn lại bám theo chi nhánh đang chọn ở header.
+    if (Array.isArray(savedIds) && savedIds.length !== 1) return savedIds;
+    return selectedBranch ? [selectedBranch.id] : [];
+  });
+  const [productionType, setProductionType] = useState<string>(
+    s.productionType || "",
   );
-  const [statusList, setStatusList] = useState<number[]>([]);
-  const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
-  const [selectedPreset, setSelectedPreset] = useState("this_month");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [statuses, setStatuses] = useState<string[]>(s.statuses || []);
+  const [manufacturedRange, setManufacturedRange] = useState<TimeRangeState>(
+    s.manufacturedRange || DEFAULT_MANUFACTURED_RANGE,
+  );
+  const [createdRange, setCreatedRange] = useState<TimeRangeState>(
+    s.createdRange || ALL_TIME,
+  );
+  const [productId, setProductId] = useState<number | undefined>(s.productId);
+  const [componentProductId, setComponentProductId] = useState<
+    number | undefined
+  >(s.componentProductId);
+  const [factoryIds, setFactoryIds] = useState<string[]>(s.factoryIds || []);
+  const [supplierIds, setSupplierIds] = useState<string[]>(s.supplierIds || []);
+  const [creatorIds, setCreatorIds] = useState<string[]>(s.creatorIds || []);
 
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const [showPresetPanel, setShowPresetPanel] = useState(false);
-  const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
-  const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
+  const isInternalOnly = productionType === "internal";
 
-  const presetRowRef = useRef<HTMLDivElement>(null);
-  const statusDropRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdowns on outside click
+  // Lưu bộ lọc
   useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (
-        statusDropRef.current &&
-        !statusDropRef.current.contains(e.target as Node)
-      )
-        setShowStatusDropdown(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        branchIds,
+        productionType,
+        statuses,
+        manufacturedRange,
+        createdRange,
+        productId,
+        componentProductId,
+        factoryIds,
+        supplierIds,
+        creatorIds,
+      }),
+    );
+  }, [
+    branchIds,
+    productionType,
+    statuses,
+    manufacturedRange,
+    createdRange,
+    productId,
+    componentProductId,
+    factoryIds,
+    supplierIds,
+    creatorIds,
+  ]);
 
   // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh ở header
   // thì tick lại chi nhánh đó. Skip lần mount đầu. Chỉ ghi đè khi đang ở chế độ
-  // "bám theo header" (đúng 1 chi nhánh); giữ nguyên nếu user lọc nhiều chi
-  // nhánh (>=2) hoặc "Tất cả chi nhánh" (rỗng).
+  // "bám theo header" (đúng 1 chi nhánh).
   const isFirstBranchSyncRef = useRef(true);
   const lastSyncedBranchIdRef = useRef<number | null>(
-    selectedBranch?.id ?? null
+    selectedBranch?.id ?? null,
   );
   useEffect(() => {
     const cur = selectedBranch?.id ?? null;
@@ -421,66 +406,82 @@ export function ProductionSidebar({
     }
     if (cur !== lastSyncedBranchIdRef.current) {
       lastSyncedBranchIdRef.current = cur;
-      setBranchIds((prev) =>
-        prev.length === 1 ? (cur ? [cur] : []) : prev
-      );
+      setBranchIds((prev) => (prev.length === 1 ? (cur ? [cur] : []) : prev));
     }
   }, [selectedBranch?.id]);
 
   // Debounce emit filters
   useEffect(() => {
     const timer = setTimeout(() => {
-      const f: any = {};
+      const f: ProductionQueryParams = {};
       if (branchIds.length > 0) f.branchIds = branchIds;
-      if (statusList.length > 0) f.status = statusList;
+      if (statuses.length > 0) f.status = statuses.map(Number);
+      if (productionType) f.isExternal = productionType === "external";
 
-      const range =
-        dateMode === "preset"
-          ? getDateRangeFromPreset(selectedPreset)
-          : fromDate && toDate
-            ? {
-                from: new Date(fromDate + "T00:00:00"),
-                to: new Date(toDate + "T23:59:59"),
-              }
-            : getDateRangeFromPreset("this_month");
+      const manufacturedIso = rangeToIso(manufacturedRange);
+      if (manufacturedIso) {
+        f.fromManufacturedDate = manufacturedIso.from;
+        f.toManufacturedDate = manufacturedIso.to;
+      }
+      const createdIso = rangeToIso(createdRange);
+      if (createdIso) {
+        f.fromCreatedDate = createdIso.from;
+        f.toCreatedDate = createdIso.to;
+      }
 
-      f.fromManufacturedDate = range.from.toISOString();
-      f.toManufacturedDate = range.to.toISOString();
+      if (productId) f.productId = productId;
+      if (componentProductId) f.componentProductId = componentProductId;
+      if (creatorIds.length > 0) f.createdByIds = creatorIds.map(Number);
+      // Nhà máy / NCC chỉ có ở phiếu gửi sản xuất.
+      if (!isInternalOnly) {
+        if (factoryIds.length > 0) f.factoryIds = factoryIds.map(Number);
+        if (supplierIds.length > 0) f.supplierIds = supplierIds.map(Number);
+      }
 
       onFiltersChange(f);
     }, 300);
     return () => clearTimeout(timer);
-  }, [branchIds, statusList, dateMode, selectedPreset, fromDate, toDate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    branchIds,
+    statuses,
+    productionType,
+    manufacturedRange,
+    createdRange,
+    productId,
+    componentProductId,
+    creatorIds,
+    factoryIds,
+    supplierIds,
+    isInternalOnly,
+  ]);
 
-  const activeFilterCount = useMemo(
-    () =>
-      [
-        branchIds.length > 0,
-        statusList.length > 0,
-        dateMode === "custom" && !!(fromDate && toDate),
-      ].filter(Boolean).length,
-    [branchIds, statusList, dateMode, fromDate, toDate]
-  );
+  const activeFilterCount = [
+    branchIds.length > 0,
+    !!productionType,
+    statuses.length > 0,
+    isRangeActive(manufacturedRange, "this_month"),
+    isRangeActive(createdRange, "all_time"),
+    !!productId,
+    !!componentProductId,
+    creatorIds.length > 0,
+    !isInternalOnly && factoryIds.length > 0,
+    !isInternalOnly && supplierIds.length > 0,
+  ].filter(Boolean).length;
 
   const clearAll = () => {
     setBranchIds(selectedBranch ? [selectedBranch.id] : []);
-    setStatusList([]);
-    setDateMode("preset");
-    setSelectedPreset("this_month");
-    setFromDate("");
-    setToDate("");
-    onFiltersChange({});
+    setProductionType("");
+    setStatuses([]);
+    setManufacturedRange(DEFAULT_MANUFACTURED_RANGE);
+    setCreatedRange(ALL_TIME);
+    setProductId(undefined);
+    setComponentProductId(undefined);
+    setFactoryIds([]);
+    setSupplierIds([]);
+    setCreatorIds([]);
+    localStorage.removeItem(STORAGE_KEY);
   };
-
-  const toggleStatus = (s: number) =>
-    setStatusList((prev) =>
-      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
-    );
-
-  const presetLabel =
-    PRESET_GROUPS.flatMap((g) => g.options).find(
-      (o) => o.value === selectedPreset
-    )?.label ?? "Chọn nhanh";
 
   return (
     <aside className="w-64 border m-4 rounded-xl custom-sidebar-scroll bg-white shadow-xl flex flex-col">
@@ -496,12 +497,53 @@ export function ProductionSidebar({
         )}
       </div>
 
-      <div className="p-4 space-y-3 overflow-y-auto flex-1">
+      <div className="p-4 space-y-3">
+        {/* ── Thời gian ── */}
+        <TimeRangeFilter
+          label="Thời gian sản xuất"
+          value={manufacturedRange}
+          onChange={setManufacturedRange}
+        />
+        <Divider />
+        <TimeRangeFilter
+          label="Thời gian tạo"
+          value={createdRange}
+          onChange={setCreatedRange}
+        />
+
+        <Divider />
+
+        {/* ── Loại phiếu ── */}
+        <div>
+          <FilterLabel>Loại phiếu</FilterLabel>
+          <SimpleDropdown
+            options={TYPE_OPTIONS}
+            value={productionType}
+            placeholder="Tất cả"
+            onChange={setProductionType}
+          />
+        </div>
+
+        {/* ── Trạng thái ── */}
+        <div>
+          <FilterLabel>Trạng thái</FilterLabel>
+          <MultiStatusDropdown
+            options={
+              isInternalOnly
+                ? STATUS_OPTIONS.filter((o) => o.value !== "4")
+                : STATUS_OPTIONS
+            }
+            values={statuses}
+            placeholder="Tất cả trạng thái"
+            onChange={setStatuses}
+          />
+        </div>
+
+        <Divider />
+
         {/* ── Chi nhánh ── */}
         <div>
-          <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-            Chi nhánh
-          </label>
+          <FilterLabel>Chi nhánh</FilterLabel>
           <FilterMultiSelect
             options={branchOptions}
             values={branchIds.map(String)}
@@ -512,184 +554,64 @@ export function ProductionSidebar({
           />
         </div>
 
-        {/* ── Trạng thái ── */}
+        <Divider />
+
+        {/* ── Hàng hóa ── */}
         <div>
-          <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-            Trạng thái
-          </label>
-          <div ref={statusDropRef} className="relative">
-            <button
-              type="button"
-              onClick={() => setShowStatusDropdown((o) => !o)}
-              className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
-                statusList.length > 0
-                  ? "border-brand bg-brand-soft text-gray-800"
-                  : "border-gray-200 text-gray-400"
-              } ${showStatusDropdown ? "ring-2 ring-brand-soft border-brand" : "hover:border-gray-300"}`}>
-              <span className="truncate">
-                {statusList.length > 0
-                  ? STATUS_OPTIONS.filter((o) => statusList.includes(o.value))
-                      .map((o) => o.label)
-                      .join(", ")
-                  : "Tất cả trạng thái"}
-              </span>
-              <ChevronDown
-                className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${showStatusDropdown ? "rotate-180" : ""}`}
-              />
-            </button>
-            {showStatusDropdown && (
-              <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
-                {STATUS_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => toggleStatus(opt.value)}
-                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-gray-50 text-left">
-                    <input
-                      type="checkbox"
-                      checked={statusList.includes(opt.value)}
-                      readOnly
-                      className="rounded"
-                    />
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${opt.color}`}>
-                      {opt.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <FilterLabel>Thành phẩm</FilterLabel>
+          <FilterProductSearch value={productId} onChange={setProductId} />
+        </div>
+        <div>
+          <FilterLabel>Nguyên liệu sử dụng</FilterLabel>
+          <FilterProductSearch
+            value={componentProductId}
+            onChange={setComponentProductId}
+          />
         </div>
 
-        {/* ── Thời gian ── */}
+        {/* ── Nhà máy / NCC (phiếu gửi sản xuất) ── */}
+        {!isInternalOnly && (
+          <>
+            <Divider />
+            <div>
+              <FilterLabel>Nhà máy</FilterLabel>
+              <FilterMultiSelect
+                options={factoryOptions}
+                values={factoryIds}
+                onChange={setFactoryIds}
+                placeholder="Tất cả nhà máy"
+                searchPlaceholder="Tìm nhà máy..."
+                multiLabel={(n) => `${n} nhà máy`}
+              />
+            </div>
+            <div>
+              <FilterLabel>Nhà cung cấp</FilterLabel>
+              <FilterMultiSelect
+                options={supplierOptions}
+                values={supplierIds}
+                onChange={setSupplierIds}
+                placeholder="Tất cả nhà cung cấp"
+                searchPlaceholder="Tìm nhà cung cấp..."
+                multiLabel={(n) => `${n} nhà cung cấp`}
+              />
+            </div>
+          </>
+        )}
+
+        <Divider />
+
+        {/* ── Người tạo ── */}
         <div>
-          <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-            Thời gian sản xuất
-          </label>
-          <div className="space-y-1.5">
-            {/* Preset row */}
-            <div
-              ref={presetRowRef}
-              onClick={() => {
-                setDateMode("preset");
-                setOpenCal(null);
-                if (showPresetPanel) {
-                  setShowPresetPanel(false);
-                } else {
-                  setPanelAnchorRect(
-                    presetRowRef.current?.getBoundingClientRect() ?? null
-                  );
-                  setShowPresetPanel(true);
-                }
-              }}
-              className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
-                dateMode === "preset"
-                  ? "border-brand bg-brand-soft"
-                  : "border-gray-200 hover:border-gray-300"
-              }`}>
-              <input
-                type="radio"
-                readOnly
-                checked={dateMode === "preset"}
-                className="accent-brand flex-shrink-0"
-              />
-              <span
-                className={`text-sm truncate flex-1 ${dateMode === "preset" ? "text-brand-dark font-medium" : "text-gray-500"}`}>
-                {dateMode === "preset" ? presetLabel : "Chọn nhanh"}
-              </span>
-              <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-            </div>
-
-            {/* Custom date range row */}
-            <div
-              onClick={() => {
-                setDateMode("custom");
-                setShowPresetPanel(false);
-              }}
-              className={`flex items-center gap-2.5 px-2 py-1 rounded-lg border cursor-pointer transition-all select-none ${
-                dateMode === "custom"
-                  ? "border-brand bg-brand-soft"
-                  : "border-gray-200 hover:border-gray-300"
-              }`}>
-              <input
-                type="radio"
-                readOnly
-                checked={dateMode === "custom"}
-                className="accent-brand flex-shrink-0"
-              />
-              <span
-                className={`text-sm ${dateMode === "custom" ? "text-brand-dark font-medium" : "text-gray-500"}`}>
-                Tùy chỉnh
-              </span>
-            </div>
-
-            {/* Date pickers (only when custom) */}
-            {dateMode === "custom" && (
-              <div className="space-y-2 pt-1">
-                {(["from", "to"] as const).map((field) => {
-                  const val = field === "from" ? fromDate : toDate;
-                  const label = field === "from" ? "Từ ngày" : "Đến ngày";
-                  const setVal = field === "from" ? setFromDate : setToDate;
-                  const isOpen = openCal === field;
-                  return (
-                    <div key={field}>
-                      <span className="text-xs text-gray-500 mb-1 block">
-                        {label}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setOpenCal(isOpen ? null : field)}
-                        className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
-                          val
-                            ? "border-brand bg-brand-soft text-gray-800"
-                            : "border-gray-200 text-gray-400"
-                        } ${isOpen ? "ring-2 ring-brand-soft border-brand" : "hover:border-gray-300"}`}>
-                        <span>
-                          {val
-                            ? new Date(val + "T00:00:00").toLocaleDateString(
-                                "vi-VN",
-                                {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  year: "numeric",
-                                }
-                              )
-                            : "Chọn ngày"}
-                        </span>
-                        <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      </button>
-                      {isOpen && (
-                        <MiniCalendar
-                          value={val}
-                          onChange={setVal}
-                          onClose={() => setOpenCal(null)}
-                          minDate={field === "to" ? fromDate : undefined}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <FilterLabel>Người tạo</FilterLabel>
+          <FilterMultiSelect
+            options={userOptions}
+            values={creatorIds}
+            onChange={setCreatorIds}
+            placeholder="Tất cả"
+            searchPlaceholder="Tìm theo tên người tạo..."
+          />
         </div>
       </div>
-
-      {/* PresetPanel portal */}
-      {showPresetPanel && (
-        <PresetPanel
-          groups={PRESET_GROUPS}
-          selected={selectedPreset}
-          onSelect={(v) => {
-            setSelectedPreset(v);
-            setDateMode("preset");
-          }}
-          onClose={() => setShowPresetPanel(false)}
-          anchorRect={panelAnchorRect}
-          triggerRef={presetRowRef}
-        />
-      )}
     </aside>
   );
 }

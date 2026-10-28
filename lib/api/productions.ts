@@ -91,6 +91,13 @@ export interface ProductionQueryParams {
   currentItem?: number;
   search?: string;
   isExternal?: boolean;
+  fromCreatedDate?: string;
+  toCreatedDate?: string;
+  factoryIds?: number[];
+  supplierIds?: number[];
+  createdByIds?: number[];
+  productId?: number;
+  componentProductId?: number;
 }
 
 export interface CreateProductionData {

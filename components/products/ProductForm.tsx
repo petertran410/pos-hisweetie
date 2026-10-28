@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { UnitSelect } from "./UnitSelect";
 import type { Product } from "@/lib/api/products";
 import { useCreateProduct, useUpdateProduct } from "@/lib/hooks/useProducts";
 import { useTrademarks } from "@/lib/hooks/useTrademarks";
@@ -786,10 +787,11 @@ export function ProductForm({
                   <label className="block text-sm font-medium mb-1">
                     Đơn vị tính
                   </label>
-                  <input
-                    {...register("unit")}
-                    className="w-full border rounded px-3 py-2 bg-white"
-                    placeholder="cái, hộp, thùng..."
+                  <UnitSelect
+                    value={watch("unit")}
+                    onChange={(name) =>
+                      setValue("unit", name, { shouldDirty: true })
+                    }
                   />
                 </div>
                 <div>
