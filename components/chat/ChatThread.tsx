@@ -57,6 +57,12 @@ const dayLabel = (d: string) =>
 const timeLabel = (d: string) =>
   new Date(d).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
 
+/** Khoảng cách (px CSS) từ mép trên khung cuộn tới tin; rect bị nhân CSS zoom của <html> → quy đổi. */
+function rowOffset(el: HTMLElement, row: Element) {
+  const z = parseFloat(getComputedStyle(document.documentElement).zoom || "1") || 1;
+  return (row.getBoundingClientRect().top - el.getBoundingClientRect().top) / z;
+}
+
 /** Lịch sử tin (cũ → mới) + gửi tin. Cha đặt `key` theo kênh/contact để reset. */
 export function ChatThread({
   source,
@@ -101,6 +107,8 @@ export function ChatThread({
   const [seenUpTo, setSeenUpTo] = useState<string | null>(null);
   // Mốc cuộn trước khi chèn tin cũ lên đầu
   const prependAnchor = useRef<{ height: number; top: number } | null>(null);
+  // Tin đầu tiên đang thấy + khoảng cách tới mép trên khung (cập nhật khi cuộn)
+  const readAnchor = useRef<{ id: string; offset: number } | null>(null);
   const olderBusy = useRef(false);
 
   const messages = useMemo(() => {
@@ -178,11 +186,19 @@ export function ChatThread({
     const content = contentRef.current;
     if (!el || !content) return;
     let prevHeight = el.clientHeight;
+    let prevWidth = el.clientWidth;
     const ro = new ResizeObserver(() => {
       const delta = prevHeight - el.clientHeight;
+      const widthChanged = el.clientWidth !== prevWidth;
       prevHeight = el.clientHeight;
+      prevWidth = el.clientWidth;
       if (stickBottom.current) el.scrollTop = el.scrollHeight;
-      else if (delta) el.scrollTop += delta;
+      else if (widthChanged && readAnchor.current) {
+        // Kéo đổi độ rộng → tin dàn lại dòng: giữ tin đang đọc ở đúng chỗ cũ
+        const { id, offset } = readAnchor.current;
+        const row = el.querySelector(`[data-msg-id="${CSS.escape(id)}"]`);
+        if (row) el.scrollTop += rowOffset(el, row) - offset;
+      } else if (delta) el.scrollTop += delta;
     });
     ro.observe(content);
     ro.observe(el);
@@ -366,6 +382,13 @@ export function ChatThread({
           const bottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
           stickBottom.current = bottom;
           if (bottom !== atBottom) setAtBottom(bottom);
+          if (!bottom) {
+            const row = [...el.querySelectorAll<HTMLElement>("[data-msg-id]")].find(
+              // Tin đầu tiên hiện từ mép trên (tin bị cắt dở cũng dàn lại dòng → lệch)
+              (r) => rowOffset(el, r) >= 0
+            );
+            readAnchor.current = row ? { id: row.dataset.msgId!, offset: rowOffset(el, row) } : null;
+          }
           // Cuộn gần đầu → tự tải tin cũ hơn
           if (el.scrollTop < 60 && hasMore && !loadingOlder && messages.length) loadOlder();
         }}

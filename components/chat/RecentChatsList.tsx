@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { RotateCw } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Loader2, RotateCw, Search, X } from "lucide-react";
 import { useRecentChats } from "@/lib/hooks/useSmaxChat";
 import type { ChatCustomerRef } from "@/lib/store/chatSidebar";
 import type { LooseThread, RecentChat, ZaloContactKind } from "@/lib/types/smaxChat";
@@ -9,6 +9,12 @@ import { markSeen, newCount } from "@/lib/chat/seen";
 import { ZaloAvatar } from "./ZaloAvatar";
 
 const COLLAPSED = 8;
+// Số hội thoại lấy từ Smax khi tìm theo tên
+const SEARCH_LIMIT = 50;
+
+// So khớp tên không phân biệt hoa thường / dấu tiếng Việt
+const foldVi = (s: string) =>
+  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLowerCase();
 
 export interface RecentChatTarget {
   pagePid: string;
@@ -74,6 +80,31 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
   const [showAll, setShowAll] = useState(false);
   const items = data?.items ?? [];
 
+  // Tìm theo tên Zalo / tên nhóm (không tìm nội dung): lọc ngay trong danh sách đã tải,
+  // rồi bổ sung kết quả Smax tìm trên toàn bộ hội thoại (~2-3s)
+  const [q, setQ] = useState("");
+  const [debounced, setDebounced] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(q.trim()), 400);
+    return () => clearTimeout(t);
+  }, [q]);
+  const term = q.trim();
+  const searching = term.length >= 2;
+  const remote = useRecentChats(searching && debounced.length >= 2, pagePid, SEARCH_LIMIT, debounced);
+  const remoteReady = searching && debounced === term && !!remote.data && !remote.isPlaceholderData;
+  const found = (() => {
+    if (!searching) return [];
+    const key = foldVi(term);
+    const byTid = new Map(items.filter((c) => foldVi(c.name).includes(key)).map((c) => [c.tid, c]));
+    if (remoteReady) for (const c of remote.data!.items) byTid.set(c.tid, c);
+    return [...byTid.values()].sort(
+      (a, b) => new Date(b.lastMessageAt ?? 0).getTime() - new Date(a.lastMessageAt ?? 0).getTime()
+    );
+  })();
+  const remoteLoading = searching && !remoteReady && !remote.error;
+  // Smax tìm phân biệt dấu (vd "cong dong" bỏ sót "CỘNG ĐỒNG") → nhắc gõ có dấu
+  const noAccent = /[a-z]/i.test(term) && term === term.normalize("NFD").replace(/[\u0300-\u036f]/g, "") && !/đ/i.test(term);
+
   return (
     <section>
       <div className="mb-2 flex items-center justify-between">
@@ -86,7 +117,53 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
           <RotateCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
         </button>
       </div>
-      {isLoading ? (
+      <div className="relative mb-2">
+        <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => e.key === "Escape" && setQ("")}
+          placeholder="Tìm hội thoại, nhóm Zalo theo tên"
+          className="w-full rounded-md border py-1.5 pl-7 pr-7 text-sm outline-none focus:border-brand"
+        />
+        {q && (
+          <button
+            onClick={() => setQ("")}
+            aria-label="Xoá tìm kiếm"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 hover:bg-gray-100">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+      {searching ? (
+        <>
+          {found.length > 0 && (
+            <ul className="flex flex-col gap-1">
+              {found.map((c) => (
+                <li key={c.tid}>
+                  <RecentChatRow c={c} onClick={() => open(c)} />
+                </li>
+              ))}
+            </ul>
+          )}
+          {remoteLoading ? (
+            <p className="flex items-center gap-1.5 px-1 py-1 text-xs text-gray-500">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Đang tìm trên toàn bộ hội thoại…
+            </p>
+          ) : remote.error ? (
+            <p className="px-1 py-1 text-xs text-red-600">
+              {(remote.error as Error).message || "Không tìm được trên Smax"}
+            </p>
+          ) : (
+            found.length === 0 && (
+              <p className="text-sm text-gray-500">Không có hội thoại / nhóm nào có tên khớp “{term}”.</p>
+            )
+          )}
+          {remoteReady && noAccent && (
+            <p className="px-1 pt-1 text-[11px] text-gray-400">Gõ có dấu (vd “Thúy”, “cộng đồng”) để tìm đầy đủ hơn.</p>
+          )}
+        </>
+      ) : isLoading ? (
         <p className="text-sm text-gray-500">Đang tải hội thoại…</p>
       ) : error ? (
         <p className="text-sm text-red-600">{(error as Error).message || "Không tải được hội thoại"}</p>
@@ -101,7 +178,7 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
           ))}
         </ul>
       )}
-      {items.length > COLLAPSED && (
+      {!searching && items.length > COLLAPSED && (
         <button
           onClick={() => setShowAll((v) => !v)}
           className="mt-1 px-1 text-xs text-brand hover:underline">

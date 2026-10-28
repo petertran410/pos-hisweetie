@@ -84,6 +84,9 @@ const PANEL_MAX_WIDTH = 1200;
 const PANEL_WIDE_WIDTH = 700;
 // Khung chat đủ rộng để hiện cột Thông tin POS riêng
 const PanelWideContext = createContext(false);
+// Thanh chia giữa khung chat và cột Thông tin POS: độ rộng tối thiểu mỗi bên
+const CHAT_MIN_WIDTH = 360;
+const POS_MIN_WIDTH = 220;
 
 /** Khung chat kéo mép trái để mở rộng / thu hẹp; bấm đúp mép để về mặc định. */
 function ResizableAside({ onClose }: { onClose: () => void }) {
@@ -696,6 +699,38 @@ function CustomerChat({ customerId }: { customerId: number }) {
     refetch,
   } = useChatContext(customerId, true);
   const wide = useContext(PanelWideContext);
+  const posRatio = useChatSidebarStore((s) => s.posRatio);
+  const setPosRatio = useChatSidebarStore((s) => s.setPosRatio);
+  const splitRef = useRef<HTMLDivElement>(null);
+  const [splitting, setSplitting] = useState(false);
+
+  // Kéo thanh chia → đổi tỷ lệ cột POS theo thời gian thực (lưu tỷ lệ, không lưu px)
+  const startSplit = (e: React.PointerEvent<HTMLDivElement>) => {
+    const box = splitRef.current;
+    if (!box) return;
+    e.preventDefault();
+    const handle = e.currentTarget;
+    handle.setPointerCapture(e.pointerId);
+    // rect theo px màn hình (html có zoom), min width theo px CSS → quy đổi
+    const rect = box.getBoundingClientRect();
+    const scale = rect.width / box.offsetWidth || 1;
+    const minPos = POS_MIN_WIDTH * scale;
+    const maxPos = rect.width - CHAT_MIN_WIDTH * scale;
+    setSplitting(true);
+    const onMove = (ev: PointerEvent) => {
+      const pos = Math.min(maxPos, Math.max(minPos, rect.right - ev.clientX));
+      setPosRatio(Math.round((pos / rect.width) * 1000) / 1000);
+    };
+    const onUp = () => {
+      setSplitting(false);
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onUp);
+      handle.removeEventListener("pointercancel", onUp);
+    };
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
+    handle.addEventListener("pointercancel", onUp);
+  };
 
   if (isLoading) {
     return (
@@ -727,7 +762,7 @@ function CustomerChat({ customerId }: { customerId: number }) {
   }
 
   return (
-    <div className="flex flex-1 min-h-0">
+    <div ref={splitRef} className={`flex flex-1 min-h-0 ${splitting ? "select-none" : ""}`}>
       <div className="flex flex-1 min-w-0 min-h-0 flex-col">
         {!wide && (
         <details className="border-b">
@@ -742,7 +777,38 @@ function CustomerChat({ customerId }: { customerId: number }) {
         <ChannelChat ctx={ctx} />
       </div>
       {wide && (
-      <div className="w-[300px] shrink-0 border-l overflow-y-auto p-3">
+      <div className="relative shrink-0">
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Kéo để chia lại khung chat và Thông tin POS"
+          title="Kéo để chia lại · bấm đúp để về mặc định"
+          onPointerDown={startSplit}
+          onDoubleClick={() => setPosRatio(null)}
+          className="group absolute inset-y-0 -left-1.5 z-20 flex w-3 cursor-col-resize touch-none items-center justify-center"
+        >
+          <span
+            className={`h-10 w-1 rounded-full transition-colors group-hover:bg-brand ${
+              splitting ? "bg-brand" : "bg-transparent"
+            }`}
+          />
+        </div>
+      </div>
+      )}
+      {wide && (
+      <div
+        className={`${posRatio ? "" : "w-[300px]"} shrink-0 border-l overflow-y-auto p-3`}
+        // Theo tỷ lệ đã lưu, kẹp min/max để khung chat luôn còn ≥ CHAT_MIN_WIDTH
+        style={
+          posRatio
+            ? {
+                width: `${posRatio * 100}%`,
+                minWidth: POS_MIN_WIDTH,
+                maxWidth: `calc(100% - ${CHAT_MIN_WIDTH}px)`,
+              }
+            : undefined
+        }
+      >
         <h3 className="text-xs font-semibold uppercase text-gray-500 mb-2">
           Thông tin POS
         </h3>

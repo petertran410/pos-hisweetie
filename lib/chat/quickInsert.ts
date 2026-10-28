@@ -39,6 +39,8 @@ export interface QuickResult {
   qrImageUrl?: string;
   // Ảnh của sản phẩm vừa chèn — cho người dùng tick chọn gửi kèm
   productImages?: ProductImagePick;
+  // Chụp bản in (hoá đơn / đặt hàng) gửi kèm dạng ảnh
+  printImage?: { templateFor: "invoice" | "order"; id: number; name: string };
 }
 
 /** Tải dữ liệu đầy đủ của mục và dựng tin (quyền POS do chính các API kiểm tra). */
@@ -49,10 +51,20 @@ export async function buildQuickMessage(
   branchId: number | undefined
 ): Promise<QuickResult> {
   switch (item.type) {
-    case "invoice":
-      return { text: invoiceText(await invoicesApi.getInvoice(item.id), perms.canViewDebt) };
-    case "order":
-      return { text: orderText(await ordersApi.getOrder(item.id), perms.canViewDebt) };
+    case "invoice": {
+      const invoice = await invoicesApi.getInvoice(item.id);
+      return {
+        text: invoiceText(invoice, perms.canViewDebt),
+        printImage: { templateFor: "invoice", id: item.id, name: invoice.code },
+      };
+    }
+    case "order": {
+      const order = await ordersApi.getOrder(item.id);
+      return {
+        text: orderText(order, perms.canViewDebt),
+        printImage: { templateFor: "order", id: item.id, name: order.code },
+      };
+    }
     case "cart":
       return { text: cartText(item.lines, perms.canViewSalePrice) };
     case "product": {
