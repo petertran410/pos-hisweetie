@@ -188,10 +188,8 @@ export function SupplierDebtsTab({
                 const isPayment = item.type === "payment";
                 const isBalanceAdjustment = item.type === "balance_adjustment";
                 const isSupplierReturn = item.type === "supplier_return";
-                const isProductionFee = item.type === "production_fee";
                 // Phát sinh nợ phải trả NCC (cộng nợ).
-                const isDebit =
-                  isPurchase || isProductionFee || isBalanceAdjustment;
+                const isDebit = isPurchase || isBalanceAdjustment;
 
                 return (
                   <tr
@@ -220,12 +218,6 @@ export function SupplierDebtsTab({
                           code={item.code}
                           className="text-md font-medium text-brand hover:underline"
                         />
-                      ) : isProductionFee ? (
-                        <CodeLink
-                          entity="production"
-                          code={item.code}
-                          className="text-md font-medium text-brand hover:underline"
-                        />
                       ) : (
                         <span className="text-brand">{item.code}</span>
                       )}
@@ -238,15 +230,13 @@ export function SupplierDebtsTab({
                         ? "Nhập hàng"
                         : isPayment
                           ? "Thanh toán"
-                          : isProductionFee
-                            ? "Phí sản xuất"
-                            : isBalanceAdjustment
-                              ? "Cân bằng nợ"
-                              : isSupplierReturn
-                                ? item.refundType === "debt_offset"
-                                  ? "Cấn trừ nợ NCC"
-                                  : "Trả hàng nhập"
-                                : "Khác"}
+                          : isBalanceAdjustment
+                            ? "Cân bằng nợ"
+                            : isSupplierReturn
+                              ? item.refundType === "debt_offset"
+                                ? "Cấn trừ nợ NCC"
+                                : "Trả hàng nhập"
+                              : "Khác"}
                     </td>
                     <td className="px-4 py-3 text-md">
                       {item.branch?.name || "-"}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { NumericInput } from "@/components/ui/NumericInput";
 import { DatePickerInput } from "@/components/ui/DatePickerInput";
+import { formatNumberInput, parseNumberInput } from "@/lib/utils";
 import {
   useApplyProductionCost,
   useProductionCostPreview,
@@ -38,8 +39,9 @@ const dateWithNow = (value: string) => {
 };
 
 /**
- * Nhận thành phẩm từ nhà máy (Đã gửi → Hoàn thành) kèm bước xác nhận giá
- * vốn; hoặc chỉ áp giá vốn cho phiếu đã hoàn thành mà lúc nhận bỏ qua.
+ * Nhận thành phẩm từ nhà máy = tạo phiếu nhập hàng (giá trị = phí sản xuất),
+ * phiếu chuyển Hoàn thành, kèm bước xác nhận giá vốn; hoặc chỉ áp giá vốn cho
+ * phiếu đã hoàn thành mà lúc nhận bỏ qua.
  */
 export function ProductionReceiveModal({
   production,
@@ -63,15 +65,33 @@ export function ProductionReceiveModal({
     "receiveBranch",
   );
 
+  // Phí chốt lúc nhận = giá trị phiếu nhập. Mặc định = phí ước tính.
+  const isCnyFee = production.feeCurrency === "CNY";
+  const [feeVnd, setFeeVnd] = useState(Number(production.processingFee ?? 0));
+  const [feeForeign, setFeeForeign] = useState(
+    Number(production.feeForeignAmount ?? 0),
+  );
+  const [feeRate, setFeeRate] = useState(
+    Number(production.feeExchangeRate ?? 0),
+  );
+  const processingFee = isCnyFee
+    ? Math.round(feeForeign * feeRate)
+    : Math.round(feeVnd);
+  const [debouncedFee, setDebouncedFee] = useState(processingFee);
+
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuantity(receivedQuantity), 300);
+    const t = setTimeout(() => {
+      setDebouncedQuantity(receivedQuantity);
+      setDebouncedFee(processingFee);
+    }, 300);
     return () => clearTimeout(t);
-  }, [receivedQuantity]);
+  }, [receivedQuantity, processingFee]);
 
   const { data: preview, isLoading } = useProductionCostPreview(
     production.id,
     isReceive ? debouncedQuantity : undefined,
     !isReceive || debouncedQuantity > 0,
+    isReceive ? debouncedFee : undefined,
   );
   const receive = useReceiveProduction();
   const applyCostMutation = useApplyProductionCost();
@@ -86,6 +106,10 @@ export function ProductionReceiveModal({
         alert("Số lượng nhận phải lớn hơn 0");
         return;
       }
+      if (isCnyFee && feeRate <= 0) {
+        alert("Tỷ giá phí CNY phải lớn hơn 0");
+        return;
+      }
       receive.mutate(
         {
           id: production.id,
@@ -94,6 +118,9 @@ export function ProductionReceiveModal({
             receivedQuantity,
             newCost: applyCost && newCost > 0 ? newCost : undefined,
             costScope: scope,
+            ...(isCnyFee
+              ? { feeForeignAmount: feeForeign, feeExchangeRate: feeRate }
+              : { processingFee: feeVnd }),
           },
         },
         { onSuccess: onClose },
@@ -161,6 +188,53 @@ export function ProductionReceiveModal({
                 />
                 <p className="text-xs text-gray-400 mt-1">
                   Phiếu: {Number(production.quantity).toLocaleString("vi-VN")}
+                </p>
+              </div>
+              <div className="col-span-2">
+                <label className="block font-medium text-gray-700 mb-1">
+                  Phí sản xuất chốt{isCnyFee ? " (CNY)" : ""}
+                </label>
+                {isCnyFee ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <NumericInput
+                      value={feeForeign}
+                      onValueChange={setFeeForeign}
+                      maxFractionDigits={2}
+                      className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-brand"
+                    />
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-500 shrink-0">
+                        Tỷ giá
+                      </span>
+                      <NumericInput
+                        value={feeRate}
+                        onValueChange={setFeeRate}
+                        maxFractionDigits={2}
+                        className="w-full min-w-0 border border-gray-300 rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-brand"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={feeVnd ? formatNumberInput(String(feeVnd)) : ""}
+                    onChange={(e) =>
+                      setFeeVnd(
+                        parseNumberInput(formatNumberInput(e.target.value)),
+                      )
+                    }
+                    placeholder="0"
+                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-brand"
+                  />
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Sẽ tạo phiếu nhập hàng vào kho{" "}
+                  {production.destinationBranchName}, giá trị ={" "}
+                  <span className="font-medium text-gray-700">
+                    {vnd(processingFee)}
+                  </span>{" "}
+                  (cộng vào nợ {production.supplier?.name || "NCC"}).
                 </p>
               </div>
             </div>
@@ -282,7 +356,7 @@ export function ProductionReceiveModal({
             {isPending
               ? "Đang lưu..."
               : isReceive
-                ? "Nhận hàng & hoàn thành"
+                ? "Nhận hàng & tạo phiếu nhập"
                 : "Xác nhận áp giá vốn"}
           </button>
         </div>

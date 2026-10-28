@@ -54,6 +54,16 @@ export interface Production {
   completedDate?: string | null;
   costAppliedAt?: string | null;
   appliedUnitCost?: number | string | null;
+  /** Phiếu nhập nhận thành phẩm còn hiệu lực (tạm hoặc đã nhập), mới nhất trước. */
+  purchaseOrders?: ProductionPurchaseOrder[];
+}
+
+/** PN nhận hàng của phiếu Gửi sản xuất (PN status: 0 tạm, 1 đã nhập, 2 hủy). */
+export interface ProductionPurchaseOrder {
+  id: number;
+  code: string;
+  status: number;
+  isDraft: boolean;
 }
 
 /** Giá thành + giá vốn bình quân đề xuất của phiếu gửi sản xuất. */
@@ -152,12 +162,21 @@ export const productionsApi = {
       receivedQuantity?: number;
       newCost?: number;
       costScope?: "receiveBranch" | "allBranches";
+      // Phí chốt = giá trị phiếu nhập được tạo.
+      processingFee?: number;
+      feeForeignAmount?: number;
+      feeExchangeRate?: number;
     },
   ) => apiClient.post<Production>(`/productions/${id}/receive`, data),
 
-  getCostPreview: (id: number, receivedQuantity?: number) =>
+  getCostPreview: (
+    id: number,
+    receivedQuantity?: number,
+    processingFee?: number,
+  ) =>
     apiClient.get<ProductionCostPreview>(`/productions/${id}/cost-preview`, {
       receivedQuantity,
+      processingFee,
     }),
 
   applyCost: (

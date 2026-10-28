@@ -13,6 +13,7 @@ import {
   Check,
   Clock,
 } from "lucide-react";
+import { formatNumberInput, parseNumberInput } from "@/lib/utils";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useProducts, useProduct } from "@/lib/hooks/useProducts";
 import {
@@ -1048,19 +1049,33 @@ export function ProductionForm({
                     Phí sản xuất lô hàng (nếu có)
                   </label>
                   <div className="flex gap-2">
-                    <NumericInput
-                      value={
-                        feeCurrency === "VND" ? processingFee : feeForeignAmount
-                      }
-                      onValueChange={
-                        feeCurrency === "VND"
-                          ? setProcessingFee
-                          : setFeeForeignAmount
-                      }
-                      maxFractionDigits={feeCurrency === "VND" ? 0 : 2}
-                      disabled={isFormDisabled}
-                      className="text-sm flex-1 px-2 py-1 border rounded text-right focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    />
+                    {feeCurrency === "VND" ? (
+                      // Gõ đến đâu thêm dấu phẩy ngăn cách đến đó.
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={
+                          processingFee
+                            ? formatNumberInput(String(processingFee))
+                            : ""
+                        }
+                        onChange={(e) =>
+                          setProcessingFee(
+                            parseNumberInput(formatNumberInput(e.target.value)),
+                          )
+                        }
+                        disabled={isFormDisabled}
+                        className="text-sm flex-1 min-w-0 px-2 py-1 border rounded text-right focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                    ) : (
+                      <NumericInput
+                        value={feeForeignAmount}
+                        onValueChange={setFeeForeignAmount}
+                        maxFractionDigits={2}
+                        disabled={isFormDisabled}
+                        className="text-sm flex-1 min-w-0 px-2 py-1 border rounded text-right focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                    )}
                     <select
                       value={feeCurrency}
                       onChange={(e) =>

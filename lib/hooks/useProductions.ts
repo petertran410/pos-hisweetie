@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   productionsApi,
+  type Production,
   type ProductionQueryParams,
   type CreateProductionData,
 } from "../api/productions";
@@ -10,10 +11,14 @@ import { API_URL } from "@/lib/config/api";
 import { useAuthStore } from "../store/auth";
 import { useBranchStore } from "../store/branch";
 
-export function useProductions(params?: ProductionQueryParams) {
+export function useProductions(
+  params?: ProductionQueryParams,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: ["productions", params],
     queryFn: () => productionsApi.getAll(params),
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -79,18 +84,24 @@ export function useDeleteProduction() {
 // ── Gửi sản xuất ở nhà máy ngoài ────────────────────────────────────────────
 // Mỗi thao tác đổi tồn kho và/hoặc công nợ NCC nên làm mới cả hai.
 function useFactoryProductionMutation<TVars>(
-  mutationFn: (vars: TVars) => Promise<unknown>,
-  successMessage: string,
+  mutationFn: (vars: TVars) => Promise<Production>,
+  successMessage: string | ((production: Production) => string),
 ) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn,
-    onSuccess: () => {
+    onSuccess: (production) => {
       queryClient.invalidateQueries({ queryKey: ["productions"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       queryClient.invalidateQueries({ queryKey: ["supplier-debt-timeline"] });
-      toast.success(successMessage);
+      // Nhận hàng tạo phiếu nhập → danh sách nhập hàng / trả tiền NCC đổi.
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      toast.success(
+        typeof successMessage === "function"
+          ? successMessage(production)
+          : successMessage,
+      );
     },
     onError: (error: Error) => {
       toast.error(error.message || "Có lỗi xảy ra");
@@ -119,7 +130,12 @@ export const useReceiveProduction = () =>
       id: number;
       data: Parameters<typeof productionsApi.receive>[1];
     }) => productionsApi.receive(id, data),
-    "Đã nhận thành phẩm vào kho",
+    (production) => {
+      const po = production.purchaseOrders?.find((p) => !p.isDraft);
+      return po
+        ? `Đã nhận hàng, tạo phiếu nhập ${po.code}`
+        : "Đã nhận thành phẩm vào kho";
+    },
   );
 
 export const useApplyProductionCost = () =>
@@ -145,10 +161,18 @@ export function useProductionCostPreview(
   id: number,
   receivedQuantity?: number,
   enabled = true,
+  processingFee?: number,
 ) {
   return useQuery({
-    queryKey: ["productions", id, "cost-preview", receivedQuantity],
-    queryFn: () => productionsApi.getCostPreview(id, receivedQuantity),
+    queryKey: [
+      "productions",
+      id,
+      "cost-preview",
+      receivedQuantity,
+      processingFee,
+    ],
+    queryFn: () =>
+      productionsApi.getCostPreview(id, receivedQuantity, processingFee),
     enabled: !!id && enabled,
     // Tồn kho và giá vốn đổi liên tục → luôn lấy số mới khi mở.
     staleTime: 0,

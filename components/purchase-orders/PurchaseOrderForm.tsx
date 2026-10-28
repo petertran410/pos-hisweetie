@@ -26,6 +26,9 @@ import { useAuthStore } from "@/lib/store/auth";
 import { ProductPickerDropdown } from "@/components/products/ProductPickerDropdown";
 import { ItemNoteField } from "@/components/shared/ItemNoteField";
 import { useExchangeRate, useRefreshExchangeRate } from "@/lib/hooks/useExchangeRate";
+import { useProductions } from "@/lib/hooks/useProductions";
+import type { Production } from "@/lib/api/productions";
+import { CodeLink } from "@/components/shared/CodeLink";
 import Swal from "sweetalert2";
 
 const IMPORT_SUPPLIER_GROUP_ID = 1;
@@ -136,7 +139,36 @@ interface PurchaseOrderFormProps {
   purchaseOrder?: PurchaseOrder | null;
   orderSupplier?: OrderSupplier | null;
   copyFrom?: PurchaseOrder | null;
+  /** Nhập thành phẩm từ phiếu Gửi sản xuất (chọn sẵn qua ?productionId=). */
+  production?: Production | null;
   onClose?: () => void;
+}
+
+/**
+ * Dòng duy nhất của PN nhận hàng gửi sản xuất: thành phẩm × SL phiếu, thành
+ * tiền = phí sản xuất (chốt thành tiền, đơn giá tự suy ra).
+ */
+function buildProductionLine(production: Production): ProductItem {
+  const quantity = Number(production.quantity) || 0;
+  const fee = Number(production.processingFee ?? 0);
+  const isCny = production.feeCurrency === "CNY";
+  const foreign = Number(production.feeForeignAmount ?? 0);
+  return {
+    productId: production.productId,
+    productCode: production.productCode,
+    productName: production.productName,
+    quantity,
+    price: quantity > 0 ? roundTo(fee / quantity, 2) : 0,
+    discount: 0,
+    subTotal: roundTo(fee, 2),
+    manualSubTotal: true,
+    inventory: 0,
+    vatRate: 0,
+    conditionType: "normal",
+    factoryPrice: isCny && quantity > 0 ? roundTo(foreign / quantity, 4) : 0,
+    factorySubTotal: isCny ? foreign : 0,
+    factorySubTotalManual: isCny,
+  };
 }
 
 const STATUS_OPTIONS = [
@@ -148,6 +180,7 @@ export function PurchaseOrderForm({
   purchaseOrder,
   orderSupplier,
   copyFrom,
+  production,
 }: PurchaseOrderFormProps) {
   const router = useRouter();
   const { selectedBranch } = useBranchStore();
@@ -213,9 +246,16 @@ export function PurchaseOrderForm({
     setPaymentForeignAmount(null);
   };
 
+  // Phiếu Gửi sản xuất đang làm nguồn cho PN mới (chọn ở ô "Nhập từ phiếu
+  // sản xuất" hoặc qua ?productionId=). PN sẽ khóa NCC, kho và dòng hàng.
+  const [sourceProduction, setSourceProduction] = useState<Production | null>(
+    !purchaseOrder && !orderSupplier && !copyFrom ? (production ?? null) : null
+  );
+  const sourceProductionCny = sourceProduction?.feeCurrency === "CNY";
   const [branchId, setBranchId] = useState<number>(
     purchaseOrder?.branchId ||
       orderSupplier?.branchId ||
+      sourceProduction?.destinationBranchId ||
       copyFrom?.branchId ||
       selectedBranch?.id ||
       0
@@ -231,6 +271,7 @@ export function PurchaseOrderForm({
   const [supplierId, setSupplierId] = useState<number>(
     purchaseOrder?.supplierId ||
       orderSupplier?.supplierId ||
+      sourceProduction?.supplierId ||
       copyFrom?.supplierId ||
       0
   );
@@ -238,7 +279,7 @@ export function PurchaseOrderForm({
     purchaseOrder?.description ||
       orderSupplier?.description ||
       copyFrom?.description ||
-      ""
+      (sourceProduction ? `Nhận hàng sản xuất ${sourceProduction.code}` : "")
   );
   const [discount, setDiscount] = useState<number>(
     purchaseOrder?.discount || copyFrom?.discount || 0
@@ -247,12 +288,18 @@ export function PurchaseOrderForm({
     purchaseOrder?.discountRatio || copyFrom?.discountRatio || 0
   );
   const [discountType, setDiscountType] = useState<"amount" | "ratio" | "cny">(
-    (purchaseOrder?.currency || orderSupplier?.currency || copyFrom?.currency) === "CNY"
+    (purchaseOrder?.currency ||
+      orderSupplier?.currency ||
+      copyFrom?.currency ||
+      sourceProduction?.feeCurrency) === "CNY"
       ? "ratio"
       : "amount"
   );
   const [currency, setCurrency] = useState<"VND" | "CNY">(
-    (purchaseOrder?.currency || orderSupplier?.currency || copyFrom?.currency) as "VND" | "CNY" || DEFAULT_CURRENCY
+    (purchaseOrder?.currency ||
+      orderSupplier?.currency ||
+      copyFrom?.currency ||
+      sourceProduction?.feeCurrency) as "VND" | "CNY" || DEFAULT_CURRENCY
   );
   const [exchangeRate, setExchangeRate] = useState<number>(
     purchaseOrder?.exchangeRate != null
@@ -261,12 +308,16 @@ export function PurchaseOrderForm({
         ? Number(orderSupplier.exchangeRate)
         : copyFrom?.exchangeRate != null
           ? Number(copyFrom.exchangeRate)
-          : DEFAULT_EXCHANGE_RATE
+          : sourceProductionCny
+            ? Number(sourceProduction?.feeExchangeRate) || DEFAULT_EXCHANGE_RATE
+            : DEFAULT_EXCHANGE_RATE
   );
   const [isDraft, setIsDraft] = useState<boolean>(
     purchaseOrder?.isDraft !== undefined ? purchaseOrder.isDraft : true
   );
-  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [products, setProducts] = useState<ProductItem[]>(() =>
+    sourceProduction ? [buildProductionLine(sourceProduction)] : []
+  );
   const { user: currentUser } = useAuthStore();
   const { data: users } = useUsersForFilter();
   const [purchaseById, setPurchaseById] = useState<number>(
@@ -296,12 +347,43 @@ export function PurchaseOrderForm({
   const supplierDropdownRef = useRef<HTMLDivElement>(null);
   const discountDropdownRef = useRef<HTMLDivElement>(null);
   const purchaseDateRef = useRef<HTMLDivElement>(null);
+  const productionDropdownRef = useRef<HTMLDivElement>(null);
+  const [showProductionDropdown, setShowProductionDropdown] = useState(false);
+  const [productionSearch, setProductionSearch] = useState("");
 
   // Cho phép sửa PN ở mọi trạng thái trừ "Đã hủy" (status=2). Trước đây
   // form bị khoá khi `!isDraft` (= "Đã nhập hàng") nên user không thể chỉnh
   // số lượng/giá kể cả khi cần điều chỉnh sau nhập hàng. BE đã hỗ trợ tính
   // delta tồn kho an toàn khi update PN status=1.
   const isFormDisabled = purchaseOrder?.status === 2;
+  // PN nhận hàng gửi sản xuất (đang tạo hoặc đã lưu): NCC, kho và dòng thành
+  // phẩm cố định theo phiếu sản xuất — chỉ sửa SL, thành tiền (phí), ngày…
+  const isProductionLocked = !!sourceProduction || !!purchaseOrder?.productionId;
+  // Phiếu Gửi sản xuất đang chờ nhận hàng (Đã gửi) và chưa có phiếu nhập.
+  const { data: sentProductionsData } = useProductions(
+    { isExternal: true, status: [4], pageSize: 200 },
+    { enabled: !purchaseOrder && !orderSupplier && !copyFrom }
+  );
+  const pickableProductions = useMemo(() => {
+    const keyword = productionSearch.trim().toLowerCase();
+    return (sentProductionsData?.data ?? []).filter(
+      (p) =>
+        !(p.purchaseOrders?.length) &&
+        (!keyword ||
+          [p.code, p.productCode, p.productName, p.supplier?.name]
+            .filter(Boolean)
+            .some((v) => String(v).toLowerCase().includes(keyword)))
+    );
+  }, [sentProductionsData, productionSearch]);
+  // Có tài liệu nguồn → không tự đổi tiền tệ / tỷ giá theo nhóm NCC.
+  const hasSourceDocument = !!(
+    purchaseOrder ||
+    orderSupplier ||
+    copyFrom ||
+    sourceProduction
+  );
+  // Ô chọn phiếu sản xuất chỉ có ở form tạo mới thường.
+  const canPickProduction = !purchaseOrder && !orderSupplier && !copyFrom;
 
   const selectedStatus = STATUS_OPTIONS.find((s) => s.value === isDraft);
   const selectedBranchData = branches?.find((b) => b.id === branchId);
@@ -340,16 +422,18 @@ export function PurchaseOrderForm({
     if (orderSupplier?.currency === "CNY" && orderSupplier?.exchangeRate) {
       return Number(orderSupplier.exchangeRate);
     }
+    // PN từ phiếu gửi sản xuất: theo tỷ giá của phí (exchangeRate đã set).
+    if (sourceProduction) return exchangeRate;
     if (isImportSupplier && liveRateQuery.data) {
       return liveRateQuery.data.rate;
     }
     return exchangeRate;
-  }, [purchaseOrder, orderSupplier, isImportSupplier, liveRateQuery.data, exchangeRate]);
+  }, [purchaseOrder, orderSupplier, sourceProduction, isImportSupplier, liveRateQuery.data, exchangeRate]);
 
   const refreshExchangeRateMutation = useRefreshExchangeRate();
 
   useEffect(() => {
-    if (purchaseOrder || orderSupplier || copyFrom) return;
+    if (hasSourceDocument) return;
     if (isImportSupplier) {
       setCurrency("CNY");
       if (liveRateQuery.data?.rate) {
@@ -359,7 +443,7 @@ export function PurchaseOrderForm({
       setCurrency("VND");
       setExchangeRate(1);
     }
-  }, [isImportSupplier, purchaseOrder, orderSupplier, copyFrom, liveRateQuery.data]);
+  }, [isImportSupplier, hasSourceDocument, liveRateQuery.data]);
 
   // Effect: đảm bảo discountType hợp lệ với currency (tương tự OrderSupplierForm).
   // Form mới chọn NCC nước ngoài → currency=CNY nhưng discountType vẫn "amount"
@@ -367,7 +451,7 @@ export function PurchaseOrderForm({
   // "amount" → calculateTotalCNY chạy nhánh VND (chia tỷ giá) cho ra kết quả
   // sai. Chỉ sửa khi mismatch để không wipe discount khi đang nhập hợp lệ.
   useEffect(() => {
-    if (purchaseOrder || orderSupplier || copyFrom) return;
+    if (hasSourceDocument) return;
     if (isCurrencyCNY && discountType === "amount") {
       setDiscountType("cny");
       setDiscount(0);
@@ -378,20 +462,18 @@ export function PurchaseOrderForm({
       setDiscountRatio(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCurrencyCNY, discountType, purchaseOrder, orderSupplier, copyFrom]);
+  }, [isCurrencyCNY, discountType, hasSourceDocument]);
 
   useEffect(() => {
     if (
-      !purchaseOrder &&
-      !orderSupplier &&
-      !copyFrom &&
+      !hasSourceDocument &&
       isImportSupplier &&
       liveRateQuery.data?.rate &&
       exchangeRate !== liveRateQuery.data.rate
     ) {
       setExchangeRate(liveRateQuery.data.rate);
     }
-  }, [liveRateQuery.data, isImportSupplier, purchaseOrder, orderSupplier, copyFrom]);
+  }, [liveRateQuery.data, isImportSupplier, hasSourceDocument]);
 
   const availableDiscount = useMemo(() => {
     if (!orderSupplier) return null;
@@ -623,13 +705,55 @@ export function PurchaseOrderForm({
       ) {
         setShowPurchaseDateCalendar(false);
       }
+      if (
+        productionDropdownRef.current &&
+        !productionDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowProductionDropdown(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Chọn / bỏ chọn phiếu Gửi sản xuất làm nguồn: điền NCC, kho, tiền tệ và
+  // đúng 1 dòng thành phẩm (thành tiền = phí sản xuất).
+  const applySourceProduction = async (next: Production | null) => {
+    setShowProductionDropdown(false);
+    setProductionSearch("");
+    if (next && !sourceProduction && products.length > 0) {
+      const res = await Swal.fire({
+        title: `Nhập từ phiếu ${next.code}?`,
+        text: "Danh sách hàng đang nhập sẽ được thay bằng thành phẩm của phiếu sản xuất.",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Đồng ý",
+        cancelButtonText: "Đóng",
+      });
+      if (!res.isConfirmed) return;
+    }
+    if (!next) {
+      setSourceProduction(null);
+      setProducts([]);
+      return;
+    }
+    const isCny = next.feeCurrency === "CNY";
+    setSourceProduction(next);
+    setSupplierId(next.supplierId ?? 0);
+    setBranchId(next.destinationBranchId);
+    setCurrency(isCny ? "CNY" : "VND");
+    setExchangeRate(isCny ? Number(next.feeExchangeRate) || 1 : 1);
+    setDiscountType(isCny ? "ratio" : "amount");
+    setDiscount(0);
+    setDiscountRatio(0);
+    setProducts([buildProductionLine(next)]);
+    setNote((prev) =>
+      prev.trim() ? prev : `Nhận hàng sản xuất ${next.code}`
+    );
+  };
+
   const handleAddProduct = (product: any, quantity: number = 1) => {
-    if (isFormDisabled) return;
+    if (isFormDisabled || isProductionLocked) return;
 
     // Cho phép thêm cùng 1 sản phẩm nhiều dòng (vd 1 dòng Tốt + 1 dòng
     // Loại B). Phân biệt qua `conditionType` + `lineNumber` (BE generate).
@@ -1140,6 +1264,9 @@ export function PurchaseOrderForm({
       })),
       purchaseById: purchaseById || undefined,
     };
+    if (sourceProduction && !purchaseOrder?.id) {
+      standardPayload.productionId = sourceProduction.id;
+    }
 
     // Payment fields CHỈ hợp lệ khi TẠO MỚI. Endpoint `PUT /:id` (update)
     // dùng DTO `forbidNonWhitelisted` KHÔNG chấp nhận paymentMethod/
@@ -1261,12 +1388,18 @@ export function PurchaseOrderForm({
             {purchaseOrder ? "Cập nhật nhập hàng" : "Tạo nhập hàng"}
           </h2>
           <div className="flex-1 max-w-xl">
-            <ProductPickerDropdown
-              branchId={branchId}
-              disabled={!!isFormDisabled}
-              onAddProduct={handleAddProduct}
-              supplierId={supplierId || undefined}
-            />
+            {isProductionLocked ? (
+              <p className="text-sm text-gray-500">
+                Phiếu nhập từ phiếu sản xuất chỉ gồm thành phẩm của phiếu.
+              </p>
+            ) : (
+              <ProductPickerDropdown
+                branchId={branchId}
+                disabled={!!isFormDisabled}
+                onAddProduct={handleAddProduct}
+                supplierId={supplierId || undefined}
+              />
+            )}
           </div>
         </div>
 
@@ -1408,7 +1541,7 @@ export function PurchaseOrderForm({
                                 : "damaged"
                             )
                           }
-                          disabled={isFormDisabled ? true : false}
+                          disabled={isFormDisabled || isProductionLocked}
                           className={`px-2 py-0.5 text-xs rounded-full border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                             item.conditionType === "damaged"
                               ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
@@ -1506,7 +1639,7 @@ export function PurchaseOrderForm({
                           <button
                             type="button"
                             onClick={() => handleDuplicateProduct(index)}
-                            disabled={isFormDisabled ? true : false}
+                            disabled={isFormDisabled || isProductionLocked}
                             className="p-1 text-green-600 hover:text-green-800 hover:bg-green-50 rounded disabled:opacity-50"
                             title="Thêm dòng mới cho sản phẩm này">
                             <Copy className="w-4 h-4" />
@@ -1514,7 +1647,7 @@ export function PurchaseOrderForm({
                           <button
                             type="button"
                             onClick={() => handleRemoveProduct(index)}
-                            disabled={isFormDisabled ? true : false}
+                            disabled={isFormDisabled || isProductionLocked}
                             className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded disabled:opacity-50"
                             title="Xóa dòng này">
                             <X className="w-4 h-4" />
@@ -1650,9 +1783,10 @@ export function PurchaseOrderForm({
               type="button"
               onClick={() =>
                 !isFormDisabled &&
+                !isProductionLocked &&
                 setShowSupplierDropdown(!showSupplierDropdown)
               }
-              disabled={isFormDisabled ? true : false}
+              disabled={isFormDisabled || isProductionLocked}
               className="w-full px-3 py-2 text-sm border rounded-lg flex items-center justify-between disabled:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-brand">
               <span
                 className={`truncate ${!selectedSupplier ? "text-gray-400" : ""}`}>
@@ -1740,6 +1874,100 @@ export function PurchaseOrderForm({
             </div>
           )}
 
+          {purchaseOrder?.production?.code && (
+            <div className="flex gap-2">
+              <div className="block text-sm text-gray-600">
+                Phiếu sản xuất:
+              </div>
+              <CodeLink
+                entity="production"
+                code={purchaseOrder.production.code}
+                className="text-brand hover:underline"
+              />
+            </div>
+          )}
+
+          {canPickProduction && (
+            <div ref={productionDropdownRef} className="relative">
+              <div className="text-sm text-gray-600 mb-1">
+                Nhập từ phiếu sản xuất:
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setShowProductionDropdown((v) => !v)}
+                  className="flex-1 min-w-0 px-2 py-1.5 text-sm border rounded flex items-center justify-between hover:bg-gray-50">
+                  <span
+                    className={`truncate ${
+                      sourceProduction ? "font-medium text-brand" : "text-gray-400"
+                    }`}>
+                    {sourceProduction
+                      ? `${sourceProduction.code} · ${sourceProduction.productName}`
+                      : "Chọn phiếu Gửi sản xuất (không bắt buộc)"}
+                  </span>
+                  <ChevronDown className="w-4 h-4 shrink-0 text-gray-400" />
+                </button>
+                {sourceProduction && (
+                  <button
+                    type="button"
+                    onClick={() => applySourceProduction(null)}
+                    className="p-1 text-gray-400 hover:text-red-600"
+                    title="Bỏ chọn phiếu sản xuất">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              {sourceProduction && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Giá trị phiếu = phí sản xuất. Nhà cung cấp, kho và thành phẩm
+                  theo phiếu sản xuất; hoàn thành phiếu nhập thì phiếu sản xuất
+                  chuyển Hoàn thành.
+                </p>
+              )}
+              {showProductionDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-72 overflow-hidden flex flex-col">
+                  <div className="p-2 border-b bg-white">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text"
+                        autoFocus
+                        value={productionSearch}
+                        onChange={(e) => setProductionSearch(e.target.value)}
+                        placeholder="Tìm mã phiếu, sản phẩm, NCC..."
+                        className="w-full pl-8 pr-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-brand"
+                      />
+                    </div>
+                  </div>
+                  <div className="overflow-y-auto max-h-56">
+                    {pickableProductions.length ? (
+                      pickableProductions.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => applySourceProduction(p)}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50">
+                          <div className="font-medium">
+                            {p.code} · {p.productName}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {p.supplier?.name || "-"} · SL{" "}
+                            {Number(p.quantity).toLocaleString("vi-VN")} ·{" "}
+                            {p.destinationBranchName}
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-2 text-sm text-gray-500">
+                        Không có phiếu Gửi sản xuất nào đang chờ nhận hàng
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div ref={statusDropdownRef} className="flex gap-2">
             <div className="text-sm text-gray-600">Trạng thái:</div>
             <span>{selectedStatus ? selectedStatus.label : "Phiếu tạm"}</span>
@@ -1751,9 +1979,11 @@ export function PurchaseOrderForm({
               <button
                 type="button"
                 onClick={() =>
-                  !isFormDisabled && setShowBranchDropdown(!showBranchDropdown)
+                  !isFormDisabled &&
+                  !isProductionLocked &&
+                  setShowBranchDropdown(!showBranchDropdown)
                 }
-                disabled={isFormDisabled ? true : false}
+                disabled={isFormDisabled || isProductionLocked}
                 className="w-full px-2 py-1.5 text-sm border rounded flex items-center justify-between disabled:bg-gray-100 hover:bg-gray-50">
                 <span>
                   {selectedBranchData ? selectedBranchData.name : "Chọn kho"}
@@ -1806,7 +2036,7 @@ export function PurchaseOrderForm({
                     }).format(effectiveRate || 0)}{" "}
                     VND
                   </span>
-                  {!isFormDisabled && !purchaseOrder && !orderSupplier && (
+                  {!isFormDisabled && !purchaseOrder && !orderSupplier && !sourceProduction && (
                     <button
                       type="button"
                       onClick={handleRefreshExchangeRate}
