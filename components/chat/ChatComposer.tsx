@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  Check,
   FileText,
   Loader2,
   Paperclip,
@@ -35,8 +34,10 @@ import type {
   OutgoingAttachment,
 } from "@/lib/types/smaxChat";
 import { messagePreview, messageThumb } from "@/lib/chat/messageActions";
+import { renderPrintImage } from "@/lib/utils/print";
 import { QuickInsertMenu, useQuickOptions } from "./QuickInsertMenu";
 import { EmojiStickerPicker } from "./EmojiStickerPicker";
+import { ImageGalleryModal } from "./ImageGalleryModal";
 import { addRecentEmoji, addRecentSticker } from "@/lib/chat/stickers";
 
 const MAX_FILES = 10;
@@ -79,6 +80,12 @@ interface Item {
 // Khi đã mở, chuỗi tìm nhận cả khoảng trắng ("/Lermao Xoài") tới khi Esc / chọn / xuống dòng.
 const SLASH = /(^|\s)\/([^\s/]*)$/;
 
+const productImageKey = (img: { productId: number; kind?: "packingSlip"; id: number }) =>
+  `p-${img.kind ?? "product"}-${img.productId}-${img.id}`;
+
+const isImageItem = (i: Item) =>
+  i.file.type.startsWith("image/") || i.result?.kind === "image";
+
 /**
  * Ô soạn tin: chữ + ảnh/video/tệp (📎, dán ảnh, kéo thả), gõ "/" để chèn nhanh
  * thông tin POS. Enter gửi, Shift+Enter xuống dòng.
@@ -113,11 +120,27 @@ export function ChatComposer({
   const disabled = !!disabledReason;
   const uploading = items.some((i) => i.status === "uploading");
   const ready = items.filter((i) => i.status === "done");
+  // Ảnh đính kèm: bấm để xem lớn, chuyển qua lại giữa các ảnh
+  const [preview, setPreview] = useState<number | null>(null);
   const selectedProductImages = productPicks.flatMap((p) =>
     p.images
       .filter((i) => p.selected.includes(i.id))
       .map((i) => ({ ...i, productId: p.productId, productName: p.name, kind: p.kind })),
   );
+  // Ảnh trong dải đính kèm (tệp tải lên + ảnh sản phẩm/báo đơn đã chèn) — bấm để xem lớn
+  const gallery = [
+    ...items
+      .filter((i) => i.localUrl && isImageItem(i))
+      .map((i) => ({ key: i.key, url: i.localUrl!, name: i.file.name })),
+    ...selectedProductImages.map((img) => ({
+      key: productImageKey(img),
+      url: img.url,
+      name: img.productName,
+    })),
+  ];
+  const openPreview = (key: string) =>
+    setPreview(gallery.findIndex((g) => g.key === key));
+
   const canSend =
     !disabled &&
     !uploading &&
@@ -127,18 +150,16 @@ export function ChatComposer({
       !!qrImageUrl ||
       selectedProductImages.length > 0);
 
-  const toggleProductImage = (pick: ProductImagePick, imageId: number) =>
+  // Bỏ 1 ảnh sản phẩm / báo đơn khỏi dải đính kèm (không gửi kèm nữa)
+  const removeProductImage = (img: { productId: number; kind?: "packingSlip"; id: number }) =>
     setProductPicks((cur) =>
-      cur.map((p) => {
-        if (!samePick(p, pick)) return p;
-        if (p.selected.includes(imageId))
-          return { ...p, selected: p.selected.filter((x) => x !== imageId) };
-        if (items.length + selectedProductImages.length >= MAX_FILES) {
-          toast.warning(`Tối đa ${MAX_FILES} tệp/ảnh mỗi lần gửi`);
-          return p;
-        }
-        return { ...p, selected: [...p.selected, imageId] };
-      }),
+      cur
+        .map((p) =>
+          samePick(p, img)
+            ? { ...p, selected: p.selected.filter((x) => x !== img.id) }
+            : p,
+        )
+        .filter((p) => p.selected.length > 0),
     );
 
   useEffect(() => {
@@ -290,6 +311,15 @@ export function ChatComposer({
           ...others,
           { ...pick, selected: pick.images.slice(0, room).map((i) => i.id) },
         ]);
+      }
+      // Ảnh bản in: chụp xong mới cho gửi (vẫn đang "inserting") rồi tải lên như tệp đính kèm
+      const print = result.printImage;
+      if (print) {
+        try {
+          addFiles([await renderPrintImage(print.templateFor, print.id, print.name)]);
+        } catch (e) {
+          toast.warning(`Không chụp được bản in ${print.name}: ${(e as Error).message}`);
+        }
       }
       requestAnimationFrame(() => textRef.current?.focus());
     } catch (e) {
@@ -505,97 +535,6 @@ export function ChatComposer({
           <Loader2 className="h-3 w-3 animate-spin" /> Đang lấy thông tin POS…
         </p>
       )}
-      {productPicks.map((p) => {
-        const all = p.selected.length === p.images.length;
-        return (
-          <div
-            key={`${p.kind ?? "product"}-${p.productId}`}
-            className="mb-2 rounded-md border bg-gray-50 p-1.5 text-xs"
-          >
-            <div className="mb-1 flex items-center gap-2">
-              <label className="flex flex-1 cursor-pointer items-center gap-1.5 min-w-0">
-                <input
-                  type="checkbox"
-                  checked={all}
-                  onChange={() =>
-                    setProductPicks((cur) =>
-                      cur.map((x) =>
-                        !samePick(x, p)
-                          ? x
-                          : {
-                              ...x,
-                              selected: all
-                                ? []
-                                : x.images
-                                    .slice(
-                                      0,
-                                      Math.max(
-                                        0,
-                                        MAX_FILES -
-                                          items.length -
-                                          (selectedProductImages.length -
-                                            x.selected.length),
-                                      ),
-                                    )
-                                    .map((i) => i.id),
-                            },
-                      ),
-                    )
-                  }
-                />
-                <span className="truncate">
-                  Gửi kèm ảnh <b>{p.name}</b> ({p.selected.length}/
-                  {p.images.length})
-                </span>
-              </label>
-              <button
-                onClick={() =>
-                  setProductPicks((cur) =>
-                    cur.filter((x) => !samePick(x, p)),
-                  )
-                }
-                aria-label="Bỏ ảnh sản phẩm"
-                className="rounded p-1 text-gray-500 hover:bg-gray-200"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <div className="flex gap-1.5 overflow-x-auto">
-              {p.images.map((img) => {
-                const on = p.selected.includes(img.id);
-                return (
-                  <button
-                    key={img.id}
-                    onClick={() => toggleProductImage(p, img.id)}
-                    aria-pressed={on}
-                    title={on ? "Bỏ chọn ảnh này" : "Chọn gửi kèm ảnh này"}
-                    className={`relative h-14 w-14 shrink-0 overflow-hidden rounded border-2 ${
-                      on
-                        ? "border-brand"
-                        : "border-transparent opacity-60 hover:opacity-100"
-                    }`}
-                  >
-                    <img
-                      src={img.url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                    <span
-                      className={`absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-sm border ${
-                        on
-                          ? "border-brand bg-brand text-white"
-                          : "border-gray-300 bg-white"
-                      }`}
-                    >
-                      {on && <Check className="h-3 w-3" />}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
       {qrImageUrl && (
         <div className="mb-2 flex items-center gap-2 rounded-md border bg-gray-50 p-1.5 text-xs">
           <img
@@ -617,7 +556,7 @@ export function ChatComposer({
         </div>
       )}
 
-      {items.length > 0 && (
+      {(items.length > 0 || selectedProductImages.length > 0) && (
         <div className="flex gap-2 overflow-x-auto pb-2">
           {items.map((i) => (
             <div
@@ -627,14 +566,20 @@ export function ChatComposer({
                 i.status === "error" ? "border-red-400" : ""
               }`}
             >
-              {i.localUrl &&
-              (i.file.type.startsWith("image/") ||
-                i.result?.kind === "image") ? (
-                <img
-                  src={i.localUrl}
-                  alt={i.file.name}
-                  className="h-full w-full object-cover"
-                />
+              {i.localUrl && isImageItem(i) ? (
+                <button
+                  onClick={() =>
+                    openPreview(i.key)
+                  }
+                  title="Xem ảnh"
+                  className="h-full w-full cursor-zoom-in"
+                >
+                  <img
+                    src={i.localUrl}
+                    alt={i.file.name}
+                    className="h-full w-full object-cover"
+                  />
+                </button>
               ) : i.localUrl ? (
                 <>
                   <video
@@ -671,7 +616,44 @@ export function ChatComposer({
               </button>
             </div>
           ))}
+          {selectedProductImages.map((img) => {
+            const key = productImageKey(img);
+            return (
+              <div
+                key={key}
+                title={img.productName}
+                className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-gray-50"
+              >
+                <button
+                  onClick={() => openPreview(key)}
+                  title="Xem ảnh"
+                  className="h-full w-full cursor-zoom-in"
+                >
+                  <img
+                    src={img.url}
+                    alt={img.productName}
+                    className="h-full w-full object-cover"
+                  />
+                </button>
+                <button
+                  onClick={() => removeProductImage(img)}
+                  aria-label="Bỏ ảnh"
+                  className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            );
+          })}
         </div>
+      )}
+
+      {preview !== null && gallery.length > 0 && (
+        <ImageGalleryModal
+          images={gallery}
+          index={Math.min(Math.max(preview, 0), gallery.length - 1)}
+          onClose={() => setPreview(null)}
+        />
       )}
 
       {/* stretch: ô soạn cao bằng cột nút bên phải, không chừa khoảng trống */}

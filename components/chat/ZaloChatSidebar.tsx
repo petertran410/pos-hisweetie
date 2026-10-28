@@ -1,13 +1,16 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   AlertTriangle,
   Check,
   ChevronDown,
   ChevronRight,
+  Loader2,
   MessageCircle,
+  MoreHorizontal,
   Settings2,
   Users,
   X,
@@ -21,12 +24,12 @@ import { useCan } from "@/lib/hooks/useCan";
 import { useIsClient, useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useChatContext, useRecentChats } from "@/lib/hooks/useSmaxChat";
 import { newCount } from "@/lib/chat/seen";
-import { UnseenBadge, useOpenRecentChat } from "./RecentChatsList";
+import { RecentChatRow, UnseenBadge, useOpenRecentChat } from "./RecentChatsList";
 import { pickChannel, useActiveChannel } from "@/lib/chat/channels";
 import { customerSource } from "@/lib/chat/threadSource";
 import { LooseChat } from "./LooseChat";
 import { useFastTitle } from "@/lib/chat/useFastTitle";
-import type { ChatChannel, ChatContext, LooseThread } from "@/lib/types/smaxChat";
+import type { ChatChannel, ChatContext, LooseThread, RecentChat } from "@/lib/types/smaxChat";
 import { ChatCustomerPicker } from "./ChatCustomerPicker";
 import { ChatCustomerCard } from "./ChatCustomerCard";
 import { ChatThread } from "./ChatThread";
@@ -46,6 +49,13 @@ export function ZaloChatSidebar() {
   const open = useChatSidebarStore((s) => s.open);
   const setOpen = useChatSidebarStore((s) => s.setOpen);
   const customer = useCurrentChatCustomer();
+  const panelWidth = useChatSidebarStore((s) => s.panelWidth);
+
+  // Các bảng chi tiết (…DetailRow) chỉ đo lại độ rộng khi window resize →
+  // báo khi khung chat mở / thu gọn / kéo đổi độ rộng làm vùng nội dung đổi theo
+  useEffect(() => {
+    window.dispatchEvent(new Event("resize"));
+  }, [open, panelWidth]);
 
   if (!canView || !isClient) return null;
 
@@ -74,6 +84,9 @@ const PANEL_MAX_WIDTH = 1200;
 const PANEL_WIDE_WIDTH = 700;
 // Khung chat đủ rộng để hiện cột Thông tin POS riêng
 const PanelWideContext = createContext(false);
+// Thanh chia giữa khung chat và cột Thông tin POS: độ rộng tối thiểu mỗi bên
+const CHAT_MIN_WIDTH = 360;
+const POS_MIN_WIDTH = 220;
 
 /** Khung chat kéo mép trái để mở rộng / thu hẹp; bấm đúp mép để về mặc định. */
 function ResizableAside({ onClose }: { onClose: () => void }) {
@@ -150,6 +163,9 @@ function ResizableAside({ onClose }: { onClose: () => void }) {
   );
 }
 
+// Chiều cao 1 bong bóng hội thoại trên thanh thu gọn (32px + gap 8px)
+const RAIL_ITEM = 40;
+
 /**
  * Thanh thu gọn: mở chat, chọn nhanh kênh Zalo (avatar), và avatar các hội thoại
  * gần nhất của kênh kèm số tin mới (so với lần xem gần nhất trên POS).
@@ -165,10 +181,43 @@ function CollapsedRail({
   const { usable, channel } = useActiveChannel();
   const setPagePid = useChatSidebarStore((s) => s.setPagePid);
   const selectCustomer = useChatSidebarStore((s) => s.selectCustomer);
-  const { data } = useRecentChats(
-    !!channel && !channel.missing,
-    channel?.pagePid,
-  );
+  // Số bong bóng vừa khít khung (đo theo chiều cao); phần còn lại xem trong dropdown "…"
+  const [listEl, setListEl] = useState<HTMLDivElement | null>(null);
+  const [fit, setFit] = useState(15);
+  // Dropdown "…" đang mở: nút neo + vị trí (tính lúc bấm)
+  const [moreAt, setMoreAt] = useState<{ anchor: HTMLElement; right: number; bottom: number } | null>(null);
+  // Số hội thoại lấy từ Smax (dropdown bấm "Tải thêm" để tăng), theo kênh
+  const [limitBy, setLimitBy] = useState<{ pagePid: string | null; n: number }>({ pagePid: null, n: 30 });
+  const limit = limitBy.pagePid === (channel?.pagePid ?? null) ? limitBy.n : 30;
+  useEffect(() => {
+    if (!listEl) return;
+    // Bong bóng 32px + gap 8px; trừ padding trên/dưới
+    const measure = () =>
+      setFit(Math.max(2, Math.floor((listEl.clientHeight - 12 + 8) / RAIL_ITEM)));
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(listEl);
+    return () => ro.disconnect();
+  }, [listEl]);
+  const { data, isFetching } = useRecentChats(!!channel && !channel.missing, channel?.pagePid, limit);
+  const items = data?.items ?? [];
+  // Còn hội thoại thì ô cuối là "…"
+  const shown = items.length > fit ? items.slice(0, fit - 1) : items;
+  const rest = items.slice(shown.length);
+  // Smax trả đủ số đã xin → có thể còn nữa (backend tối đa 200)
+  const canLoadMore = items.length >= limit && limit < 200;
+  const toggleMore = (btn: HTMLElement) => {
+    if (moreAt) return setMoreAt(null);
+    // Mép phải dropdown sát trái thanh, đáy ngang nút "…" (position:fixed bị nhân zoom của <html>)
+    const zoom = parseFloat(getComputedStyle(document.documentElement).zoom || "1") || 1;
+    const a = btn.getBoundingClientRect();
+    const rail = btn.closest("aside")?.getBoundingClientRect() ?? a;
+    setMoreAt({
+      anchor: btn,
+      right: (window.innerWidth - rail.left + 6) / zoom,
+      bottom: Math.max(8, window.innerHeight - a.bottom) / zoom,
+    });
+  };
   const openLoose = useChatSidebarStore((s) => s.openLoose);
   const { open } = useOpenRecentChat(
     (c, target) => {
@@ -225,9 +274,13 @@ function CollapsedRail({
       )}
 
       {/* Hội thoại gần nhất của kênh đang chọn */}
-      {!!data?.items.length && (
-        <div className="flex w-full min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto border-t pt-2 pb-1">
-          {data.items.slice(0, 15).map((c) => {
+      <div
+        ref={setListEl}
+        className={`flex w-full min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto pt-2 pb-1 ${
+          items.length ? "border-t" : ""
+        }`}
+      >
+          {shown.map((c) => {
             const unseen = newCount(c.tid, c.messageCount);
             const who = c.match
               ? `${c.match.customer.code ?? ""} ${c.match.customer.name}`
@@ -253,9 +306,111 @@ function CollapsedRail({
               </button>
             );
           })}
-        </div>
+          {rest.length > 0 && (
+            <button
+              onClick={(e) => toggleMore(e.currentTarget)}
+              title={`${rest.length}${canLoadMore ? "+" : ""} hội thoại khác`}
+              aria-label="Xem thêm hội thoại"
+              aria-expanded={!!moreAt}
+              className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-cyan-bg hover:text-brand ${
+                moreAt ? "bg-cyan-bg text-brand" : "bg-gray-100 text-gray-500"
+              }`}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+              {rest.some((c) => newCount(c.tid, c.messageCount) > 0) && (
+                <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+              )}
+            </button>
+          )}
+      </div>
+      {moreAt && rest.length > 0 && (
+        <RailMoreDropdown
+          anchor={moreAt.anchor}
+          pos={moreAt}
+          items={rest}
+          loading={isFetching}
+          canLoadMore={canLoadMore}
+          onLoadMore={() => setLimitBy({ pagePid: channel?.pagePid ?? null, n: Math.min(200, limit + 30) })}
+          onPick={(c) => {
+            setMoreAt(null);
+            open(c);
+          }}
+          onClose={() => setMoreAt(null)}
+        />
       )}
     </aside>
+  );
+}
+
+/**
+ * Dropdown "…" của thanh thu gọn: các hội thoại không đủ chỗ trên thanh. Nổi bên trái
+ * thanh (portal, không đẩy layout), kẹp trong viewport; cuối danh sách "Tải thêm".
+ */
+function RailMoreDropdown({
+  anchor,
+  pos,
+  items,
+  loading,
+  canLoadMore,
+  onLoadMore,
+  onPick,
+  onClose,
+}: {
+  anchor: HTMLElement;
+  pos: { right: number; bottom: number };
+  items: RecentChat[];
+  loading: boolean;
+  canLoadMore: boolean;
+  onLoadMore: () => void;
+  onPick: (c: RecentChat) => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node) && !anchor.contains(e.target as Node)) onClose();
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [anchor, onClose]);
+
+  return createPortal(
+    <div
+      ref={ref}
+      role="dialog"
+      aria-label="Hội thoại khác"
+      style={{ right: pos.right, bottom: pos.bottom }}
+      className="fixed z-[1000] flex max-h-[min(70vh,calc(100vh-16px))] w-80 flex-col rounded-lg border bg-white shadow-xl"
+    >
+      <div className="border-b px-3 py-2 text-xs font-semibold uppercase text-gray-500">
+        Hội thoại khác ({items.length}
+        {canLoadMore ? "+" : ""})
+      </div>
+      <ul className="min-h-0 flex-1 overflow-y-auto p-1">
+        {items.map((c) => (
+          <li key={c.tid}>
+            <RecentChatRow c={c} onClick={() => onPick(c)} />
+          </li>
+        ))}
+      </ul>
+      {canLoadMore && (
+        <button
+          onClick={onLoadMore}
+          disabled={loading}
+          className="flex items-center justify-center gap-1 border-t py-2 text-xs text-brand hover:bg-cyan-bg disabled:opacity-60"
+        >
+          {loading && <Loader2 className="h-3 w-3 animate-spin" />}
+          {loading ? "Đang tải…" : "Tải thêm hội thoại"}
+        </button>
+      )}
+    </div>,
+    document.body,
   );
 }
 
@@ -544,6 +699,38 @@ function CustomerChat({ customerId }: { customerId: number }) {
     refetch,
   } = useChatContext(customerId, true);
   const wide = useContext(PanelWideContext);
+  const posRatio = useChatSidebarStore((s) => s.posRatio);
+  const setPosRatio = useChatSidebarStore((s) => s.setPosRatio);
+  const splitRef = useRef<HTMLDivElement>(null);
+  const [splitting, setSplitting] = useState(false);
+
+  // Kéo thanh chia → đổi tỷ lệ cột POS theo thời gian thực (lưu tỷ lệ, không lưu px)
+  const startSplit = (e: React.PointerEvent<HTMLDivElement>) => {
+    const box = splitRef.current;
+    if (!box) return;
+    e.preventDefault();
+    const handle = e.currentTarget;
+    handle.setPointerCapture(e.pointerId);
+    // rect theo px màn hình (html có zoom), min width theo px CSS → quy đổi
+    const rect = box.getBoundingClientRect();
+    const scale = rect.width / box.offsetWidth || 1;
+    const minPos = POS_MIN_WIDTH * scale;
+    const maxPos = rect.width - CHAT_MIN_WIDTH * scale;
+    setSplitting(true);
+    const onMove = (ev: PointerEvent) => {
+      const pos = Math.min(maxPos, Math.max(minPos, rect.right - ev.clientX));
+      setPosRatio(Math.round((pos / rect.width) * 1000) / 1000);
+    };
+    const onUp = () => {
+      setSplitting(false);
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onUp);
+      handle.removeEventListener("pointercancel", onUp);
+    };
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
+    handle.addEventListener("pointercancel", onUp);
+  };
 
   if (isLoading) {
     return (
@@ -575,7 +762,7 @@ function CustomerChat({ customerId }: { customerId: number }) {
   }
 
   return (
-    <div className="flex flex-1 min-h-0">
+    <div ref={splitRef} className={`flex flex-1 min-h-0 ${splitting ? "select-none" : ""}`}>
       <div className="flex flex-1 min-w-0 min-h-0 flex-col">
         {!wide && (
         <details className="border-b">
@@ -590,7 +777,38 @@ function CustomerChat({ customerId }: { customerId: number }) {
         <ChannelChat ctx={ctx} />
       </div>
       {wide && (
-      <div className="w-[300px] shrink-0 border-l overflow-y-auto p-3">
+      <div className="relative shrink-0">
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Kéo để chia lại khung chat và Thông tin POS"
+          title="Kéo để chia lại · bấm đúp để về mặc định"
+          onPointerDown={startSplit}
+          onDoubleClick={() => setPosRatio(null)}
+          className="group absolute inset-y-0 -left-1.5 z-20 flex w-3 cursor-col-resize touch-none items-center justify-center"
+        >
+          <span
+            className={`h-10 w-1 rounded-full transition-colors group-hover:bg-brand ${
+              splitting ? "bg-brand" : "bg-transparent"
+            }`}
+          />
+        </div>
+      </div>
+      )}
+      {wide && (
+      <div
+        className={`${posRatio ? "" : "w-[300px]"} shrink-0 border-l overflow-y-auto p-3`}
+        // Theo tỷ lệ đã lưu, kẹp min/max để khung chat luôn còn ≥ CHAT_MIN_WIDTH
+        style={
+          posRatio
+            ? {
+                width: `${posRatio * 100}%`,
+                minWidth: POS_MIN_WIDTH,
+                maxWidth: `calc(100% - ${CHAT_MIN_WIDTH}px)`,
+              }
+            : undefined
+        }
+      >
         <h3 className="text-xs font-semibold uppercase text-gray-500 mb-2">
           Thông tin POS
         </h3>

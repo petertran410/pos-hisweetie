@@ -28,6 +28,18 @@ export default function CustomersPage() {
     ...(codeParam ? { code: codeParam } : {}),
   }));
 
+  // Cùng route nên trang không mount lại khi ?Code= đổi / bị bỏ (vd bấm menu
+  // "Danh sách khách hàng") → đồng bộ lại bộ lọc mã khách theo URL
+  const [prevCode, setPrevCode] = useState(codeParam);
+  if (codeParam !== prevCode) {
+    setPrevCode(codeParam);
+    setFilters((f) => {
+      const next = { ...f, currentItem: 0 };
+      delete next.code;
+      return codeParam ? { ...next, code: codeParam } : next;
+    });
+  }
+
   const handleFiltersChange = useCallback(
     (newFilters: CustomerFilters) => {
       setFilters({
@@ -49,6 +61,8 @@ export default function CustomersPage() {
           onFiltersChange={handleFiltersChange}
         />
         <CustomersTable
+          // mã đổi → bỏ dòng đang mở rộng, tự mở dòng của mã mới
+          key={codeParam ?? ""}
           filters={filters}
           onCreateClick={() => setShowCreateForm(true)}
           onEditClick={(customer) => setEditingCustomer(customer)}

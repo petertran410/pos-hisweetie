@@ -1,3 +1,4 @@
+import { API_URL, getAuthHeaders } from "@/lib/config/api";
 import { printTemplatesApi } from "@/lib/api/print-templates";
 
 const ITEM_TABLE_HEADER_GROUPS = [
@@ -183,11 +184,15 @@ export function buildPrintDocumentHtml(
 </html>`;
 }
 
-export async function printEntity(
+/** Chọn mẫu in (chỉ định → mặc định → đầu tiên) và render nội dung cho entity. */
+async function renderEntityPrint(
   templateFor: string,
   entityId: number,
   templateId?: number
-): Promise<void> {
+): Promise<{
+  template: { id: number; paperSize?: string | null; orientation?: string | null };
+  content: string;
+}> {
   const templates = await printTemplatesApi.getAll({
     templateFor,
     isActive: true,
@@ -208,6 +213,15 @@ export async function printEntity(
   if (!preview?.content) {
     throw new Error("Không render được nội dung in");
   }
+  return { template, content: preview.content };
+}
+
+export async function printEntity(
+  templateFor: string,
+  entityId: number,
+  templateId?: number
+): Promise<void> {
+  const { content } = await renderEntityPrint(templateFor, entityId, templateId);
 
   // Tạo iframe ẩn trong trang hiện tại
   const iframe = document.createElement("iframe");
@@ -228,7 +242,7 @@ export async function printEntity(
   doc.open();
   doc.write(
     buildPrintDocumentHtml(
-      addPrintSerialNumberColumn(preview.content, templateFor)
+      addPrintSerialNumberColumn(content, templateFor)
     )
   );
   doc.close();
@@ -461,4 +475,118 @@ export async function printWarehouseExport(invoiceId: number): Promise<void> {
     win.print();
     cleanup();
   };
+}
+
+// Khổ giấy (mm, dọc) để chụp bản in thành ảnh; khổ lạ → A5
+const PAPER_MM: Record<string, [number, number]> = {
+  A4: [210, 297],
+  A5: [148, 210],
+  A6: [105, 148],
+};
+const PX_PER_MM = 96 / 25.4;
+
+/** Ảnh trong mẫu in → data URL (CORS trực tiếp, không được thì qua backend); lỗi → null. */
+async function imageToDataUrl(src: string): Promise<string | null> {
+  if (src.startsWith("data:")) return src;
+  const toDataUrl = (blob: Blob) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  try {
+    const res = await fetch(src, { mode: "cors" });
+    if (res.ok) return toDataUrl(await res.blob());
+  } catch {
+    // host không cho CORS (vd ảnh QR VietQR) → tải qua backend
+  }
+  try {
+    const res = await fetch(
+      `${API_URL}/smax/chat/media?url=${encodeURIComponent(src)}`,
+      { headers: getAuthHeaders() }
+    );
+    if (res.ok) return toDataUrl(await res.blob());
+  } catch {
+    // bỏ ảnh, vẫn chụp phần còn lại
+  }
+  return null;
+}
+
+/**
+ * Chụp bản in (mẫu in mặc định của hoá đơn / đặt hàng) thành ảnh PNG theo khổ giấy
+ * của mẫu (A5…): dựng trong iframe ẩn để đo, rồi vẽ qua SVG foreignObject lên canvas.
+ */
+export async function renderPrintImage(
+  templateFor: "invoice" | "order",
+  entityId: number,
+  fileName: string
+): Promise<File> {
+  const { template, content } = await renderEntityPrint(templateFor, entityId);
+  const [w, h] = PAPER_MM[String(template.paperSize).toUpperCase()] ?? PAPER_MM.A5;
+  const [pageW, pageH] = template.orientation === "landscape" ? [h, w] : [w, h];
+  const width = Math.round(pageW * PX_PER_MM);
+
+  // Ảnh ngoài làm "bẩn" canvas → nhúng thẳng data URL
+  const parsed = new DOMParser().parseFromString(
+    addPrintSerialNumberColumn(content, templateFor),
+    "text/html"
+  );
+  await Promise.all(
+    [...parsed.images].map(async (img) => {
+      const data = await imageToDataUrl(img.src);
+      if (data) img.src = data;
+      else img.remove();
+    })
+  );
+
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText = `position:fixed;left:-10000px;top:0;width:${width}px;height:10px;border:0;visibility:hidden`;
+  document.body.appendChild(iframe);
+  try {
+    const doc = iframe.contentDocument;
+    if (!doc) throw new Error("Không tạo được iframe chụp bản in");
+    const loaded = new Promise((resolve) => {
+      iframe.onload = resolve;
+      setTimeout(resolve, 3000);
+    });
+    doc.open();
+    doc.write(
+      buildPrintDocumentHtml(parsed.body.innerHTML).replace(
+        "</head>",
+        // Lề giấy như khi in (@page margin) + nền trắng
+        "<style>body{padding:8mm;background:#fff}</style></head>"
+      )
+    );
+    doc.close();
+    await loaded;
+    const height = Math.max(
+      Math.round(pageH * PX_PER_MM),
+      doc.documentElement.scrollHeight
+    );
+
+    const xhtml = new XMLSerializer().serializeToString(doc.documentElement);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject width="100%" height="100%">${xhtml}</foreignObject></svg>`;
+    const image = new Image();
+    image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    await image.decode();
+
+    // x2 cho chữ nét khi khách phóng to trên Zalo
+    const scale = 2;
+    const canvas = document.createElement("canvas");
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.scale(scale, scale);
+    ctx.drawImage(image, 0, 0);
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/png")
+    );
+    if (!blob) throw new Error("Không chụp được bản in");
+    return new File([blob], `${fileName}.png`, { type: "image/png" });
+  } finally {
+    iframe.remove();
+  }
 }
