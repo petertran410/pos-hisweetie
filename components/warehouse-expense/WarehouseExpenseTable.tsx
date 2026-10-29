@@ -17,6 +17,7 @@ import {
   displaySource,
   displayDescription,
 } from "@/lib/internal-finance/display";
+import { officeVoucherDetails } from "@/lib/internal-finance/office";
 import { formatCurrency } from "@/lib/utils";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -24,6 +25,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   FUEL: "Xăng dầu",
   VEHICLE_CARE: "Chăm sóc xe",
   OTHER_EXPENSE: "Chi phí khác",
+  CASH_FUND_EXPENSE: "Chi quỹ tiền mặt",
 };
 
 const SUBCATEGORY_LABELS: Record<string, string> = {
@@ -69,6 +71,25 @@ export const WAREHOUSE_EXPENSE_COLUMNS = [
   { key: "manager", label: "Quản lý kho", width: "130px" },
   { key: "accountant", label: "Kế toán kho", width: "130px" },
   { key: "batch", label: "Batch Approval", width: "160px" },
+  { key: "approvalStatus", label: "Trạng thái duyệt", width: "140px" },
+  { key: "cashIssued", label: "Đã chi", width: "150px" },
+];
+
+/**
+ * Văn phòng: phiếu sinh từ đơn PHIẾU CHI Lark, không có tick kiểm tra hay
+ * Approval tuần; thêm phòng ban, phương thức, tổng tiền / tiền mặt.
+ */
+export const OFFICE_EXPENSE_COLUMNS = [
+  { key: "code", label: "Mã phiếu", width: "190px" },
+  { key: "date", label: "Ngày chi", width: "110px" },
+  { key: "source", label: "Nguồn", width: "170px" },
+  { key: "content", label: "Nội dung", width: "250px" },
+  { key: "department", label: "Phòng ban", width: "170px" },
+  { key: "item", label: "Khoản mục", width: "200px" },
+  { key: "payer", label: "Người đề xuất", width: "150px" },
+  { key: "method", label: "Phương thức", width: "170px" },
+  { key: "amount", label: "Tiền mặt", width: "130px" },
+  { key: "evidence", label: "Chứng từ", width: "90px" },
   { key: "approvalStatus", label: "Trạng thái duyệt", width: "140px" },
   { key: "cashIssued", label: "Đã chi", width: "150px" },
 ];
@@ -121,7 +142,10 @@ export function WarehouseExpenseTable({
   sort,
   onSort,
   totals,
+  columns = WAREHOUSE_EXPENSE_COLUMNS,
 }: {
+  /** Bộ cột của bảng: kho (mặc định) hoặc văn phòng. */
+  columns?: Array<{ key: string; label: string; width: string }>;
   /** Cột đang sắp xếp (null: mặc định ngày chi mới nhất trước). */
   sort?: { key: "date" | "amount"; dir: "asc" | "desc" } | null;
   onSort?: (key: "date" | "amount") => void;
@@ -160,9 +184,11 @@ export function WarehouseExpenseTable({
   /** Cột nào đang hiện (theo nút "Cột hiển thị" ở trang). */
   shows: (key: string) => boolean;
 }) {
+  const columnKeys = new Set(columns.map((column) => column.key));
+  // Ô chỉ vẽ khi cột thuộc bộ cột đang dùng và chưa bị ẩn.
+  const visible = (key: string) => columnKeys.has(key) && shows(key);
   const visibleCount =
-    WAREHOUSE_EXPENSE_COLUMNS.filter((column) => shows(column.key)).length +
-    (selection ? 1 : 0);
+    columns.filter((column) => shows(column.key)).length + (selection ? 1 : 0);
   const selectableIds = selection
     ? rows.filter((row) => !selection.blockReason(row)).map((row) => row.id)
     : [];
@@ -223,68 +249,68 @@ export function WarehouseExpenseTable({
                 />
               </th>
             )}
-            {WAREHOUSE_EXPENSE_COLUMNS.filter((column) =>
-              shows(column.key),
-            ).map((column) => {
-              const sortable =
-                Boolean(onSort) &&
-                (column.key === "date" || column.key === "amount");
-              const active = sortable && sort?.key === column.key;
-              return (
-                <th
-                  key={column.key}
-                  onClick={
-                    sortable
-                      ? () => onSort?.(column.key as "date" | "amount")
-                      : undefined
-                  }
-                  className={`whitespace-nowrap px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-gray-500 ${
-                    column.key === "amount" ? "text-right" : "text-left"
-                  } ${sortable ? "cursor-pointer select-none hover:bg-gray-100" : ""}`}
-                  style={{ width: column.width, minWidth: column.width }}>
-                  <span
-                    className={`inline-flex items-center gap-1 ${
-                      column.key === "amount" ? "justify-end" : ""
-                    }`}>
-                    {column.label}
-                    {sortable &&
-                      (active && sort?.dir === "desc" ? (
-                        <ArrowDown className="h-3 w-3 text-brand" />
-                      ) : active && sort?.dir === "asc" ? (
-                        <ArrowUp className="h-3 w-3 text-brand" />
-                      ) : (
-                        <ArrowUpDown className="h-3 w-3 text-gray-400 opacity-40" />
-                      ))}
-                  </span>
-                </th>
-              );
-            })}
+            {columns
+              .filter((column) => shows(column.key))
+              .map((column) => {
+                const sortable =
+                  Boolean(onSort) &&
+                  (column.key === "date" || column.key === "amount");
+                const active = sortable && sort?.key === column.key;
+                return (
+                  <th
+                    key={column.key}
+                    onClick={
+                      sortable
+                        ? () => onSort?.(column.key as "date" | "amount")
+                        : undefined
+                    }
+                    className={`whitespace-nowrap px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-gray-500 ${
+                      column.key === "amount" ? "text-right" : "text-left"
+                    } ${sortable ? "cursor-pointer select-none hover:bg-gray-100" : ""}`}
+                    style={{ width: column.width, minWidth: column.width }}>
+                    <span
+                      className={`inline-flex items-center gap-1 ${
+                        column.key === "amount" ? "justify-end" : ""
+                      }`}>
+                      {column.label}
+                      {sortable &&
+                        (active && sort?.dir === "desc" ? (
+                          <ArrowDown className="h-3 w-3 text-brand" />
+                        ) : active && sort?.dir === "asc" ? (
+                          <ArrowUp className="h-3 w-3 text-brand" />
+                        ) : (
+                          <ArrowUpDown className="h-3 w-3 text-gray-400 opacity-40" />
+                        ))}
+                    </span>
+                  </th>
+                );
+              })}
             <th style={{ width: "150px", minWidth: "150px" }} />
           </tr>
-          {totals && (shows("amount") || shows("cashIssued")) && (
+          {totals && (visible("amount") || visible("cashIssued")) && (
             <tr className="border-b bg-gray-50/60">
               {selection && <td className="px-3 py-2" />}
-              {WAREHOUSE_EXPENSE_COLUMNS.filter((column) =>
-                shows(column.key),
-              ).map((column) => (
-                <td
-                  key={column.key}
-                  className={`whitespace-nowrap px-4 py-2 ${
-                    column.key === "amount" ? "text-right" : ""
-                  }`}>
-                  {column.key === "amount" ? (
-                    <span className="font-semibold text-red-600">
-                      {formatCurrency(totals.amount)}
-                    </span>
-                  ) : column.key === "cashIssued" ? (
-                    <span
-                      className="font-semibold text-green-700"
-                      title="Tổng tiền các phiếu đã tick Đã chi">
-                      {formatCurrency(totals.issuedAmount)}
-                    </span>
-                  ) : null}
-                </td>
-              ))}
+              {columns
+                .filter((column) => shows(column.key))
+                .map((column) => (
+                  <td
+                    key={column.key}
+                    className={`whitespace-nowrap px-4 py-2 ${
+                      column.key === "amount" ? "text-right" : ""
+                    }`}>
+                    {column.key === "amount" ? (
+                      <span className="font-semibold text-red-600">
+                        {formatCurrency(totals.amount)}
+                      </span>
+                    ) : column.key === "cashIssued" ? (
+                      <span
+                        className="font-semibold text-green-700"
+                        title="Tổng tiền các phiếu đã tick Đã chi">
+                        {formatCurrency(totals.issuedAmount)}
+                      </span>
+                    ) : null}
+                  </td>
+                ))}
               <td className="px-4 py-2" />
             </tr>
           )}
@@ -309,8 +335,17 @@ export function WarehouseExpenseTable({
             </tr>
           ) : (
             rows.map((row) => {
-              const approvalStatus = row.weeklyBatch?.approvalRequest?.status;
+              // Phiếu văn phòng từ đơn Lark: còn hiệu lực là đã duyệt, hủy là thu hồi.
+              const fromLark = row.sourceType === "LARK_APPROVAL";
+              const approvalStatus =
+                row.weeklyBatch?.approvalRequest?.status ??
+                (fromLark
+                  ? row.status === "CANCELLED"
+                    ? "REVERTED"
+                    : "APPROVED"
+                  : undefined);
               const snapshot = row.sourceSnapshot || {};
+              const details = officeVoucherDetails(row.sourceSnapshot);
               const vehicleName =
                 row.vehicle?.label ||
                 row.vehicleName ||
@@ -350,7 +385,7 @@ export function WarehouseExpenseTable({
                       })()}
                     </td>
                   )}
-                  {shows("code") && (
+                  {visible("code") && (
                     <td className="px-4 py-2.5">
                       <div
                         className={`font-mono text-xs ${cancelled ? "text-gray-400 line-through" : "text-gray-900"}`}>
@@ -375,7 +410,7 @@ export function WarehouseExpenseTable({
                       )}
                     </td>
                   )}
-                  {shows("date") && (
+                  {visible("date") && (
                     <td className="whitespace-nowrap px-4 py-2.5">
                       {displayOccurredAt({
                         occurredAt: row.occurredAt,
@@ -384,11 +419,18 @@ export function WarehouseExpenseTable({
                       })}
                     </td>
                   )}
-                  {shows("source") && (
+                  {visible("source") && (
                     <td className="px-4 py-2.5">
                       <div className="text-gray-900">
                         {displaySource(row.sourceType, row.category)}
                       </div>
+                      {fromLark && (
+                        <Link
+                          href={`/tai-chinh/don-lark-approval?search=${encodeURIComponent(row.code)}`}
+                          className="text-xs text-brand hover:underline">
+                          Xem đơn Lark
+                        </Link>
+                      )}
                       {row.packingSlip ? (
                         <Link
                           href={`/don-hang/bao-don?Code=${encodeURIComponent(row.packingSlip.code)}`}
@@ -413,7 +455,7 @@ export function WarehouseExpenseTable({
                       ) : null}
                     </td>
                   )}
-                  {shows("content") && (
+                  {visible("content") && (
                     <td className="px-4 py-2.5">
                       <div className="max-w-[280px] break-words text-gray-900">
                         {displayDescription(row.description) || "-"}
@@ -431,7 +473,21 @@ export function WarehouseExpenseTable({
                       )}
                     </td>
                   )}
-                  {shows("item") && (
+                  {visible("department") && (
+                    <td className="px-4 py-2.5">
+                      <div className="max-w-[180px] break-words text-gray-900">
+                        {details.department || (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </div>
+                      {details.expenseType && (
+                        <div className="mt-0.5 max-w-[180px] break-words text-xs text-gray-500">
+                          {details.expenseType}
+                        </div>
+                      )}
+                    </td>
+                  )}
+                  {visible("item") && (
                     <td className="px-4 py-2.5">
                       <div className="max-w-[220px] break-words text-gray-900">
                         {row.expenseItem || groupLabel}
@@ -443,26 +499,54 @@ export function WarehouseExpenseTable({
                       )}
                     </td>
                   )}
-                  {shows("payer") && (
+                  {visible("payer") && (
                     <td className="px-4 py-2.5">
                       {row.payer?.name || (
                         <span className="text-gray-400">-</span>
                       )}
                     </td>
                   )}
-                  {shows("creator") && (
+                  {visible("method") && (
+                    <td className="px-4 py-2.5">
+                      <div className="max-w-[180px] break-words text-gray-900">
+                        {details.method || (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </div>
+                      {details.cashSource && (
+                        <div className="mt-0.5 text-xs text-gray-500">
+                          {details.cashSource}
+                        </div>
+                      )}
+                    </td>
+                  )}
+                  {visible("creator") && (
                     <td className="px-4 py-2.5">
                       {row.creator?.name || (
                         <span className="text-gray-400">-</span>
                       )}
                     </td>
                   )}
-                  {shows("amount") && (
-                    <td className="px-4 py-2.5 text-right font-semibold text-red-600">
-                      {formatCurrency(row.amount)}
+                  {visible("amount") && (
+                    <td className="px-4 py-2.5 text-right">
+                      <div className="font-semibold text-red-600">
+                        {formatCurrency(row.amount)}
+                      </div>
+                      {/* Đơn trộn chuyển khoản + tiền mặt: quỹ chỉ trừ phần tiền mặt. */}
+                      {details.totalAmount &&
+                        details.totalAmount !== Number(row.amount) && (
+                          <div
+                            className="mt-0.5 whitespace-nowrap text-xs text-gray-500"
+                            title="Tổng tiền của đơn; phần còn lại chuyển khoản">
+                            Tổng {formatCurrency(details.totalAmount)}
+                            {details.transferAmount
+                              ? ` · CK ${formatCurrency(details.transferAmount)}`
+                              : ""}
+                          </div>
+                        )}
                     </td>
                   )}
-                  {shows("evidence") && (
+                  {visible("evidence") && (
                     <td className="px-4 py-2.5">
                       {row.attachments?.length ? (
                         <button
@@ -478,15 +562,15 @@ export function WarehouseExpenseTable({
                       )}
                     </td>
                   )}
-                  {shows("manager") && (
+                  {visible("manager") && (
                     <td className="px-4 py-2.5">{checkCell(row, "manager")}</td>
                   )}
-                  {shows("accountant") && (
+                  {visible("accountant") && (
                     <td className="px-4 py-2.5">
                       {checkCell(row, "accountant")}
                     </td>
                   )}
-                  {shows("batch") && (
+                  {visible("batch") && (
                     <td className="px-4 py-2.5">
                       {row.weeklyBatch ? (
                         <div>
@@ -502,7 +586,7 @@ export function WarehouseExpenseTable({
                       )}
                     </td>
                   )}
-                  {shows("approvalStatus") && (
+                  {visible("approvalStatus") && (
                     <td className="px-4 py-2.5">
                       {approvalStatus ? (
                         <span
@@ -518,7 +602,7 @@ export function WarehouseExpenseTable({
                       )}
                     </td>
                   )}
-                  {shows("cashIssued") && (
+                  {visible("cashIssued") && (
                     <td className="px-4 py-2.5">
                       <label className="inline-flex items-center gap-1.5 text-xs text-gray-700">
                         {busyId === row.id ? (

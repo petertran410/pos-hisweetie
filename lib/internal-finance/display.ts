@@ -20,6 +20,14 @@ const SNAPSHOT_LABELS: Record<string, string> = {
   cashSource: "Nguồn tiền",
   method: "Hình thức",
   feeCategory: "Khoản phí",
+  // Phiếu chi văn phòng từ đơn PHIẾU CHI Lark.
+  expenseType: "Loại chi phí",
+  expenseItem: "Khoản mục",
+  department: "Phòng ban",
+  supplier: "NCU",
+  totalAmount: "Tổng tiền",
+  cashAmount: "Tiền mặt",
+  transferAmount: "Chuyển khoản",
 };
 
 const LARK_FIELD_LABELS: Record<string, string> = {

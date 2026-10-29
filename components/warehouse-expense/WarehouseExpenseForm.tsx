@@ -68,9 +68,10 @@ export function WarehouseExpenseForm({
   const { data: branchData } = useBranches();
   const branches = useMemo(
     () =>
+      // Chỉ kho tạo phiếu tay; văn phòng làm đơn PHIẾU CHI trên Lark.
       asBranches(branchData).filter(
         (branch) =>
-          [1, 4, 6, 7].includes(branch.id) &&
+          [1, 6].includes(branch.id) &&
           access.can("warehouse_expense", "create", branch.id),
       ),
     [branchData, access],

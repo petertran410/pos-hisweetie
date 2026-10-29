@@ -33,6 +33,7 @@ import { WarehouseExpenseNotesPanel } from "@/components/warehouse-expense/Wareh
 import {
   isExpenseCancellable,
   isExpenseCheckOpen,
+  OFFICE_EXPENSE_COLUMNS,
   WarehouseExpenseTable,
   WAREHOUSE_EXPENSE_COLUMNS,
 } from "@/components/warehouse-expense/WarehouseExpenseTable";
@@ -54,6 +55,7 @@ import {
   useWarehouseExpenses,
 } from "@/lib/hooks/useInternalFinance";
 import { isExpenseOpenForEdit } from "@/lib/internal-finance/vehicle-constants";
+import { isOfficeBranch } from "@/lib/internal-finance/office";
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
@@ -69,10 +71,23 @@ function WarehouseExpenseScreen() {
     loadWarehouseExpenseFilters(selectedBranch?.id),
   );
   const branchId = filters.branchId || selectedBranch?.id || 6;
-  const { columns, toggleColumn, shows } = useColumnToggle(
+  // Văn phòng: phiếu từ đơn PHIẾU CHI Lark, không tạo tay, không tick, không
+  // Approval tuần; bộ cột riêng (lưu ẩn / hiện riêng với kho).
+  const office = isOfficeBranch(filters.branchId);
+  const warehouseColumns = useColumnToggle(
     "warehouseExpenseTableColumns",
     WAREHOUSE_EXPENSE_COLUMNS,
   );
+  const officeColumns = useColumnToggle(
+    "officeExpenseTableColumns",
+    OFFICE_EXPENSE_COLUMNS,
+  );
+  const { columns, toggleColumn, shows } = office
+    ? officeColumns
+    : warehouseColumns;
+  const columnDefs = office
+    ? OFFICE_EXPENSE_COLUMNS
+    : WAREHOUSE_EXPENSE_COLUMNS;
   const [search, setSearch] = useState(codeParam);
   const [debouncedSearch, setDebouncedSearch] = useState(codeParam);
   const [page, setPage] = useState(1);
@@ -442,7 +457,12 @@ function WarehouseExpenseScreen() {
             page={page}
             totalPages={totalPages}
             onPageChange={setPage}
-            onCreate={canAction("create") ? () => setShowForm(true) : undefined}
+            onCreate={
+              canAction("create") && !office
+                ? () => setShowForm(true)
+                : undefined
+            }
+            office={office}
             canCheck={canCheckRow}
             canMarkIssued={canMarkIssuedRow}
             canEdit={canEditRow}
@@ -490,7 +510,7 @@ function WarehouseExpenseScreen() {
                 <div className="flex min-w-0 items-center gap-2">
                   <WalletCards className="h-5 w-5 text-brand" />
                   <h1 className="whitespace-nowrap text-base font-semibold text-gray-900">
-                    Phiếu chi kho
+                    {office ? "Phiếu chi văn phòng" : "Phiếu chi kho"}
                   </h1>
                 </div>
                 <div className="relative">
@@ -502,7 +522,11 @@ function WarehouseExpenseScreen() {
                       if (event.target.value.trim() !== codeParam)
                         clearCodeParam();
                     }}
-                    placeholder="Tìm mã, nội dung, ghi chú, xe, mã báo đơn..."
+                    placeholder={
+                      office
+                        ? "Tìm mã, nội dung, ghi chú..."
+                        : "Tìm mã, nội dung, ghi chú, xe, mã báo đơn..."
+                    }
                     className="h-9 w-64 rounded-lg border px-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                   />
                   {search && (
@@ -521,7 +545,7 @@ function WarehouseExpenseScreen() {
                 </div>
               </div>
               <div className="flex shrink-0 flex-wrap items-center gap-2">
-                {canAction("create") && (
+                {canAction("create") && !office && (
                   <button
                     type="button"
                     onClick={() => setShowForm(true)}
@@ -552,12 +576,14 @@ function WarehouseExpenseScreen() {
                     Xuất file
                   </button>
                 )}
-                <Link
-                  href="/tai-chinh/approval-tuan"
-                  className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                  <CalendarRange className="h-4 w-4" />
-                  Approval tuần
-                </Link>
+                {!office && (
+                  <Link
+                    href="/tai-chinh/approval-tuan"
+                    className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    <CalendarRange className="h-4 w-4" />
+                    Approval tuần
+                  </Link>
+                )}
                 <ColumnToggle columns={columns} onToggle={toggleColumn} />
               </div>
             </div>
@@ -590,6 +616,7 @@ function WarehouseExpenseScreen() {
                   onCancel={handleCancel}
                   onOpenNotes={setNotesRow}
                   shows={shows}
+                  columns={columnDefs}
                   sort={sort}
                   onSort={handleSort}
                   totals={expenses.data?.totals}

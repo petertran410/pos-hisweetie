@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FileCheck2, X } from "lucide-react";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
@@ -204,8 +205,10 @@ export default function DonLarkApprovalPage() {
     });
   }, [branchId, formKind, scope, status, suspect]);
 
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  // Link "Xem đơn Lark" từ Phiếu chi văn phòng: ?search=<mã phiếu>.
+  const searchParam = useSearchParams().get("search")?.trim() || "";
+  const [search, setSearch] = useState(searchParam);
+  const [debouncedSearch, setDebouncedSearch] = useState(searchParam);
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
     return () => clearTimeout(timer);
