@@ -5,6 +5,7 @@ import { priceBooksApi } from "@/lib/api/price-books";
 import { debtTrackingApi } from "@/lib/api/debt-tracking";
 import { smaxChatApi } from "@/lib/api/smaxChat";
 import { packingSlipsApi } from "@/lib/api/packing-slips";
+import { useAuthStore } from "@/lib/store/auth";
 import type { ChatContext } from "@/lib/types/smaxChat";
 import type { CartLine } from "@/lib/store/posInView";
 import { cartText, debtText, invoiceText, orderText, packingSlipText, productText } from "./quickTemplates";
@@ -14,6 +15,13 @@ export type QuickItem =
   | { type: "invoice" | "order" | "product" | "packingSlip"; id: number }
   | { type: "cart"; lines: CartLine[] }
   | { type: "debt" };
+
+// Bảng giá mặc định theo chi nhánh khi chưa chọn bảng giá ở /ban-hang: Kho Sài Gòn → BẢNG GIÁ LẺ HCM.
+// Chi nhánh khác (vd Kho Hà Nội) dùng Bảng giá chung = giá gốc.
+const BRANCH_DEFAULT_PRICE_BOOK: Record<number, number> = { 1: 22 };
+
+// Cùng key với bảng giá đang chọn ở /ban-hang (getPriceBookStorageKey)
+const posPriceBookKey = () => `pos-selected-price-book-${useAuthStore.getState().user?.id || "default"}`;
 
 export interface QuickPerms {
   canViewDebt: boolean;
@@ -73,11 +81,19 @@ export async function buildQuickMessage(
       if (perms.canViewSalePrice) {
         price = Number(product.basePrice ?? 0);
         if (perms.canViewPriceBooks) {
-          // Bảng giá áp dụng cho khách đang chat — như khi lên đơn ở /ban-hang
-          const info = await priceBooksApi
-            .getPriceForProduct({ productId: item.id, branchId, customerId: ctx.customer.id })
-            .catch(() => null);
-          if (info?.price != null) price = Number(info.price);
+          // Bảng giá đang chọn ở /ban-hang → bảng giá mặc định của chi nhánh → Bảng giá chung (giá gốc)
+          const priceIn = async (priceBookId: number) => {
+            const info = await priceBooksApi
+              .getPriceForProduct({ productId: item.id, branchId, priceBookId })
+              .catch(() => null);
+            return info?.priceBookId === priceBookId ? Number(info.price) : null;
+          };
+          const selected = Number(localStorage.getItem(posPriceBookKey()));
+          const branchDefault = branchId ? BRANCH_DEFAULT_PRICE_BOOK[branchId] : undefined;
+          const listed =
+            (selected > 0 ? await priceIn(selected) : null) ??
+            (branchDefault ? await priceIn(branchDefault) : null);
+          if (listed != null) price = listed;
         }
       }
       const inv = branchId ? product.inventories?.find((i) => i.branchId === branchId) : undefined;
