@@ -5,6 +5,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link2, Loader2, Search, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { smaxChatApi } from "@/lib/api/smaxChat";
+import { apiClient } from "@/lib/config/api";
+import type { CustomerSearchResult } from "@/lib/types/customer";
 import { useCan } from "@/lib/hooks/useCan";
 import { useSearchCustomers } from "@/lib/hooks/useCustomers";
 import { useAuthStore } from "@/lib/store/auth";
@@ -54,6 +56,38 @@ export function LooseChat({ thread }: { thread: LooseThread }) {
   );
 }
 
+const nameTokens = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/đ/gi, "d")
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+
+/**
+ * Khách POS khớp tên Zalo / tên nhóm nhất. Tìm theo cả tên, không có thì bỏ đoạn đầu trước " - "
+ * (tên nhóm thường là "Diệp Trà - <tên khách>"). Tìm khách bắt buộc khớp mọi từ, nên chọn khách
+ * có ít từ thừa nhất; bỏ qua khi tên khách dài gấp đôi trở lên (khớp quá lỏng).
+ */
+async function guessCustomerByName(zaloName: string): Promise<ChatCustomerRef | null> {
+  const name = zaloName.trim();
+  const dash = name.indexOf(" - ");
+  for (const q of dash > 0 ? [name, name.slice(dash + 3)] : [name]) {
+    const qn = nameTokens(q).length;
+    if (qn === 0) continue;
+    const res = await apiClient.get<{ data: CustomerSearchResult[] }>("/customers/search", { search: q });
+    let best: CustomerSearchResult | null = null;
+    let bestScore = 0;
+    for (const c of res.data ?? []) {
+      const score = qn / Math.max(qn, nameTokens(c.name).length);
+      if (score > bestScore) [best, bestScore] = [c, score];
+    }
+    if (best && bestScore > 0.5) return { id: best.id, code: best.code, name: best.name };
+  }
+  return null;
+}
+
 function LinkCustomerBar({ thread, zaloName }: { thread: LooseThread; zaloName: string }) {
   const canManage = useCan("smax_chat", "manage_contacts");
   const userId = useAuthStore((s) => s.user?.id ?? null);
@@ -68,15 +102,22 @@ function LinkCustomerBar({ thread, zaloName }: { thread: LooseThread; zaloName: 
     return () => clearTimeout(t);
   }, [input]);
   const { data, isFetching } = useSearchCustomers(search, { enabled: search.length >= 2 });
+  const { data: byName } = useQuery({
+    queryKey: ["chatLinkByName", zaloName],
+    queryFn: () => guessCustomerByName(zaloName),
+    enabled: canManage && !thread.suggestion && zaloName.trim().length >= 2,
+    staleTime: 5 * 60_000,
+  });
 
-  // Gợi ý: khớp mã trong tên nhóm, rồi khách đang mở trên màn hình bên trái
+  // Gợi ý: khớp mã trong tên nhóm, khớp tên Zalo / tên nhóm, rồi khách đang mở trên màn hình bên trái
+  const primary = thread.suggestion ?? byName ?? null;
   const suggestions = useMemo(() => {
     const out: ChatCustomerRef[] = [];
-    if (thread.suggestion) out.push(thread.suggestion);
+    if (primary) out.push(primary);
     for (const e of Object.values(inView).reverse())
       if (!out.some((c) => c.id === e.id)) out.push({ id: e.id, code: e.code, name: e.name });
     return out.slice(0, 4);
-  }, [thread.suggestion, inView]);
+  }, [primary, inView]);
 
   const link = async (c: ChatCustomerRef) => {
     setLinking(c.id);
@@ -129,7 +170,7 @@ function LinkCustomerBar({ thread, zaloName }: { thread: LooseThread; zaloName: 
         <>
           {suggestions.length > 0 && (
             <div className="mb-1.5 flex flex-wrap gap-1">
-              {suggestions.map((c, i) => row(c, i === 0 && !!thread.suggestion))}
+              {suggestions.map((c, i) => row(c, i === 0 && !!primary))}
             </div>
           )}
           <div className="relative">
