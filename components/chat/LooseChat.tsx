@@ -67,13 +67,16 @@ const nameTokens = (s: string) =>
 
 /**
  * Khách POS khớp tên Zalo / tên nhóm nhất. Tìm theo cả tên, không có thì bỏ đoạn đầu trước " - "
- * (tên nhóm thường là "Diệp Trà - <tên khách>"). Tìm khách bắt buộc khớp mọi từ, nên chọn khách
+ * ("Diệp Trà - <tên khách>"), rồi bỏ đoạn cuối sau " - " ("<tên khách> - Diệp Trà").
+ * Tìm khách bắt buộc khớp mọi từ, nên chọn khách
  * có ít từ thừa nhất; bỏ qua khi tên khách dài gấp đôi trở lên (khớp quá lỏng).
  */
 async function guessCustomerByName(zaloName: string): Promise<ChatCustomerRef | null> {
   const name = zaloName.trim();
-  const dash = name.indexOf(" - ");
-  for (const q of dash > 0 ? [name, name.slice(dash + 3)] : [name]) {
+  const first = name.indexOf(" - ");
+  const last = name.lastIndexOf(" - ");
+  const queries = first > 0 ? [name, name.slice(first + 3), name.slice(0, last)] : [name];
+  for (const q of new Set(queries)) {
     const qn = nameTokens(q).length;
     if (qn === 0) continue;
     const res = await apiClient.get<{ data: CustomerSearchResult[] }>("/customers/search", { search: q });
