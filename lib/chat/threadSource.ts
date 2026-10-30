@@ -15,6 +15,8 @@ export interface ThreadSource {
   fetchProfile: () => Promise<ZaloProfile>;
   // Thả / thu hồi (NONE) cảm xúc 1 tin
   react: (pid: string, reaction: string, confirmed?: boolean) => Promise<unknown>;
+  // Thu hồi (cả 2 phía) / xoá phía mình 1 tin
+  messageAction: (pid: string, action: "recall" | "delete", confirmed?: boolean) => Promise<unknown>;
   // Chỉ chat theo khách (API kết bạn theo contact)
   friendAction?: (action: "request" | "accept" | "undo") => Promise<{ friend: ZaloProfile["friend"] }>;
 }
@@ -30,6 +32,8 @@ export function customerSource(customerId: number, pagePid: string, contact: Zal
     fetchProfile: () => smaxChatApi.getZaloProfile(customerId, pagePid, contact.id),
     react: (pid, reaction, confirmed) =>
       smaxChatApi.react({ pagePid, tid: `zlw${contact.zaloId}`, pid, reaction, confirmed }),
+    messageAction: (pid, action, confirmed) =>
+      smaxChatApi.messageAction({ pagePid, tid: `zlw${contact.zaloId}`, pid, action, confirmed }),
     friendAction: (action) => smaxChatApi.friendAction(customerId, { pagePid, contactId: contact.id, action }),
   };
 }
@@ -44,5 +48,7 @@ export function looseSource(t: LooseThread): ThreadSource {
     send: (body) => smaxChatApi.sendToThread({ ...body, pagePid: t.pagePid, tid: t.tid, isGroup: t.isGroup }),
     fetchProfile: () => smaxChatApi.getThreadProfile(t.pagePid, t.tid, t.isGroup),
     react: (pid, reaction, confirmed) => smaxChatApi.react({ pagePid: t.pagePid, tid: t.tid, pid, reaction, confirmed }),
+    messageAction: (pid, action, confirmed) =>
+      smaxChatApi.messageAction({ pagePid: t.pagePid, tid: t.tid, pid, action, confirmed }),
   };
 }

@@ -28,6 +28,10 @@ export const smaxChatApi = {
   react: (body: { pagePid: string; tid: string; pid: string; reaction: string; confirmed?: boolean }) =>
     apiClient.post("/smax/chat/threads/reaction", body),
 
+  // recall = thu hồi cả 2 phía; delete = xoá phía mình
+  messageAction: (body: { pagePid: string; tid: string; pid: string; action: "recall" | "delete"; confirmed?: boolean }) =>
+    apiClient.post("/smax/chat/threads/message-action", body),
+
   getChannels: (): Promise<ChatChannel[]> => apiClient.get("/smax/chat/channels"),
 
   // q: tìm theo tên Zalo / tên nhóm trên toàn bộ hội thoại của kênh

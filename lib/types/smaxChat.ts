@@ -66,6 +66,8 @@ export interface ChatMessage {
   quote?: { pid: string | null; text: string; senderName: string | null } | null;
   // Cảm xúc gộp theo icon (HEART, LIKE, HAHA, WOW, CRY, ANGRY…); mine = kênh của mình đã thả
   reactions?: { icon: string; count: number; mine: boolean; users: { name: string | null; avatar: string | null }[] }[];
+  // Đã thu hồi (kênh hoặc khách) — vẫn có nội dung gốc
+  recalled?: boolean;
   createdAt: string;
 }
 

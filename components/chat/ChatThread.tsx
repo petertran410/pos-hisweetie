@@ -269,6 +269,32 @@ export function ChatThread({
   };
 
   const canReact = !!latest.data?.canReact && !sendDisabledReason;
+
+  // Thu hồi / xoá phía mình (album = nhiều tin, làm từng tin). Không hoàn tác được → luôn hỏi lại
+  const messageAction = async (list: ChatMessage[], action: "recall" | "delete") => {
+    const what = list.length > 1 ? `${list.length} ảnh/video này` : "tin này";
+    const ok = await confirmAction(
+      action === "recall"
+        ? `Thu hồi ${what} ở cả 2 phía? Khách sẽ thấy "Tin nhắn đã được thu hồi".`
+        : `Xoá ${what} ở phía mình? Khách vẫn thấy tin.`,
+      { title: action === "recall" ? "Thu hồi tin nhắn" : "Xoá tin nhắn", confirmText: action === "recall" ? "Thu hồi" : "Xoá", danger: true }
+    );
+    if (!ok) return;
+    let failed = 0;
+    let error = "";
+    for (const m of list) {
+      try {
+        await source.messageAction(m.id, action, confirmBeforeSend || undefined);
+      } catch (e) {
+        failed++;
+        error = (e as Error).message;
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: messagesKey });
+    const label = action === "recall" ? "thu hồi" : "xoá";
+    if (!failed) toast.success(`Đã ${label} ${what}`);
+    else toast.error(`${failed}/${list.length} tin không ${label} được${error ? `: ${error}` : ""}`);
+  };
   const react = async (m: ChatMessage, icon: ReactionIcon | "NONE") => {
     // Thu hồi không cần xác nhận; thả mới hỏi khi ở môi trường thử nghiệm
     if (
@@ -586,9 +612,11 @@ export function ChatThread({
         <MessageMenu
           x={menu.x}
           y={menu.y}
-          canReply
+          canReply={!menu.messages.some((m) => m.recalled)}
           hasText={menu.messages.some((m) => m.text.trim())}
           hasMedia={menu.messages.some((m) => m.attachments.length)}
+          canRecall={canReact && menu.messages.every(canRecallMessage)}
+          canDelete={canReact}
           onClose={() => setMenu(null)}
           onAction={(a) => {
             const list = menu.messages;
@@ -596,6 +624,7 @@ export function ChatThread({
             else if (a === "forward") setForwarding(list);
             else if (a === "copy") copyMessages(list);
             else if (a === "download") downloadMessagesMedia(list);
+            else if (a === "recall" || a === "delete") messageAction(list, a);
             else if (a === "select") {
               setSelecting(true);
               setSelected(new Set(list.map((m) => m.id)));
@@ -646,6 +675,13 @@ export function ChatThread({
   }
 }
 
+// Zalo chỉ cho thu hồi tin của mình trong 24 giờ
+const canRecallMessage = (m: ChatMessage) =>
+  m.fromMe && !m.recalled && Date.now() - new Date(m.createdAt).getTime() < 24 * 60 * 60 * 1000;
+
+// Tin đã thu hồi vẫn hiện nội dung (mờ, gạch ngang) để nhân viên xem lại, kèm nhãn
+const RECALLED_TAG = <span className="ml-1 italic text-red-500">· Đã thu hồi</span>;
+
 function MessageBubble({ message: m, showSender }: { message: ChatMessage; showSender: boolean }) {
   const [preview, setPreview] = useState<number | null>(null);
   if (m.type === "system") {
@@ -657,12 +693,15 @@ function MessageBubble({ message: m, showSender }: { message: ChatMessage; showS
         {showSender && !m.fromMe && m.senderName && (
           <span className="text-[11px] text-gray-500 ml-2">{m.senderName}</span>
         )}
-        <span className={`relative ${m.reactions?.length ? "mb-2.5" : ""}`}>
+        <span className={`relative ${m.reactions?.length ? "mb-2.5" : ""} ${m.recalled ? "opacity-50" : ""}`}>
           <img src={stickerUrl(m.stickerId)} alt="sticker" loading="lazy" className="h-28 w-28 object-contain" />
           <HoverActions fromMe={m.fromMe} />
           <ReactionSlot reactions={m.reactions} />
         </span>
-        <span className="text-[11px] text-gray-400 mx-1">{timeLabel(m.createdAt)}</span>
+        <span className="text-[11px] text-gray-400 mx-1">
+          {timeLabel(m.createdAt)}
+          {m.recalled && RECALLED_TAG}
+        </span>
       </div>
     );
   }
@@ -674,7 +713,7 @@ function MessageBubble({ message: m, showSender }: { message: ChatMessage; showS
       <div
         className={`relative max-w-[72%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${
           m.fromMe ? "rounded-br-sm bg-brand text-white" : "rounded-bl-sm bg-white border"
-        } ${m.reactions?.length ? "mb-2.5 min-w-[4rem]" : ""}`}>
+        } ${m.reactions?.length ? "mb-2.5 min-w-[4rem]" : ""} ${m.recalled ? "opacity-50 line-through" : ""}`}>
         <HoverActions fromMe={m.fromMe} />
         <ReactionSlot reactions={m.reactions} />
         {m.quote && <QuoteBlock quote={m.quote} fromMe={m.fromMe} />}
@@ -713,7 +752,10 @@ function MessageBubble({ message: m, showSender }: { message: ChatMessage; showS
         )}
         {m.text}
       </div>
-      <span className="text-[11px] text-gray-400 mx-1">{timeLabel(m.createdAt)}</span>
+      <span className="text-[11px] text-gray-400 mx-1">
+        {timeLabel(m.createdAt)}
+        {m.recalled && RECALLED_TAG}
+      </span>
       {preview !== null && (
         <AttachmentPreviewModal
           items={m.attachments}
@@ -817,6 +859,7 @@ function AlbumBubble({ messages, showSender }: { messages: ChatMessage[]; showSe
     },
     []
   );
+  const recalled = messages.some((m) => m.recalled);
   const sizes = albumRows(media.length);
   const rows = sizes.map((size, r) => {
     const start = sizes.slice(0, r).reduce((sum, n) => sum + n, 0);
@@ -831,7 +874,7 @@ function AlbumBubble({ messages, showSender }: { messages: ChatMessage[]; showSe
       <div className={`relative w-[260px] max-w-[72%] ${albumReactions.length ? "mb-2.5" : ""}`}>
       <HoverActions fromMe={first.fromMe} />
       <ReactionSlot reactions={albumReactions} />
-      <div className="flex flex-col gap-0.5 overflow-hidden rounded-2xl">
+      <div className={`flex flex-col gap-0.5 overflow-hidden rounded-2xl ${recalled ? "opacity-50" : ""}`}>
         {rows.map((row, r) => (
           <div key={r} className="flex gap-0.5">
             {row.map(({ a, i }) => (
@@ -864,6 +907,7 @@ function AlbumBubble({ messages, showSender }: { messages: ChatMessage[]; showSe
       </div>
       <span className="text-[11px] text-gray-400 mx-1">
         {media.length} ảnh/video · {timeLabel(last.createdAt)}
+        {recalled && RECALLED_TAG}
       </span>
       {preview !== null && (
         <AttachmentPreviewModal items={media} index={preview} onClose={() => setPreview(null)} />
