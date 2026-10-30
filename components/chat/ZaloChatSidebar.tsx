@@ -50,12 +50,13 @@ export function ZaloChatSidebar() {
   const setOpen = useChatSidebarStore((s) => s.setOpen);
   const customer = useCurrentChatCustomer();
   const panelWidth = useChatSidebarStore((s) => s.panelWidth);
+  const railWidth = useChatSidebarStore((s) => s.railWidth);
 
   // Các bảng chi tiết (…DetailRow) chỉ đo lại độ rộng khi window resize →
   // báo khi khung chat mở / thu gọn / kéo đổi độ rộng làm vùng nội dung đổi theo
   useEffect(() => {
     window.dispatchEvent(new Event("resize"));
-  }, [open, panelWidth]);
+  }, [open, panelWidth, railWidth]);
 
   if (!canView || !isClient) return null;
 
@@ -165,6 +166,10 @@ function ResizableAside({ onClose }: { onClose: () => void }) {
 
 // Chiều cao 1 bong bóng hội thoại trên thanh thu gọn (32px + gap 8px)
 const RAIL_ITEM = 40;
+// Thanh thu gọn: rộng mặc định (chỉ avatar); kéo quá RAIL_NAMES_WIDTH thì hiện tên hội thoại
+const RAIL_WIDTH = 48;
+const RAIL_NAMES_WIDTH = 120;
+const RAIL_MAX_WIDTH = 360;
 
 /**
  * Thanh thu gọn: mở chat, chọn nhanh kênh Zalo (avatar), và avatar các hội thoại
@@ -240,35 +245,101 @@ function CollapsedRail({
   const railRef = useRef<HTMLElement>(null);
   useFastTitle(railRef);
 
+  // Kéo mép trái để giãn thanh; thả khi chưa đủ rộng hiện tên thì về lại cỡ avatar
+  const railWidth = useChatSidebarStore((s) => s.railWidth);
+  const setRailWidth = useChatSidebarStore((s) => s.setRailWidth);
+  const [resizing, setResizing] = useState(false);
+  const width = railWidth ?? RAIL_WIDTH;
+  const showNames = width >= RAIL_NAMES_WIDTH;
+  const startResize = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = railRef.current;
+    if (!el) return;
+    e.preventDefault();
+    const handle = e.currentTarget;
+    handle.setPointerCapture(e.pointerId);
+    const startX = e.clientX;
+    const startW = el.offsetWidth;
+    // Toạ độ con trỏ theo px màn hình, độ rộng theo px CSS (html có zoom) → quy đổi
+    const scale = el.getBoundingClientRect().width / el.offsetWidth || 1;
+    let w = startW;
+    setResizing(true);
+    const onMove = (ev: PointerEvent) => {
+      w = Math.round(Math.min(RAIL_MAX_WIDTH, Math.max(RAIL_WIDTH, startW + (startX - ev.clientX) / scale)));
+      setRailWidth(w);
+    };
+    const onUp = () => {
+      setResizing(false);
+      if (w < RAIL_NAMES_WIDTH) setRailWidth(null);
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onUp);
+      handle.removeEventListener("pointercancel", onUp);
+    };
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
+    handle.addEventListener("pointercancel", onUp);
+  };
+
   return (
     <aside
       ref={railRef}
-      className="w-12 shrink-0 border-l bg-white flex flex-col items-center gap-2 py-3 min-h-0"
+      className={`relative shrink-0 border-l bg-white flex flex-col gap-2 py-3 min-h-0 ${
+        showNames ? "items-stretch" : "items-center"
+      } ${resizing ? "select-none" : ""}`}
+      style={{ width }}
     >
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Kéo để hiện tên hội thoại"
+        title="Kéo sang trái để hiện tên hội thoại · bấm đúp để thu lại"
+        onPointerDown={startResize}
+        onDoubleClick={() => setRailWidth(null)}
+        className="group absolute inset-y-0 -left-1.5 z-20 flex w-3 cursor-col-resize touch-none items-center justify-center"
+      >
+        <span
+          className={`h-10 w-1 rounded-full transition-colors group-hover:bg-brand ${
+            resizing ? "bg-brand" : "bg-transparent"
+          }`}
+        />
+      </div>
       <button
         onClick={onExpand}
         title="Mở chat Zalo"
-        className="h-8 w-8 shrink-0 flex items-center justify-center rounded-md text-brand hover:bg-cyan-bg"
+        className={`h-8 shrink-0 flex items-center gap-2 rounded-md text-brand hover:bg-cyan-bg ${
+          showNames ? "mx-2 px-1.5 text-sm font-medium" : "w-8 justify-center"
+        }`}
       >
-        <MessageCircle className="w-5 h-5" />
+        <MessageCircle className="w-5 h-5 shrink-0" />
+        {showNames && "Mở chat Zalo"}
       </button>
       {customer && (
         <button
           onClick={onExpand}
           title={`Chat với ${customer.code ?? ""} ${customer.name}`}
-          className="h-8 w-8 shrink-0 rounded-full bg-brand text-white text-xs font-semibold"
+          className={`shrink-0 flex items-center gap-2 text-left ${
+            showNames ? "mx-2 rounded-md px-1 hover:bg-cyan-bg" : ""
+          }`}
         >
-          {initials(customer.name)}
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-white text-xs font-semibold">
+            {initials(customer.name)}
+          </span>
+          {showNames && (
+            <span className="min-w-0 flex-1 truncate text-xs font-medium">
+              {customer.code ? `${customer.code} · ` : ""}
+              {customer.name}
+            </span>
+          )}
         </button>
       )}
 
       {/* Kênh đang chọn; từ 2 kênh trở lên bấm để chọn kênh khác */}
       {channel && (
-        <div className="w-full shrink-0 border-t pt-2 flex justify-center">
+        <div className={`w-full shrink-0 border-t pt-2 flex ${showNames ? "px-2" : "justify-center"}`}>
           <RailChannelPicker
             channels={usable}
             active={channel}
             onPick={setPagePid}
+            showName={showNames}
           />
         </div>
       )}
@@ -276,22 +347,29 @@ function CollapsedRail({
       {/* Hội thoại gần nhất của kênh đang chọn */}
       <div
         ref={setListEl}
-        className={`flex w-full min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto pt-2 pb-1 ${
-          items.length ? "border-t" : ""
-        }`}
+        className={`flex w-full min-h-0 flex-1 flex-col gap-2 overflow-y-auto pt-2 pb-1 ${
+          showNames ? "items-stretch px-2" : "items-center"
+        } ${items.length ? "border-t" : ""}`}
       >
           {shown.map((c) => {
             const unseen = newCount(c.tid, c.messageCount);
             const who = c.match
               ? `${c.match.customer.code ?? ""} ${c.match.customer.name}`
               : `${c.name} (chưa gắn khách POS — mở Smax)`;
+            const label =
+              c.match?.type === "linked"
+                ? `${c.match.customer.code ? `${c.match.customer.code} · ` : ""}${c.match.customer.name}`
+                : c.name || c.zaloId;
             return (
               <button
                 key={c.tid}
                 onClick={() => open(c)}
                 title={`${who}\n${c.isGroup ? `${c.name}: ` : ""}${c.lastMessage}`}
-                className={`relative shrink-0 rounded-full ${c.match ? "" : "opacity-50 hover:opacity-80"} disabled:opacity-40`}
+                className={`relative shrink-0 ${
+                  showNames ? "flex min-w-0 items-center gap-2 rounded-md px-1 text-left hover:bg-cyan-bg" : "rounded-full"
+                } ${c.match ? "" : "opacity-50 hover:opacity-80"} disabled:opacity-40`}
               >
+                <span className="relative shrink-0">
                 <ZaloAvatar
                   avatar={c.avatar}
                   isGroup={c.isGroup}
@@ -303,6 +381,12 @@ function CollapsedRail({
                   size={32}
                 />
                 {unseen > 0 && <UnseenBadge count={unseen} />}
+                </span>
+                {showNames && (
+                  <span className={`min-w-0 flex-1 truncate text-xs ${c.unread || unseen > 0 ? "font-semibold" : ""}`}>
+                    {label}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -312,11 +396,12 @@ function CollapsedRail({
               title={`${rest.length}${canLoadMore ? "+" : ""} hội thoại khác`}
               aria-label="Xem thêm hội thoại"
               aria-expanded={!!moreAt}
-              className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-cyan-bg hover:text-brand ${
-                moreAt ? "bg-cyan-bg text-brand" : "bg-gray-100 text-gray-500"
-              }`}
+              className={`relative flex h-8 shrink-0 items-center justify-center gap-1.5 hover:bg-cyan-bg hover:text-brand ${
+                showNames ? "rounded-md px-2 text-xs" : "w-8 self-center rounded-full"
+              } ${moreAt ? "bg-cyan-bg text-brand" : "bg-gray-100 text-gray-500"}`}
             >
               <MoreHorizontal className="h-4 w-4" />
+              {showNames && `${rest.length}${canLoadMore ? "+" : ""} hội thoại khác`}
               {rest.some((c) => newCount(c.tid, c.messageCount) > 0) && (
                 <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
               )}
@@ -435,10 +520,13 @@ function RailChannelPicker({
   channels,
   active,
   onPick,
+  showName = false,
 }: {
   channels: ChatChannel[];
   active: ChatChannel;
   onPick: (pagePid: string) => void;
+  // Thanh thu gọn đã kéo giãn: hiện tên kênh cạnh avatar
+  showName?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -460,16 +548,26 @@ function RailChannelPicker({
   }, [open]);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className={`relative ${showName ? "min-w-0 flex-1" : ""}`}>
       <button
         onClick={() => many && setOpen((o) => !o)}
         title={`${active.name}${active.connectionError ? " · Mất kết nối" : ""}${many ? " — bấm để chọn kênh khác" : ""}`}
-        className={`relative rounded-full ring-2 ring-brand ring-offset-1 ${many ? "cursor-pointer" : "cursor-default"}`}
+        className={`flex items-center gap-2 text-left ${showName ? "w-full rounded-md p-1 hover:bg-cyan-bg" : ""} ${
+          many ? "cursor-pointer" : "cursor-default"
+        }`}
       >
-        <ChannelDot c={active} size={30} />
-        {many && (
-          <span className="absolute -left-1 -bottom-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white text-gray-500 shadow ring-1 ring-gray-200">
-            <ChevronDown className="h-2.5 w-2.5" />
+        <span className="relative shrink-0 rounded-full ring-2 ring-brand ring-offset-1">
+          <ChannelDot c={active} size={30} />
+          {many && (
+            <span className="absolute -left-1 -bottom-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white text-gray-500 shadow ring-1 ring-gray-200">
+              <ChevronDown className="h-2.5 w-2.5" />
+            </span>
+          )}
+        </span>
+        {showName && (
+          <span className="min-w-0 flex-1 leading-tight">
+            <span className="block truncate text-xs font-medium">{active.name}</span>
+            {active.connectionError && <span className="block text-[11px] text-red-600">Mất kết nối</span>}
           </span>
         )}
       </button>

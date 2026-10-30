@@ -24,6 +24,8 @@ interface ChatSidebarState {
   panelWidth: number | null;
   // Tỷ lệ cột "Thông tin POS" / khung chat (kéo thanh chia giữa hai cột); null = 300px mặc định
   posRatio: number | null;
+  // Chiều rộng thanh thu gọn (px) — kéo mép trái để hiện tên hội thoại; null = chỉ avatar
+  railWidth: number | null;
   // "Đang chat gần đây": chỉ hiện hội thoại chưa đọc (nhớ cho lần sau)
   recentUnreadOnly: boolean;
   // Đang mở hội thoại chưa gắn khách POS (ưu tiên hơn `customer`)
@@ -37,6 +39,7 @@ interface ChatSidebarState {
   setComposerHeight: (h: number) => void;
   setPanelWidth: (w: number | null) => void;
   setPosRatio: (r: number | null) => void;
+  setRailWidth: (w: number | null) => void;
   setRecentUnreadOnly: (v: boolean) => void;
 }
 
@@ -52,6 +55,7 @@ export const useChatSidebarStore = create<ChatSidebarState>()(
       composerHeight: COMPOSER_DEFAULT_HEIGHT,
       panelWidth: null,
       posRatio: null,
+      railWidth: null,
       recentUnreadOnly: false,
       loose: null,
       openLoose: (loose, ownerId) => set({ loose, ownerId, pagePid: loose.pagePid }),
@@ -64,6 +68,7 @@ export const useChatSidebarStore = create<ChatSidebarState>()(
       setComposerHeight: (composerHeight) => set({ composerHeight }),
       setPanelWidth: (panelWidth) => set({ panelWidth }),
       setPosRatio: (posRatio) => set({ posRatio }),
+      setRailWidth: (railWidth) => set({ railWidth }),
       setRecentUnreadOnly: (recentUnreadOnly) => set({ recentUnreadOnly }),
     }),
     { name: "chat-sidebar" }
