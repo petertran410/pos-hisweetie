@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, Search, X } from "lucide-react";
+import { AlertTriangle, RefreshCw, Search, X } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { confirmAction } from "@/lib/chat/confirm";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import {
   useSmaxZaloChannels,
+  useSyncSmaxChannels,
   useLinkSmaxChannel,
   useUnlinkSmaxChannel,
 } from "@/lib/hooks/useSmax";
@@ -22,6 +23,7 @@ const PLATFORM_LABEL: Record<string, string> = {
 function ZaloUserTab() {
   const [search, setSearch] = useState("");
   const { data: channels, isLoading, error } = useSmaxZaloChannels();
+  const syncMutation = useSyncSmaxChannels();
   const { data: users, isLoading: loadingUsers } = useUsers();
   const linkMutation = useLinkSmaxChannel();
   const unlinkMutation = useUnlinkSmaxChannel();
@@ -70,8 +72,8 @@ function ZaloUserTab() {
 
   return (
     <>
-      <div className="px-6 pt-4">
-        <div className="relative max-w-md">
+      <div className="px-6 pt-4 flex items-center gap-3">
+        <div className="relative max-w-md flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
@@ -81,6 +83,14 @@ function ZaloUserTab() {
             className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm"
           />
         </div>
+        <button
+          onClick={() => syncMutation.mutate()}
+          disabled={syncMutation.isPending}
+          title="Tải lại danh sách kênh Zalo từ Smax, cập nhật tên kênh đã đổi"
+          className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 border rounded-lg text-sm text-brand border-brand-border bg-white hover:bg-cyan-bg disabled:opacity-60">
+          <RefreshCw className={`w-4 h-4 ${syncMutation.isPending ? "animate-spin" : ""}`} />
+          {syncMutation.isPending ? "Đang đồng bộ..." : "Đồng bộ từ Smax"}
+        </button>
       </div>
 
       <div className="flex-1 overflow-auto p-6">

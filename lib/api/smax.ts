@@ -17,6 +17,10 @@ export const smaxApi = {
   getZaloChannels: (): Promise<SmaxZaloChannel[]> =>
     apiClient.get("/smax/zalo-channels"),
 
+  // Tải lại kênh từ Smax, cập nhật tên kênh đã lưu của các liên kết
+  syncChannels: (): Promise<{ channels: SmaxZaloChannel[]; updated: number }> =>
+    apiClient.post("/smax/zalo-channels/sync", {}),
+
   linkChannel: (pagePid: string, userId: number) =>
     apiClient.put(`/smax/zalo-channels/${encodeURIComponent(pagePid)}`, {
       userId,
