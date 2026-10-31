@@ -112,4 +112,15 @@ export const smaxChatApi = {
     phone: string
   ): Promise<{ friend: { uid: string; name: string } | null }> =>
     apiClient.get("/smax/chat/zalo-lookup", { pagePid, phone }),
+
+  // Đặt xe giao hàng: kênh + nhóm Zalo cố định nhận tin
+  deliveryBookingTarget: (): Promise<{
+    channelName: string;
+    groupName: string | null;
+    connectionError: boolean;
+    confirmBeforeSend: boolean;
+  }> => apiClient.get("/smax/chat/delivery-booking"),
+
+  bookDelivery: (body: { invoiceId: number; text: string; confirmed?: boolean }): Promise<{ ok: true }> =>
+    apiClient.post("/smax/chat/delivery-booking", body),
 };
