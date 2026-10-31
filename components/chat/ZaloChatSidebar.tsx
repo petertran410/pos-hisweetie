@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Loader2,
   MessageCircle,
+  MessageSquareDot,
   MoreHorizontal,
   Settings2,
   Users,
@@ -205,12 +206,18 @@ function CollapsedRail({
     return () => ro.disconnect();
   }, [listEl]);
   const { data, isFetching } = useRecentChats(!!channel && !channel.missing, channel?.pagePid, limit);
-  const items = data?.items ?? [];
+  // Lọc "Chưa đọc" dùng chung với danh sách "Đang chat gần đây" khi mở rộng
+  const unreadOnly = useChatSidebarStore((s) => s.recentUnreadOnly);
+  const setUnreadOnly = useChatSidebarStore((s) => s.setRecentUnreadOnly);
+  const all = data?.items ?? [];
+  const isUnread = (c: RecentChat) => c.unread || newCount(c.tid, c.messageCount) > 0;
+  const unreadCount = all.filter(isUnread).length;
+  const items = unreadOnly ? all.filter(isUnread) : all;
   // Còn hội thoại thì ô cuối là "…"
   const shown = items.length > fit ? items.slice(0, fit - 1) : items;
   const rest = items.slice(shown.length);
   // Smax trả đủ số đã xin → có thể còn nữa (backend tối đa 200)
-  const canLoadMore = items.length >= limit && limit < 200;
+  const canLoadMore = all.length >= limit && limit < 200;
   const toggleMore = (btn: HTMLElement) => {
     if (moreAt) return setMoreAt(null);
     // Mép phải dropdown sát trái thanh, đáy ngang nút "…" (position:fixed bị nhân zoom của <html>)
@@ -344,12 +351,31 @@ function CollapsedRail({
         </div>
       )}
 
+      {channel && (
+        <button
+          onClick={() => setUnreadOnly(!unreadOnly)}
+          aria-pressed={unreadOnly}
+          title={`${unreadOnly ? "Đang lọc" : "Chỉ hiện"} hội thoại chưa đọc${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
+          className={`relative h-8 shrink-0 flex items-center gap-2 ${
+            showNames ? "mx-2 rounded-md px-1.5 text-xs" : "w-8 self-center justify-center rounded-full"
+          } ${unreadOnly ? "bg-brand text-white" : "text-gray-500 hover:bg-cyan-bg hover:text-brand"}`}
+        >
+          <MessageSquareDot className="h-4 w-4 shrink-0" />
+          {showNames && `Chưa đọc${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
+          {!showNames && unreadCount > 0 && (
+            <span className="absolute -right-1.5 -top-1.5 min-w-[16px] rounded-full bg-brand px-1 text-center text-[10px] font-semibold leading-4 text-white ring-2 ring-white">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </button>
+      )}
+
       {/* Hội thoại gần nhất của kênh đang chọn */}
       <div
         ref={setListEl}
         className={`flex w-full min-h-0 flex-1 flex-col gap-2 overflow-y-auto pt-2 pb-1 ${
           showNames ? "items-stretch px-2" : "items-center"
-        } ${items.length ? "border-t" : ""}`}
+        } ${all.length ? "border-t" : ""}`}
       >
           {shown.map((c) => {
             const unseen = newCount(c.tid, c.messageCount);
@@ -390,6 +416,9 @@ function CollapsedRail({
               </button>
             );
           })}
+          {unreadOnly && items.length === 0 && !isFetching && showNames && (
+            <p className="px-1 text-xs text-gray-500">Không có hội thoại chưa đọc.</p>
+          )}
           {rest.length > 0 && (
             <button
               onClick={(e) => toggleMore(e.currentTarget)}
