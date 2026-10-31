@@ -17,13 +17,14 @@ import {
   Copy,
   Loader2,
   MapPin,
-  PackageCheck,
   Printer,
   Tag,
   Ticket,
+  Truck,
   User,
 } from "lucide-react";
 import { ShippingLabelA6Modal } from "./ShippingLabelA6Modal";
+import { DeliveryBookingModal } from "./DeliveryBookingModal";
 import { toast } from "sonner";
 import { INVOICE_STATUS, INVOICE_STATUS_LABELS } from "@/lib/types/invoice";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -32,7 +33,6 @@ import { useInvoiceCashPackingLock } from "@/lib/hooks/useInvoiceCashPackingLock
 import {
   printDeliverySlip,
   printEntity,
-  printWarehouseExport,
 } from "@/lib/utils/print";
 import Swal from "sweetalert2";
 import { CodeLink } from "../shared/CodeLink";
@@ -117,6 +117,7 @@ export function InvoicesMobileDetailSheet({
   const [description, setDescription] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [showLabelA6, setShowLabelA6] = useState(false);
+  const [showDeliveryBooking, setShowDeliveryBooking] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -293,15 +294,6 @@ export function InvoicesMobileDetailSheet({
     }
   };
 
-  const handlePrintWarehouseExport = async () => {
-    if (!invoice) return;
-    try {
-      await printWarehouseExport(invoice.id);
-    } catch (e: any) {
-      toast.error(e?.message || "In phiếu xuất kho thất bại");
-    }
-  };
-
   const handleProcessInvoice = () => {
     if (!invoice) return;
     router.push(`/ban-hang?invoiceId=${invoice.id}&from=hoa-don`);
@@ -342,8 +334,9 @@ export function InvoicesMobileDetailSheet({
           {invoice && hasPermPrint && invoice.delivery && (
             <button
               onClick={handlePrintDelivery}
+              title="In phiếu giao hàng"
               className="p-2 rounded-full hover:bg-gray-100 active:scale-95 transition-all flex-shrink-0 ml-auto">
-              <MapPin className="w-4 h-4 text-gray-500" />
+              <Printer className="w-4 h-4 text-gray-500" />
             </button>
           )}
         </div>
@@ -768,12 +761,12 @@ export function InvoicesMobileDetailSheet({
               </button>
             )}
 
-            {hasPermPrint && invoice?.status !== INVOICE_STATUS.CANCELLED && (
+            {hasPermUpdate && invoice?.status !== INVOICE_STATUS.CANCELLED && (
               <button
-                onClick={handlePrintWarehouseExport}
-                title="In phiếu xuất kho"
+                onClick={() => setShowDeliveryBooking(true)}
+                title="Đặt xe giao hàng"
                 className="p-2.5 text-gray-500 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 active:scale-95 transition-all flex-shrink-0">
-                <PackageCheck className="w-4 h-4" />
+                <Truck className="w-4 h-4" />
               </button>
             )}
 
@@ -803,6 +796,12 @@ export function InvoicesMobileDetailSheet({
           </div>
         )}
       </div>
+      {showDeliveryBooking && invoice && (
+        <DeliveryBookingModal
+          invoice={invoice}
+          onClose={() => setShowDeliveryBooking(false)}
+        />
+      )}
       {showLabelA6 && invoice && (
         <ShippingLabelA6Modal
           invoice={invoice}

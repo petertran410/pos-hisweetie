@@ -57,13 +57,24 @@ export function DeliveryBookingModal({ invoice, onClose }: { invoice: Invoice; o
   const [note, setNote] = useState(invoice.code || "");
   const [payer, setPayer] = useState<Payer | null>(null);
 
+  const branchId = invoice.branch?.id ?? invoice.branchId;
+  // Kho Hà Nội / Kho Sài Gòn: chỉ nhân sự phòng ban Lark tương ứng; chi nhánh khác: mọi nhân sự
+  const senders = useQuery({
+    queryKey: ["deliveryBookingSenders", branchId],
+    queryFn: () => smaxChatApi.deliveryBookingSenders(branchId!),
+    enabled: !!branchId,
+    staleTime: 5 * 60_000,
+  });
+  const allowedIds = senders.data?.userIds ? new Set(senders.data.userIds) : null;
+  // Người đang thao tác luôn có trong danh sách (mặc định chọn sẵn)
+  const senderOptions = allowedIds ? users?.filter((u) => allowedIds.has(u.id) || u.id === userId) : users;
+
   const sender = users?.find((u) => u.id === senderId);
   // SĐT theo nhân viên được chọn (sửa được sau đó)
   useEffect(() => {
     setSenderPhone(formatPhone(sender?.phone));
   }, [sender?.id, sender?.phone]);
   // Địa chỉ chi nhánh của hóa đơn (Cài đặt → Chi nhánh)
-  const branchId = invoice.branch?.id ?? invoice.branchId;
   const branchSaved = branches?.find((b) => b.id === branchId)?.address ?? "";
   useEffect(() => {
     setBranchAddress(branchSaved);
@@ -152,7 +163,7 @@ export function DeliveryBookingModal({ invoice, onClose }: { invoice: Invoice; o
                     onChange={(e) => setSenderId(e.target.value ? Number(e.target.value) : null)}
                     className={input}>
                     <option value="">— Chọn nhân viên —</option>
-                    {users?.map((u) => (
+                    {senderOptions?.map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.name}
                       </option>

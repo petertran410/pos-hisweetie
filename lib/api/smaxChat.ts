@@ -121,6 +121,10 @@ export const smaxChatApi = {
     confirmBeforeSend: boolean;
   }> => apiClient.get("/smax/chat/delivery-booking"),
 
+  // Nhân viên được chọn làm người gửi theo chi nhánh (null = mọi nhân sự)
+  deliveryBookingSenders: (branchId: number): Promise<{ userIds: number[] | null }> =>
+    apiClient.get("/smax/chat/delivery-booking/senders", { branchId }),
+
   bookDelivery: (body: { invoiceId: number; text: string; confirmed?: boolean }): Promise<{ ok: true }> =>
     apiClient.post("/smax/chat/delivery-booking", body),
 };
