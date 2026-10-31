@@ -1,21 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link2, Loader2, Search, UserPlus } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { smaxChatApi } from "@/lib/api/smaxChat";
 import { apiClient } from "@/lib/config/api";
 import type { CustomerSearchResult } from "@/lib/types/customer";
 import { useCan } from "@/lib/hooks/useCan";
-import { useSearchCustomers } from "@/lib/hooks/useCustomers";
 import { useAuthStore } from "@/lib/store/auth";
 import { useChatSidebarStore, type ChatCustomerRef } from "@/lib/store/chatSidebar";
 import { useCustomersInViewStore } from "@/lib/store/customersInView";
 import { useActiveChannel } from "@/lib/chat/channels";
 import { looseSource } from "@/lib/chat/threadSource";
-import type { LooseThread } from "@/lib/types/smaxChat";
+import type { LinkedCustomer, LooseThread } from "@/lib/types/smaxChat";
 import { ChatThread } from "./ChatThread";
+import { CustomerSearchSelect, linkGroupCustomers } from "./GroupCustomersBar";
 
 /**
  * Hội thoại Zalo chưa gắn khách POS: vẫn xem/gửi tin được, thanh "Gắn khách POS"
@@ -96,15 +96,7 @@ function LinkCustomerBar({ thread, zaloName }: { thread: LooseThread; zaloName: 
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const inView = useCustomersInViewStore((s) => s.entries);
   const queryClient = useQueryClient();
-  const [input, setInput] = useState("");
-  const [search, setSearch] = useState("");
-  const [linking, setLinking] = useState<number | null>(null);
-
-  useEffect(() => {
-    const t = setTimeout(() => setSearch(input.trim()), 300);
-    return () => clearTimeout(t);
-  }, [input]);
-  const { data, isFetching } = useSearchCustomers(search, { enabled: search.length >= 2 });
+  const [busy, setBusy] = useState(false);
   const { data: byName } = useQuery({
     queryKey: ["chatLinkByName", zaloName],
     queryFn: () => guessCustomerByName(zaloName),
@@ -122,44 +114,42 @@ function LinkCustomerBar({ thread, zaloName }: { thread: LooseThread; zaloName: 
     return out.slice(0, 4);
   }, [primary, inView]);
 
-  const link = async (c: ChatCustomerRef) => {
-    setLinking(c.id);
+  // Nhóm: gắn được nhiều khách (vd nhóm chung các chi nhánh); chat cá nhân: 1 khách
+  const link = async (picked: ChatCustomerRef[]) => {
+    if (!picked.length) return;
+    setBusy(true);
     try {
-      const contact = await smaxChatApi.createContact(c.id, {
-        kind: thread.isGroup ? "group" : "user",
-        zaloId: thread.zaloId,
-        name: zaloName || undefined,
-      });
-      toast.success(`Đã gắn ${thread.isGroup ? "nhóm" : "Zalo"} "${zaloName}" cho ${c.code ?? c.name}`);
+      let linked: LinkedCustomer[];
+      if (thread.isGroup) {
+        linked = await linkGroupCustomers(picked, { zaloId: thread.zaloId, name: zaloName || undefined });
+      } else {
+        const contact = await smaxChatApi.createContact(picked[0].id, {
+          kind: "user",
+          zaloId: thread.zaloId,
+          name: zaloName || undefined,
+        });
+        linked = [{ ...picked[0], contactId: contact.id }];
+      }
+      if (!linked.length) return;
+      toast.success(
+        `Đã gắn ${thread.isGroup ? "nhóm" : "Zalo"} "${zaloName}" cho ${
+          linked.length > 1 ? `${linked.length} khách` : (linked[0].code ?? linked[0].name)
+        }`,
+      );
       queryClient.invalidateQueries({ queryKey: ["smaxRecentChats"] });
-      // Chuyển sang chat theo khách (selectCustomer xoá trạng thái chưa gắn)
+      // Chuyển sang chat theo khách đầu tiên (selectCustomer xoá trạng thái chưa gắn)
+      const first = linked[0];
       const st = useChatSidebarStore.getState();
-      st.selectCustomer(c, userId);
+      st.selectCustomer({ id: first.id, code: first.code, name: first.name }, userId);
       st.setPagePid(thread.pagePid);
       st.setKind(thread.isGroup ? "group" : "user");
-      st.setGroupId(thread.isGroup ? contact.id : null);
+      st.setGroupId(thread.isGroup ? first.contactId : null);
     } catch (e) {
       toast.error((e as Error).message || "Không gắn được khách POS");
     } finally {
-      setLinking(null);
+      setBusy(false);
     }
   };
-
-  const row = (c: ChatCustomerRef, primary = false) => (
-    <button
-      key={c.id}
-      onClick={() => link(c)}
-      disabled={!canManage || linking !== null}
-      className={`inline-flex max-w-full items-center gap-1 rounded-md px-2 py-1 text-xs disabled:opacity-50 ${
-        primary ? "bg-brand text-white" : "border border-brand-border bg-white text-brand hover:bg-cyan-bg"
-      }`}>
-      {linking === c.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Link2 className="h-3 w-3 shrink-0" />}
-      <span className="truncate">
-        Gắn {c.code ? `${c.code} · ` : ""}
-        {c.name}
-      </span>
-    </button>
-  );
 
   return (
     <div className="border-b bg-amber-50 px-3 py-2 text-sm">
@@ -171,27 +161,10 @@ function LinkCustomerBar({ thread, zaloName }: { thread: LooseThread; zaloName: 
         <p className="text-xs text-amber-800">Bạn chưa có quyền quản lý ID Zalo của khách để gắn.</p>
       ) : (
         <>
-          {suggestions.length > 0 && (
-            <div className="mb-1.5 flex flex-wrap gap-1">
-              {suggestions.map((c, i) => row(c, i === 0 && !!primary))}
-            </div>
+          {thread.isGroup && (
+            <p className="mb-1 text-xs text-amber-800">Nhóm dùng chung nhiều khách: tick chọn đủ các khách rồi bấm Gắn.</p>
           )}
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Tìm khách POS theo mã, tên, SĐT để gắn"
-              className="w-full rounded-md border bg-white py-1.5 pl-7 pr-2 text-xs outline-none focus:border-brand"
-            />
-          </div>
-          {search.length >= 2 && (
-            <div className="mt-1 flex max-h-28 flex-col gap-1 overflow-y-auto">
-              {isFetching && !data && <span className="text-xs text-gray-500">Đang tìm…</span>}
-              {data?.data?.length === 0 && <span className="text-xs text-gray-500">Không tìm thấy khách</span>}
-              {data?.data?.slice(0, 8).map((c) => row({ id: c.id, code: c.code, name: c.name }))}
-            </div>
-          )}
+          <CustomerSearchSelect suggestions={suggestions} multi={thread.isGroup} busy={busy} onConfirm={link} />
         </>
       )}
     </div>

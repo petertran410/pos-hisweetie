@@ -19,11 +19,20 @@ export interface ChatChannel {
   missing: boolean;
 }
 
+// Khách POS gắn với 1 hội thoại Zalo (1 nhóm có thể gắn nhiều khách)
+export interface LinkedCustomer {
+  id: number;
+  code: string | null;
+  name: string;
+  contactId: number;
+}
+
 export interface ChatContext {
   customer: { id: number; code: string | null; name: string; phone: string | null };
   salePic: { id: number; name: string } | null;
   myChannels: ChatChannel[];
-  contacts: { user: ZaloContact | null; groups: ZaloContact[] };
+  // sharedWith: khách khác cùng gắn nhóm này
+  contacts: { user: ZaloContact | null; groups: (ZaloContact & { sharedWith: LinkedCustomer[] })[] };
   // null = không có quyền xem công nợ
   debt: number | null;
   recentOrders: { id: number; code: string; date: string; total: number; status: string | null }[];
@@ -144,7 +153,14 @@ export interface RecentChat {
   smaxUrl: string;
   // linked: đã lưu ID Zalo cho khách; byCode: đoán theo mã khách trong tên nhóm
   match:
-    | { type: "linked"; customer: { id: number; code: string | null; name: string }; contactId: number; kind: ZaloContactKind }
+    | {
+        type: "linked";
+        customer: { id: number; code: string | null; name: string };
+        contactId: number;
+        kind: ZaloContactKind;
+        // Mọi khách gắn hội thoại này (khách đầu = customer)
+        customers: LinkedCustomer[];
+      }
     | { type: "byCode"; customer: { id: number; code: string | null; name: string } }
     | null;
 }

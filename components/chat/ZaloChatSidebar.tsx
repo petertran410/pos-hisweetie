@@ -25,14 +25,15 @@ import { useCan } from "@/lib/hooks/useCan";
 import { useIsClient, useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useChatContext, useRecentChats } from "@/lib/hooks/useSmaxChat";
 import { newCount } from "@/lib/chat/seen";
-import { RecentChatRow, UnseenBadge, useOpenRecentChat } from "./RecentChatsList";
+import { linkedChatLabel, RecentChatRow, UnseenBadge, useOpenRecentChat } from "./RecentChatsList";
 import { pickChannel, useActiveChannel } from "@/lib/chat/channels";
 import { customerSource } from "@/lib/chat/threadSource";
 import { LooseChat } from "./LooseChat";
 import { useFastTitle } from "@/lib/chat/useFastTitle";
-import type { ChatChannel, ChatContext, LooseThread, RecentChat } from "@/lib/types/smaxChat";
+import type { ChatChannel, ChatContext, LinkedCustomer, LooseThread, RecentChat } from "@/lib/types/smaxChat";
 import { ChatCustomerPicker } from "./ChatCustomerPicker";
 import { ChatCustomerCard } from "./ChatCustomerCard";
+import { GroupCustomersBar } from "./GroupCustomersBar";
 import { ChatThread } from "./ChatThread";
 import { ZaloContactEditor } from "./ZaloContactEditor";
 import { ZaloContactsManager } from "./ZaloContactsManager";
@@ -383,9 +384,7 @@ function CollapsedRail({
               ? `${c.match.customer.code ?? ""} ${c.match.customer.name}`
               : `${c.name} (chưa gắn khách POS — mở Smax)`;
             const label =
-              c.match?.type === "linked"
-                ? `${c.match.customer.code ? `${c.match.customer.code} · ` : ""}${c.match.customer.name}`
-                : c.name || c.zaloId;
+              c.match?.type === "linked" ? linkedChatLabel(c.match) : c.name || c.zaloId;
             return (
               <button
                 key={c.tid}
@@ -818,6 +817,33 @@ function ChatPanel({
   );
 }
 
+/** Nhóm đang mở của khách + mọi khách POS cùng gắn nhóm đó (theo thứ tự gắn). */
+function useCurrentGroup(ctx: ChatContext | undefined) {
+  const kind = useChatSidebarStore((s) => s.kind);
+  const groupId = useChatSidebarStore((s) => s.groupId);
+  const groups = ctx?.contacts.groups ?? [];
+  const group = kind === "group" ? (groups.find((g) => g.id === groupId) ?? groups[0] ?? null) : null;
+  const customers: LinkedCustomer[] =
+    group && ctx
+      ? [
+          { id: ctx.customer.id, code: ctx.customer.code, name: ctx.customer.name, contactId: group.id },
+          ...group.sharedWith,
+        ].sort((a, b) => a.contactId - b.contactId)
+      : [];
+  return { group, customers };
+}
+
+/** Chuyển sang khách khác cùng nhóm (vẫn mở nhóm đó). */
+function useSwitchGroupCustomer() {
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+  return (c: LinkedCustomer) => {
+    const st = useChatSidebarStore.getState();
+    st.selectCustomer({ id: c.id, code: c.code, name: c.name }, userId);
+    st.setKind("group");
+    st.setGroupId(c.contactId);
+  };
+}
+
 function CustomerChat({ customerId }: { customerId: number }) {
   const {
     data: ctx,
@@ -953,6 +979,8 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
   const canManage = useCan("smax_chat", "manage_contacts");
   const { kind, groupId, pagePid, setKind, setGroupId, setPagePid } =
     useChatSidebarStore();
+  const { customers: groupCustomers } = useCurrentGroup(ctx);
+  const switchCustomer = useSwitchGroupCustomer();
   const [managing, setManaging] = useState(false);
   const [adding, setAdding] = useState(false);
 
@@ -1108,7 +1136,21 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
           sendDisabledReason={sendDisabledReason}
           ctx={ctx}
           headerActions={toolbar}
-          headerExtra={groupSelect}
+          headerExtra={
+            kind === "group" && group ? (
+              <>
+                {groupSelect}
+                <GroupCustomersBar
+                  group={group}
+                  customers={groupCustomers}
+                  currentId={ctx.customer.id}
+                  onSelect={switchCustomer}
+                />
+              </>
+            ) : (
+              groupSelect
+            )
+          }
         />
       ) : (
         <div className="flex-1 overflow-y-auto p-4 text-sm">

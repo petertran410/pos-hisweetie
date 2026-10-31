@@ -53,6 +53,12 @@ export function toLooseThread(c: RecentChat): LooseThread {
   };
 }
 
+/** Tên khách đã gắn hội thoại; nhóm gắn nhiều khách ghi số khách trước (vd "5 khách · KH1 · Little Cam (NTMK)"). */
+export function linkedChatLabel(m: Extract<RecentChat["match"], { type: "linked" }>) {
+  const count = m.customers?.length ?? 1;
+  return `${count > 1 ? `${count} khách · ` : ""}${m.customer.code ? `${m.customer.code} · ` : ""}${m.customer.name}`;
+}
+
 /**
  * Mở hội thoại gần đây: đã gắn khách → chat theo khách; chưa gắn (kể cả chỉ khớp
  * mã khách trong tên nhóm) → mở hội thoại, thanh "Gắn khách POS" ở trên cùng.
@@ -224,9 +230,7 @@ export function RecentChatRow({ c, onClick }: { c: RecentChat; onClick: () => vo
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
           <span className={`truncate text-sm ${c.unread ? "font-semibold" : "font-medium"}`}>
-            {m?.type === "linked"
-              ? `${m.customer.code ? `${m.customer.code} · ` : ""}${m.customer.name}`
-              : c.name || c.zaloId}
+            {m?.type === "linked" ? linkedChatLabel(m) : c.name || c.zaloId}
           </span>
           <span className="ml-auto shrink-0 text-[11px] text-gray-400">{ago(c.lastMessageAt)}</span>
           {c.unread && <span className="h-2 w-2 shrink-0 rounded-full bg-brand" title="Chưa đọc" />}
