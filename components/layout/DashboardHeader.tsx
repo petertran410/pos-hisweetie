@@ -153,6 +153,7 @@ export function DashboardHeader() {
   const customerSubmenu = useMemo(
     () => [
       { label: "Danh sách khách hàng", href: "/khach-hang" },
+      { label: "Lead", href: "/khach-hang/lead" },
       { label: "Khuyến mãi", href: "/khach-hang/khuyen-mai" },
       {
         label: "Demand khách hàng (OEM/đặt hộ)",

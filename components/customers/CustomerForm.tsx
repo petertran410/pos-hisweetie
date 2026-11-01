@@ -37,6 +37,15 @@ interface CustomerFormProps {
   customer?: Customer;
   onClose: () => void;
   onSuccess?: (customer?: any) => void;
+  // Chỉ khi tạo mới: điền sẵn (vd tạo khách từ lead)
+  initialValues?: {
+    name?: string;
+    contactNumber?: string;
+    newCityCode?: string;
+    newCityName?: string;
+    newWardCode?: string;
+    newWardName?: string;
+  };
 }
 
 interface City {
@@ -109,6 +118,7 @@ export function CustomerForm({
   customer,
   onClose,
   onSuccess,
+  initialValues,
 }: CustomerFormProps) {
   const {
     register,
@@ -460,7 +470,25 @@ export function CustomerForm({
     } else {
       // Tạo mới: chưa chọn loại khách hàng — buộc người dùng tự chọn
       setValue("type", "");
+      if (initialValues) {
+        setValue("name", initialValues.name || "");
+        setValue("contactNumber", initialValues.contactNumber || "");
+        if (initialValues.newCityCode) {
+          setAddresses([
+            {
+              ...createEmptyAddress(true),
+              contactNumber: initialValues.contactNumber,
+              newCityCode: initialValues.newCityCode,
+              newCityName: initialValues.newCityName,
+              newWardCode: initialValues.newWardCode,
+              newWardName: initialValues.newWardName,
+            },
+          ]);
+        }
+      }
     }
+    // initialValues chỉ áp lúc mở form tạo mới
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customer, setValue]);
 
   const handleToggleGroup = (groupId: number) => {

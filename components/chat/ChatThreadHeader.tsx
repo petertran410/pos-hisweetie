@@ -6,7 +6,10 @@ import { ExternalLink, Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { useCan } from "@/lib/hooks/useCan";
 import type { ThreadSource } from "@/lib/chat/threadSource";
+import { platformLabel } from "@/lib/chat/platforms";
 import { ZaloAvatar } from "./ZaloAvatar";
+import { ThreadKindLogo } from "./ThreadKindIcon";
+import { MetaAiSwitch } from "./MetaAiSwitch";
 import { confirmAction, openExternal } from "@/lib/chat/confirm";
 
 interface Props {
@@ -15,10 +18,13 @@ interface Props {
   // Hiện cùng hàng bên phải (vd Trực tiếp/Nhóm) và dòng phụ bên dưới (chọn nhóm)
   actions?: React.ReactNode;
   extra?: React.ReactNode;
+  // Messenger đang do Meta AI trả lời mà nhân viên đã bấm tắt (tin gửi tiếp kèm HUMAN_AGENT)
+  takeOver?: boolean;
+  onTakeOverChange?: (v: boolean) => void;
 }
 
 /** Thanh đầu hội thoại: avatar + tên Zalo của khách/nhóm, dòng trạng thái kết bạn. */
-export function ChatThreadHeader({ source, channelName, actions, extra }: Props) {
+export function ChatThreadHeader({ source, channelName, actions, extra, takeOver = false, onTakeOverChange }: Props) {
   const profileKey = ["smaxZaloProfile", source.key];
   const { data: p, isLoading } = useQuery({
     queryKey: profileKey,
@@ -33,6 +39,30 @@ export function ChatThreadHeader({ source, channelName, actions, extra }: Props)
   const [busy, setBusy] = useState(false);
   const isGroup = source.kind === "group";
   const f = p?.friend;
+
+  // Messenger: Meta Business AI đang trả lời (tắt cục bộ = chờ nhân viên gửi tin kèm HUMAN_AGENT)
+  const metaAiOn = p?.controlledBy === "META_AI" && !takeOver;
+  const toggleMetaAi = async () => {
+    if (metaAiOn) {
+      onTakeOverChange?.(true);
+      toast.info("Đã tắt Meta AI cho hội thoại này — tin bạn gửi tiếp theo sẽ lấy lại quyền trả lời");
+      return;
+    }
+    if (p?.controlledBy === "META_AI") return onTakeOverChange?.(false);
+    // Bật ngay, không hỏi xác nhận (người dùng chủ động bấm công tắc)
+    setBusy(true);
+    try {
+      await source.passControlAI(true);
+      queryClient.setQueryData(profileKey, p && { ...p, controlledBy: "META_AI" });
+      queryClient.invalidateQueries({ queryKey: ["smaxRecentChats"] });
+      onTakeOverChange?.(false);
+      toast.success("Đã bật Meta Business AI cho hội thoại");
+    } catch (e) {
+      toast.error((e as Error).message || "Không bật được Meta Business AI");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const act = async (action: "request" | "accept" | "undo") => {
     const label = { request: "gửi lời mời kết bạn", accept: "đồng ý kết bạn", undo: "thu hồi lời mời kết bạn" }[action];
@@ -57,11 +87,14 @@ export function ChatThreadHeader({ source, channelName, actions, extra }: Props)
     }
   };
 
-  const subtitle = isGroup
-    ? `Nhóm Zalo${p?.memberCount ? ` · ${p.memberCount} thành viên` : ""}`
-    : f?.isFriend
-      ? "Zalo cá nhân · Bạn bè"
-      : "Zalo cá nhân";
+  const subtitle =
+    source.platform !== "zaloweb"
+      ? `${platformLabel(source.platform)}${p?.isComment ? " · Bình luận bài viết" : ""}`
+      : isGroup
+        ? `Nhóm Zalo${p?.memberCount ? ` · ${p.memberCount} thành viên` : ""}`
+        : f?.isFriend
+          ? "Zalo cá nhân · Bạn bè"
+          : "Zalo cá nhân";
 
   return (
     <div className="border-b bg-white">
@@ -78,6 +111,19 @@ export function ChatThreadHeader({ source, channelName, actions, extra }: Props)
           </p>
           <p className="truncate text-[11px] text-gray-500">{subtitle}</p>
         </div>
+        {p?.canPassControlAI && canSend && (
+          <MetaAiSwitch on={metaAiOn} busy={busy} onClick={toggleMetaAi} />
+        )}
+        {p?.commentUrl && (
+          <a
+            href={p.commentUrl}
+            target="_blank"
+            rel="noreferrer"
+            title="Mở bình luận trên bài viết Facebook"
+            className="rounded p-1 hover:bg-gray-100">
+            <ThreadKindLogo isComment className="h-4 w-4" />
+          </a>
+        )}
         {p?.smaxUrl && (
           <a
             href={p.smaxUrl}
@@ -91,6 +137,7 @@ export function ChatThreadHeader({ source, channelName, actions, extra }: Props)
         {actions}
       </div>
       {extra && <div className="px-3 pb-1.5">{extra}</div>}
+
 
       {!isGroup && f && !f.isFriend && (
         <div className="flex items-center gap-2 border-t bg-amber-50 px-3 py-1.5 text-xs text-amber-900">

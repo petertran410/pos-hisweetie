@@ -21,6 +21,7 @@ import { MessageMenu } from "./MessageMenu";
 import { ForwardDialog } from "./ForwardDialog";
 import { applyReaction, ReactionBar, type ReactionIcon, type Reactions } from "./MessageReactions";
 import { confirmAction } from "@/lib/chat/confirm";
+import { useMetaAiTakeOver } from "@/lib/store/metaAiTakeOver";
 import { toast } from "sonner";
 import { copyMessages, downloadMessagesMedia, messagePreview, messageThumb } from "@/lib/chat/messageActions";
 import {
@@ -133,12 +134,11 @@ export function ChatThread({
 
   // Đang mở hội thoại → coi như đã xem: cập nhật mốc "tin mới" theo số tin Smax đếm
   useEffect(() => {
-    const tid = `zlw${source.zaloId}`;
     for (const [, d] of queryClient.getQueriesData<{ items: RecentChat[] }>({ queryKey: ["smaxRecentChats"] })) {
-      const hit = d?.items.find((i) => i.tid === tid);
-      if (hit) markSeen(tid, hit.messageCount);
+      const hit = d?.items.find((i) => i.tid === source.tid);
+      if (hit) markSeen(source.tid, hit.messageCount);
     }
-  }, [latest.data, source.zaloId, queryClient]);
+  }, [latest.data, source.tid, queryClient]);
   // Tên + avatar người gửi: gộp dần qua các lần poll (tin cũ tải thêm không kèm bảng này)
   const [senders, setSenders] = useState<NonNullable<ChatMessagesPage["senders"]>>({});
   const latestSenders = latest.data?.senders;
@@ -268,6 +268,19 @@ export function ChatThread({
     }
   };
 
+  // Messenger do Meta Business AI trả lời: khoá ô soạn như Smax, tới khi nhân viên tắt Meta AI ("tự phản hồi")
+  const { data: profile } = useQuery({
+    queryKey: ["smaxZaloProfile", source.key],
+    queryFn: () => source.fetchProfile(),
+    staleTime: 60_000,
+    retry: false,
+  });
+  // Đã tắt Meta AI (dùng chung với công tắc trên danh sách hội thoại)
+  const takeOver = useMetaAiTakeOver((s) => !!s.tids[source.tid]);
+  const setTakeOver = (v: boolean) => useMetaAiTakeOver.getState().set(source.tid, v);
+  const metaAiReplying = profile?.controlledBy === "META_AI" && !takeOver;
+  const composerDisabledReason =
+    sendDisabledReason ?? (metaAiReplying ? "Meta Business AI đang trả lời hội thoại này — tắt Meta AI để tự phản hồi" : null);
   const canReact = !!latest.data?.canReact && !sendDisabledReason;
 
   // Thu hồi / xoá phía mình (album = nhiều tin, làm từng tin). Không hoàn tác được → luôn hỏi lại
@@ -349,9 +362,16 @@ export function ChatThread({
             : undefined,
         stickerId: draft.stickerId,
         replyToPid: draft.replyTo?.pid,
+        // Đã tắt Meta AI: tin này lấy lại quyền trả lời (thẻ HUMAN_AGENT)
+        humanAgent: takeOver || undefined,
         confirmed: confirmBeforeSend || undefined,
       });
       queryClient.invalidateQueries({ queryKey: messagesKey });
+      if (takeOver) {
+        queryClient.setQueryData(["smaxZaloProfile", source.key], (p: typeof profile) => p && { ...p, controlledBy: "SMAXAI" });
+        queryClient.invalidateQueries({ queryKey: ["smaxRecentChats"] });
+        setTakeOver(false);
+      }
       setPending((p) => p.map((x) => (x.key === key ? { ...x, status: "sent" } : x)));
     } catch (e) {
       setPending((p) =>
@@ -399,6 +419,8 @@ export function ChatThread({
         channelName={channelName}
         actions={headerActions}
         extra={headerExtra}
+        takeOver={takeOver}
+        onTakeOverChange={setTakeOver}
       />
       <div className="relative flex flex-1 min-h-0 flex-col">
       <div
@@ -541,11 +563,20 @@ export function ChatThread({
                   {p.status === "sending" && "Đang gửi…"}
                   {p.status === "sent" && "Đã gửi"}
                   {p.status === "error" && (
-                    <span className="text-red-600">
+                    // Lỗi đầy đủ Smax trả về (vd Facebook quá 24h) + mở hội thoại trên Smax để trả lời ở đó
+                    <span className="select-text whitespace-pre-wrap break-words text-red-600">
                       Lỗi: {p.error || "gửi thất bại"} ·{" "}
                       <button onClick={() => onSendRetry(p)} className="underline">
                         Thử lại
                       </button>
+                      {profile?.smaxUrl && (
+                        <>
+                          {" · "}
+                          <a href={profile.smaxUrl} target="_blank" rel="noreferrer" className="underline">
+                            Mở hội thoại trên Smax
+                          </a>
+                        </>
+                      )}
                     </span>
                   )}
                 </span>
@@ -597,11 +628,13 @@ export function ChatThread({
         </div>
       ) : (
         <ChatComposer
-          disabledReason={sendDisabledReason}
+          disabledReason={composerDisabledReason}
           ctx={ctx}
           onSend={onSend}
           restore={restore}
           threadStickerIds={threadStickerIds}
+          // Sticker chỉ gửi được qua Zalo cá nhân
+          allowSticker={source.platform === "zaloweb"}
           draftKey={source.key}
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}

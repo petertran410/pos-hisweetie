@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { AlertTriangle, RefreshCw, Search, X } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import type { SmaxZaloChannel } from "@/lib/api/smax";
+import { PLATFORM_LABEL } from "@/lib/chat/platforms";
 import { confirmAction } from "@/lib/chat/confirm";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import {
@@ -13,16 +15,32 @@ import {
 } from "@/lib/hooks/useSmax";
 import { useUsers } from "@/lib/hooks/useUsers";
 
-const TABS = [{ key: "zalo-user", label: "Zalo User" }] as const;
+// Tab theo loại kênh trên Smax (platform). Chat trên POS hiện chỉ dùng Zalo cá nhân.
+const TABS = [
+  { key: "zalo-user", label: "Zalo User", platforms: ["zaloweb"] },
+  { key: "zalo-oa", label: "Zalo OA", platforms: ["zalo"] },
+  { key: "facebook", label: "Facebook", platforms: ["facebook"] },
+  { key: "instagram", label: "Instagram", platforms: ["instagram"] },
+  { key: "tiktok", label: "Tiktok", platforms: ["tiktok", "tiktokweb"] },
+  { key: "shopee", label: "Shopee", platforms: ["shopee"] },
+  { key: "website", label: "Website Livechat", platforms: ["custom", "web", "livechat"] },
+] as const;
+type TabKey = (typeof TABS)[number]["key"] | "other";
+const KNOWN_PLATFORMS: readonly string[] = TABS.flatMap((t) => t.platforms);
 
-const PLATFORM_LABEL: Record<string, string> = {
-  zalo: "Zalo OA",
-  zaloweb: "Zalo cá nhân",
-};
+const tabOf = (platform: string): TabKey =>
+  TABS.find((t) => (t.platforms as readonly string[]).includes(platform))?.key ?? "other";
 
-function ZaloUserTab() {
+function ChannelsTab({
+  channels,
+  isLoading,
+  error,
+}: {
+  channels: SmaxZaloChannel[];
+  isLoading: boolean;
+  error: unknown;
+}) {
   const [search, setSearch] = useState("");
-  const { data: channels, isLoading, error } = useSmaxZaloChannels();
   const syncMutation = useSyncSmaxChannels();
   const { data: users, isLoading: loadingUsers } = useUsers();
   const linkMutation = useLinkSmaxChannel();
@@ -39,8 +57,8 @@ function ZaloUserTab() {
 
   const filtered = useMemo(() => {
     const kw = search.trim().toLowerCase();
-    if (!kw) return channels || [];
-    return (channels || []).filter(
+    if (!kw) return channels;
+    return channels.filter(
       (c) =>
         c.name.toLowerCase().includes(kw) ||
         c.users.some((u) => u.name?.toLowerCase().includes(kw))
@@ -60,7 +78,7 @@ function ZaloUserTab() {
           <p className="font-medium">
             Không tải được danh sách kênh từ Smax
           </p>
-          <p className="mt-1">{(error as any).message}</p>
+          <p className="mt-1">{(error as Error).message}</p>
           <p className="mt-1 text-amber-700">
             Kiểm tra biến <code>SMAX_API_TOKEN</code> (và{" "}
             <code>SMAX_BIZ_ALIAS</code>) trong .env của backend.
@@ -86,7 +104,7 @@ function ZaloUserTab() {
         <button
           onClick={() => syncMutation.mutate()}
           disabled={syncMutation.isPending}
-          title="Tải lại danh sách kênh Zalo từ Smax, cập nhật tên kênh đã đổi"
+          title="Tải lại danh sách kênh từ Smax, cập nhật tên kênh đã đổi"
           className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 border rounded-lg text-sm text-brand border-brand-border bg-white hover:bg-cyan-bg disabled:opacity-60">
           <RefreshCw className={`w-4 h-4 ${syncMutation.isPending ? "animate-spin" : ""}`} />
           {syncMutation.isPending ? "Đang đồng bộ..." : "Đồng bộ từ Smax"}
@@ -99,7 +117,7 @@ function ZaloUserTab() {
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-gray-700">
-                  Kênh Zalo
+                  Kênh
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-gray-700">
                   page_pid
@@ -124,7 +142,7 @@ function ZaloUserTab() {
               {!isLoading && !loadingUsers && filtered.length === 0 && (
                 <tr>
                   <td colSpan={5} className="text-center py-8 text-gray-500">
-                    Không có kênh Zalo nào
+                    Không có kênh nào
                   </td>
                 </tr>
               )}
@@ -253,7 +271,12 @@ function ZaloUserTab() {
 }
 
 export default function SmaxSettingsPage() {
-  const [tab, setTab] = useState<(typeof TABS)[number]["key"]>("zalo-user");
+  const [tab, setTab] = useState<TabKey>("zalo-user");
+  const { data: channels, isLoading, error } = useSmaxZaloChannels();
+  // Loại kênh Smax mới chưa có tab riêng → gom vào tab "Khác"
+  const hasOther = (channels ?? []).some((c) => !KNOWN_PLATFORMS.includes(c.platform));
+  const tabs = [...TABS, ...(hasOther ? [{ key: "other" as const, label: "Khác" }] : [])];
+  const count = (key: TabKey) => (channels ?? []).filter((c) => tabOf(c.platform) === key).length;
 
   return (
     <PagePermissionGuard resource="settings" action="update">
@@ -261,11 +284,11 @@ export default function SmaxSettingsPage() {
         <div className="px-6 pt-6 border-b bg-white">
           <h1 className="text-2xl font-bold">Smax</h1>
           <p className="text-gray-600 mt-1">
-            Liên kết kênh Zalo trên Smax.AI với tài khoản người dùng (sale) để
-            dùng các tính năng Smax ngay trên POS.
+            Liên kết kênh trên Smax.AI với tài khoản người dùng (sale) để
+            dùng các tính năng Smax ngay trên POS. Chat trên POS hiện dùng kênh Zalo cá nhân.
           </p>
           <div className="flex gap-1 mt-4">
-            {TABS.map((t) => (
+            {tabs.map((t) => (
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
@@ -275,11 +298,17 @@ export default function SmaxSettingsPage() {
                     : "border-transparent text-gray-600 hover:text-gray-900"
                 }`}>
                 {t.label}
+                {channels && <span className="ml-1 text-xs text-gray-400">({count(t.key)})</span>}
               </button>
             ))}
           </div>
         </div>
-        {tab === "zalo-user" && <ZaloUserTab />}
+        <ChannelsTab
+          key={tab}
+          channels={(channels ?? []).filter((c) => tabOf(c.platform) === tab)}
+          isLoading={isLoading}
+          error={error}
+        />
       </div>
     </PagePermissionGuard>
   );

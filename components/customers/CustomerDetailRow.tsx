@@ -167,7 +167,7 @@ export function CustomerDetailRow({
           ]
         : [{ key: "debts", label: "Công nợ" }]
       : []),
-    ...(canViewZalo ? [{ key: "zalo", label: "Zalo" }] : []),
+    ...(canViewZalo ? [{ key: "zalo", label: "Smax" }] : []),
   ] as const;
 
   const groups =

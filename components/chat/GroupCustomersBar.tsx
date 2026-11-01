@@ -17,11 +17,18 @@ import type { LinkedCustomer } from "@/lib/types/smaxChat";
 export async function linkGroupCustomers(
   customers: ChatCustomerRef[],
   group: { zaloId: string; name?: string },
+  // Hội thoại kênh khác Zalo cá nhân: gắn dạng "user" kèm kênh (pagePid)
+  link: { kind: "user" | "group"; pagePid?: string } = { kind: "group" },
 ): Promise<LinkedCustomer[]> {
   const linked: LinkedCustomer[] = [];
   for (const c of customers) {
     try {
-      const contact = await smaxChatApi.createContact(c.id, { kind: "group", zaloId: group.zaloId, name: group.name });
+      const contact = await smaxChatApi.createContact(c.id, {
+        kind: link.kind,
+        zaloId: group.zaloId,
+        name: group.name,
+        pagePid: link.pagePid,
+      });
       linked.push({ ...c, contactId: contact.id });
     } catch (e) {
       toast.error(`${c.code ?? c.name}: ${(e as Error).message || "không gắn được"}`);
@@ -171,8 +178,11 @@ export function GroupCustomersBar({
   customers,
   currentId,
   onSelect,
+  link,
 }: {
   group: { zaloId: string; name: string | null };
+  // Mặc định nhóm Zalo; hội thoại kênh khác: { kind: "user", pagePid }
+  link?: { kind: "user" | "group"; pagePid?: string };
   // Mọi khách gắn nhóm, gồm khách đang chọn
   customers: LinkedCustomer[];
   currentId: number;
@@ -186,10 +196,10 @@ export function GroupCustomersBar({
 
   const add = async (picked: ChatCustomerRef[]) => {
     setBusy(true);
-    const added = await linkGroupCustomers(picked, { zaloId: group.zaloId, name: group.name ?? undefined });
+    const added = await linkGroupCustomers(picked, { zaloId: group.zaloId, name: group.name ?? undefined }, link);
     setBusy(false);
     if (!added.length) return;
-    toast.success(`Đã gắn nhóm cho ${added.length} khách`);
+    toast.success(`Đã gắn ${link?.kind === "user" ? "hội thoại" : "nhóm"} cho ${added.length} khách`);
     queryClient.invalidateQueries({ queryKey: ["smaxChatContext"] });
     queryClient.invalidateQueries({ queryKey: ["smaxRecentChats"] });
     setAdding(false);
@@ -216,7 +226,7 @@ export function GroupCustomersBar({
         {canManage && (
           <button
             onClick={() => setAdding(!adding)}
-            title={adding ? "Đóng" : "Gắn nhóm này cho thêm khách POS (vd các chi nhánh dùng chung nhóm)"}
+            title={adding ? "Đóng" : "Gắn hội thoại này cho thêm khách POS (vd các chi nhánh dùng chung)"}
             className="inline-flex shrink-0 items-center gap-0.5 rounded-full px-2 py-0.5 text-xs text-brand hover:bg-cyan-bg">
             {adding ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
             {adding ? "Đóng" : customers.length > 1 ? "Gắn thêm" : "Gắn thêm khách"}

@@ -7,6 +7,14 @@ import { useChatSidebarStore, type ChatCustomerRef } from "@/lib/store/chatSideb
 import type { LooseThread, RecentChat, ZaloContactKind } from "@/lib/types/smaxChat";
 import { markSeen, newCount } from "@/lib/chat/seen";
 import { ZaloAvatar } from "./ZaloAvatar";
+import { ThreadKindIcon, ThreadKindLogo } from "./ThreadKindIcon";
+import { MetaAiSwitch } from "./MetaAiSwitch";
+import { LEAD_FIRST_PLATFORMS } from "@/lib/leads/constants";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { smaxChatApi } from "@/lib/api/smaxChat";
+import { useCan } from "@/lib/hooks/useCan";
+import { useMetaAiTakeOver } from "@/lib/store/metaAiTakeOver";
 
 const COLLAPSED = 8;
 // Số hội thoại lấy từ Smax khi tìm theo tên
@@ -49,7 +57,10 @@ export function toLooseThread(c: RecentChat): LooseThread {
     zaloId: c.zaloId,
     isGroup: c.isGroup,
     name: c.name,
-    suggestion: c.match?.type === "byCode" ? c.match.customer : null,
+    platform: c.platform,
+    phones: c.phones,
+    lead: c.lead,
+    suggestion: c.match?.type === "byCode" || c.match?.type === "byPhone" ? c.match.customer : null,
   };
 }
 
@@ -84,7 +95,15 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
   const { data, isLoading, isFetching, error, refetch } = useRecentChats(true, pagePid);
   const { open } = useOpenRecentChat(onOpen, onOpenThread);
   const [showAll, setShowAll] = useState(false);
-  const items = data?.items ?? [];
+  // Fanpage Facebook: lọc tin nhắn Messenger / bình luận bài viết (đổi kênh → về "Tất cả")
+  const [kindFilter, setKindFilter] = useState<{ pagePid?: string | null; kind: "all" | "message" | "comment" }>({
+    kind: "all",
+  });
+  const kind = kindFilter.pagePid === pagePid ? kindFilter.kind : "all";
+  const setKind = (k: typeof kind) => setKindFilter({ pagePid, kind: k });
+  const isFanpage = (data?.items ?? []).some((c) => c.platform === "facebook");
+  const kindOk = (c: RecentChat) => !isFanpage || kind === "all" || (kind === "comment") === !!c.isComment;
+  const items = (data?.items ?? []).filter(kindOk);
   // Lọc "Chưa đọc": Smax đánh dấu chưa đọc (chấm xanh) hoặc có tin mới chưa xem trên POS (số đỏ)
   const unreadOnly = useChatSidebarStore((s) => s.recentUnreadOnly);
   const setUnreadOnly = useChatSidebarStore((s) => s.setRecentUnreadOnly);
@@ -108,7 +127,7 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
     if (!searching) return [];
     const key = foldVi(term);
     const byTid = new Map(items.filter((c) => foldVi(c.name).includes(key)).map((c) => [c.tid, c]));
-    if (remoteReady) for (const c of remote.data!.items) byTid.set(c.tid, c);
+    if (remoteReady) for (const c of remote.data!.items.filter(kindOk)) byTid.set(c.tid, c);
     return [...byTid.values()].sort(
       (a, b) => new Date(b.lastMessageAt ?? 0).getTime() - new Date(a.lastMessageAt ?? 0).getTime()
     );
@@ -139,7 +158,36 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
           <RotateCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
         </button>
       </div>
-      <div className="relative mb-2">
+      {/* Lọc Messenger / Bình luận (fanpage) cùng hàng ô tìm */}
+      <div className="mb-2 flex items-center gap-2">
+      {isFanpage && (
+        <div className="inline-flex shrink-0 self-stretch overflow-hidden rounded-md border text-xs">
+          {(
+            [
+              ["all", "Tất cả"],
+              ["message", "Messenger"],
+              ["comment", "Bình luận"],
+            ] as const
+          ).map(([k, label], i) => (
+            <button
+              key={k}
+              onClick={() => setKind(k)}
+              aria-pressed={kind === k}
+              title={k === "comment" ? "Bình luận bài viết trên fanpage" : k === "message" ? "Tin nhắn Messenger" : ""}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 ${i ? "border-l" : ""} ${
+                kind === k ? "bg-brand text-white" : "text-gray-600 hover:bg-gray-50"
+              }`}>
+              {k !== "all" && (
+                <span className={`flex rounded-full ${kind === k ? "bg-white" : ""}`}>
+                  <ThreadKindLogo isComment={k === "comment"} className="h-3.5 w-3.5" />
+                </span>
+              )}
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="relative min-w-0 flex-1">
         <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
         <input
           value={q}
@@ -156,6 +204,7 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
             <X className="h-3.5 w-3.5" />
           </button>
         )}
+      </div>
       </div>
       {searching ? (
         <>
@@ -193,7 +242,13 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
         <p className="text-sm text-red-600">{(error as Error).message || "Không tải được hội thoại"}</p>
       ) : shown.length === 0 ? (
         <p className="text-sm text-gray-500">
-          {unreadOnly ? "Không có hội thoại chưa đọc." : "Chưa có hội thoại gần đây trên kênh này."}
+          {unreadOnly
+            ? "Không có hội thoại chưa đọc."
+            : kind === "comment"
+              ? "Chưa có bình luận gần đây trên fanpage này."
+              : kind === "message"
+                ? "Chưa có tin nhắn Messenger gần đây."
+                : "Chưa có hội thoại gần đây trên kênh này."}
         </p>
       ) : (
         <ul className="flex flex-col gap-1">
@@ -219,13 +274,17 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
 export function RecentChatRow({ c, onClick }: { c: RecentChat; onClick: () => void }) {
   const m = c.match;
   const unseen = newCount(c.tid, c.messageCount);
+  const canSend = useCan("smax_chat", "send");
+  const showMetaAi = !!c.canPassControlAI && canSend;
   return (
+    <div className="relative">
     <button
       onClick={onClick}
       className="w-full flex items-start gap-2 rounded-md px-3 py-2 text-left hover:bg-cyan-bg border border-transparent hover:border-brand-border">
       <span className="relative shrink-0">
         <ZaloAvatar avatar={c.avatar} isGroup={c.isGroup} members={c.isGroup ? c.memberPreview : [{ name: c.name, avatar: null }]} size={28} />
         {unseen > 0 && <UnseenBadge count={unseen} />}
+        <ThreadKindIcon platform={c.platform} isComment={c.isComment} />
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
@@ -235,20 +294,77 @@ export function RecentChatRow({ c, onClick }: { c: RecentChat; onClick: () => vo
           <span className="ml-auto shrink-0 text-[11px] text-gray-400">{ago(c.lastMessageAt)}</span>
           {c.unread && <span className="h-2 w-2 shrink-0 rounded-full bg-brand" title="Chưa đọc" />}
         </span>
-        <span className="block truncate text-xs text-gray-500">
+        <span className={`block truncate text-xs text-gray-500 ${showMetaAi && m?.type === "linked" ? "pr-24" : ""}`}>
           {c.isGroup && m?.type === "linked" ? `${c.name}: ` : ""}
           {c.lastMessage || "…"}
         </span>
-        {m?.type !== "linked" && (
+        {m?.type !== "linked" && c.lead && (
+          <span className="block text-[11px] text-violet-700">Lead · {c.lead.name}</span>
+        )}
+        {m?.type === "byCode" || m?.type === "byPhone" ? (
+          // Gợi ý gắn khách POS (Facebook/Tiktok: chỉ khi SĐT trong hội thoại / của lead trùng khách)
           <span className="block text-[11px] text-amber-700">
-            {m?.type === "byCode"
-              ? `Chưa gắn khách POS — gợi ý ${m.customer.code ?? m.customer.name}`
-              : "Chưa gắn khách POS"}
+            {LEAD_FIRST_PLATFORMS.has(c.platform) ? "SĐT trùng khách POS" : "Chưa gắn khách POS"} — gợi ý{" "}
+            {m.customer.code ?? m.customer.name}
+            {m.type === "byPhone" && !LEAD_FIRST_PLATFORMS.has(c.platform) ? " (theo SĐT)" : ""}
           </span>
+        ) : (
+          m?.type !== "linked" &&
+          !c.lead && (
+            <span className={`block text-[11px] ${LEAD_FIRST_PLATFORMS.has(c.platform) ? "text-violet-700" : "text-amber-700"}`}>
+              {LEAD_FIRST_PLATFORMS.has(c.platform) ? "Chưa có lead — mở để tạo lead" : "Chưa gắn khách POS"}
+            </span>
+          )
         )}
       </span>
     </button>
+    {/* Ngoài nút mở hội thoại (không lồng button) */}
+    {showMetaAi && (
+      <span className="absolute bottom-1.5 right-3">
+        <RowMetaAiSwitch c={c} />
+      </span>
+    )}
+    </div>
   );
+}
+
+/**
+ * Bật/tắt Meta Business AI ngay trên danh sách, không mở hội thoại. Bật: gọi Smax. Tắt: Smax không
+ * có API — đánh dấu hội thoại; tin nhân viên gửi tiếp (kèm HUMAN_AGENT) mới lấy lại quyền trả lời.
+ */
+function RowMetaAiSwitch({ c }: { c: RecentChat }) {
+  const queryClient = useQueryClient();
+  const takeOver = useMetaAiTakeOver((s) => !!s.tids[c.tid]);
+  const [busy, setBusy] = useState(false);
+  const metaAi = c.controlledBy === "META_AI";
+  const on = metaAi && !takeOver;
+
+  const toggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const { set } = useMetaAiTakeOver.getState();
+    if (on) {
+      set(c.tid, true);
+      toast.info(`Đã tắt Meta AI cho "${c.name}" — tin bạn gửi tiếp trong hội thoại sẽ lấy lại quyền trả lời`);
+      return;
+    }
+    if (metaAi) return set(c.tid, false);
+    // Bật ngay, không hỏi xác nhận
+    setBusy(true);
+    try {
+      await smaxChatApi.passControlAI({ pagePid: c.pagePid, tid: c.tid, confirmed: true });
+      queryClient.setQueriesData<{ items: RecentChat[] }>({ queryKey: ["smaxRecentChats"] }, (d) =>
+        d && { ...d, items: d.items.map((i) => (i.tid === c.tid ? { ...i, controlledBy: "META_AI" } : i)) }
+      );
+      queryClient.invalidateQueries({ queryKey: ["smaxZaloProfile"] });
+      toast.success(`Đã bật Meta Business AI cho "${c.name}"`);
+    } catch (err) {
+      toast.error((err as Error).message || "Không bật được Meta Business AI");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return <MetaAiSwitch on={on} busy={busy} onClick={toggle} />;
 }
 
 /** Số tin mới (so với lần xem gần nhất trên POS). */

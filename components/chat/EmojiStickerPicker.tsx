@@ -15,7 +15,8 @@ interface Props {
   // Sticker khách đã gửi trong hội thoại đang mở
   threadStickerIds: string[];
   onEmoji: (emoji: string) => void;
-  onSticker: (id: string) => void;
+  // Không truyền = kênh không gửi được sticker → chỉ hiện emoji
+  onSticker?: (id: string) => void;
   onClose: () => void;
 }
 
@@ -63,7 +64,7 @@ export function EmojiStickerPicker({ threadStickerIds, onEmoji, onSticker, onClo
       onMouseDown={(e) => e.preventDefault()}
       className="absolute bottom-full right-2 z-30 mb-1 flex h-80 w-[340px] max-w-[calc(100%-1rem)] flex-col rounded-lg border bg-white shadow-xl">
       <div className="flex border-b text-sm font-medium">
-        {(["sticker", "emoji"] as const).map((t) => (
+        {(onSticker ? (["sticker", "emoji"] as const) : (["emoji"] as const)).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -97,7 +98,7 @@ export function EmojiStickerPicker({ threadStickerIds, onEmoji, onSticker, onClo
             {stickerGroups.map((g) => (
               <section key={g.name} className="mb-2">
                 <h4 className="px-1 pb-1 text-xs font-semibold text-gray-500">{g.name}</h4>
-                <StickerGrid ids={g.ids} onPick={onSticker} />
+                <StickerGrid ids={g.ids} onPick={(id) => onSticker?.(id)} />
               </section>
             ))}
             <section>
@@ -120,7 +121,7 @@ export function EmojiStickerPicker({ threadStickerIds, onEmoji, onSticker, onClo
                   </button>
                 </div>
               </div>
-              <StickerGrid ids={pageIds} onPick={onSticker} />
+              <StickerGrid ids={pageIds} onPick={(id) => onSticker?.(id)} />
             </section>
           </>
         )}

@@ -56,6 +56,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   stock_condition_transfers: "Chuyển loại tồn",
   settings: "Cài đặt hệ thống",
   smax_chat: "Chat Zalo (Smax)",
+  leads: "Lead",
   return_orders_price: "Giá nhập lại trả hàng",
   return_orders_total_prices: "Tổng tiền hàng trả hàng",
   pos_inventory: "Tồn kho (POS)",

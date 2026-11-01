@@ -22,7 +22,7 @@ export function useSyncSmaxChannels() {
       queryClient.invalidateQueries({ queryKey: ["smaxMyChannels"] });
       const onSmax = channels.filter((c) => !c.missing).length;
       const missing = channels.length - onSmax;
-      toast.success(`Đã đồng bộ ${onSmax} kênh Zalo từ Smax`, {
+      toast.success(`Đã đồng bộ ${onSmax} kênh từ Smax`, {
         description:
           [updated && `Cập nhật tên ${updated} kênh`, missing && `${missing} kênh không còn trên Smax`]
             .filter(Boolean)

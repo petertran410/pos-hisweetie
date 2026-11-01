@@ -28,6 +28,7 @@ import { newCount } from "@/lib/chat/seen";
 import { linkedChatLabel, RecentChatRow, UnseenBadge, useOpenRecentChat } from "./RecentChatsList";
 import { pickChannel, useActiveChannel } from "@/lib/chat/channels";
 import { customerSource } from "@/lib/chat/threadSource";
+import { platformLabel } from "@/lib/chat/platforms";
 import { LooseChat } from "./LooseChat";
 import { useFastTitle } from "@/lib/chat/useFastTitle";
 import type { ChatChannel, ChatContext, LinkedCustomer, LooseThread, RecentChat } from "@/lib/types/smaxChat";
@@ -39,6 +40,7 @@ import { ZaloContactEditor } from "./ZaloContactEditor";
 import { ZaloContactsManager } from "./ZaloContactsManager";
 import { SharedGroupsScanner } from "./SharedGroupsScanner";
 import { ZaloAvatar } from "./ZaloAvatar";
+import { ThreadKindIcon } from "./ThreadKindIcon";
 
 /**
  * Sidebar chat Zalo (Smax) mép phải. Desktop: đẩy nội dung (rail 44px khi thu
@@ -346,7 +348,11 @@ function CollapsedRail({
           <RailChannelPicker
             channels={usable}
             active={channel}
-            onPick={setPagePid}
+            onPick={(pid) => {
+              // Đổi kênh → khi mở rộng sẽ thấy danh sách hội thoại của kênh mới
+              selectCustomer(null, userId);
+              setPagePid(pid);
+            }}
             showName={showNames}
           />
         </div>
@@ -406,6 +412,7 @@ function CollapsedRail({
                   size={32}
                 />
                 {unseen > 0 && <UnseenBadge count={unseen} />}
+                <ThreadKindIcon platform={c.platform} isComment={c.isComment} />
                 </span>
                 {showNames && (
                   <span className={`min-w-0 flex-1 truncate text-xs ${c.unread || unseen > 0 ? "font-semibold" : ""}`}>
@@ -671,7 +678,13 @@ function useCurrentLooseThread(): LooseThread | null {
 /** Đầu sidebar: avatar + chọn kênh Zalo của tôi + tình trạng kênh (thay chữ "Chat Zalo"). */
 function ChannelSwitcher() {
   const { usable, channel } = useActiveChannel();
-  const setPagePid = useChatSidebarStore((s) => s.setPagePid);
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+  // Đổi kênh → về danh sách hội thoại của kênh mới (bỏ hội thoại / khách đang mở)
+  const switchChannel = (pagePid: string) => {
+    const st = useChatSidebarStore.getState();
+    st.selectCustomer(null, userId);
+    st.setPagePid(pagePid);
+  };
   if (!channel) {
     return (
       <>
@@ -693,14 +706,21 @@ function ChannelSwitcher() {
       {usable.length >= 2 ? (
         <select
           value={channel.pagePid}
-          onChange={(e) => setPagePid(e.target.value)}
-          title="Kênh Zalo gửi tin"
+          onChange={(e) => switchChannel(e.target.value)}
+          title={`Kênh gửi tin · ${platformLabel(channel.platform)}`}
           className="min-w-0 max-w-[180px] shrink rounded border px-2 py-1 text-sm font-medium"
         >
-          {usable.map((c) => (
-            <option key={c.pagePid} value={c.pagePid}>
-              {c.name}
-            </option>
+          {/* Nhóm theo loại kênh: Zalo cá nhân, Zalo OA, Facebook… (giữ thứ tự xuất hiện) */}
+          {[...new Set(usable.map((c) => c.platform))].map((pf) => (
+            <optgroup key={pf} label={platformLabel(pf)}>
+              {usable
+                .filter((c) => c.platform === pf)
+                .map((c) => (
+                  <option key={c.pagePid} value={c.pagePid}>
+                    {c.name}
+                  </option>
+                ))}
+            </optgroup>
           ))}
         </select>
       ) : (
@@ -833,14 +853,18 @@ function useCurrentGroup(ctx: ChatContext | undefined) {
   return { group, customers };
 }
 
-/** Chuyển sang khách khác cùng nhóm (vẫn mở nhóm đó). */
+/** Chuyển sang khách khác cùng nhóm / cùng hội thoại kênh khác (vẫn mở hội thoại đó). */
 function useSwitchGroupCustomer() {
   const userId = useAuthStore((s) => s.user?.id ?? null);
   return (c: LinkedCustomer) => {
     const st = useChatSidebarStore.getState();
+    const kind = st.kind;
     st.selectCustomer({ id: c.id, code: c.code, name: c.name }, userId);
-    st.setKind("group");
-    st.setGroupId(c.contactId);
+    // Kênh khác Zalo cá nhân: hội thoại chọn theo kênh, không theo Trực tiếp/Nhóm
+    if (kind === "group") {
+      st.setKind("group");
+      st.setGroupId(c.contactId);
+    }
   };
 }
 
@@ -1012,18 +1036,19 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
       </Notice>
     );
   }
-  if (channel.platform !== "zaloweb") {
-    return (
-      <Notice>
-        Chưa hỗ trợ chat qua Zalo OA (<b>{channel.name}</b>) trong POS. Hãy liên
-        kết thêm một kênh Zalo cá nhân. {settingsLink}
-      </Notice>
-    );
-  }
-
-  const { user, groups } = ctx.contacts;
+  // Zalo cá nhân: ID Zalo / nhóm của khách; kênh khác (OA, Facebook, Shopee…): hội thoại đã gắn đúng kênh
+  const zaloweb = channel.platform === "zaloweb";
+  const { user, groups, others } = ctx.contacts;
   const group = groups.find((g) => g.id === groupId) ?? groups[0];
-  const contact = kind === "group" ? group : user;
+  const other = zaloweb ? undefined : others.find((c) => c.pagePid === channel.pagePid);
+  const contact = zaloweb ? (kind === "group" ? group : user) : other;
+  // Khách cùng gắn hội thoại kênh khác này (vd 1 fanpage chat chung nhiều chi nhánh)
+  const otherCustomers: LinkedCustomer[] = other
+    ? [
+        { id: ctx.customer.id, code: ctx.customer.code, name: ctx.customer.name, contactId: other.id },
+        ...other.sharedWith,
+      ].sort((a, b) => a.contactId - b.contactId)
+    : [];
   const missingOthers = channels.filter((c) => c.missing);
 
   const sendDisabledReason = !canSend
@@ -1033,14 +1058,17 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
       : null;
 
   const recipientLabel = contact
-    ? kind === "group"
-      ? `Nhóm ${contact.name ?? ""} (ID ${contact.zaloId})`
-      : `${contact.name || ctx.customer.name} (ID ${contact.zaloId})`
+    ? !zaloweb
+      ? `${platformLabel(channel.platform)} · ${contact.name || ctx.customer.name}`
+      : kind === "group"
+        ? `Nhóm ${contact.name ?? ""} (ID ${contact.zaloId})`
+        : `${contact.name || ctx.customer.name} (ID ${contact.zaloId})`
     : "";
 
   // Trực tiếp / Nhóm + quản lý ID Zalo — nằm cùng hàng với avatar & tên Zalo của khách
   const toolbar = (
     <div className="flex items-center gap-1">
+      {zaloweb && (
       <div className="inline-flex rounded-md border overflow-hidden text-sm">
         <button
           onClick={() => {
@@ -1067,6 +1095,7 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
           Nhóm
         </button>
       </div>
+      )}
       <button
         onClick={() => setManaging(!managing)}
         title="ID Zalo của khách"
@@ -1077,7 +1106,7 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
     </div>
   );
   const groupSelect =
-    kind === "group" && groups.length >= 2 ? (
+    zaloweb && kind === "group" && groups.length >= 2 ? (
       <select
         value={group?.id}
         onChange={(e) => setGroupId(Number(e.target.value))}
@@ -1129,7 +1158,7 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
       ) : contact ? (
         <ChatThread
           key={`${channel.pagePid}-${contact.id}`}
-          source={customerSource(ctx.customer.id, channel.pagePid, contact)}
+          source={customerSource(ctx.customer.id, channel, contact)}
           channelName={channel.name}
           recipientLabel={recipientLabel}
           confirmBeforeSend={ctx.confirmBeforeSend}
@@ -1137,7 +1166,15 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
           ctx={ctx}
           headerActions={toolbar}
           headerExtra={
-            kind === "group" && group ? (
+            other ? (
+              <GroupCustomersBar
+                group={other}
+                link={{ kind: "user", pagePid: channel.pagePid }}
+                customers={otherCustomers}
+                currentId={ctx.customer.id}
+                onSelect={switchCustomer}
+              />
+            ) : zaloweb && kind === "group" && group ? (
               <>
                 {groupSelect}
                 <GroupCustomersBar
@@ -1154,7 +1191,17 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
         />
       ) : (
         <div className="flex-1 overflow-y-auto p-4 text-sm">
-          {adding ? (
+          {!zaloweb ? (
+            <div className="text-center text-gray-500 py-6">
+              <p className="mb-1">
+                Khách chưa gắn hội thoại trên kênh <b>{channel.name}</b> ({platformLabel(channel.platform)}).
+              </p>
+              <p>
+                Bấm nút <Users className="inline h-3.5 w-3.5" /> ở trên, mở hội thoại của khách trong danh sách gần đây
+                của kênh này rồi gắn khách POS.
+              </p>
+            </div>
+          ) : adding ? (
             <ZaloContactEditor
               customerId={ctx.customer.id}
               kind={kind}

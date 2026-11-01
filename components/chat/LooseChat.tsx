@@ -13,8 +13,12 @@ import { useChatSidebarStore, type ChatCustomerRef } from "@/lib/store/chatSideb
 import { useCustomersInViewStore } from "@/lib/store/customersInView";
 import { useActiveChannel } from "@/lib/chat/channels";
 import { looseSource } from "@/lib/chat/threadSource";
+import { platformLabel } from "@/lib/chat/platforms";
 import type { LinkedCustomer, LooseThread } from "@/lib/types/smaxChat";
 import { ChatThread } from "./ChatThread";
+import { LeadFormModal } from "@/components/leads/LeadFormModal";
+import { LEAD_FIRST_PLATFORMS, PLATFORM_TO_SOURCE } from "@/lib/leads/constants";
+import Link from "next/link";
 import { CustomerSearchSelect, linkGroupCustomers } from "./GroupCustomersBar";
 
 /**
@@ -47,7 +51,9 @@ export function LooseChat({ thread }: { thread: LooseThread }) {
         key={source.key}
         source={source}
         channelName={channel?.name ?? ""}
-        recipientLabel={`${thread.isGroup ? "Nhóm " : ""}${name} (ID ${thread.zaloId}) — chưa gắn khách POS`}
+        recipientLabel={`${
+          (thread.platform ?? "zaloweb") === "zaloweb" ? "" : `${platformLabel(thread.platform)} · `
+        }${thread.isGroup ? "Nhóm " : ""}${name} (ID ${thread.zaloId}) — chưa gắn khách POS`}
         confirmBeforeSend={profile?.confirmBeforeSend ?? true}
         sendDisabledReason={sendDisabledReason}
         ctx={null}
@@ -93,14 +99,21 @@ async function guessCustomerByName(zaloName: string): Promise<ChatCustomerRef | 
 
 function LinkCustomerBar({ thread, zaloName }: { thread: LooseThread; zaloName: string }) {
   const canManage = useCan("smax_chat", "manage_contacts");
+  const canCreateLead = useCan("leads", "update");
+  const { channels } = useActiveChannel();
+  const [creatingLead, setCreatingLead] = useState(false);
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const inView = useCustomersInViewStore((s) => s.entries);
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
+  // Facebook / Tiktok: ưu tiên tạo lead; phần gắn khách POS chỉ hiện khi SĐT trùng khách (gợi ý) hoặc bấm mở
+  const leadFirst = LEAD_FIRST_PLATFORMS.has(thread.platform ?? "") && !thread.isGroup;
+  const [showLink, setShowLink] = useState(false);
+  const linkMode = !leadFirst || !!thread.suggestion || showLink;
   const { data: byName } = useQuery({
     queryKey: ["chatLinkByName", zaloName],
     queryFn: () => guessCustomerByName(zaloName),
-    enabled: canManage && !thread.suggestion && zaloName.trim().length >= 2,
+    enabled: canManage && linkMode && !thread.suggestion && zaloName.trim().length >= 2,
     staleTime: 5 * 60_000,
   });
 
@@ -123,10 +136,13 @@ function LinkCustomerBar({ thread, zaloName }: { thread: LooseThread; zaloName: 
       if (thread.isGroup) {
         linked = await linkGroupCustomers(picked, { zaloId: thread.zaloId, name: zaloName || undefined });
       } else {
+        // Kênh khác Zalo cá nhân: lưu tid hội thoại kèm kênh (ID khách riêng theo từng trang)
+        const zaloweb = (thread.platform ?? "zaloweb") === "zaloweb";
         const contact = await smaxChatApi.createContact(picked[0].id, {
           kind: "user",
-          zaloId: thread.zaloId,
+          zaloId: zaloweb ? thread.zaloId : thread.tid,
           name: zaloName || undefined,
+          ...(zaloweb ? {} : { pagePid: thread.pagePid }),
         });
         linked = [{ ...picked[0], contactId: contact.id }];
       }
@@ -151,12 +167,96 @@ function LinkCustomerBar({ thread, zaloName }: { thread: LooseThread; zaloName: 
     }
   };
 
+  const leadForm = creatingLead && (
+    <LeadFormModal
+      initial={{
+        name: zaloName,
+        phone: thread.phones?.[0]?.replace(/^\+?84(?=\d{9}$)/, "0"),
+        source: PLATFORM_TO_SOURCE[thread.platform ?? "zaloweb"],
+        channelPid: thread.pagePid,
+        channelName: channels.find((c) => c.pagePid === thread.pagePid)?.name,
+        conversation: {
+          pagePid: thread.pagePid,
+          tid: thread.tid,
+          platform: thread.platform ?? "zaloweb",
+          isGroup: thread.isGroup,
+          name: zaloName,
+        },
+      }}
+      onClose={() => setCreatingLead(false)}
+      onSaved={(lead) => {
+        // Hội thoại đang mở mang nhãn lead ngay (không chờ tải lại danh sách)
+        const st = useChatSidebarStore.getState();
+        if (st.loose?.tid === thread.tid) st.openLoose({ ...thread, lead: { id: lead.id, name: lead.name, status: lead.status } }, userId);
+      }}
+    />
+  );
+
+  if (!linkMode) {
+    return (
+      <div className="flex items-center gap-2 border-b bg-violet-50 px-3 py-2 text-sm">
+        <UserPlus className="h-4 w-4 shrink-0 text-violet-700" />
+        <span className="flex-1 font-medium text-violet-900">
+          {thread.lead
+            ? "Khách tiềm năng đã có lead — CSKH chăm sóc rồi chuyển cho Sale"
+            : "Khách tiềm năng — tạo lead để CSKH chăm sóc và chuyển cho Sale"}
+        </span>
+        {thread.lead ? (
+          <Link
+            href={`/khach-hang/lead?id=${thread.lead.id}`}
+            className="shrink-0 rounded-md bg-violet-100 px-2 py-1 text-xs font-medium text-violet-700 hover:underline">
+            Lead · {thread.lead.name}
+          </Link>
+        ) : (
+          canCreateLead && (
+            <button
+              onClick={() => setCreatingLead(true)}
+              className="shrink-0 rounded-md bg-violet-600 px-3 py-1 text-xs font-medium text-white hover:bg-violet-700">
+              + Tạo lead
+            </button>
+          )
+        )}
+        {canManage && (
+          <button
+            onClick={() => setShowLink(true)}
+            title="Khách đã mua hàng — gắn hội thoại vào khách POS"
+            className="shrink-0 text-xs text-gray-500 hover:text-brand hover:underline">
+            Gắn khách POS
+          </button>
+        )}
+        {leadForm}
+      </div>
+    );
+  }
+
   return (
     <div className="border-b bg-amber-50 px-3 py-2 text-sm">
       <p className="mb-1.5 flex items-center gap-1.5 font-medium text-amber-900">
         <UserPlus className="h-4 w-4 shrink-0" />
-        Hội thoại chưa gắn khách POS — gắn để xem công nợ, đơn hàng và gửi nhanh thông tin
+        <span className="flex-1">
+          {leadFirst && thread.suggestion
+            ? "SĐT trùng khách POS — gắn để xem công nợ, đơn hàng và gửi nhanh thông tin"
+            : "Hội thoại chưa gắn khách POS — gắn để xem công nợ, đơn hàng và gửi nhanh thông tin"}
+        </span>
+        {thread.lead ? (
+          <Link
+            href={`/khach-hang/lead?id=${thread.lead.id}`}
+            className="shrink-0 rounded-md bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700 hover:underline">
+            Lead · {thread.lead.name}
+          </Link>
+        ) : (
+          canCreateLead &&
+          !thread.isGroup && (
+            <button
+              onClick={() => setCreatingLead(true)}
+              title="Khách tiềm năng chưa có đơn — tạo lead mang sẵn hội thoại này"
+              className="shrink-0 rounded-md border border-violet-300 bg-white px-2 py-0.5 text-xs font-medium text-violet-700 hover:bg-violet-50">
+              + Tạo lead
+            </button>
+          )
+        )}
       </p>
+      {leadForm}
       {!canManage ? (
         <p className="text-xs text-amber-800">Bạn chưa có quyền quản lý ID Zalo của khách để gắn.</p>
       ) : (

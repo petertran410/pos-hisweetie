@@ -56,6 +56,8 @@ interface Props {
   restore?: { draft: ChatDraft; nonce: number } | null;
   // Sticker đã xuất hiện trong hội thoại — nhóm "Trong hội thoại" của bảng sticker
   threadStickerIds?: string[];
+  // Kênh gửi được sticker Zalo (chỉ Zalo cá nhân) — tắt thì bảng chỉ còn emoji
+  allowSticker?: boolean;
   // Khóa bản nháp theo hội thoại (đổi Trực tiếp/Nhóm/khách không mất chữ đang soạn)
   draftKey: string;
   // Đang trả lời tin này (hiện khung trích dẫn, bấm ✕ để bỏ)
@@ -96,6 +98,7 @@ export function ChatComposer({
   onSend,
   restore,
   threadStickerIds = [],
+  allowSticker = true,
   draftKey,
   replyTo,
   onCancelReply,
@@ -517,7 +520,7 @@ export function ChatComposer({
         <EmojiStickerPicker
           threadStickerIds={threadStickerIds}
           onEmoji={insertEmoji}
-          onSticker={sendSticker}
+          onSticker={allowSticker ? sendSticker : undefined}
           onClose={() => setPickerOpen(false)}
         />
       )}

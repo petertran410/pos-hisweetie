@@ -4,8 +4,11 @@ export interface ZaloContact {
   id: number;
   customerId: number;
   kind: ZaloContactKind;
+  // Zalo cá nhân: số Zalo; kênh khác (Zalo OA, Facebook, Shopee…): tid hội thoại (fb…, zl…, sp…)
   zaloId: string;
   name: string | null;
+  // Kênh của hội thoại kênh khác (null = ID Zalo cá nhân, dùng với mọi kênh Zalo cá nhân)
+  pagePid?: string | null;
 }
 
 export interface ChatChannel {
@@ -32,7 +35,12 @@ export interface ChatContext {
   salePic: { id: number; name: string } | null;
   myChannels: ChatChannel[];
   // sharedWith: khách khác cùng gắn nhóm này
-  contacts: { user: ZaloContact | null; groups: (ZaloContact & { sharedWith: LinkedCustomer[] })[] };
+  contacts: {
+    user: ZaloContact | null;
+    groups: (ZaloContact & { sharedWith: LinkedCustomer[] })[];
+    // Hội thoại trên kênh khác Zalo cá nhân, mỗi cái gắn 1 kênh (pagePid)
+    others: (ZaloContact & { sharedWith: LinkedCustomer[] })[];
+  };
   // null = không có quyền xem công nợ
   debt: number | null;
   recentOrders: { id: number; code: string; date: string; total: number; status: string | null }[];
@@ -140,6 +148,19 @@ export interface RecentChat {
   tid: string;
   zaloId: string;
   pagePid: string;
+  // zaloweb, zalo (OA), facebook, instagram, tiktokweb, shopee, custom…
+  platform: string;
+  // Bình luận bài viết (Facebook…), khác tin nhắn Messenger
+  isComment?: boolean;
+  // SĐT khách Smax thu được (Facebook…) — điền sẵn khi tạo lead
+  phones?: string[];
+  // Đã gắn lead (trang Lead) → hiện "Lead · tên", tránh tạo trùng
+  lead?: { id: number; name: string; status: string } | null;
+  // Messenger: META_AI = Meta Business AI đang trả lời; bật được khi canPassControlAI
+  controlledBy?: string | null;
+  canPassControlAI?: boolean;
+  // Smax báo trả lời được qua API (Facebook ngoài 24h, Shopee… thường không)
+  canReply: boolean;
   channelName: string;
   name: string;
   isGroup: boolean;
@@ -162,6 +183,8 @@ export interface RecentChat {
         customers: LinkedCustomer[];
       }
     | { type: "byCode"; customer: { id: number; code: string | null; name: string } }
+    // Gợi ý theo SĐT khách Smax thu được (Facebook…)
+    | { type: "byPhone"; customer: { id: number; code: string | null; name: string } }
     | null;
 }
 
@@ -175,6 +198,15 @@ export interface ZaloProfile {
   memberPreview: { name: string | null; avatar: string | null }[];
   // Chỉ chat trực tiếp; null nếu không tra được
   friend: { isFriend: boolean; isRequested: boolean; isRequesting: boolean } | null;
+  platform?: string;
+  // false = Smax báo không trả lời được qua API (Facebook ngoài 24h, Shopee…)
+  canReply?: boolean;
+  // Bình luận bài viết Facebook: link bài viết (kèm comment_id)
+  isComment?: boolean;
+  commentUrl?: string | null;
+  // Messenger: META_AI = Meta Business AI đang trả lời; bật được khi canPassControlAI
+  controlledBy?: string | null;
+  canPassControlAI?: boolean;
   smaxUrl: string;
   // Môi trường thử nghiệm: hỏi xác nhận trước khi gửi
   confirmBeforeSend?: boolean;
@@ -193,6 +225,8 @@ export interface SendBody {
   replyToPid?: string;
   // Chuyển tiếp ảnh/tệp đã có trên máy chủ Zalo
   forwardMedia?: { url: string; kind: "image" | "file" }[];
+  // Messenger: gửi kèm thẻ HUMAN_AGENT → lấy lại quyền trả lời từ Meta Business AI
+  humanAgent?: boolean;
   confirmed?: boolean;
 }
 
@@ -203,6 +237,10 @@ export interface LooseThread {
   zaloId: string;
   isGroup: boolean;
   name: string;
-  // Khách đoán theo mã trong tên nhóm — gợi ý gắn nhanh
+  // Nền tảng của kênh (thiếu = Zalo cá nhân, dữ liệu lưu từ trước)
+  platform?: string;
+  phones?: string[];
+  lead?: { id: number; name: string; status: string } | null;
+  // Khách đoán theo mã trong tên nhóm / SĐT — gợi ý gắn nhanh
   suggestion?: { id: number; code: string | null; name: string } | null;
 }

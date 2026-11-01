@@ -28,6 +28,10 @@ export const smaxChatApi = {
   react: (body: { pagePid: string; tid: string; pid: string; reaction: string; confirmed?: boolean }) =>
     apiClient.post("/smax/chat/threads/reaction", body),
 
+  // Bật Meta Business AI trả lời hội thoại Messenger (tắt = gửi tin kèm humanAgent)
+  passControlAI: (body: { pagePid: string; tid: string; confirmed?: boolean }) =>
+    apiClient.post("/smax/chat/threads/meta-ai", body),
+
   // recall = thu hồi cả 2 phía; delete = xoá phía mình
   messageAction: (body: { pagePid: string; tid: string; pid: string; action: "recall" | "delete"; confirmed?: boolean }) =>
     apiClient.post("/smax/chat/threads/message-action", body),
@@ -98,7 +102,8 @@ export const smaxChatApi = {
 
   createContact: (
     customerId: number,
-    body: { kind: ZaloContactKind; zaloId: string; name?: string }
+    // zaloId: số Zalo, hoặc tid hội thoại kênh khác (fb…, zl…) kèm pagePid
+    body: { kind: ZaloContactKind; zaloId: string; name?: string; pagePid?: string }
   ): Promise<ZaloContact> => apiClient.post(`${base(customerId)}/contacts`, body),
 
   updateContact: (customerId: number, contactId: number, body: { name?: string }) =>

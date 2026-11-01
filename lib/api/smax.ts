@@ -3,7 +3,8 @@ import { apiClient } from "@/lib/config/api";
 export interface SmaxZaloChannel {
   pagePid: string;
   name: string;
-  platform: "zalo" | "zaloweb" | string;
+  // zaloweb (Zalo cá nhân), zalo (OA), facebook, instagram, tiktokweb, shopee, custom (website)…
+  platform: string;
   active: boolean;
   // Mất kết nối Zalo (token lỗi) — Smax vẫn để active=true
   connectionError: { at: string; note: string | null } | null;
