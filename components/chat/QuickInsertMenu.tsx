@@ -42,7 +42,10 @@ function useDebounced(value: string, ms = 300) {
   return v;
 }
 
-/** Các lựa chọn của menu "/": gợi ý từ màn hình bên trái, sản phẩm, hóa đơn, đặt hàng, công nợ. */
+/**
+ * Các lựa chọn của menu "/": gợi ý từ màn hình bên trái, sản phẩm, hóa đơn, đặt hàng, công nợ.
+ * ctx null (chưa gắn khách POS): chỉ có sản phẩm.
+ */
 export function useQuickOptions(query: string, ctx: ChatContext | null, enabled: boolean) {
   const entries = usePosInViewStore((s) => s.entries);
   const branchId = useBranchStore((s) => s.selectedBranch?.id);
@@ -52,7 +55,6 @@ export function useQuickOptions(query: string, ctx: ChatContext | null, enabled:
   const q = useDebounced(query.trim());
   const search = q.length >= 2 ? q : "";
   const customerId = ctx?.customer.id ?? 0;
-  enabled = enabled && !!ctx;
 
   const products = useProducts(
     { search, limit: 8, isActive: true, branchId },
@@ -61,13 +63,13 @@ export function useQuickOptions(query: string, ctx: ChatContext | null, enabled:
   const invoices = useQuery({
     queryKey: ["chatQuickInvoices", customerId, search],
     queryFn: () => invoicesApi.getInvoices({ search, customerIds: [customerId], pageSize: 5 }),
-    enabled: enabled && canInvoices && !!search,
+    enabled: enabled && !!ctx && canInvoices && !!search,
     retry: false,
   });
   const orders = useQuery({
     queryKey: ["chatQuickOrders", customerId, search],
     queryFn: () => ordersApi.getOrders({ search, customerId, limit: 5 }),
-    enabled: enabled && canOrders && !!search,
+    enabled: enabled && !!ctx && canOrders && !!search,
     retry: false,
   });
 
@@ -85,6 +87,8 @@ export function useQuickOptions(query: string, ctx: ChatContext | null, enabled:
 
     // Gợi ý: mục đang mở bên trái (mới mở lên đầu) + công nợ khách đang chat
     for (const e of Object.values(entries).reverse()) {
+      // Chưa gắn khách POS: chỉ gợi ý sản phẩm
+      if (!ctx && e.type !== "product") continue;
       if (e.type === "cart") {
         if (e.lines.length && match("gio hang bao gia", e.label))
           push({
