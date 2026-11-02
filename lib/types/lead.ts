@@ -1,4 +1,4 @@
-export type LeadSource = "facebook" | "tiktok" | "shopee" | "zalo_oa" | "website" | "direct" | "other";
+export type LeadSource = "facebook" | "tiktok" | "shopee" | "zalo_oa" | "zalo_user" | "website" | "direct" | "other";
 export type LeadCategory = "cafe" | "chain" | "distributor" | "training";
 export type LeadStatus = "new" | "caring" | "handed_over" | "converted" | "cancelled";
 
@@ -14,7 +14,8 @@ export interface LeadConversation {
 
 export type HandoverStepKey = "lark" | "friend" | "greeting";
 export interface HandoverStep {
-  status: "pending" | "ok" | "failed";
+  /** skipped: lỗi chấp nhận được (khách chặn tin người lạ), không chặn hoàn tất chuyển giao */
+  status: "pending" | "ok" | "failed" | "skipped";
   at?: string;
   error?: string;
 }

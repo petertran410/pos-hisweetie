@@ -9,7 +9,7 @@ import { useColumnVisibility, type ColumnConfig } from "@/lib/hooks/useColumnVis
 import { useCan } from "@/lib/hooks/useCan";
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
 import { TablePagination } from "@/components/shared/TablePagination";
-import { ThreadKindLogo } from "@/components/chat/ThreadKindIcon";
+import { LeadSourceLogo } from "./LeadSourceLogo";
 import { CustomTooltip } from "@/components/ui/CustomTooltip";
 import {
   LEAD_CATEGORY_LABEL,
@@ -33,7 +33,7 @@ const DEFAULT_COLUMNS: ColumnConfig<Lead>[] = [
     visible: true,
     render: (l) => (
       <span className="inline-flex items-center gap-1.5">
-        {l.source === "facebook" && <ThreadKindLogo className="h-3.5 w-3.5" />}
+        <LeadSourceLogo source={l.source} />
         {LEAD_SOURCE_LABEL[l.source]}
       </span>
     ),

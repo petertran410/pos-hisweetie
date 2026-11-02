@@ -5,6 +5,7 @@ export const LEAD_SOURCE_LABEL: Record<LeadSource, string> = {
   tiktok: "Tiktok",
   shopee: "Shopee",
   zalo_oa: "Zalo OA",
+  zalo_user: "Zalo User",
   website: "Website",
   direct: "Trực tiếp",
   other: "Khác",
@@ -33,7 +34,7 @@ export const LEAD_STATUS_COLOR: Record<LeadStatus, string> = {
   cancelled: "bg-gray-100 text-gray-500",
 };
 
-// Nền tảng kênh Smax → nguồn lead (Zalo cá nhân không phải nguồn → để CSKH chọn)
+// Nền tảng kênh Smax → nguồn lead
 export const PLATFORM_TO_SOURCE: Record<string, LeadSource> = {
   facebook: "facebook",
   instagram: "facebook",
@@ -41,6 +42,7 @@ export const PLATFORM_TO_SOURCE: Record<string, LeadSource> = {
   tiktokweb: "tiktok",
   shopee: "shopee",
   zalo: "zalo_oa",
+  zaloweb: "zalo_user",
   custom: "website",
 };
 
@@ -50,6 +52,7 @@ export const SOURCE_PLATFORMS: Record<LeadSource, string[]> = {
   tiktok: ["tiktok", "tiktokweb"],
   shopee: ["shopee"],
   zalo_oa: ["zalo"],
+  zalo_user: ["zaloweb"],
   website: ["custom"],
   direct: [],
   other: [],

@@ -7,7 +7,7 @@ import { FileText, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { leadsApi } from "@/lib/api/leads";
 
-const VARS = ["{tên khách}", "{tên sale}", "{sđt}", "{phân loại}", "{nhu cầu}", "{ghi chú}", "{link}"];
+const VARS = ["{tên khách}", "{tên sale}", "{sđt}", "{phân loại}", "{khu vực}", "{phường}", "{nhu cầu}", "{ghi chú}", "{link}"];
 
 /** Mẫu tin chuyển giao lead (để trống = mẫu mặc định). */
 export function LeadTemplatesModal({ onClose }: { onClose: () => void }) {
