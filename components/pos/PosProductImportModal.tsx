@@ -27,6 +27,8 @@ interface ParsedRow {
   /** Số dòng trong file Excel (tính cả dòng tiêu đề) để người dùng dễ dò. */
   rowNumber: number;
   code: string;
+  /** Tên trong file: để dễ đọc; chỉ dùng tìm SP khi dòng không có mã. */
+  name: string;
   quantityRaw: string;
   unitRaw: string;
   priceRaw: string;
@@ -34,6 +36,7 @@ interface ParsedRow {
 }
 
 interface PreviewRow extends ParsedRow {
+  productCode?: string;
   productName?: string;
   unitLabel?: string;
   displayQuantity?: number;
@@ -43,13 +46,17 @@ interface PreviewRow extends ParsedRow {
   warnings: string[];
 }
 
-type ParsedField = "code" | "quantity" | "unit" | "price" | "note";
+type ParsedField = "code" | "name" | "quantity" | "unit" | "price" | "note";
 
 // Key đã bỏ dấu + chữ thường (xem `toKey`).
 const HEADER_MAP: Record<string, ParsedField> = {
   "ma hang": "code",
   "ma san pham": "code",
   "ma sp": "code",
+  "ten san pham": "name",
+  "ten hang": "name",
+  "ten hang hoa": "name",
+  "ten sp": "name",
   "so luong": "quantity",
   sl: "quantity",
   "don vi": "unit",
@@ -129,8 +136,10 @@ function parseExcel(file: File): Promise<ParsedRow[]> {
           const field = HEADER_MAP[toKey(header)];
           if (field && !fieldMap[field]) fieldMap[field] = header;
         }
-        if (!fieldMap.code) {
-          throw new Error('Không tìm thấy cột "Mã hàng" trong file Excel');
+        if (!fieldMap.code && !fieldMap.name) {
+          throw new Error(
+            'Không tìm thấy cột "Mã hàng" hoặc "Tên sản phẩm" trong file Excel',
+          );
         }
         if (!fieldMap.quantity) {
           throw new Error('Không tìm thấy cột "Số lượng" trong file Excel');
@@ -144,12 +153,13 @@ function parseExcel(file: File): Promise<ParsedRow[]> {
             .map((raw, index) => ({
               rowNumber: index + 2,
               code: read(raw, "code"),
+              name: read(raw, "name"),
               quantityRaw: read(raw, "quantity"),
               unitRaw: read(raw, "unit"),
               priceRaw: read(raw, "price"),
               note: read(raw, "note"),
             }))
-            .filter((row) => row.code),
+            .filter((row) => row.code || row.name),
         );
       } catch (error: unknown) {
         reject(
@@ -165,15 +175,30 @@ function parseExcel(file: File): Promise<ParsedRow[]> {
 }
 
 function downloadTemplate() {
-  const headers = ["Mã hàng", "Số lượng", "Đơn vị", "Đơn giá", "Ghi chú"];
+  const headers = [
+    "Mã hàng",
+    "Tên sản phẩm",
+    "Số lượng",
+    "Đơn vị",
+    "Đơn giá",
+    "Ghi chú",
+  ];
   const sample = [
-    ["SP000001", 10, "", "", "Đơn giá để trống: lấy theo bảng giá"],
-    ["SP000002", 2, "Thùng", "", "2 thùng, tự quy đổi ra gói"],
-    ["SP000003", 5, "Gói", 45000, "Giá bán riêng cho đơn này"],
+    [
+      "SP000001",
+      "Sản phẩm A",
+      10,
+      "",
+      "",
+      "Đơn giá để trống: lấy theo bảng giá",
+    ],
+    ["SP000002", "Sản phẩm B", 2, "Thùng", "", "2 thùng, tự quy đổi ra gói"],
+    ["SP000003", "Sản phẩm C", 5, "Gói", 45000, "Giá bán riêng cho đơn này"],
   ];
   const sheet = XLSX.utils.aoa_to_sheet([headers, ...sample]);
   sheet["!cols"] = [
     { wch: 16 },
+    { wch: 40 },
     { wch: 12 },
     { wch: 12 },
     { wch: 14 },
@@ -184,7 +209,16 @@ function downloadTemplate() {
 
   const guideRows = [
     ["Cột", "Bắt buộc", "Cách điền"],
-    ["Mã hàng", "Có", "Mã sản phẩm, ví dụ SP000001"],
+    [
+      "Mã hàng",
+      "Có (*)",
+      "Mã sản phẩm, ví dụ SP000001. Có mã thì luôn tìm sản phẩm theo mã.",
+    ],
+    [
+      "Tên sản phẩm",
+      "Không (*)",
+      "Để dễ đọc file. (*) Dòng để trống Mã hàng thì tìm theo ĐÚNG tên sản phẩm trên hệ thống (không phân biệt hoa thường, dấu); nhiều sản phẩm trùng tên thì phải điền Mã hàng.",
+    ],
     ["Số lượng", "Có", "Số lớn hơn 0, cho phép số lẻ (ví dụ 1,5)"],
     [
       "Đơn vị",
@@ -204,7 +238,7 @@ function downloadTemplate() {
     ],
   ];
   const guide = XLSX.utils.aoa_to_sheet(guideRows);
-  guide["!cols"] = [{ wch: 12 }, { wch: 10 }, { wch: 100 }];
+  guide["!cols"] = [{ wch: 14 }, { wch: 10 }, { wch: 100 }];
   XLSX.utils.book_append_sheet(workbook, guide, "Hướng dẫn");
 
   XLSX.writeFile(workbook, "Mau_NhapSanPham_BanHang.xlsx");
@@ -245,7 +279,7 @@ export function PosProductImportModal({
     try {
       const parsed = await parseExcel(file);
       if (!parsed.length) {
-        throw new Error("File không có dòng nào có Mã hàng");
+        throw new Error("File không có dòng nào có Mã hàng hoặc Tên sản phẩm");
       }
 
       // Cùng bộ lọc với ô tìm kiếm sản phẩm của trang bán hàng.
@@ -264,8 +298,12 @@ export function PosProductImportModal({
       ]);
 
       const byCode = new Map<string, Product>();
+      const byName = new Map<string, Product[]>();
       for (const product of productRes?.data || []) {
         if (product.code) byCode.set(toKey(product.code), product);
+        const nameKey = toKey(product.name);
+        if (nameKey)
+          byName.set(nameKey, [...(byName.get(nameKey) || []), product]);
       }
       const bookPrices = new Map<number, number>();
       for (const detail of priceBook?.priceBookDetails || []) {
@@ -282,11 +320,29 @@ export function PosProductImportModal({
 
       const previews: PreviewRow[] = parsed.map((row) => {
         const preview: PreviewRow = { ...row, warnings: [] };
-        const product = byCode.get(toKey(row.code));
-        if (!product) {
-          preview.error = "Mã hàng không tồn tại hoặc không được bán trực tiếp";
-          return preview;
+        // Có mã → luôn tìm theo mã. Không có mã → tìm theo đúng tên.
+        let product: Product | undefined;
+        if (row.code) {
+          product = byCode.get(toKey(row.code));
+          if (!product) {
+            preview.error =
+              "Mã hàng không tồn tại hoặc không được bán trực tiếp";
+            return preview;
+          }
+        } else {
+          const matches = byName.get(toKey(row.name)) || [];
+          if (matches.length > 1) {
+            preview.error = `Có ${matches.length} sản phẩm trùng tên — vui lòng điền Mã hàng`;
+            return preview;
+          }
+          product = matches[0];
+          if (!product) {
+            preview.error =
+              "Không tìm thấy sản phẩm theo tên (hoặc không được bán trực tiếp)";
+            return preview;
+          }
         }
+        preview.productCode = product.code;
         preview.productName = product.name;
 
         const inPriceBook = bookPrices.has(product.id);
@@ -384,9 +440,11 @@ export function PosProductImportModal({
         <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4">
           <div className="rounded border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800 space-y-1">
             <p>
-              Cột bắt buộc: <strong>Mã hàng, Số lượng</strong>. Cột tùy chọn:{" "}
-              <strong>Đơn vị</strong> (để trống hoặc Thùng),{" "}
-              <strong>Đơn giá</strong>, <strong>Ghi chú</strong>.
+              Cột bắt buộc: <strong>Mã hàng</strong> (hoặc{" "}
+              <strong>Tên sản phẩm</strong> đúng như trên hệ thống),{" "}
+              <strong>Số lượng</strong>. Cột tùy chọn: <strong>Đơn vị</strong>{" "}
+              (để trống hoặc Thùng), <strong>Đơn giá</strong>,{" "}
+              <strong>Ghi chú</strong>.
             </p>
             <p>
               <strong>Đơn giá</strong> tính cho 1 đơn vị cơ bản (gói), để trống
@@ -468,9 +526,11 @@ export function PosProductImportModal({
                         key={row.rowNumber}
                         className={`border-t ${row.error ? "bg-red-50/50" : ""}`}>
                         <td className="p-2 text-gray-400">{row.rowNumber}</td>
-                        <td className="p-2 whitespace-nowrap">{row.code}</td>
+                        <td className="p-2 whitespace-nowrap">
+                          {row.productCode || row.code || "-"}
+                        </td>
                         <td className="p-2 min-w-[160px]">
-                          {row.productName || "-"}
+                          {row.productName || row.name || "-"}
                         </td>
                         <td className="p-2 text-right">
                           {row.displayQuantity ?? (row.quantityRaw || "-")}
