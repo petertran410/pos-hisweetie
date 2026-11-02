@@ -7,6 +7,7 @@ import {
   rangeToIso,
   type TimeRangeState,
 } from "@/components/shared/TimeRangeFilter";
+import { FilterSearchableSelect } from "@/components/ui/filters";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useSuppliers } from "@/lib/hooks/useSuppliers";
 import {
@@ -171,19 +172,18 @@ export function SupplierReportSidebar({
           <label className="text-sm font-medium text-gray-700 mb-1.5 block">
             Chi nhánh
           </label>
-          <select
-            value={branchId}
-            onChange={(e) => setBranchId(e.target.value)}
-            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-            <option value="">Tất cả</option>
-            {(branches || [])
+          <FilterSearchableSelect
+            options={(branches || [])
               .filter((b: { isActive: boolean }) => b.isActive)
-              .map((b: { id: number; name: string }) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-          </select>
+              .map((b: { id: number; name: string }) => ({
+                value: String(b.id),
+                label: b.name,
+              }))}
+            value={branchId}
+            onChange={setBranchId}
+            placeholder="Tất cả"
+            searchPlaceholder="Tìm chi nhánh..."
+          />
         </div>
 
         {/* ── Nhà cung cấp ── */}
@@ -191,17 +191,16 @@ export function SupplierReportSidebar({
           <label className="text-sm font-medium text-gray-700 mb-1.5 block">
             Nhà cung cấp
           </label>
-          <select
+          <FilterSearchableSelect
+            options={suppliers.map((s) => ({
+              value: String(s.id),
+              label: s.name,
+            }))}
             value={supplierId}
-            onChange={(e) => setSupplierId(e.target.value)}
-            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-            <option value="">Tất cả</option>
-            {suppliers.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+            onChange={setSupplierId}
+            placeholder="Tất cả"
+            searchPlaceholder="Tìm nhà cung cấp..."
+          />
         </div>
       </div>
     </aside>

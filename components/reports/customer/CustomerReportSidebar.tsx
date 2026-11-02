@@ -7,6 +7,7 @@ import {
   rangeToIso,
   type TimeRangeState,
 } from "@/components/shared/TimeRangeFilter";
+import { FilterSearchableSelect } from "@/components/ui/filters";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useCustomerGroups } from "@/lib/hooks/useCustomerGroups";
 import { useCategories } from "@/lib/hooks/useCategories";
@@ -254,19 +255,18 @@ export function CustomerReportSidebar({
           <label className="text-sm font-medium text-gray-700 mb-1.5 block">
             Chi nhánh
           </label>
-          <select
-            value={branchId}
-            onChange={(e) => setBranchId(e.target.value)}
-            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-            <option value="">Tất cả</option>
-            {(branches || [])
+          <FilterSearchableSelect
+            options={(branches || [])
               .filter((b: { isActive: boolean }) => b.isActive)
-              .map((b: { id: number; name: string }) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-          </select>
+              .map((b: { id: number; name: string }) => ({
+                value: String(b.id),
+                label: b.name,
+              }))}
+            value={branchId}
+            onChange={setBranchId}
+            placeholder="Tất cả"
+            searchPlaceholder="Tìm chi nhánh..."
+          />
         </div>
 
         {/* ── Số dòng hiển thị (chỉ tab Dữ liệu) ── */}
@@ -275,14 +275,17 @@ export function CustomerReportSidebar({
             <label className="text-sm font-medium text-gray-700 mb-1.5 block">
               Dòng mỗi trang
             </label>
-            <select
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-              <option value={500}>500</option>
-              <option value={1000}>1000</option>
-              <option value={2000}>2000</option>
-            </select>
+            <FilterSearchableSelect
+              options={["500", "1000", "2000"].map((v) => ({
+                value: v,
+                label: v,
+              }))}
+              value={String(pageSize)}
+              onChange={(v) => setPageSize(Number(v))}
+              searchable={false}
+              allowDeselect={false}
+              showClearOption={false}
+            />
           </div>
         )}
 
@@ -291,19 +294,20 @@ export function CustomerReportSidebar({
           <label className="text-sm font-medium text-gray-700 mb-1.5 block">
             Nhóm khách hàng
           </label>
-          <select
+          <FilterSearchableSelect
+            options={(
+              (customerGroups as any)?.data ||
+              (customerGroups as any) ||
+              []
+            ).map((g: { id: number; name: string }) => ({
+              value: String(g.id),
+              label: g.name,
+            }))}
             value={customerGroupId}
-            onChange={(e) => setCustomerGroupId(e.target.value)}
-            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-            <option value="">Tất cả</option>
-            {((customerGroups as any)?.data || (customerGroups as any) || []).map(
-              (g: { id: number; name: string }) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
-              ),
-            )}
-          </select>
+            onChange={setCustomerGroupId}
+            placeholder="Tất cả"
+            searchPlaceholder="Tìm nhóm khách hàng..."
+          />
         </div>
 
         {/* ── Bộ lọc sản phẩm (chỉ áp dụng cho các báo cáo bán hàng) ── */}
@@ -412,7 +416,7 @@ export function CustomerReportSidebar({
             placeholder="Theo mã, tên, SĐT..."
             value={customerKeyword}
             onChange={(e) => setCustomerKeyword(e.target.value)}
-            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white"
+            className="w-full border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand bg-white"
           />
         </div>
       </div>

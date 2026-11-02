@@ -315,6 +315,10 @@ export interface ProductReportFilters {
   productKeyword?: string;
   categoryLevel?: CategoryLevel;
   categoryValue?: string;
+  // Lọc nhiều nhóm hàng (cùng cấp categoryLevel)
+  categoryValues?: string[];
+  // Lọc theo thương hiệu (id)
+  tradeMarkIds?: number[];
   page?: number;
   limit?: number;
 }
@@ -403,7 +407,9 @@ export const productReportApi = {
   exportExcel: (params: ProductReportFilters) => {
     const url = new URL(`${API_URL}/reports/product/export`);
     Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
+      if (Array.isArray(value)) {
+        value.forEach((v) => url.searchParams.append(key, String(v)));
+      } else if (value !== undefined && value !== null) {
         url.searchParams.append(key, String(value));
       }
     });
@@ -413,7 +419,9 @@ export const productReportApi = {
   exportDetail: (params: ProductReportFilters) => {
     const url = new URL(`${API_URL}/reports/product/invoices/export`);
     Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
+      if (Array.isArray(value)) {
+        value.forEach((v) => url.searchParams.append(key, String(v)));
+      } else if (value !== undefined && value !== null) {
         url.searchParams.append(key, String(value));
       }
     });

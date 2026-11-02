@@ -7,8 +7,14 @@ import {
   rangeToIso,
   type TimeRangeState,
 } from "@/components/shared/TimeRangeFilter";
+import {
+  FilterMultiSelect,
+  FilterSearchableSelect,
+} from "@/components/ui/filters";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
+import { useTrademarks } from "@/lib/hooks/useTrademarks";
+import { TradeMark } from "@/lib/api/trademarks";
 import { dashboardApi } from "@/lib/api/dashboard";
 import {
   useReportAccess,
@@ -41,6 +47,17 @@ const VIEW_TYPES: { value: ProductViewType; label: string }[] = [
   { value: "DamageItem", label: "Hàng hỏng / hủy" },
 ];
 
+const CATEGORY_LEVEL_OPTIONS: { value: CategoryLevel; label: string }[] = [
+  { value: "parent", label: "Nhóm cha" },
+  { value: "middle", label: "Nhóm giữa" },
+  { value: "child", label: "Nhóm con" },
+];
+
+const PAGE_SIZE_OPTIONS = ["500", "1000", "2000"].map((v) => ({
+  value: v,
+  label: v,
+}));
+
 export function ProductReportSidebar({
   viewType,
   onViewTypeChange,
@@ -50,15 +67,25 @@ export function ProductReportSidebar({
 }: Props) {
   const { data: branches } = useBranches();
   const { data: users } = useUsersForFilter();
+  const { data: trademarks } = useTrademarks({ silentForbidden: true });
   const { has } = useReportAccess();
+  const trademarkOptions = useMemo(
+    () =>
+      (trademarks || []).map((t: TradeMark) => ({
+        value: String(t.id),
+        label: t.name,
+      })),
+    [trademarks]
+  );
 
   const [branchId, setBranchId] = useState("");
   const [soldById, setSoldById] = useState("");
   const [productKeyword, setProductKeyword] = useState("");
   const [productKeywordDebounced, setProductKeywordDebounced] = useState("");
   const [categoryLevel, setCategoryLevel] = useState<CategoryLevel>("parent");
-  const [categoryValue, setCategoryValue] = useState("");
+  const [categoryValues, setCategoryValues] = useState<string[]>([]);
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const [tradeMarkIds, setTradeMarkIds] = useState<string[]>([]);
   // Số dòng hiển thị mỗi trang (chế độ Dữ liệu) — cố định 20 cho Biểu đồ.
   const [pageSize, setPageSize] = useState<number>(500);
 
@@ -90,9 +117,8 @@ export function ProductReportSidebar({
   }, [visibleViewTypes, viewType, onViewTypeChange]);
   const showCategory = viewType === "ProductByCategory";
 
-  // Nạp option nhóm hàng theo cấp
+  // Nạp option nhóm hàng theo cấp (bộ lọc Nhóm hàng có ở mọi loại báo cáo)
   useEffect(() => {
-    if (!showCategory) return;
     let alive = true;
     dashboardApi
       .getCategoryOptions(categoryLevel)
@@ -105,7 +131,7 @@ export function ProductReportSidebar({
     return () => {
       alive = false;
     };
-  }, [showCategory, categoryLevel]);
+  }, [categoryLevel]);
 
   // Debounce từ khóa SP
   useEffect(() => {
@@ -122,10 +148,11 @@ export function ProductReportSidebar({
       if (branchId) f.branchId = parseInt(branchId);
       if (soldById && showSoldBy) f.soldById = parseInt(soldById);
       if (productKeywordDebounced) f.productKeyword = productKeywordDebounced;
-      if (showCategory) {
+      // "Theo nhóm hàng" luôn cần cấp nhóm (để gom dòng); view khác chỉ gửi khi đang lọc.
+      if (showCategory || categoryValues.length > 0)
         f.categoryLevel = categoryLevel;
-        if (categoryValue) f.categoryValue = categoryValue;
-      }
+      if (categoryValues.length > 0) f.categoryValues = categoryValues;
+      if (tradeMarkIds.length > 0) f.tradeMarkIds = tradeMarkIds.map(Number);
 
       // "Toàn thời gian" → null → không lọc theo ngày.
       const range = rangeToIso(timeRange);
@@ -148,7 +175,8 @@ export function ProductReportSidebar({
     productKeywordDebounced,
     showCategory,
     categoryLevel,
-    categoryValue,
+    categoryValues,
+    tradeMarkIds,
     timeRange,
     pageSize,
   ]);
@@ -223,19 +251,18 @@ export function ProductReportSidebar({
           <label className="text-sm font-medium text-gray-700 mb-1.5 block">
             Chi nhánh
           </label>
-          <select
-            value={branchId}
-            onChange={(e) => setBranchId(e.target.value)}
-            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-            <option value="">Tất cả</option>
-            {(branches || [])
+          <FilterSearchableSelect
+            options={(branches || [])
               .filter((b: { isActive: boolean }) => b.isActive)
-              .map((b: { id: number; name: string }) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-          </select>
+              .map((b: { id: number; name: string }) => ({
+                value: String(b.id),
+                label: b.name,
+              }))}
+            value={branchId}
+            onChange={setBranchId}
+            placeholder="Tất cả"
+            searchPlaceholder="Tìm chi nhánh..."
+          />
         </div>
 
         {/* ── Số dòng hiển thị (chỉ tab Dữ liệu) ── */}
@@ -244,14 +271,14 @@ export function ProductReportSidebar({
             <label className="text-sm font-medium text-gray-700 mb-1.5 block">
               Dòng mỗi trang
             </label>
-            <select
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-              <option value={500}>500</option>
-              <option value={1000}>1000</option>
-              <option value={2000}>2000</option>
-            </select>
+            <FilterSearchableSelect
+              options={PAGE_SIZE_OPTIONS}
+              value={String(pageSize)}
+              onChange={(v) => setPageSize(Number(v))}
+              searchable={false}
+              allowDeselect={false}
+              showClearOption={false}
+            />
           </div>
         )}
 
@@ -265,47 +292,57 @@ export function ProductReportSidebar({
             placeholder="Tìm tên / mã SP..."
             value={productKeyword}
             onChange={(e) => setProductKeyword(e.target.value)}
-            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white"
+            className="w-full border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand bg-white"
           />
         </div>
 
-        {/* ── Nhóm hàng (ProductByCategory) ── */}
-        {showCategory && (
-          <div className="space-y-2">
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-                Cấp nhóm hàng
-              </label>
-              <select
-                value={categoryLevel}
-                onChange={(e) => {
-                  setCategoryLevel(e.target.value as CategoryLevel);
-                  setCategoryValue("");
-                }}
-                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-                <option value="parent">Nhóm cha</option>
-                <option value="middle">Nhóm giữa</option>
-                <option value="child">Nhóm con</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1.5 block">
-                Nhóm hàng
-              </label>
-              <select
-                value={categoryValue}
-                onChange={(e) => setCategoryValue(e.target.value)}
-                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-                <option value="">Tất cả</option>
-                {categoryOptions.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
-            </div>
+        {/* ── Nhóm hàng (mọi loại báo cáo) ── */}
+        <div className="space-y-2">
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+              Cấp nhóm hàng
+            </label>
+            <FilterSearchableSelect
+              options={CATEGORY_LEVEL_OPTIONS}
+              value={categoryLevel}
+              onChange={(v) => {
+                setCategoryLevel(v as CategoryLevel);
+                setCategoryValues([]);
+              }}
+              searchable={false}
+              allowDeselect={false}
+              showClearOption={false}
+            />
           </div>
-        )}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+              Nhóm hàng
+            </label>
+            <FilterMultiSelect
+              options={categoryOptions.map((o) => ({ value: o, label: o }))}
+              values={categoryValues}
+              onChange={setCategoryValues}
+              placeholder="Tất cả"
+              searchPlaceholder="Tìm nhóm hàng..."
+              multiLabel={(n) => `${n} nhóm hàng`}
+            />
+          </div>
+        </div>
+
+        {/* ── Thương hiệu (mọi loại báo cáo) ── */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+            Thương hiệu
+          </label>
+          <FilterMultiSelect
+            options={trademarkOptions}
+            values={tradeMarkIds}
+            onChange={setTradeMarkIds}
+            placeholder="Tất cả"
+            searchPlaceholder="Tìm thương hiệu..."
+            multiLabel={(n) => `${n} thương hiệu`}
+          />
+        </div>
 
         {/* ── NV bán hàng (ProductByUser) ── */}
         {showSoldBy && (
@@ -313,17 +350,16 @@ export function ProductReportSidebar({
             <label className="text-sm font-medium text-gray-700 mb-1.5 block">
               NV bán hàng
             </label>
-            <select
+            <FilterSearchableSelect
+              options={(users || []).map((u: { id: number; name: string }) => ({
+                value: String(u.id),
+                label: u.name,
+              }))}
               value={soldById}
-              onChange={(e) => setSoldById(e.target.value)}
-              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-              <option value="">Tất cả</option>
-              {(users || []).map((u: { id: number; name: string }) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
+              onChange={setSoldById}
+              placeholder="Tất cả"
+              searchPlaceholder="Tìm nhân viên..."
+            />
           </div>
         )}
       </div>

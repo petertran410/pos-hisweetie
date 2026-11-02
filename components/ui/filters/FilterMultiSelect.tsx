@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Check, Search, X } from "lucide-react";
 import { useDropdownPosition } from "./useDropdownPosition";
+import { foldSearch } from "./foldSearch";
 
 export interface FilterOption {
   value: string;
@@ -74,9 +75,9 @@ export function FilterMultiSelect({
   }, [open, searchable]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = foldSearch(search.trim());
     if (!q) return options;
-    return options.filter((o) => o.label.toLowerCase().includes(q));
+    return options.filter((o) => foldSearch(o.label).includes(q));
   }, [options, search]);
 
   const selectedLabels = useMemo(
