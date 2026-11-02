@@ -54,5 +54,8 @@ export const SOURCE_PLATFORMS: Record<LeadSource, string[]> = {
 // Kênh khách lạ nhắn tới (Facebook, Tiktok): ưu tiên tạo lead; chỉ gợi ý gắn khách POS khi trùng SĐT
 export const LEAD_FIRST_PLATFORMS = new Set(["facebook", "tiktok", "tiktokweb"]);
 
+/** Mã lead hiển thị: LEAD + id 6 chữ số (khớp tìm kiếm ở backend). */
+export const leadCode = (id: number) => `LEAD${String(id).padStart(6, "0")}`;
+
 export const options = <T extends string>(labels: Record<T, string>) =>
   (Object.keys(labels) as T[]).map((value) => ({ value, label: labels[value] }));

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Clock, Loader2, MessageCircle, Pencil, Send, Trash2, UserCheck, XCircle } from "lucide-react";
@@ -14,7 +14,7 @@ import { confirmAction } from "@/lib/chat/confirm";
 import { platformLabel } from "@/lib/chat/platforms";
 import { CustomerForm } from "@/components/customers/CustomerForm";
 import { ThreadKindLogo } from "@/components/chat/ThreadKindIcon";
-import { LEAD_CATEGORY_LABEL, LEAD_SOURCE_LABEL, LEAD_STATUS_COLOR, LEAD_STATUS_LABEL } from "@/lib/leads/constants";
+import { LEAD_CATEGORY_LABEL, LEAD_SOURCE_LABEL, LEAD_STATUS_COLOR, LEAD_STATUS_LABEL, leadCode } from "@/lib/leads/constants";
 import type { HandoverStepKey, LeadConversation, LeadDetail } from "@/lib/types/lead";
 import { LeadFormModal } from "./LeadFormModal";
 import { HANDOVER_STEP_LABEL, LeadHandoverModal } from "./LeadHandoverModal";
@@ -25,6 +25,25 @@ type Tab = "info" | "channels" | "history";
 export function LeadDetailRow({ leadId, colSpan }: { leadId: number; colSpan: number }) {
   const { data: lead, isLoading } = useLead(leadId);
   const [tab, setTab] = useState<Tab>("info");
+  // Khung chi tiết đứng yên khi bảng cuộn ngang: sticky + rộng bằng vùng nhìn thấy của bảng
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const loaded = !!lead;
+  useLayoutEffect(() => {
+    const el = wrapperRef.current;
+    let scrollEl = el?.parentElement ?? null;
+    while (scrollEl && !["auto", "scroll"].includes(getComputedStyle(scrollEl).overflowX)) {
+      scrollEl = scrollEl.parentElement;
+    }
+    if (!el || !scrollEl) return;
+    const box = scrollEl;
+    const update = () => {
+      el.style.width = `${box.clientWidth}px`;
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(box);
+    return () => ro.disconnect();
+  }, [loaded]);
 
   if (isLoading || !lead) {
     return (
@@ -44,30 +63,33 @@ export function LeadDetailRow({ leadId, colSpan }: { leadId: number; colSpan: nu
   return (
     <tr>
       <td colSpan={colSpan} className="p-0">
-        <div className="m-2 rounded-lg border-2 border-brand bg-white">
-          <div className="flex items-center gap-3 px-4 pt-3">
-            <h3 className="text-lg font-semibold">{lead.name}</h3>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${LEAD_STATUS_COLOR[lead.status]}`}>
-              {LEAD_STATUS_LABEL[lead.status]}
-            </span>
+        <div ref={wrapperRef} className="sticky left-0" style={{ width: 0 }}>
+          <div className="m-2 rounded-lg border-2 border-brand bg-white">
+            <div className="flex items-center gap-3 px-4 pt-3">
+              <h3 className="text-lg font-semibold">{lead.name}</h3>
+              <span className="text-sm text-gray-500">{leadCode(lead.id)}</span>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${LEAD_STATUS_COLOR[lead.status]}`}>
+                {LEAD_STATUS_LABEL[lead.status]}
+              </span>
 
-          </div>
-          <div className="flex border-b px-4">
-            {tabs.map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={`px-4 py-2 text-sm font-medium border-b-2 ${
-                  tab === t.key ? "border-brand text-brand" : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}>
-                {t.label}
-              </button>
-            ))}
-          </div>
-          <div className="p-4">
-            {tab === "info" && <InfoTab lead={lead} />}
-            {tab === "channels" && <ChannelsTab lead={lead} />}
-            {tab === "history" && <HistoryTab lead={lead} />}
+            </div>
+            <div className="flex border-b px-4">
+              {tabs.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setTab(t.key)}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 ${
+                    tab === t.key ? "border-brand text-brand" : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <div className="p-4">
+              {tab === "info" && <InfoTab lead={lead} />}
+              {tab === "channels" && <ChannelsTab lead={lead} />}
+              {tab === "history" && <HistoryTab lead={lead} />}
+            </div>
           </div>
         </div>
       </td>
@@ -115,7 +137,10 @@ function InfoTab({ lead }: { lead: LeadDetail }) {
     ["Phân loại", LEAD_CATEGORY_LABEL[lead.category]],
     ["Khu vực", [lead.wardName, lead.provinceName].filter(Boolean).join(", ") || "—"],
     ["CSKH", lead.cskhUser?.name ?? "—"],
-    ["Sale PIC", lead.salePic?.name ?? "—"],
+    [
+      "Sale PIC",
+      lead.salePic ? `${lead.salePic.name}${lead.salePicFromCustomer ? " (theo khách hàng)" : ""}` : "—",
+    ],
     ["Ngày tạo", new Date(lead.createdAt).toLocaleString("vi-VN")],
     [
       "Khách hàng POS",

@@ -57,6 +57,8 @@ export interface Lead {
   createdAt: string;
   cskhUser: { id: number; name: string } | null;
   salePic: { id: number; name: string } | null;
+  /** Lead chưa có Sale PIC → lấy Sale PIC của khách POS đã gắn */
+  salePicFromCustomer?: boolean;
   // Khách POS: đã chuyển đổi (customerId) + khách đã gắn hội thoại của lead
   customers: { id: number; code: string | null; name: string }[];
 }

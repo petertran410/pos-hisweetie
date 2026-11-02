@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Loader2, Send, Truck, X } from "lucide-react";
 import { toast } from "sonner";
 import { smaxChatApi } from "@/lib/api/smaxChat";
+import { FilterSearchableSelect } from "@/components/ui/filters";
 import { useUsers } from "@/lib/hooks/useUsers";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useAuthStore } from "@/lib/store/auth";
@@ -49,6 +50,7 @@ export function DeliveryBookingModal({ invoice, onClose }: { invoice: Invoice; o
 
   const receiver = useMemo(() => buildDefaults(invoice, null), [invoice]);
   const [senderId, setSenderId] = useState<number | null>(userId);
+  const [senderName, setSenderName] = useState("Diệp Trà");
   const [senderPhone, setSenderPhone] = useState("");
   const [branchAddress, setBranchAddress] = useState("");
   const [receiverName, setReceiverName] = useState(cleanName(receiver.receiverName));
@@ -82,7 +84,7 @@ export function DeliveryBookingModal({ invoice, onClose }: { invoice: Invoice; o
 
   const text = [
     "Thông tin người gửi:",
-    line(sender?.name ?? "", senderPhone),
+    line(senderName, senderPhone),
     branchAddress.trim(),
     "Thông tin người nhận:",
     line(receiverName, receiverPhone),
@@ -104,13 +106,15 @@ export function DeliveryBookingModal({ invoice, onClose }: { invoice: Invoice; o
 
   const missing = !sender
     ? "Chọn người gửi"
-    : !receiverName.trim()
-      ? "Nhập tên người nhận"
-      : !receiverAddress.trim()
-        ? "Nhập địa chỉ người nhận"
-        : !payer
-          ? "Chọn bên thanh toán"
-          : null;
+    : !senderName.trim()
+      ? "Nhập tên người gửi"
+      : !receiverName.trim()
+        ? "Nhập tên người nhận"
+        : !receiverAddress.trim()
+          ? "Nhập địa chỉ người nhận"
+          : !payer
+            ? "Chọn bên thanh toán"
+            : null;
   const blocked = target.error
     ? (target.error as Error).message || "Không tải được kênh Zalo đặt xe"
     : target.data?.connectionError
@@ -158,22 +162,23 @@ export function DeliveryBookingModal({ invoice, onClose }: { invoice: Invoice; o
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className={label}>Nhân viên</label>
-                  <select
-                    value={senderId ?? ""}
-                    onChange={(e) => setSenderId(e.target.value ? Number(e.target.value) : null)}
-                    className={input}>
-                    <option value="">— Chọn nhân viên —</option>
-                    {senderOptions?.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name}
-                      </option>
-                    ))}
-                  </select>
+                  <FilterSearchableSelect
+                    size="form"
+                    options={(senderOptions ?? []).map((u) => ({ value: String(u.id), label: u.name }))}
+                    value={senderId ? String(senderId) : ""}
+                    onChange={(v) => setSenderId(v ? Number(v) : null)}
+                    placeholder="— Chọn nhân viên —"
+                    searchPlaceholder="Tìm nhân viên…"
+                  />
                 </div>
                 <div>
                   <label className={label}>SĐT người gửi</label>
                   <input value={senderPhone} onChange={(e) => setSenderPhone(e.target.value)} className={input} />
                 </div>
+              </div>
+              <div>
+                <label className={label}>Tên người gửi</label>
+                <input value={senderName} onChange={(e) => setSenderName(e.target.value)} className={input} />
               </div>
               <div>
                 <label className={label}>
