@@ -29,11 +29,13 @@ import {
   ArrowUpDown,
   AlertTriangle,
   PackageCheck,
+  Truck,
 } from "lucide-react";
 import type {
   Invoice,
   InvoicePackingCreatorLink,
 } from "@/lib/types/invoice";
+import { INVOICE_STATUS } from "@/lib/types/invoice";
 import { getDebtRuleTypeLabel } from "@/lib/api/debt-tracking";
 import { formatCurrency } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
@@ -41,6 +43,8 @@ import { CodeLink } from "../shared/CodeLink";
 import { ColumnToggle } from "../shared/ColumnToggle";
 import { InvoicePickupSummaryModal } from "./InvoicePickupSummaryModal";
 import { MergeInvoicesModal } from "./MergeInvoicesModal";
+import { DeliveryBookingModal } from "./DeliveryBookingModal";
+import { useCan } from "@/lib/hooks/useCan";
 import {
   useColumnVisibility,
   type ColumnConfig,
@@ -577,6 +581,10 @@ export function InvoicesTable({
   const [showPickupSummary, setShowPickupSummary] = useState(false);
   const [showMergeModal, setShowMergeModal] = useState(false);
   const [isMergeValidating, setIsMergeValidating] = useState(false);
+  // Đặt xe nhiều hóa đơn: tải chi tiết (địa chỉ giao, khách) rồi mở modal
+  const [deliveryInvoices, setDeliveryInvoices] = useState<Invoice[] | null>(null);
+  const [isDeliveryLoading, setIsDeliveryLoading] = useState(false);
+  const canBookDelivery = useCan("invoices", "update");
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc" | null>(null);
 
@@ -921,6 +929,33 @@ export function InvoicesTable({
     }
   };
 
+  const handleDeliveryClick = async () => {
+    const usable = selectedInvoices.filter(
+      (inv) => inv.status !== INVOICE_STATUS.CANCELLED
+    );
+    if (!usable.length) {
+      toast.error("Các hóa đơn đã chọn đều đã hủy");
+      return;
+    }
+    if (usable.length > 10) {
+      toast.error("Đặt xe tối đa 10 hóa đơn mỗi lần");
+      return;
+    }
+    if (usable.length < selectedInvoices.length) {
+      toast.warning("Bỏ qua hóa đơn đã hủy");
+    }
+    setIsDeliveryLoading(true);
+    try {
+      setDeliveryInvoices(
+        await Promise.all(usable.map((inv) => invoicesApi.getInvoice(inv.id)))
+      );
+    } catch (err: any) {
+      toast.error(err.message || "Không tải được hóa đơn");
+    } finally {
+      setIsDeliveryLoading(false);
+    }
+  };
+
   const handleExportOverview = async () => {
     setShowExportDropdown(false);
     const currentFilters = {
@@ -1069,7 +1104,7 @@ export function InvoicesTable({
     <PermissionGate resource="invoices" action="view">
       <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
         {/* Toolbar */}
-        <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
+        <div className="border-b px-4 py-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
               Hóa đơn
@@ -1308,41 +1343,41 @@ export function InvoicesTable({
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {/* <PermissionGate resource="invoices" action="create"> */}
-            <button
-              onClick={onCreateClick}
-              className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium flex items-center gap-1.5">
-              <Plus className="w-4 h-4" />
-              Tạo hóa đơn
-            </button>
-            {/* </PermissionGate> */}
-
-            {/* Báo đơn dropdown */}
-            <button
-              onClick={() => setShowPickupSummary(true)}
-              disabled={selectedInvoices.length === 0}
-              title={
-                selectedInvoices.length === 0
-                  ? "Chọn ít nhất một hóa đơn"
-                  : "Tổng hợp hàng đã chọn"
-              }
-              className="px-3 py-1.5 border border-brand text-brand rounded-lg hover:bg-brand-soft text-sm font-medium flex items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-50">
-              <PackageCheck className="w-4 h-4" />
-              Pick-up ({selectedInvoices.length})
-            </button>
-            <button
-              onClick={handleMergeClick}
-              disabled={selectedInvoices.length < 2 || isMergeValidating}
-              title={
-                selectedInvoices.length < 2
-                  ? "Chọn ít nhất hai hóa đơn"
-                  : "Gộp các hóa đơn đã chọn"
-              }
-              className="px-3 py-1.5 border border-brand text-brand rounded-lg hover:bg-brand-soft text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50">
-              {isMergeValidating
-                ? "Đang kiểm tra..."
-                : `Gộp hóa đơn (${selectedInvoices.length})`}
-            </button>
+            {/* Thao tác theo nhiều hóa đơn: chỉ hiện khi chọn từ 2 hóa đơn */}
+            {selectedInvoices.length >= 2 && (
+              <>
+                <button
+                  onClick={() => setShowPickupSummary(true)}
+                  title="Tổng hợp hàng đã chọn"
+                  className="px-3 py-1.5 border border-brand text-brand rounded-lg hover:bg-brand-soft text-sm font-medium flex items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-50">
+                  <PackageCheck className="w-4 h-4" />
+                  Pick-up ({selectedInvoices.length})
+                </button>
+                <button
+                  onClick={handleMergeClick}
+                  disabled={isMergeValidating}
+                  title="Gộp các hóa đơn đã chọn"
+                  className="px-3 py-1.5 border border-brand text-brand rounded-lg hover:bg-brand-soft text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50">
+                  {isMergeValidating
+                    ? "Đang kiểm tra..."
+                    : `Gộp hóa đơn (${selectedInvoices.length})`}
+                </button>
+                {canBookDelivery && (
+                  <button
+                    onClick={handleDeliveryClick}
+                    disabled={isDeliveryLoading}
+                    title="Đặt 1 xe giao các hóa đơn đã chọn (người nhận 1, 2…)"
+                    className="px-3 py-1.5 border border-brand text-brand rounded-lg hover:bg-brand-soft text-sm font-medium flex items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-50">
+                    {isDeliveryLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Truck className="w-4 h-4" />
+                    )}
+                    Đặt xe ({selectedInvoices.length})
+                  </button>
+                )}
+              </>
+            )}
             {selectedInvoices.length > 0 && (
               <button
                 onClick={() => setSelectedInvoicesMap(new Map())}
@@ -1351,6 +1386,14 @@ export function InvoicesTable({
                 Bỏ chọn ({selectedInvoices.length})
               </button>
             )}
+            {/* <PermissionGate resource="invoices" action="create"> */}
+            <button
+              onClick={onCreateClick}
+              className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium flex items-center gap-1.5">
+              <Plus className="w-4 h-4" />
+              Tạo hóa đơn
+            </button>
+            {/* </PermissionGate> */}
 
             {/* Báo đơn dropdown */}
             <div ref={baoDonRef} className="relative">
@@ -1749,6 +1792,12 @@ export function InvoicesTable({
         <InvoicePickupSummaryModal
           invoices={selectedInvoices}
           onClose={() => setShowPickupSummary(false)}
+        />
+      )}
+      {deliveryInvoices && (
+        <DeliveryBookingModal
+          invoices={deliveryInvoices}
+          onClose={() => setDeliveryInvoices(null)}
         />
       )}
       {showMergeModal && (

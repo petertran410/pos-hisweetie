@@ -49,7 +49,7 @@ interface Props {
   // Lý do khóa ô soạn (mất kết nối, không có quyền…); null = được gửi
   disabledReason: string | null;
   // Ngữ cảnh khách đang chat — cho menu "/" và kéo thả từ bảng Thông tin POS
-  // null: hội thoại chưa gắn khách POS → tắt menu "/" và kéo thả thông tin POS
+  // null: hội thoại chưa gắn khách POS → menu "/" và kéo thả chỉ nhận sản phẩm
   ctx: ChatContext | null;
   onSend: (draft: ChatDraft) => void;
   // Nội dung trả lại ô soạn (vd bấm Hủy ở hộp xác nhận); đổi `nonce` để áp lại
@@ -257,7 +257,6 @@ export function ChatComposer({
   );
 
   const detectSlash = (value: string, caret: number) => {
-    if (!ctx) return setSlash(null);
     // Đang mở: giữ nguyên vị trí "/", chuỗi tìm là đoạn tới con trỏ (cho phép khoảng trắng)
     if (slash && value[slash.start] === "/" && caret > slash.start) {
       const query = value.slice(slash.start + 1, caret);
@@ -281,7 +280,7 @@ export function ChatComposer({
     replace?: { start: number; end: number },
   ) => {
     setSlash(null);
-    if (!ctx) {
+    if (!ctx && item.type !== "product") {
       toast.info("Gắn khách POS cho hội thoại này để gửi nhanh thông tin POS");
       return;
     }
@@ -726,7 +725,7 @@ export function ChatComposer({
               ? ""
               : ctx
                 ? "Nhập tin… gõ / để chèn sản phẩm, hóa đơn, công nợ (Enter gửi, Shift+Enter xuống dòng)"
-                : "Nhập tin… (Enter gửi, Shift+Enter xuống dòng)"
+                : "Nhập tin… gõ / để chèn sản phẩm (Enter gửi, Shift+Enter xuống dòng)"
           }
           className="flex-1 resize-none border rounded-md px-3 py-2 text-sm outline-none focus:border-brand disabled:bg-gray-100"
         />

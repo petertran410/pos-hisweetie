@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { UserPlus } from "lucide-react";
+import { UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { smaxChatApi } from "@/lib/api/smaxChat";
 import { apiClient } from "@/lib/config/api";
@@ -21,9 +21,30 @@ import { LEAD_FIRST_PLATFORMS, PLATFORM_TO_SOURCE } from "@/lib/leads/constants"
 import Link from "next/link";
 import { CustomerSearchSelect, linkGroupCustomers } from "./GroupCustomersBar";
 
+// Hội thoại đã ẩn thanh "Gắn khách POS / Tạo lead" (không cần gắn) — theo trình duyệt
+const HIDDEN_BAR_KEY = "chat-link-bar-hidden";
+
+function readHiddenBars(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(HIDDEN_BAR_KEY) || "[]");
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeHiddenBars(keys: string[]) {
+  try {
+    localStorage.setItem(HIDDEN_BAR_KEY, JSON.stringify(keys));
+  } catch {
+    // localStorage bị chặn — chỉ ẩn trong phiên này
+  }
+}
+
 /**
  * Hội thoại Zalo chưa gắn khách POS: vẫn xem/gửi tin được, thanh "Gắn khách POS"
- * luôn ở trên cùng (gợi ý theo mã khách trong tên nhóm, khách đang xem, tìm khách).
+ * ở trên cùng (gợi ý theo mã khách trong tên nhóm, khách đang xem, tìm khách).
+ * Hội thoại không cần gắn: bấm ✕ để ẩn thanh, nút trên header để hiện lại.
  */
 export function LooseChat({ thread }: { thread: LooseThread }) {
   const source = useMemo(() => looseSource(thread), [thread]);
@@ -37,6 +58,14 @@ export function LooseChat({ thread }: { thread: LooseThread }) {
     retry: false,
   });
   const name = profile?.name || thread.name || thread.zaloId;
+  const [hiddenBars, setHiddenBars] = useState(readHiddenBars);
+  const barHidden = hiddenBars.includes(source.key);
+  const setBarHidden = (hide: boolean) => {
+    const next = hiddenBars.filter((k) => k !== source.key);
+    if (hide) next.push(source.key);
+    setHiddenBars(next);
+    writeHiddenBars(next);
+  };
 
   const sendDisabledReason = !canSend
     ? "Bạn không có quyền gửi tin Zalo"
@@ -46,7 +75,7 @@ export function LooseChat({ thread }: { thread: LooseThread }) {
 
   return (
     <div className="flex flex-1 min-h-0 flex-col">
-      <LinkCustomerBar thread={thread} zaloName={name} />
+      {!barHidden && <LinkCustomerBar thread={thread} zaloName={name} onHide={() => setBarHidden(true)} />}
       <ChatThread
         key={source.key}
         source={source}
@@ -57,6 +86,16 @@ export function LooseChat({ thread }: { thread: LooseThread }) {
         confirmBeforeSend={profile?.confirmBeforeSend ?? true}
         sendDisabledReason={sendDisabledReason}
         ctx={null}
+        headerActions={
+          barHidden && (
+            <button
+              onClick={() => setBarHidden(false)}
+              title="Hiện thanh gắn khách POS / tạo lead"
+              className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-brand">
+              <UserPlus className="h-4 w-4" />
+            </button>
+          )
+        }
       />
     </div>
   );
@@ -97,7 +136,15 @@ async function guessCustomerByName(zaloName: string): Promise<ChatCustomerRef | 
   return null;
 }
 
-function LinkCustomerBar({ thread, zaloName }: { thread: LooseThread; zaloName: string }) {
+function LinkCustomerBar({
+  thread,
+  zaloName,
+  onHide,
+}: {
+  thread: LooseThread;
+  zaloName: string;
+  onHide: () => void;
+}) {
   const canManage = useCan("smax_chat", "manage_contacts");
   const canCreateLead = useCan("leads", "update");
   const { channels } = useActiveChannel();
@@ -167,6 +214,16 @@ function LinkCustomerBar({ thread, zaloName }: { thread: LooseThread; zaloName: 
     }
   };
 
+  const hideButton = (
+    <button
+      onClick={onHide}
+      title="Ẩn thanh này — hội thoại không cần gắn khách / tạo lead"
+      aria-label="Ẩn thanh gắn khách POS"
+      className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-black/5 hover:text-gray-600">
+      <X className="h-3.5 w-3.5" />
+    </button>
+  );
+
   const leadForm = creatingLead && (
     <LeadFormModal
       initial={{
@@ -224,6 +281,7 @@ function LinkCustomerBar({ thread, zaloName }: { thread: LooseThread; zaloName: 
             Gắn khách POS
           </button>
         )}
+        {hideButton}
         {leadForm}
       </div>
     );
@@ -255,6 +313,7 @@ function LinkCustomerBar({ thread, zaloName }: { thread: LooseThread; zaloName: 
             </button>
           )
         )}
+        {hideButton}
       </p>
       {leadForm}
       {!canManage ? (

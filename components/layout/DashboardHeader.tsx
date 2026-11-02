@@ -155,7 +155,6 @@ export function DashboardHeader() {
     () => [
       { label: "Danh sách khách hàng", href: "/khach-hang" },
       { label: "Lead", href: "/khach-hang/lead" },
-      { label: "Form thu thập lead", href: "/khach-hang/lead/form" },
       { label: "Khuyến mãi", href: "/khach-hang/khuyen-mai" },
       {
         label: "Demand khách hàng (OEM/đặt hộ)",
