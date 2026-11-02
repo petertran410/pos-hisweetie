@@ -393,7 +393,72 @@ export interface ApprovalHistoryItem {
 }
 
 export type LarkFormKind =
-  "PHIEU_THU" | "PHIEU_CHI" | "PHIEU_CHI_KHO_HN" | "PHIEU_CHI_KHO_SG";
+  | "PHIEU_THU"
+  | "PHIEU_CHI"
+  | "PHIEU_CHI_KHO_HN"
+  | "PHIEU_CHI_KHO_SG"
+  | "TAM_UNG_LUONG";
+
+/** Đơn TẠM ỨNG LƯƠNG trên Lark Approval (không có mã đơn Lark). */
+export interface SalaryAdvanceRow {
+  id: number;
+  status: string;
+  serialNumber: string | null;
+  requesterName: string | null;
+  department: string | null;
+  requestDate: string | null;
+  submittedAt: string | null;
+  completedAt: string | null;
+  amount: number | null;
+  /** Chi tiền mặt từ một quỹ (false: chuyển khoản công ty). */
+  cash: boolean;
+  method: string | null;
+  cashSource: string | null;
+  branchId: number | null;
+  branchName: string | null;
+  inScope: boolean;
+  skipReason: string | null;
+  entry: {
+    id: number;
+    code: string;
+    status: string;
+    fundTransaction: { code: string; status: string } | null;
+  } | null;
+}
+
+export interface SalaryAdvanceQuery {
+  branchIds?: number[];
+  status?: string;
+  method?: "CASH" | "TRANSFER" | string;
+  requester?: string;
+  fromDate?: string;
+  toDate?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface SalaryAdvancePerson {
+  requesterName: string | null;
+  count: number;
+  amount: number;
+  cashAmount: number;
+  lastRequestDate: string | null;
+}
+
+export interface SalaryAdvanceResponse {
+  data: SalaryAdvanceRow[];
+  total: number;
+  /** Tổng các đơn đã duyệt khớp bộ lọc. */
+  totals: {
+    approvedCount: number;
+    approvedAmount: number;
+    approvedCashAmount: number;
+  };
+  byPerson: SalaryAdvancePerson[];
+  page: number;
+  limit: number;
+}
 
 /** Đơn nhân viên tạo trực tiếp trên Lark Approval (không có mã đơn Lark). */
 export interface LarkApprovalRow {
@@ -601,6 +666,11 @@ export const internalFinanceApi = {
     page: number;
     limit: number;
   }> => apiClient.get("/internal-finance/lark-approvals", params),
+
+  salaryAdvances: (
+    params?: SalaryAdvanceQuery,
+  ): Promise<SalaryAdvanceResponse> =>
+    apiClient.get("/internal-finance/salary-advances", params),
 
   warehouseExpenseBatchPage: (
     params?: InternalFinanceQuery,

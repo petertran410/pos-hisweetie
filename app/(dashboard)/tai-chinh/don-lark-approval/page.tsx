@@ -44,6 +44,7 @@ const FORM_OPTIONS = [
   { value: "PHIEU_THU", label: "PHIẾU THU" },
   { value: "PHIEU_CHI_KHO_HN", label: "PHIẾU CHI KHO HN" },
   { value: "PHIEU_CHI_KHO_SG", label: "PHIẾU CHI KHO SG" },
+  { value: "TAM_UNG_LUONG", label: "TẠM ỨNG LƯƠNG" },
 ];
 const FORM_LABELS = Object.fromEntries(
   FORM_OPTIONS.map((option) => [option.value, option.label]),
@@ -315,7 +316,7 @@ export default function DonLarkApprovalPage() {
             FORM_OPTIONS,
             formKind,
             setFormKind,
-            "Cả 4 form",
+            "Tất cả form",
           )}
           {selectFilter(
             "Trạng thái Lark",

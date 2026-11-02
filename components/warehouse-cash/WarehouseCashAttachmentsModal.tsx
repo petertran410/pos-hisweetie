@@ -2,13 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  X,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, X } from "lucide-react";
 import type { InternalFinanceAttachment } from "@/lib/api/internal-finance";
+import { ZoomableImage } from "@/components/shared/ZoomableImage";
 
 const isImageAttachment = (file: InternalFinanceAttachment) => {
   const mime = file.fileType?.toLowerCase() || "";
@@ -36,6 +32,9 @@ export function WarehouseCashAttachmentsModal({
   );
   const [viewingImage, setViewingImage] = useState<string | null>(
     images[0]?.fileUrl || null,
+  );
+  const viewingAttachment = images.find(
+    (image) => image.fileUrl === viewingImage,
   );
 
   const changeImage = useCallback(
@@ -134,26 +133,32 @@ export function WarehouseCashAttachmentsModal({
       </div>
 
       {viewingImage && (
+        // Không đóng khi bấm nền: vùng ảnh phủ cả màn hình, kéo ảnh dễ đóng nhầm.
+        // Đóng bằng nút X hoặc Esc.
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
-          onClick={() => setViewingImage(null)}>
-          <button
-            type="button"
-            title="Đóng ảnh"
-            onClick={() => setViewingImage(null)}
-            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70">
-            <X className="h-5 w-5" />
-          </button>
-          <div
-            className="flex max-w-full flex-col items-center gap-4"
-            onClick={(event) => event.stopPropagation()}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+          className="fixed inset-0 z-[100] flex flex-col bg-neutral-950"
+          onClick={(event) => event.stopPropagation()}>
+          <div className="flex items-center justify-between gap-3 px-4 py-3">
+            <span className="truncate text-sm text-white/80">
+              {viewingAttachment ? fileLabel(viewingAttachment) : ""}
+            </span>
+            <button
+              type="button"
+              title="Đóng ảnh (Esc)"
+              onClick={() => setViewingImage(null)}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 px-2 sm:px-4">
+            <ZoomableImage
+              key={viewingImage}
               src={viewingImage}
               alt="Xem ảnh chứng từ"
-              className="max-h-[75vh] max-w-full rounded object-contain"
             />
-            {images.length > 1 && (
+          </div>
+          {images.length > 1 && (
+            <div className="flex justify-center p-3">
               <div className="flex max-w-full items-center gap-2 rounded-lg bg-white/90 p-3">
                 <button
                   type="button"
@@ -194,12 +199,13 @@ export function WarehouseCashAttachmentsModal({
                   <ChevronRight className="h-5 w-5" />
                 </button>
                 <span className="ml-1 whitespace-nowrap text-sm text-gray-700">
-                  {images.findIndex((image) => image.fileUrl === viewingImage) + 1} /{" "}
-                  {images.length}
+                  {images.findIndex((image) => image.fileUrl === viewingImage) +
+                    1}{" "}
+                  / {images.length}
                 </span>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>,

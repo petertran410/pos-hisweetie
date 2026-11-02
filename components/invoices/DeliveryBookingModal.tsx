@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Loader2, Send, Truck, X } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Loader2, Send, Truck, X } from "lucide-react";
 import { toast } from "sonner";
 import { smaxChatApi } from "@/lib/api/smaxChat";
 import { FilterSearchableSelect } from "@/components/ui/filters";
@@ -16,6 +16,7 @@ import { buildDefaults, formatPhone } from "./ShippingLabelA6Modal";
 /**
  * Đặt xe giao hàng: soạn tin từ hóa đơn (sửa được), gửi vào nhóm Zalo đặt xe qua kênh
  * cố định của công ty (backend cấu hình). Người gửi mặc định là nhân viên đang thao tác.
+ * Nhiều hóa đơn: 1 tin với Người nhận 1, 2… theo thứ tự sắp xếp được (thứ tự giao).
  */
 
 type Payer = "sender" | "receiver";
@@ -36,8 +37,36 @@ const cleanName = (name: string) =>
     .trim();
 
 const line = (...parts: string[]) => parts.map((p) => p.trim()).filter(Boolean).join(" - ");
+const block = (...lines: string[]) => lines.map((l) => l.trim()).filter(Boolean).join("\n");
 
-export function DeliveryBookingModal({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {
+// Giới hạn độ dài tin (backend MaxLength 2000)
+const MAX_TEXT = 2000;
+
+interface Receiver {
+  invoiceId: number;
+  code: string;
+  name: string;
+  phone: string;
+  address: string;
+  note: string;
+}
+
+const toReceiver = (invoice: Invoice): Receiver => {
+  const d = buildDefaults(invoice, null);
+  return {
+    invoiceId: invoice.id,
+    code: invoice.code || "",
+    name: cleanName(d.receiverName),
+    phone: cleanPhone(d.receiverPhone),
+    address: d.address,
+    note: invoice.code || "",
+  };
+};
+
+export function DeliveryBookingModal({ invoices, onClose }: { invoices: Invoice[]; onClose: () => void }) {
+  // Người gửi / chi nhánh theo hóa đơn đầu tiên
+  const invoice = invoices[0];
+  const multi = invoices.length > 1;
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const { data: users } = useUsers();
   const { data: branches } = useBranches();
@@ -48,18 +77,27 @@ export function DeliveryBookingModal({ invoice, onClose }: { invoice: Invoice; o
     retry: false,
   });
 
-  const receiver = useMemo(() => buildDefaults(invoice, null), [invoice]);
   const [senderId, setSenderId] = useState<number | null>(userId);
   const [senderName, setSenderName] = useState("Diệp Trà");
   const [senderPhone, setSenderPhone] = useState("");
   const [branchAddress, setBranchAddress] = useState("");
-  const [receiverName, setReceiverName] = useState(cleanName(receiver.receiverName));
-  const [receiverPhone, setReceiverPhone] = useState(cleanPhone(receiver.receiverPhone));
-  const [receiverAddress, setReceiverAddress] = useState(receiver.address);
-  const [note, setNote] = useState(invoice.code || "");
+  const [receivers, setReceivers] = useState<Receiver[]>(() => invoices.map(toReceiver));
   const [payer, setPayer] = useState<Payer | null>(null);
 
+  const updateReceiver = (i: number, patch: Partial<Receiver>) =>
+    setReceivers((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  const moveReceiver = (i: number, to: number) =>
+    setReceivers((rs) => {
+      const next = [...rs];
+      const [r] = next.splice(i, 1);
+      next.splice(to, 0, r);
+      return next;
+    });
+  const removeReceiver = (i: number) => setReceivers((rs) => rs.filter((_, j) => j !== i));
+
   const branchId = invoice.branch?.id ?? invoice.branchId;
+  const branchIdOf = (inv: Invoice) => inv.branch?.id ?? inv.branchId;
+  const mixedBranches = invoices.some((inv) => branchIdOf(inv) !== branchId);
   // Kho Hà Nội / Kho Sài Gòn: chỉ nhân sự phòng ban Lark tương ứng; chi nhánh khác: mọi nhân sự
   const senders = useQuery({
     queryKey: ["deliveryBookingSenders", branchId],
@@ -82,21 +120,27 @@ export function DeliveryBookingModal({ invoice, onClose }: { invoice: Invoice; o
     setBranchAddress(branchSaved);
   }, [branchSaved]);
 
+  // Các khối cách nhau 1 dòng trống; tiêu đề người nhận đứng riêng 1 khối
   const text = [
-    "Thông tin người gửi:",
-    line(senderName, senderPhone),
-    branchAddress.trim(),
-    "Thông tin người nhận:",
-    line(receiverName, receiverPhone),
-    receiverAddress.trim(),
-    `Ghi chú: ${note.trim()}`,
+    block("THÔNG TIN NGƯỜI GỬI:", line(senderName, senderPhone), branchAddress),
+    ...receivers.flatMap((r, i) => [
+      `* THÔNG TIN NGƯỜI NHẬN${receivers.length > 1 ? ` ${i + 1}` : ""}:`,
+      block(line(r.name, r.phone), r.address, `Ghi chú: ${r.note.trim()}`),
+    ]),
     payer ? PAYER_LABEL[payer] : "",
   ]
     .filter(Boolean)
-    .join("\n");
+    .join("\n\n");
 
   const send = useMutation({
-    mutationFn: () => smaxChatApi.bookDelivery({ invoiceId: invoice.id, text, confirmed: true }),
+    mutationFn: () =>
+      smaxChatApi.bookDelivery({
+        ...(receivers.length > 1
+          ? { invoiceIds: receivers.map((r) => r.invoiceId) }
+          : { invoiceId: receivers[0].invoiceId }),
+        text,
+        confirmed: true,
+      }),
     onSuccess: () => {
       toast.success(`Đã gửi tin đặt xe vào nhóm ${target.data?.groupName ?? "đặt xe"}`);
       onClose();
@@ -104,17 +148,24 @@ export function DeliveryBookingModal({ invoice, onClose }: { invoice: Invoice; o
     onError: (e: Error) => toast.error(e.message || "Không gửi được tin đặt xe"),
   });
 
+  const receiverNo = (i: number) => (receivers.length > 1 ? ` ${i + 1}` : "");
+  const noName = receivers.findIndex((r) => !r.name.trim());
+  const noAddress = receivers.findIndex((r) => !r.address.trim());
   const missing = !sender
     ? "Chọn người gửi"
     : !senderName.trim()
       ? "Nhập tên người gửi"
-      : !receiverName.trim()
-        ? "Nhập tên người nhận"
-        : !receiverAddress.trim()
-          ? "Nhập địa chỉ người nhận"
-          : !payer
-            ? "Chọn bên thanh toán"
-            : null;
+      : !receivers.length
+        ? "Chưa có người nhận"
+        : noName >= 0
+          ? `Nhập tên người nhận${receiverNo(noName)}`
+          : noAddress >= 0
+            ? `Nhập địa chỉ người nhận${receiverNo(noAddress)}`
+            : !payer
+              ? "Chọn bên thanh toán"
+              : text.length > MAX_TEXT
+                ? `Tin quá dài (${text.length}/${MAX_TEXT} ký tự) — bớt người nhận hoặc rút gọn`
+                : null;
   const blocked = target.error
     ? (target.error as Error).message || "Không tải được kênh Zalo đặt xe"
     : target.data?.connectionError
@@ -140,7 +191,7 @@ export function DeliveryBookingModal({ invoice, onClose }: { invoice: Invoice; o
           <div className="min-w-0">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <Truck className="w-5 h-5 text-brand" />
-              Đặt xe giao hàng — {invoice.code}
+              Đặt xe giao hàng — {multi ? `${invoices.length} hóa đơn` : invoice.code}
             </h2>
             <p className="text-xs text-gray-500 truncate">
               {target.data
@@ -193,33 +244,73 @@ export function DeliveryBookingModal({ invoice, onClose }: { invoice: Invoice; o
               </div>
             </fieldset>
 
-            <fieldset className="space-y-2">
-              <legend className="text-sm font-semibold mb-1">Người nhận</legend>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className={label}>Tên khách hàng</label>
-                  <input value={receiverName} onChange={(e) => setReceiverName(e.target.value)} className={input} />
+            {mixedBranches && (
+              <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                Các hóa đơn thuộc nhiều chi nhánh — người gửi và địa chỉ lấy theo chi nhánh của {invoice.code}.
+              </p>
+            )}
+            {receivers.map((r, i) => (
+              <fieldset
+                key={r.invoiceId}
+                className={`space-y-2 ${receivers.length > 1 ? "rounded-lg border p-3" : ""}`}>
+                <legend className="text-sm font-semibold mb-1 flex items-center gap-1.5 px-1">
+                  Người nhận{receiverNo(i)}
+                  {receivers.length > 1 && (
+                    <>
+                      <span className="font-normal text-gray-500">· {r.code}</span>
+                      <span className="ml-2 inline-flex gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => moveReceiver(i, i - 1)}
+                          disabled={i === 0}
+                          title="Đưa lên trước"
+                          className="rounded p-0.5 text-gray-500 hover:bg-gray-100 disabled:opacity-30">
+                          <ArrowUp className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveReceiver(i, i + 1)}
+                          disabled={i === receivers.length - 1}
+                          title="Đưa xuống sau"
+                          className="rounded p-0.5 text-gray-500 hover:bg-gray-100 disabled:opacity-30">
+                          <ArrowDown className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeReceiver(i)}
+                          title="Bỏ hóa đơn này khỏi chuyến"
+                          className="rounded p-0.5 text-gray-500 hover:bg-red-50 hover:text-red-600">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </span>
+                    </>
+                  )}
+                </legend>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={label}>Tên khách hàng</label>
+                    <input value={r.name} onChange={(e) => updateReceiver(i, { name: e.target.value })} className={input} />
+                  </div>
+                  <div>
+                    <label className={label}>SĐT</label>
+                    <input value={r.phone} onChange={(e) => updateReceiver(i, { phone: e.target.value })} className={input} />
+                  </div>
                 </div>
                 <div>
-                  <label className={label}>SĐT</label>
-                  <input value={receiverPhone} onChange={(e) => setReceiverPhone(e.target.value)} className={input} />
+                  <label className={label}>Địa chỉ khách hàng</label>
+                  <textarea
+                    value={r.address}
+                    onChange={(e) => updateReceiver(i, { address: e.target.value })}
+                    rows={2}
+                    className={input}
+                  />
                 </div>
-              </div>
-              <div>
-                <label className={label}>Địa chỉ khách hàng</label>
-                <textarea
-                  value={receiverAddress}
-                  onChange={(e) => setReceiverAddress(e.target.value)}
-                  rows={2}
-                  className={input}
-                />
-              </div>
-            </fieldset>
-
-            <div>
-              <label className={label}>Ghi chú</label>
-              <input value={note} onChange={(e) => setNote(e.target.value)} className={input} />
-            </div>
+                <div>
+                  <label className={label}>Ghi chú</label>
+                  <input value={r.note} onChange={(e) => updateReceiver(i, { note: e.target.value })} className={input} />
+                </div>
+              </fieldset>
+            ))}
 
             <div className="flex flex-wrap gap-4 text-sm">
               {(Object.keys(PAYER_LABEL) as Payer[]).map((k) => (
