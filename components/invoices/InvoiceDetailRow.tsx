@@ -1058,7 +1058,7 @@ export function InvoiceDetailRow({
         </div>
         {showDeliveryBooking && (
           <DeliveryBookingModal
-            invoice={invoice}
+            invoices={[invoice]}
             onClose={() => setShowDeliveryBooking(false)}
           />
         )}

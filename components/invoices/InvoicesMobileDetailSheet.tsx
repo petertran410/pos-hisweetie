@@ -798,7 +798,7 @@ export function InvoicesMobileDetailSheet({
       </div>
       {showDeliveryBooking && invoice && (
         <DeliveryBookingModal
-          invoice={invoice}
+          invoices={[invoice]}
           onClose={() => setShowDeliveryBooking(false)}
         />
       )}
