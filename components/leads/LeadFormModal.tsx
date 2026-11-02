@@ -10,7 +10,7 @@ import { useUsers } from "@/lib/hooks/useUsers";
 import { useNewLocations } from "@/lib/hooks/useNewLocations";
 import { useAuthStore } from "@/lib/store/auth";
 import { FilterSearchableSelect } from "@/components/ui/filters";
-import { LEAD_CATEGORY_LABEL, LEAD_SOURCE_LABEL, LEAD_STATUS_LABEL, SOURCE_PLATFORMS, options } from "@/lib/leads/constants";
+import { LEAD_CATEGORY_LABEL, LEAD_SOURCE_LABEL, LEAD_STATUS_LABEL, SOURCE_CHANNEL_NAMES, SOURCE_PLATFORMS, options } from "@/lib/leads/constants";
 import { useQuery } from "@tanstack/react-query";
 import type { Lead, LeadCategory, LeadDuplicates, LeadInput, LeadSource, LeadStatus } from "@/lib/types/lead";
 import { platformLabel } from "@/lib/chat/platforms";
@@ -40,15 +40,21 @@ export function LeadFormModal({
   const [phone, setPhone] = useState(src?.phone ?? "");
   const [zaloPhone, setZaloPhone] = useState(lead?.zaloPhone ?? "");
   const [source, setSource] = useState<LeadSource | "">(src?.source ?? "");
-  const [channelPid, setChannelPid] = useState(src?.channelPid ?? "");
+  // pagePid kênh Smax; nguồn có danh sách kênh cố định (Trực tiếp) → tên kênh
+  const [channelPid, setChannelPid] = useState(
+    src?.channelPid ?? (src?.source && SOURCE_CHANNEL_NAMES[src.source] ? (src.channelName ?? "") : "")
+  );
+  const fixedChannels = source ? SOURCE_CHANNEL_NAMES[source] : undefined;
   const { data: allChannels } = useQuery({ queryKey: ["leadChannels"], queryFn: () => leadsApi.channels(), staleTime: 5 * 60_000 });
   // Kênh theo nguồn (Fanpage → các fanpage…); kênh đã lưu không còn trên Smax vẫn giữ để hiển thị
-  const channelOptions = [
-    ...(allChannels ?? []).filter((c) => !source || SOURCE_PLATFORMS[source].includes(c.platform)),
-    ...(src?.channelPid && !(allChannels ?? []).some((c) => c.pagePid === src.channelPid)
-      ? [{ pagePid: src.channelPid, name: src.channelName ?? src.channelPid, platform: "" }]
-      : []),
-  ].map((c) => ({ value: c.pagePid, label: c.name }));
+  const channelOptions = fixedChannels
+    ? fixedChannels.map((n) => ({ value: n, label: n }))
+    : [
+        ...(allChannels ?? []).filter((c) => !source || SOURCE_PLATFORMS[source].includes(c.platform)),
+        ...(src?.channelPid && !(allChannels ?? []).some((c) => c.pagePid === src.channelPid)
+          ? [{ pagePid: src.channelPid, name: src.channelName ?? src.channelPid, platform: "" }]
+          : []),
+      ].map((c) => ({ value: c.pagePid, label: c.name }));
   const [category, setCategory] = useState<LeadCategory | "">(src?.category ?? "");
   const [status, setStatus] = useState<LeadStatus>(lead?.status ?? "new");
   const [provinceCode, setProvinceCode] = useState(src?.provinceCode ?? "");
@@ -80,7 +86,7 @@ export function LeadFormModal({
       phone: phone.trim(),
       zaloPhone: zaloPhone.trim(),
       source: source as LeadSource,
-      channelPid,
+      channelPid: fixedChannels ? "" : channelPid,
       channelName: channelOptions.find((c) => c.value === channelPid)?.label ?? "",
       category: category as LeadCategory,
       provinceCode,
@@ -205,7 +211,14 @@ export function LeadFormModal({
               setSource(v);
               // Kênh không thuộc nguồn mới → bỏ chọn
               const ch = allChannels?.find((c) => c.pagePid === channelPid);
-              if (ch && !SOURCE_PLATFORMS[v].includes(ch.platform)) setChannelPid("");
+              const names = SOURCE_CHANNEL_NAMES[v];
+              const fixed = Object.values(SOURCE_CHANNEL_NAMES).flat();
+              if (
+                names
+                  ? !names.includes(channelPid)
+                  : (ch && !SOURCE_PLATFORMS[v].includes(ch.platform)) || fixed.includes(channelPid)
+              )
+                setChannelPid("");
             })}
           </div>
           <div>
@@ -215,7 +228,7 @@ export function LeadFormModal({
               options={channelOptions}
               value={channelPid}
               onChange={setChannelPid}
-              placeholder={source ? "— Chọn kênh —" : "Chọn nguồn trước"}
+              placeholder={!source ? "Chọn nguồn trước" : channelOptions.length ? "— Chọn kênh —" : "Không có kênh"}
             />
           </div>
           <div>

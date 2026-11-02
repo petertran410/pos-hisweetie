@@ -84,6 +84,7 @@ export const ROUTE_PERMISSIONS: Record<
   "/khach-hang/demand-oem": { resource: "customer_demand", action: "view" },
   "/khach-hang/hop-dong": { resource: "contracts", action: "view" },
   "/khach-hang/theo-doi-cong-no": { resource: "debt_tracking", action: "view" },
+  "/khach-hang/lead/form": { resource: "leads", action: "update" },
   "/khach-hang/lead": { resource: "leads", action: "view" },
   "/khach-hang": { resource: "customers", action: "view" },
   "/so-quy": { resource: "cash_flows", action: "view" },

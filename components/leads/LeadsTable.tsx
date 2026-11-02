@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { FileText, Plus, Search } from "lucide-react";
+import { ClipboardList, FileText, Plus, Search } from "lucide-react";
 import { useLeads } from "@/lib/hooks/useLeads";
 import { useColumnVisibility, type ColumnConfig } from "@/lib/hooks/useColumnVisibility";
 import { useCan } from "@/lib/hooks/useCan";
@@ -210,6 +210,13 @@ export function LeadsTable({
               className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white">
               <Plus className="h-4 w-4" /> Tạo lead
             </button>
+          )}
+          {canUpdate && (
+            <Link
+              href="/khach-hang/lead/form"
+              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50">
+              <ClipboardList className="h-4 w-4" /> Form thu thập
+            </Link>
           )}
           {canTemplates && (
             <button

@@ -97,6 +97,9 @@ const TITLE_MAP: Array<{ prefix: string; title: string }> = [
 
   // Đăng nhập
   { prefix: "/login", title: "Đăng nhập" },
+
+  // Form thu thập lead công khai
+  { prefix: "/f", title: "Đăng ký thông tin" },
 ];
 
 function resolveTitle(pathname: string): string | null {

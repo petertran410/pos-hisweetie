@@ -1,4 +1,4 @@
-export type LeadSource = "facebook" | "tiktok" | "shopee" | "zalo_oa" | "website";
+export type LeadSource = "facebook" | "tiktok" | "shopee" | "zalo_oa" | "website" | "direct" | "other";
 export type LeadCategory = "cafe" | "chain" | "distributor" | "training";
 export type LeadStatus = "new" | "caring" | "handed_over" | "converted" | "cancelled";
 
@@ -66,6 +66,14 @@ export interface Lead {
 export interface LeadDetail extends Lead {
   conversations: LeadConversation[];
   handovers: LeadHandover[];
+  /** Các lần khách gửi form thu thập lead (mới nhất trước) */
+  formSubmissions: {
+    id: number;
+    answers: { key: string; label: string; value: string }[];
+    merged: boolean;
+    createdAt: string;
+    form: { id: number; name: string };
+  }[];
 }
 
 export interface LeadFilters {

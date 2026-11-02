@@ -6,6 +6,8 @@ export const LEAD_SOURCE_LABEL: Record<LeadSource, string> = {
   shopee: "Shopee",
   zalo_oa: "Zalo OA",
   website: "Website",
+  direct: "Trực tiếp",
+  other: "Khác",
 };
 
 export const LEAD_CATEGORY_LABEL: Record<LeadCategory, string> = {
@@ -49,6 +51,13 @@ export const SOURCE_PLATFORMS: Record<LeadSource, string[]> = {
   shopee: ["shopee"],
   zalo_oa: ["zalo"],
   website: ["custom"],
+  direct: [],
+  other: [],
+};
+
+// Nguồn không có kênh Smax: chọn kênh trong danh sách cố định (lưu tên kênh, không có pagePid)
+export const SOURCE_CHANNEL_NAMES: Partial<Record<LeadSource, string[]>> = {
+  direct: ["Hội chợ", "Workshop"],
 };
 
 // Kênh khách lạ nhắn tới (Facebook, Tiktok): ưu tiên tạo lead; chỉ gợi ý gắn khách POS khi trùng SĐT

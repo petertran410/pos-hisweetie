@@ -189,6 +189,27 @@ function InfoTab({ lead }: { lead: LeadDetail }) {
           <p className="whitespace-pre-wrap">{lead.cskhNote}</p>
         </div>
       )}
+      {lead.formSubmissions.length > 0 && (
+        <div>
+          <p className="mb-1 text-xs text-gray-500">Thông tin khách gửi qua form ({lead.formSubmissions.length})</p>
+          <div className="grid gap-2 md:grid-cols-2">
+            {lead.formSubmissions.map((s) => (
+              <div key={s.id} className="rounded-lg border bg-gray-50 px-3 py-2">
+                <p className="mb-1 text-xs text-gray-500">
+                  {s.form.name} ·{" "}
+                  {new Date(s.createdAt).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" })}
+                  {s.merged && " · gửi lại (gộp)"}
+                </p>
+                {s.answers.map((a) => (
+                  <p key={a.key}>
+                    <span className="text-gray-500">{a.label}:</span> {a.value}
+                  </p>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2 border-t pt-3">
         {canUpdate && (
