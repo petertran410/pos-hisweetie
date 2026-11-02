@@ -3,7 +3,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Clock, Loader2, MessageCircle, Pencil, Send, Trash2, UserCheck, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Loader2, MessageCircle, Pencil, Send, Trash2, UserCheck, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { leadsApi } from "@/lib/api/leads";
 import { useLead, useSaveLead } from "@/lib/hooks/useLeads";
@@ -390,12 +390,19 @@ function HistoryTab({ lead }: { lead: LeadDetail }) {
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
                   ) : s?.status === "failed" ? (
                     <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+                  ) : s?.status === "skipped" ? (
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
                   ) : (
                     <Clock className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
                   )}
                   <span>
                     {HANDOVER_STEP_LABEL[k]}
-                    {s?.error && <span className="block whitespace-pre-wrap text-xs text-red-600">{s.error}</span>}
+                    {s?.status === "skipped" && <span className="text-xs text-amber-600"> · bỏ qua — Sale nhắn sau khi khách đồng ý kết bạn</span>}
+                    {s?.error && (
+                      <span className={`block whitespace-pre-wrap text-xs ${s.status === "skipped" ? "text-gray-500" : "text-red-600"}`}>
+                        {s.error}
+                      </span>
+                    )}
                   </span>
                 </div>
               );

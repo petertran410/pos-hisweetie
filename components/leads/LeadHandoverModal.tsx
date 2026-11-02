@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Loader2, Send, X, XCircle } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2, Loader2, Send, X, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { leadsApi } from "@/lib/api/leads";
 import { FilterSearchableSelect } from "@/components/ui/filters";
@@ -144,12 +144,19 @@ export function LeadHandoverModal({ lead, onClose }: { lead: Lead; onClose: () =
                 <div key={k} className="flex items-start gap-2">
                   {s.status === "ok" ? (
                     <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600 mt-0.5" />
+                  ) : s.status === "skipped" ? (
+                    <AlertCircle className="h-4 w-4 shrink-0 text-amber-500 mt-0.5" />
                   ) : (
                     <XCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
                   )}
                   <span>
                     {HANDOVER_STEP_LABEL[k]}
-                    {s.error && <span className="block whitespace-pre-wrap text-xs text-red-600">{s.error}</span>}
+                    {s.status === "skipped" && <span className="text-xs text-amber-600"> · bỏ qua — Sale nhắn sau khi khách đồng ý kết bạn</span>}
+                    {s.error && (
+                      <span className={`block whitespace-pre-wrap text-xs ${s.status === "skipped" ? "text-gray-500" : "text-red-600"}`}>
+                        {s.error}
+                      </span>
+                    )}
                   </span>
                 </div>
               );
