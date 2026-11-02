@@ -39,6 +39,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   internal_finance: "Tài chính nội bộ",
   weekly_approval: "Approval tuần",
   lark_approval: "Đơn Lark Approval",
+  salary_advance: "Tạm ứng lương",
   internal_fund: "Quỹ nội bộ",
   vehicles: "Xe cộ",
   reports: "Báo cáo",
