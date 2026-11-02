@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Check, Search } from "lucide-react";
 import { useDropdownPosition } from "./useDropdownPosition";
+import { foldSearch } from "./foldSearch";
 import type { FilterOption } from "./FilterMultiSelect";
 
 interface FilterSearchableSelectProps {
@@ -73,10 +74,10 @@ export function FilterSearchableSelect({
   }, [open, searchable]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = foldSearch(search.trim());
     if (!q) return options;
     return options.filter((o) =>
-      (o.value + " " + o.label).toLowerCase().includes(q),
+      foldSearch(o.value + " " + o.label).includes(q),
     );
   }, [options, search]);
 

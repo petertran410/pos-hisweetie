@@ -7,6 +7,7 @@ import {
   rangeToIso,
   type TimeRangeState,
 } from "@/components/shared/TimeRangeFilter";
+import { FilterSearchableSelect } from "@/components/ui/filters";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { usePriceBooks } from "@/lib/hooks/usePriceBooks";
@@ -196,17 +197,18 @@ export function SaleReportSidebar({
           <label className="text-sm font-medium text-gray-700 mb-1.5 block">
             Chi nhánh
           </label>
-          <select
+          <FilterSearchableSelect
+            options={filteredBranches.map(
+              (b: { id: number; name: string }) => ({
+                value: String(b.id),
+                label: b.name,
+              })
+            )}
             value={branchId}
-            onChange={(e) => setBranchId(e.target.value)}
-            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-            <option value="">Tất cả</option>
-            {filteredBranches.map((b: { id: number; name: string }) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+            onChange={setBranchId}
+            placeholder="Tất cả"
+            searchPlaceholder="Tìm chi nhánh..."
+          />
         </div>
 
         {/* ── NV bán hàng ── */}
@@ -215,17 +217,16 @@ export function SaleReportSidebar({
             <label className="text-sm font-medium text-gray-700 mb-1.5 block">
               NV bán hàng
             </label>
-            <select
+            <FilterSearchableSelect
+              options={(users || []).map((u: { id: number; name: string }) => ({
+                value: String(u.id),
+                label: u.name,
+              }))}
               value={soldById}
-              onChange={(e) => setSoldById(e.target.value)}
-              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-              <option value="">Tất cả</option>
-              {(users || []).map((u: { id: number; name: string }) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
+              onChange={setSoldById}
+              placeholder="Tất cả"
+              searchPlaceholder="Tìm nhân viên..."
+            />
           </div>
         )}
 
@@ -235,17 +236,16 @@ export function SaleReportSidebar({
             <label className="text-sm font-medium text-gray-700 mb-1.5 block">
               Bảng giá
             </label>
-            <select
+            <FilterSearchableSelect
+              options={priceBooks.map((p: { id: number; name: string }) => ({
+                value: String(p.id),
+                label: p.name,
+              }))}
               value={priceBookId}
-              onChange={(e) => setPriceBookId(e.target.value)}
-              className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-              <option value="">Tất cả</option>
-              {priceBooks.map((p: { id: number; name: string }) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+              onChange={setPriceBookId}
+              placeholder="Tất cả"
+              searchPlaceholder="Tìm bảng giá..."
+            />
           </div>
         )}
       </div>

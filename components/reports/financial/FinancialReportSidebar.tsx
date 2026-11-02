@@ -7,6 +7,7 @@ import {
   rangeToIso,
   type TimeRangeState,
 } from "@/components/shared/TimeRangeFilter";
+import { FilterSearchableSelect } from "@/components/ui/filters";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useCashFlowGroups } from "@/lib/hooks/useCashflowGroups";
 import {
@@ -152,19 +153,18 @@ export function FinancialReportSidebar({
           <label className="text-sm font-medium text-gray-700 mb-1.5 block">
             Chi nhánh
           </label>
-          <select
-            value={branchId}
-            onChange={(e) => setBranchId(e.target.value)}
-            className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-            <option value="">Tất cả</option>
-            {(branches || [])
+          <FilterSearchableSelect
+            options={(branches || [])
               .filter((b: { isActive: boolean }) => b.isActive)
-              .map((b: { id: number; name: string }) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-          </select>
+              .map((b: { id: number; name: string }) => ({
+                value: String(b.id),
+                label: b.name,
+              }))}
+            value={branchId}
+            onChange={setBranchId}
+            placeholder="Tất cả"
+            searchPlaceholder="Tìm chi nhánh..."
+          />
         </div>
 
         {showCashFilters && (
@@ -173,30 +173,31 @@ export function FinancialReportSidebar({
               <label className="text-sm font-medium text-gray-700 mb-1.5 block">
                 Loại phiếu
               </label>
-              <select
+              <FilterSearchableSelect
+                options={[
+                  { value: "receipt", label: "Phiếu thu" },
+                  { value: "payment", label: "Phiếu chi" },
+                ]}
                 value={direction}
-                onChange={(e) => setDirection(e.target.value)}
-                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-                <option value="">Tất cả</option>
-                <option value="receipt">Phiếu thu</option>
-                <option value="payment">Phiếu chi</option>
-              </select>
+                onChange={setDirection}
+                placeholder="Tất cả"
+                searchable={false}
+              />
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1.5 block">
                 Nhóm thu chi
               </label>
-              <select
+              <FilterSearchableSelect
+                options={groupList.map((g) => ({
+                  value: String(g.id),
+                  label: g.name,
+                }))}
                 value={cashFlowGroupId}
-                onChange={(e) => setCashFlowGroupId(e.target.value)}
-                className="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-brand focus:border-brand bg-white">
-                <option value="">Tất cả</option>
-                {groupList.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setCashFlowGroupId}
+                placeholder="Tất cả"
+                searchPlaceholder="Tìm nhóm thu chi..."
+              />
             </div>
           </>
         )}
