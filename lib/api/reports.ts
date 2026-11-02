@@ -337,12 +337,16 @@ export interface ProductChartRow {
   outValue?: number;
   closingQuantity?: number;
   closingValue?: number;
+  // ProductBySale: số liệu theo tháng, key "YYYY-MM"
+  byMonth?: Record<string, { quantity: number; value: number }>;
 }
 
 export interface ProductPreviewResponse {
   viewType: ProductViewType;
   data: ProductChartRow[];
   total: number;
+  // ProductBySale: danh sách tháng "YYYY-MM" trong khoảng lọc
+  months?: string[];
   summary: {
     totalRows: number;
     totalValue: number;

@@ -14,6 +14,7 @@ import {
 } from "@/lib/api/reports";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { CodeLink } from "@/components/shared/CodeLink";
+import { ProductSaleMonthlyTable } from "./ProductSaleMonthlyTable";
 
 interface Props {
   filters: ProductReportFilters;
@@ -86,6 +87,16 @@ export function ProductDataPanel({ filters, viewType }: Props) {
   const drillable = DRILLABLE.includes(viewType);
   const subjectHeader =
     viewType === "ProductByCategory" ? "Nhóm hàng" : "Sản phẩm";
+  const monthly = viewType === "ProductBySale" ? data?.months : undefined;
+  const handleSelectSubject = drillable
+    ? (row: ProductChartRow) => {
+        if (!row.extra1 && !row.subject) return;
+        setDrill({
+          title: `Chi tiết bán hàng — ${row.subject}`,
+          code: row.extra1 || "",
+        });
+      }
+    : undefined;
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
@@ -172,6 +183,12 @@ export function ProductDataPanel({ filters, viewType }: Props) {
           </div>
         ) : isInOut ? (
           <InOutTable rows={rows} />
+        ) : monthly ? (
+          <ProductSaleMonthlyTable
+            rows={rows}
+            months={monthly}
+            onSelectSubject={handleSelectSubject}
+          />
         ) : (
           <ProductAggregateTable
             rows={rows}
@@ -183,17 +200,7 @@ export function ProductDataPanel({ filters, viewType }: Props) {
               viewType === "ProductByCustomer" ||
               viewType === "ProductBySupplier"
             }
-            onSelectSubject={
-              drillable
-                ? (row) => {
-                    if (!row.extra1 && !row.subject) return;
-                    setDrill({
-                      title: `Chi tiết bán hàng — ${row.subject}`,
-                      code: row.extra1 || "",
-                    });
-                  }
-                : undefined
-            }
+            onSelectSubject={handleSelectSubject}
           />
         )}
       </div>
