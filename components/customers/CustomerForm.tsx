@@ -703,7 +703,8 @@ export function CustomerForm({
       code: data.code || undefined,
       email: data.email || undefined,
       phone: data.phone || undefined,
-      comments: data.comments || undefined,
+      // Sửa KH: xóa trắng ghi chú phải gửi "" để backend xóa (undefined bị bỏ qua).
+      comments: data.comments?.trim() || (customer?.comments ? "" : undefined),
       organization: isOrganization ? data.organization || undefined : undefined,
       taxCode: invoice.taxCode || undefined,
       type: parseInt(data.type),

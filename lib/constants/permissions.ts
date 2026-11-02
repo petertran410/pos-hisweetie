@@ -119,6 +119,7 @@ export const ACTION_LABELS: Record<string, string> = {
   print: "In",
   report_delivered: "Báo đơn (Giao thành công)",
   update_finalized: "Sửa HĐ đã giao / hoàn thành",
+  update_comments: "Sửa ghi chú",
   update_policy: "Thiết lập kiểu công nợ",
   assign_sale_pic: "Gắn Sale PIC",
   stop_delivery: "Tạo phiếu ngừng đi hàng",

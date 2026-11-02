@@ -171,6 +171,30 @@ export function useUpdateCustomer() {
   });
 }
 
+/** Chỉ sửa ghi chú — cần quyền customers:update HOẶC customers:update_comments. */
+export function useUpdateCustomerComments() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, comments }: { id: number; comments: string }) => {
+      return await apiClient.patch<{ id: number; comments: string | null }>(
+        `/customers/${id}/comments`,
+        { comments },
+      );
+    },
+    onSuccess: (result, variables) => {
+      queryClient.setQueryData<Customer>(["customers", variables.id], (old) =>
+        old ? { ...old, comments: result?.comments ?? "" } : old,
+      );
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      toast.success("Đã lưu ghi chú khách hàng");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Không lưu được ghi chú");
+    },
+  });
+}
+
 export function useDeleteCustomer() {
   const queryClient = useQueryClient();
 
