@@ -54,7 +54,8 @@ export interface QuickResult {
 /** Tải dữ liệu đầy đủ của mục và dựng tin (quyền POS do chính các API kiểm tra). */
 export async function buildQuickMessage(
   item: QuickItem,
-  ctx: ChatContext,
+  // null: hội thoại chưa gắn khách POS — chỉ dựng được tin sản phẩm
+  ctx: ChatContext | null,
   perms: QuickPerms,
   branchId: number | undefined
 ): Promise<QuickResult> {
@@ -126,7 +127,7 @@ export async function buildQuickMessage(
           documents: docs.map((d: any) => ({ code: d.code, customerName: d.customer?.name, soldByName: d.soldBy?.name })),
           creatorName: slip.creator?.name,
           // Cờ hàng lạnh tính sẵn ở "Báo đơn gần đây" (API chi tiết báo đơn không trả)
-          hasColdItems: ctx.recentPackingSlips?.find((r) => r.id === slip.id)?.hasColdItems,
+          hasColdItems: ctx?.recentPackingSlips?.find((r) => r.id === slip.id)?.hasColdItems,
         }),
         productImages: images.length
           ? { kind: "packingSlip", productId: slip.id, name: `Báo đơn ${slip.code}`, images }
@@ -134,6 +135,7 @@ export async function buildQuickMessage(
       };
     }
     case "debt": {
+      if (!ctx) throw new Error("Gắn khách POS cho hội thoại này để gửi công nợ");
       if (ctx.debt === null) throw new Error("Bạn không có quyền xem công nợ");
       const [detail, payment] = await Promise.all([
         perms.canViewDebtTracking
