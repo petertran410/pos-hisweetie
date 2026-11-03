@@ -79,6 +79,8 @@ export interface ChatMessage {
   albumId: string | null;
   // Tin sticker Zalo (ảnh lấy theo mã, xem lib/chat/stickers.ts)
   stickerId: string | null;
+  // Tin sticker Facebook: URL ảnh sticker
+  stickerImage?: string | null;
   // Tin trả lời: trích tin gốc
   quote?: { pid: string | null; text: string; senderName: string | null } | null;
   // Cảm xúc gộp theo icon (HEART, LIKE, HAHA, WOW, CRY, ANGRY…); mine = kênh của mình đã thả
