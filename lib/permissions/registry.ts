@@ -103,6 +103,10 @@ export const ROUTE_PERMISSIONS: Record<
     resource: "lark_approval",
     action: "view",
   },
+  "/tai-chinh/tam-ung-luong": {
+    resource: "salary_advance",
+    action: "view",
+  },
   "/tai-chinh/xe-co": [
     { resource: "vehicles", action: "view" },
     { resource: "vehicles", action: "create" },
@@ -375,6 +379,12 @@ export const NAV_CONFIG: NavSection[] = [
         label: "Đơn Lark Approval",
         href: "/tai-chinh/don-lark-approval",
         permission: { resource: "lark_approval", action: "view" },
+      },
+      {
+        key: "salary-advances",
+        label: "Tạm ứng lương",
+        href: "/tai-chinh/tam-ung-luong",
+        permission: { resource: "salary_advance", action: "view" },
       },
       {
         key: "vehicle-finance",

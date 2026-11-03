@@ -151,6 +151,9 @@ export function CustomerForm({
 
   const { data: customerGroupsData } = useCustomerGroups();
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
+  // Người dùng có tự thêm/bỏ nhóm không — chỉ khi đó mới được gửi groupIds: []
+  // (vài màn mở form với dữ liệu khách không kèm nhóm, gửi [] sẽ xóa nhầm).
+  const [groupsTouched, setGroupsTouched] = useState(false);
   const [showGroupDropdown, setShowGroupDropdown] = useState(false);
   const [groupSearchTerm, setGroupSearchTerm] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -492,6 +495,7 @@ export function CustomerForm({
   }, [customer, setValue]);
 
   const handleToggleGroup = (groupId: number) => {
+    setGroupsTouched(true);
     setSelectedGroupIds((prev) =>
       prev.includes(groupId)
         ? prev.filter((id) => id !== groupId)
@@ -500,6 +504,7 @@ export function CustomerForm({
   };
 
   const handleRemoveGroup = (groupId: number) => {
+    setGroupsTouched(true);
     setSelectedGroupIds((prev) => prev.filter((id) => id !== groupId));
   };
 
@@ -699,11 +704,19 @@ export function CustomerForm({
       contactNumber: data.contactNumber || undefined,
       branchId: selectedBranch?.id,
       parentId: selectedParent?.id || undefined,
-      groupIds: selectedGroupIds.length > 0 ? selectedGroupIds : undefined,
+      // Sửa KH mà người dùng bỏ chọn hết nhóm phải gửi [] để backend gỡ khỏi
+      // mọi nhóm (undefined bị bỏ qua → nhóm cũ vẫn giữ nguyên).
+      groupIds:
+        selectedGroupIds.length > 0
+          ? selectedGroupIds
+          : customer && groupsTouched
+            ? []
+            : undefined,
       code: data.code || undefined,
       email: data.email || undefined,
       phone: data.phone || undefined,
-      comments: data.comments || undefined,
+      // Sửa KH: xóa trắng ghi chú phải gửi "" để backend xóa (undefined bị bỏ qua).
+      comments: data.comments?.trim() || (customer?.comments ? "" : undefined),
       organization: isOrganization ? data.organization || undefined : undefined,
       taxCode: invoice.taxCode || undefined,
       type: parseInt(data.type),

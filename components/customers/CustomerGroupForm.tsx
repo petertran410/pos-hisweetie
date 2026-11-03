@@ -6,6 +6,8 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { customerGroupsApi } from "@/lib/api/customer-groups";
 import { usersApi } from "@/lib/api/users";
 import { toast } from "sonner";
+import Swal from "sweetalert2";
+import { useCancelCustomerGroup } from "@/lib/hooks/useCustomerGroups";
 
 interface CustomerGroupFormProps {
   isOpen: boolean;
@@ -128,17 +130,8 @@ export function CustomerGroupForm({
     },
   });
 
-  const deleteGroup = useMutation({
-    mutationFn: customerGroupsApi.delete,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customer-groups"] });
-      toast.success("Xóa nhóm khách hàng thành công");
-      onClose();
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Không thể xóa nhóm khách hàng");
-    },
-  });
+  // Hủy nhóm thay cho xóa hẳn: dữ liệu nhóm được giữ lại, có thể khôi phục.
+  const cancelGroup = useCancelCustomerGroup();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,14 +158,39 @@ export function CustomerGroupForm({
     }
   };
 
-  const handleDelete = () => {
-    if (
-      window.confirm(
-        "Bạn có chắc chắn muốn xóa nhóm khách hàng này? Hành động này không thể hoàn tác!"
-      )
-    ) {
-      deleteGroup.mutate(group.id);
-    }
+  const handleCancelGroup = async () => {
+    const customerCount: number =
+      group.customerCount ??
+      group._count?.customerGroupDetails ??
+      group.customerGroupDetails?.length ??
+      0;
+
+    const res =
+      customerCount > 0
+        ? await Swal.fire({
+            title: `Nhóm "${group.name}" còn ${customerCount} khách hàng`,
+            text: "Phải gỡ hết khách khỏi nhóm mới hủy được. Khách hàng vẫn giữ nguyên, chỉ bị bỏ khỏi nhóm. Nhóm đã hủy có thể khôi phục.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Gỡ hết khách và hủy nhóm",
+            cancelButtonText: "Không làm gì",
+            confirmButtonColor: "#dc2626",
+          })
+        : await Swal.fire({
+            title: `Hủy nhóm "${group.name}"?`,
+            text: "Nhóm vẫn được lưu lại và có thể khôi phục.",
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonText: "Hủy nhóm",
+            cancelButtonText: "Không làm gì",
+            confirmButtonColor: "#dc2626",
+          });
+    if (!res.isConfirmed) return;
+
+    cancelGroup.mutate(
+      { id: group.id, removeCustomers: customerCount > 0 },
+      { onSuccess: () => onClose() }
+    );
   };
 
   const addCondition = () => {
@@ -519,17 +537,17 @@ export function CustomerGroupForm({
             <>
               <button
                 type="button"
-                onClick={handleDelete}
-                disabled={deleteGroup.isPending}
+                onClick={handleCancelGroup}
+                disabled={cancelGroup.isPending}
                 className="px-4 py-2 border border-red-300 text-red-600 rounded hover:bg-red-50 disabled:opacity-50">
-                {deleteGroup.isPending ? "Đang xóa..." : "Xóa"}
+                {cancelGroup.isPending ? "Đang hủy..." : "Hủy nhóm"}
               </button>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={onClose}
                   className="px-4 py-2 border rounded hover:bg-gray-50">
-                  Hủy
+                  Đóng
                 </button>
                 <button
                   type="submit"

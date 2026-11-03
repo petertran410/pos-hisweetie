@@ -145,6 +145,8 @@ export const priceBooksApi = {
     customerId?: number;
     userId?: number;
     date?: string;
+    // true → liệt kê mọi bảng giá chọn được, bỏ qua phạm vi khách hàng
+    anyCustomer?: boolean;
   }): Promise<PriceBook[]> => {
     return apiClient.get("/price-books/applicable", params);
   },

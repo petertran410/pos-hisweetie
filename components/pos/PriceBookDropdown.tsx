@@ -7,6 +7,7 @@ import { useAuthStore } from "@/lib/store/auth";
 import { ChevronDown } from "lucide-react";
 import { priceBooksApi } from "@/lib/api";
 import { toast } from "sonner";
+import { canCustomerUsePriceBook } from "@/lib/utils/price-book-scope";
 
 interface PriceBookDropdownProps {
   selectedPriceBookId: number | null;
@@ -17,6 +18,7 @@ interface PriceBookDropdownProps {
   ) => void;
   cartItems?: any[];
   selectedCustomerId?: number | null;
+  selectedCustomerName?: string | null;
 }
 
 export function PriceBookDropdown({
@@ -25,6 +27,7 @@ export function PriceBookDropdown({
   onSelectPriceBook,
   cartItems,
   selectedCustomerId,
+  selectedCustomerName,
 }: PriceBookDropdownProps) {
   const { selectedBranch } = useBranchStore();
   const { user } = useAuthStore();
@@ -32,10 +35,12 @@ export function PriceBookDropdown({
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Liệt kê mọi bảng giá chọn được (kể cả bảng giá riêng khi chưa có khách);
+  // việc khách có thuộc bảng giá hay không được kiểm tra lúc chọn.
   const { data: applicablePriceBooks } = useApplicablePriceBooks({
     branchId: selectedBranch?.id,
-    customerId: selectedCustomerId ?? undefined,
     userId: user?.id,
+    anyCustomer: true,
   });
 
   const priceBooks = applicablePriceBooks || [];
@@ -60,6 +65,33 @@ export function PriceBookDropdown({
   }, []);
 
   const handleSelectPriceBook = async (priceBookId: number | null) => {
+    if (selectedCustomerId) {
+      let allowed: boolean;
+      try {
+        allowed = await canCustomerUsePriceBook({
+          customerId: selectedCustomerId,
+          priceBookId,
+          branchId: selectedBranch?.id,
+          userId: user?.id,
+        });
+      } catch {
+        toast.error(
+          "Không thể kiểm tra bảng giá của khách hàng. Vui lòng thử lại."
+        );
+        return;
+      }
+      if (!allowed) {
+        const targetName =
+          priceBookId && priceBookId > 0
+            ? (priceBooks.find((p) => p.id === priceBookId)?.name ?? "")
+            : "Bảng giá chung";
+        toast.error(
+          `Khách hàng "${selectedCustomerName ?? ""}" không thuộc bảng giá "${targetName}".`
+        );
+        return;
+      }
+    }
+
     if (priceBookId && priceBookId > 0 && cartItems && cartItems.length > 0) {
       try {
         const pb = await priceBooksApi.getPriceBook(priceBookId);

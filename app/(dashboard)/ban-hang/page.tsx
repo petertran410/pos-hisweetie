@@ -20,7 +20,18 @@ import {
   useCreatePosInvoiceFromOrder,
 } from "@/lib/hooks/useInvoices";
 import { toast } from "sonner";
-import { X, Plus, ArrowLeftRight, List, ShoppingCart } from "lucide-react";
+import {
+  X,
+  Plus,
+  ArrowLeftRight,
+  List,
+  ShoppingCart,
+  FileSpreadsheet,
+} from "lucide-react";
+import {
+  PosProductImportModal,
+  type ImportedCartLine,
+} from "@/components/pos/PosProductImportModal";
 import { useCreateOrderPayment } from "@/lib/hooks/useOrderPayments";
 import { useCreateInvoicePayment } from "@/lib/hooks/useInvoicePayments";
 import { InvoiceCart } from "@/components/pos/InvoiceCart";
@@ -674,7 +685,10 @@ export default function BanHangPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId) || tabs[0];
-  useRegisterCustomerInView(activeTab?.selectedCustomer, "Bán hàng (tab đang mở)");
+  useRegisterCustomerInView(
+    activeTab?.selectedCustomer,
+    "Bán hàng (tab đang mở)",
+  );
   // Giỏ của tab đang mở → gợi ý "Báo giá" trong menu "/" của chat Zalo
   useRegisterPosInView(
     activeTab?.cartItems?.length
@@ -693,7 +707,7 @@ export default function BanHangPage() {
             isGift: item.isPromoGift && item.promoLineType === "gift",
           })),
         }
-      : null
+      : null,
   );
 
   // ── Cảnh báo lệch giá: so đơn giá hiện tại với giá bán gần nhất (hóa đơn) ──
@@ -1778,6 +1792,7 @@ export default function BanHangPage() {
   );
 
   const [mobilePosView, setMobilePosView] = useState<"items" | "cart">("items");
+  const [showImportModal, setShowImportModal] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -3498,6 +3513,42 @@ export default function BanHangPage() {
     setMobilePosView("items");
   };
 
+  // Thêm nhiều dòng từ file Excel trong 1 lần cập nhật (effect KM chỉ chạy 1 lần).
+  // Giá/giảm giá đã được modal tính sẵn theo bảng giá + quyền sửa giá.
+  const addImportedItemsToCart = (lines: ImportedCartLine[]) => {
+    if (!lines.length) return;
+    const stamp = Date.now();
+    const newItems: CartItem[] = lines.map((line, index) => ({
+      rowId: `${line.product.id}_normal__${stamp}_${index}`,
+      product: line.product,
+      quantity: line.quantity,
+      quantityUnit: line.quantityUnit,
+      conversionValueSnapshot: getConversionValue(line.product),
+      price: line.price,
+      discount: line.discount,
+      note: line.note,
+      conditionType: "normal",
+    }));
+
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) =>
+        tab.id === activeTabId
+          ? { ...tab, cartItems: [...newItems, ...tab.cartItems] }
+          : tab,
+      ),
+    );
+    setMobilePosView("items");
+    toast.success(`Đã thêm ${lines.length} sản phẩm từ file`);
+  };
+
+  const openImportModal = () => {
+    if (!selectedBranch) {
+      toast.error("Vui lòng chọn chi nhánh trước khi import sản phẩm");
+      return;
+    }
+    setShowImportModal(true);
+  };
+
   const updateCartItem = (rowId: string, updates: Partial<CartItem>) => {
     updateActiveTab({
       cartItems: activeTab.cartItems.map((item) =>
@@ -4475,17 +4526,32 @@ export default function BanHangPage() {
     </div>
   );
 
+  const importButton = (
+    <button
+      type="button"
+      onClick={openImportModal}
+      title="Import sản phẩm từ Excel"
+      aria-label="Import sản phẩm từ Excel"
+      className="flex items-center gap-1.5 px-2 lg:px-3 py-2 rounded text-white bg-white/15 hover:bg-white/25 text-sm font-medium flex-shrink-0">
+      <FileSpreadsheet className="w-5 h-5" />
+      <span className="hidden xl:inline">Import Excel</span>
+    </button>
+  );
+
   return (
     <div className="h-full flex flex-col bg-brand-dark">
       {/* ══════════════════════════════════════════
           DESKTOP HEADER — chỉ hiện lg+, giữ nguyên
       ══════════════════════════════════════════ */}
       <div className="hidden lg:flex px-4 py-3 items-center gap-4 flex-shrink-0">
-        <div className="flex-1 max-w-md">
-          <ProductSearchDropdown
-            onAddProduct={addToCart}
-            selectedPriceBookId={activeTab.selectedPriceBookId}
-          />
+        <div className="flex-1 max-w-md flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <ProductSearchDropdown
+              onAddProduct={addToCart}
+              selectedPriceBookId={activeTab.selectedPriceBookId}
+            />
+          </div>
+          {importButton}
         </div>
         {tabsRow}
       </div>
@@ -4495,10 +4561,15 @@ export default function BanHangPage() {
       ══════════════════════════════════════════ */}
       <div className="lg:hidden px-2 pt-1.5 pb-1.5 flex flex-col gap-1.5 flex-shrink-0">
         {tabsRow}
-        <ProductSearchDropdown
-          onAddProduct={addToCart}
-          selectedPriceBookId={activeTab.selectedPriceBookId}
-        />
+        <div className="flex items-center gap-1.5">
+          <div className="flex-1 min-w-0">
+            <ProductSearchDropdown
+              onAddProduct={addToCart}
+              selectedPriceBookId={activeTab.selectedPriceBookId}
+            />
+          </div>
+          {importButton}
+        </div>
       </div>
 
       {/* ══════════════════════════════════════════
@@ -4822,6 +4893,16 @@ export default function BanHangPage() {
               }, 300);
             }
           }}
+        />
+      )}
+
+      {showImportModal && (
+        <PosProductImportModal
+          branchId={selectedBranch?.id}
+          priceBookId={activeTab.selectedPriceBookId}
+          canEditPrice={canEditPrice}
+          onClose={() => setShowImportModal(false)}
+          onConfirm={addImportedItemsToCart}
         />
       )}
     </div>
