@@ -299,7 +299,7 @@ export function RecentChatRow({ c, onClick }: { c: RecentChat; onClick: () => vo
           {c.lastMessage || "…"}
         </span>
         {m?.type !== "linked" && c.lead && (
-          <span className="block text-[11px] text-violet-700">Lead · {c.lead.name}</span>
+          <span className="block text-[11px] text-green-700">Lead · {c.lead.name}</span>
         )}
         {m?.type === "byCode" || m?.type === "byPhone" ? (
           // Gợi ý gắn khách POS (Facebook/Tiktok: chỉ khi SĐT trong hội thoại / của lead trùng khách)

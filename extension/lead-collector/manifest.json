@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "Hisweetie – Tạo lead nhanh",
+  "version": "2.2.0",
+  "description": "Sidebar thu thập tên, SĐT, nhu cầu, đơn hàng từ hội thoại webchat Shopee (hoặc đoạn bôi đen) và tạo lead POS.",
+  "permissions": [
+    "sidePanel",
+    "scripting",
+    "contextMenus",
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://banhang.shopee.vn/*",
+    "https://pos.hisweetievietnam.com/*",
+    "http://localhost:3050/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://pos.hisweetievietnam.com/*",
+        "http://localhost:3050/*"
+      ],
+      "js": [
+        "pos-bridge.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "Tạo lead nhanh (Alt+Shift+L)"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+L"
+      },
+      "description": "Mở sidebar tạo lead"
+    }
+  }
+}

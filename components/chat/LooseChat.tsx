@@ -17,7 +17,7 @@ import { platformLabel } from "@/lib/chat/platforms";
 import type { LinkedCustomer, LooseThread } from "@/lib/types/smaxChat";
 import { ChatThread } from "./ChatThread";
 import { LeadFormModal } from "@/components/leads/LeadFormModal";
-import { LEAD_FIRST_PLATFORMS, PLATFORM_TO_SOURCE } from "@/lib/leads/constants";
+import { LEAD_FIRST_PLATFORMS, PLATFORM_TO_SOURCE, leadHref } from "@/lib/leads/constants";
 import Link from "next/link";
 import { CustomerSearchSelect, linkGroupCustomers } from "./GroupCustomersBar";
 
@@ -260,7 +260,7 @@ function LinkCustomerBar({
         </span>
         {thread.lead ? (
           <Link
-            href={`/khach-hang/lead?id=${thread.lead.id}`}
+            href={leadHref(thread.lead.id)}
             className="shrink-0 rounded-md bg-violet-100 px-2 py-1 text-xs font-medium text-violet-700 hover:underline">
             Lead · {thread.lead.name}
           </Link>
@@ -298,7 +298,7 @@ function LinkCustomerBar({
         </span>
         {thread.lead ? (
           <Link
-            href={`/khach-hang/lead?id=${thread.lead.id}`}
+            href={leadHref(thread.lead.id)}
             className="shrink-0 rounded-md bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700 hover:underline">
             Lead · {thread.lead.name}
           </Link>
