@@ -19,6 +19,9 @@ import { useCan } from "@/lib/hooks/useCan";
 import { CodeLink } from "../shared/CodeLink";
 import { ZaloContactsManager } from "../chat/ZaloContactsManager";
 import { useRegisterCustomerInView } from "@/lib/store/customersInView";
+import { useCustomerJourney } from "@/lib/hooks/useLeads";
+import { CustomerJourneyTab } from "../journey/CustomerJourneyTab";
+import { LEAD_SOURCE_LABEL, leadHref } from "@/lib/leads/constants";
 
 interface CustomerDetailRowProps {
   customerId: number;
@@ -45,12 +48,17 @@ export function CustomerDetailRow({
     | "debts_total"
     | "debts_own"
     | "zalo"
+    | "journey"
   >("info");
 
   const canUpdateCustomer = useCan("customers", "update");
   const canDeleteCustomer = useCan("customers", "delete");
   const canViewDebt = useCan("customers", "view_debt");
   const canViewZalo = useCan("smax_chat", "view");
+  // Lead nguồn của khách (dòng "Từ lead" + tab "Hành trình")
+  const canViewLeads = useCan("leads", "view");
+  const journey = useCustomerJourney(customerId, canViewLeads);
+  const sourceLead = journey.data?.lead ?? null;
   useRegisterCustomerInView(customer, "Chi tiết khách hàng");
 
   // ─── Ghi chú sửa trực tiếp (giống ghi chú ở OrderDetailRow) ───
@@ -187,6 +195,7 @@ export function CustomerDetailRow({
         : [{ key: "debts", label: "Công nợ" }]
       : []),
     ...(canViewZalo ? [{ key: "zalo", label: "Smax" }] : []),
+    ...(canViewLeads ? [{ key: "journey", label: "Hành trình" }] : []),
   ] as const;
 
   const groups =
@@ -304,6 +313,25 @@ export function CustomerDetailRow({
                             {groups.length > 0 ? groups.join(", ") : "Chưa có"}
                           </span>
                         </span>
+                        {sourceLead && (
+                          <>
+                            <span className="text-gray-300">|</span>
+                            <span>
+                              Từ lead:{" "}
+                              <a
+                                href={leadHref(sourceLead.id)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-brand hover:underline">
+                                {sourceLead.code}
+                              </a>{" "}
+                              <span className="text-gray-700">
+                                · {LEAD_SOURCE_LABEL[sourceLead.source]}
+                                {sourceLead.cskh ? ` · CSKH ${sourceLead.cskh.name}` : ""}
+                              </span>
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -479,6 +507,9 @@ export function CustomerDetailRow({
                 <div className="max-w-md">
                   <ZaloContactsManager customerId={customer.id} />
                 </div>
+              )}
+              {activeTab === "journey" && (
+                <CustomerJourneyTab customerId={customer.id} />
               )}
               {activeTab === "debts" && (
                 <CustomerDebtsTab

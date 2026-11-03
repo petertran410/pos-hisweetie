@@ -1,5 +1,6 @@
 import { apiClient } from "@/lib/config/api";
 import type {
+  CustomerJourney,
   Lead,
   LeadDetail,
   LeadDuplicates,
@@ -20,7 +21,16 @@ export const leadsApi = {
     apiClient.get("/leads/check-phone", { phone, ...(excludeId ? { excludeId } : {}) }),
   removeConversation: (id: number, conversationId: number) =>
     apiClient.delete(`/leads/${id}/conversations/${conversationId}`),
-  convert: (id: number, customerId: number) => apiClient.post(`/leads/${id}/convert`, { customerId }),
+  convert: (
+    id: number,
+    customerId: number,
+    method?: "manual" | "created"
+  ): Promise<{ lead: Lead; customer: { id: number; code: string | null; name: string }; converted: boolean }> =>
+    apiClient.post(`/leads/${id}/convert`, { customerId, ...(method ? { method } : {}) }),
+  unlink: (id: number): Promise<Lead> => apiClient.post(`/leads/${id}/unlink`, {}),
+  journey: (id: number): Promise<CustomerJourney> => apiClient.get(`/leads/${id}/journey`),
+  customerJourney: (customerId: number): Promise<CustomerJourney> =>
+    apiClient.get(`/leads/by-customer/${customerId}/journey`),
   handoverCheck: (
     id: number,
     salePicId?: number,

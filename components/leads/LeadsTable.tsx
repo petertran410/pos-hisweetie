@@ -13,6 +13,7 @@ import { LeadSourceLogo } from "./LeadSourceLogo";
 import { CustomTooltip } from "@/components/ui/CustomTooltip";
 import {
   LEAD_CATEGORY_LABEL,
+  LEAD_LINK_METHOD_LABEL,
   LEAD_SOURCE_LABEL,
   LEAD_STATUS_COLOR,
   LEAD_STATUS_LABEL,
@@ -21,6 +22,7 @@ import {
 } from "@/lib/leads/constants";
 import type { Lead, LeadFilters } from "@/lib/types/lead";
 import { LeadDetailRow } from "./LeadDetailRow";
+import { JourneyStepper, stageMilestones } from "@/components/journey/JourneyStepper";
 
 const DEFAULT_COLUMNS: ColumnConfig<Lead>[] = [
   {
@@ -83,7 +85,21 @@ const DEFAULT_COLUMNS: ColumnConfig<Lead>[] = [
     key: "customer",
     label: "Khách hàng",
     visible: true,
-    render: (l) => <LeadCustomersCell customers={l.customers} />,
+    render: (l) => (
+      <span className="inline-flex flex-col">
+        <LeadCustomersCell customers={l.customers} />
+        {l.customerId && l.linkMethod && l.linkMethod !== "unlinked" && (
+          <span className="text-[11px] text-gray-500">{LEAD_LINK_METHOD_LABEL[l.linkMethod]}</span>
+        )}
+      </span>
+    ),
+  },
+  {
+    key: "journey",
+    label: "Hành trình",
+    visible: true,
+    // Lead → Chuyển Sale → Mã KH → Đặt hàng (suy từ trạng thái; chi tiết ở tab "Hành trình")
+    render: (l) => <JourneyStepper compact milestones={stageMilestones(l)} />,
   },
   {
     key: "createdAt",

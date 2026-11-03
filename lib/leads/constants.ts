@@ -1,4 +1,4 @@
-import type { LeadCategory, LeadSource, LeadStatus } from "@/lib/types/lead";
+import type { LeadCandidate, LeadCategory, LeadLinkMethod, LeadSource, LeadStatus } from "@/lib/types/lead";
 
 export const LEAD_SOURCE_LABEL: Record<LeadSource, string> = {
   facebook: "Fanpage",
@@ -32,6 +32,22 @@ export const LEAD_STATUS_COLOR: Record<LeadStatus, string> = {
   handed_over: "bg-violet-100 text-violet-700",
   converted: "bg-green-100 text-green-700",
   cancelled: "bg-gray-100 text-gray-500",
+};
+
+export const LEAD_LINK_METHOD_LABEL: Record<LeadLinkMethod, string> = {
+  zalo: "ID Zalo",
+  conversation: "Hội thoại",
+  phone: "SĐT",
+  manual: "Gắn tay",
+  created: "Tạo từ lead",
+  unlinked: "Đã gỡ",
+};
+
+export const LEAD_CANDIDATE_REASON_LABEL: Record<LeadCandidate["reason"], string> = {
+  zalo: "trùng ID Zalo",
+  conversation: "trùng hội thoại",
+  phone: "trùng SĐT",
+  thread_phone: "SĐT trong hội thoại",
 };
 
 // Nền tảng kênh Smax → nguồn lead

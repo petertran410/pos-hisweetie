@@ -104,7 +104,9 @@ export const smaxChatApi = {
     customerId: number,
     // zaloId: số Zalo, hoặc tid hội thoại kênh khác (fb…, zl…) kèm pagePid
     body: { kind: ZaloContactKind; zaloId: string; name?: string; pagePid?: string }
-  ): Promise<ZaloContact> => apiClient.post(`${base(customerId)}/contacts`, body),
+    // linkedLead: lead chưa gắn cùng ID Zalo / hội thoại → backend tự gắn vào khách
+  ): Promise<ZaloContact & { linkedLead?: { id: number; code: string } | null }> =>
+    apiClient.post(`${base(customerId)}/contacts`, body),
 
   updateContact: (customerId: number, contactId: number, body: { name?: string }) =>
     apiClient.patch(`${base(customerId)}/contacts/${contactId}`, body),

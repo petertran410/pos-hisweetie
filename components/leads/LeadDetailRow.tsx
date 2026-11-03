@@ -3,10 +3,10 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, CheckCircle2, Clock, Loader2, MessageCircle, Pencil, Send, Trash2, UserCheck, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Link2, Loader2, MessageCircle, Pencil, Send, Trash2, Unlink, UserCheck, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { leadsApi } from "@/lib/api/leads";
-import { useLead, useSaveLead } from "@/lib/hooks/useLeads";
+import { useLead, useLeadJourney, useSaveLead } from "@/lib/hooks/useLeads";
 import { useCan } from "@/lib/hooks/useCan";
 import { useAuthStore } from "@/lib/store/auth";
 import { useChatSidebarStore } from "@/lib/store/chatSidebar";
@@ -14,16 +14,29 @@ import { confirmAction } from "@/lib/chat/confirm";
 import { platformLabel } from "@/lib/chat/platforms";
 import { CustomerForm } from "@/components/customers/CustomerForm";
 import { ThreadKindLogo } from "@/components/chat/ThreadKindIcon";
-import { LEAD_CATEGORY_LABEL, LEAD_SOURCE_LABEL, LEAD_STATUS_COLOR, LEAD_STATUS_LABEL, leadCode } from "@/lib/leads/constants";
+import {
+  LEAD_CANDIDATE_REASON_LABEL,
+  LEAD_CATEGORY_LABEL,
+  LEAD_LINK_METHOD_LABEL,
+  LEAD_SOURCE_LABEL,
+  LEAD_STATUS_COLOR,
+  LEAD_STATUS_LABEL,
+  leadCode,
+} from "@/lib/leads/constants";
+import { JourneyStepper } from "@/components/journey/JourneyStepper";
+import { JourneyTimeline } from "@/components/journey/JourneyTimeline";
 import type { HandoverStepKey, LeadConversation, LeadDetail } from "@/lib/types/lead";
 import { LeadFormModal } from "./LeadFormModal";
-import { HANDOVER_STEP_LABEL, LeadHandoverModal } from "./LeadHandoverModal";
+import { HANDOVER_SKIP_NOTE, HANDOVER_STEP_LABEL, LeadHandoverModal } from "./LeadHandoverModal";
+import { LinkCustomerModal } from "./LinkCustomerModal";
 
-type Tab = "info" | "channels" | "history";
+type Tab = "info" | "channels" | "history" | "journey";
 
 /** Chi tiết lead (mở khi bấm dòng): thông tin + thao tác, kênh kết nối, lịch sử chuyển giao. */
 export function LeadDetailRow({ leadId, colSpan }: { leadId: number; colSpan: number }) {
   const { data: lead, isLoading } = useLead(leadId);
+  // Mốc hành trình (thanh dưới tiêu đề) + dòng thời gian (tab "Hành trình")
+  const journey = useLeadJourney(leadId);
   const [tab, setTab] = useState<Tab>("info");
   // Khung chi tiết đứng yên khi bảng cuộn ngang: sticky + rộng bằng vùng nhìn thấy của bảng
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -58,6 +71,7 @@ export function LeadDetailRow({ leadId, colSpan }: { leadId: number; colSpan: nu
     { key: "info", label: "Thông tin" },
     { key: "channels", label: `Kênh kết nối (${lead.conversations.length})` },
     { key: "history", label: `Lịch sử chuyển giao (${lead.handovers.length})` },
+    { key: "journey", label: "Hành trình" },
   ];
 
   return (
@@ -73,6 +87,11 @@ export function LeadDetailRow({ leadId, colSpan }: { leadId: number; colSpan: nu
               </span>
 
             </div>
+            {journey.data && (
+              <div className="px-4 pt-3">
+                <JourneyStepper milestones={journey.data.milestones} />
+              </div>
+            )}
             <div className="flex border-b px-4">
               {tabs.map((t) => (
                 <button
@@ -89,6 +108,14 @@ export function LeadDetailRow({ leadId, colSpan }: { leadId: number; colSpan: nu
               {tab === "info" && <InfoTab lead={lead} />}
               {tab === "channels" && <ChannelsTab lead={lead} />}
               {tab === "history" && <HistoryTab lead={lead} />}
+              {tab === "journey" &&
+                (journey.data ? (
+                  <JourneyTimeline events={journey.data.events} />
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    <Loader2 className="inline h-4 w-4 animate-spin" /> Đang tải hành trình…
+                  </p>
+                ))}
             </div>
           </div>
         </div>
@@ -105,6 +132,7 @@ function InfoTab({ lead }: { lead: LeadDetail }) {
   const [editing, setEditing] = useState(false);
   const [handingOver, setHandingOver] = useState(false);
   const [creatingCustomer, setCreatingCustomer] = useState(false);
+  const [linking, setLinking] = useState(false);
   const closed = lead.status === "converted" || lead.status === "cancelled";
 
   // Lý do khoá "Chuyển giao" về phía lead (Sale / kênh Zalo của Sale kiểm tra trong modal)
@@ -113,21 +141,40 @@ function InfoTab({ lead }: { lead: LeadDetail }) {
     queryFn: () => leadsApi.handoverCheck(lead.id),
     enabled: canAssign,
   });
-  // Khách POS trùng SĐT → gắn lead vào khách đó thay vì tạo mới
-  const dups = useQuery({
-    queryKey: ["leadPhoneDups", lead.id, lead.phone],
-    queryFn: () => leadsApi.checkPhone(lead.phone!, lead.id),
-    enabled: !!lead.phone && !lead.customerId,
-  });
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["leads"] });
+    queryClient.invalidateQueries({ queryKey: ["lead", lead.id] });
+    queryClient.invalidateQueries({ queryKey: ["leadJourney", lead.id] });
+    queryClient.invalidateQueries({ queryKey: ["customerJourney"] });
+  };
   const convert = useMutation({
-    mutationFn: (customerId: number) => leadsApi.convert(lead.id, customerId),
-    onSuccess: () => {
-      toast.success("Lead đã thành khách hàng");
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
-      queryClient.invalidateQueries({ queryKey: ["lead", lead.id] });
+    mutationFn: ({ customerId, method }: { customerId: number; method?: "manual" | "created" }) =>
+      leadsApi.convert(lead.id, customerId, method),
+    onSuccess: (res) => {
+      toast.success(
+        res.converted
+          ? `Đã gắn khách ${res.customer.code ?? res.customer.name} — khách đã có đơn, lead "Đã chuyển đổi"`
+          : `Đã gắn khách ${res.customer.code ?? res.customer.name}`
+      );
+      refresh();
     },
-    onError: (e: Error) => toast.error(e.message || "Không chuyển thành khách được"),
+    onError: (e: Error) => toast.error(e.message || "Không gắn khách được"),
   });
+  const unlink = useMutation({
+    mutationFn: () => leadsApi.unlink(lead.id),
+    onSuccess: () => {
+      toast.success("Đã gỡ khách khỏi lead");
+      refresh();
+    },
+    onError: (e: Error) => toast.error(e.message || "Không gỡ được"),
+  });
+  const linkTo = async (c: { id: number; code: string | null; name: string }, reason?: string) => {
+    const ok = await confirmAction(
+      `Gắn lead "${lead.name}" vào khách ${c.code ?? ""} · ${c.name}${reason ? ` (${reason})` : ""}?`,
+      { title: "Gắn lead với khách hàng", confirmText: "Gắn" }
+    );
+    if (ok) convert.mutate({ customerId: c.id });
+  };
 
   const rows: [string, React.ReactNode][] = [
     ["SĐT", lead.phone || "—"],
@@ -147,10 +194,32 @@ function InfoTab({ lead }: { lead: LeadDetail }) {
       lead.customers.length ? (
         <span className="flex flex-col">
           {lead.customers.map((c) => (
-            <Link key={c.id} href={`/khach-hang?Code=${encodeURIComponent(c.code ?? "")}`} className="text-brand hover:underline">
-              {c.code} - {c.name}
-              {c.id === lead.customerId ? " (đã chuyển đổi)" : ""}
-            </Link>
+            <span key={c.id} className="flex flex-wrap items-center gap-x-2">
+              <Link href={`/khach-hang?Code=${encodeURIComponent(c.code ?? "")}`} className="text-brand hover:underline">
+                {c.code} - {c.name}
+              </Link>
+              {c.id === lead.customerId && lead.linkMethod && lead.linkMethod !== "unlinked" && (
+                <span className="text-xs font-normal text-gray-500">
+                  {LEAD_LINK_METHOD_LABEL[lead.linkMethod]}
+                  {lead.linkedAt ? ` · ${new Date(lead.linkedAt).toLocaleDateString("vi-VN")}` : ""}
+                </span>
+              )}
+              {c.id === lead.customerId && canUpdate && (
+                <button
+                  onClick={async () => {
+                    const ok = await confirmAction(
+                      `Gỡ khách ${c.code ?? ""} · ${c.name} khỏi lead "${lead.name}"? Hệ thống sẽ không tự gắn lại.`,
+                      { title: "Gỡ liên kết", confirmText: "Gỡ", danger: true }
+                    );
+                    if (ok) unlink.mutate();
+                  }}
+                  disabled={unlink.isPending}
+                  title="Gỡ liên kết (gắn nhầm)"
+                  className="inline-flex items-center gap-1 text-xs font-normal text-gray-500 hover:text-red-600">
+                  <Unlink className="h-3.5 w-3.5" /> Gỡ
+                </button>
+              )}
+            </span>
           ))}
         </span>
       ) : (
@@ -158,13 +227,8 @@ function InfoTab({ lead }: { lead: LeadDetail }) {
       ),
     ],
   ];
-  // Gắn lead vào khách: khách đã gắn hội thoại của lead, rồi khách trùng SĐT
-  const candidates = [
-    ...lead.customers.map((c) => ({ ...c, reason: "đã gắn hội thoại của lead" })),
-    ...(dups.data?.customers ?? [])
-      .filter((d) => !lead.customers.some((c) => c.id === d.id))
-      .map((c) => ({ ...c, reason: "trùng SĐT" })),
-  ];
+  // Chưa gắn khách: khách khớp ID Zalo / hội thoại / SĐT (kể cả SĐT Smax thu trong hội thoại)
+  const candidates = lead.customerId ? [] : lead.candidates;
   const handoverBlocked = check.data?.reasons[0];
 
   return (
@@ -222,17 +286,18 @@ function InfoTab({ lead }: { lead: LeadDetail }) {
             {candidates.map((c) => (
               <button
                 key={c.id}
-                onClick={async () => {
-                  const ok = await confirmAction(`Gắn lead "${lead.name}" vào khách ${c.code} · ${c.name} (${c.reason})?`, {
-                    title: "Lead thành khách hàng",
-                    confirmText: "Gắn",
-                  });
-                  if (ok) convert.mutate(c.id);
-                }}
+                onClick={() => linkTo(c, LEAD_CANDIDATE_REASON_LABEL[c.reason])}
+                title={LEAD_CANDIDATE_REASON_LABEL[c.reason]}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-green-300 px-3 py-1.5 text-green-700 hover:bg-green-50">
                 <UserCheck className="h-4 w-4" /> Gắn khách {c.code}
+                <span className="text-xs text-green-600/80">({LEAD_CANDIDATE_REASON_LABEL[c.reason]})</span>
               </button>
             ))}
+            <button
+              onClick={() => setLinking(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 hover:bg-gray-50">
+              <Link2 className="h-4 w-4" /> Gắn khách khác…
+            </button>
             <button
               onClick={() => setCreatingCustomer(true)}
               className="inline-flex items-center gap-1.5 rounded-lg border border-green-300 px-3 py-1.5 text-green-700 hover:bg-green-50">
@@ -277,7 +342,17 @@ function InfoTab({ lead }: { lead: LeadDetail }) {
           onClose={() => setCreatingCustomer(false)}
           onSuccess={(customer?: { id?: number }) => {
             setCreatingCustomer(false);
-            if (customer?.id) convert.mutate(customer.id);
+            if (customer?.id) convert.mutate({ customerId: customer.id, method: "created" });
+          }}
+        />
+      )}
+      {linking && (
+        <LinkCustomerModal
+          leadName={lead.name}
+          onClose={() => setLinking(false)}
+          onPick={(c) => {
+            setLinking(false);
+            linkTo(c);
           }}
         />
       )}
@@ -397,7 +472,7 @@ function HistoryTab({ lead }: { lead: LeadDetail }) {
                   )}
                   <span>
                     {HANDOVER_STEP_LABEL[k]}
-                    {s?.status === "skipped" && <span className="text-xs text-amber-600"> · bỏ qua — Sale nhắn sau khi khách đồng ý kết bạn</span>}
+                    {s?.status === "skipped" && <span className="text-xs text-amber-600"> · {HANDOVER_SKIP_NOTE[k] ?? "bỏ qua"}</span>}
                     {s?.error && (
                       <span className={`block whitespace-pre-wrap text-xs ${s.status === "skipped" ? "text-gray-500" : "text-red-600"}`}>
                         {s.error}

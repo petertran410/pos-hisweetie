@@ -192,6 +192,7 @@ function LinkCustomerBar({
           ...(zaloweb ? {} : { pagePid: thread.pagePid }),
         });
         linked = [{ ...picked[0], contactId: contact.id }];
+        if (contact.linkedLead) toast.success(`Đã gắn ${contact.linkedLead.code} vào khách ${picked[0].code ?? picked[0].name}`);
       }
       if (!linked.length) return;
       toast.success(

@@ -11,6 +11,20 @@ export function useLead(id: number | null) {
   return useQuery({ queryKey: ["lead", id], queryFn: () => leadsApi.get(id!), enabled: !!id });
 }
 
+/** Hành trình theo lead (tab "Hành trình", thanh mốc ở chi tiết lead). */
+export function useLeadJourney(id: number | null) {
+  return useQuery({ queryKey: ["leadJourney", id], queryFn: () => leadsApi.journey(id!), enabled: !!id });
+}
+
+/** Hành trình theo khách (trang khách hàng): lead nguồn + mã KH + đơn / hóa đơn. */
+export function useCustomerJourney(customerId: number | null, enabled = true) {
+  return useQuery({
+    queryKey: ["customerJourney", customerId],
+    queryFn: () => leadsApi.customerJourney(customerId!),
+    enabled: !!customerId && enabled,
+  });
+}
+
 /** Tạo / sửa lead; báo trùng SĐT (khách / lead khác) nhưng vẫn lưu. */
 export function useSaveLead() {
   const queryClient = useQueryClient();

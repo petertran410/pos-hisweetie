@@ -16,6 +16,12 @@ export const HANDOVER_STEP_LABEL: Record<HandoverStepKey, string> = {
   greeting: "Tin chào Zalo",
 };
 
+/** Ghi chú khi bước bị "bỏ qua" (lỗi Zalo chấp nhận được) */
+export const HANDOVER_SKIP_NOTE: Partial<Record<HandoverStepKey, string>> = {
+  friend: "bỏ qua — khách đã là bạn bè",
+  greeting: "bỏ qua — Sale nhắn sau khi khách đồng ý kết bạn",
+};
+
 /**
  * Chuyển lead cho Sale PIC: chọn Sale + kênh Zalo cá nhân của Sale, xem trước / sửa tin Lark,
  * lời mời kết bạn, tin chào (từ mẫu), xác nhận rồi gửi. Lỗi giữa chừng → gửi lại bước lỗi
@@ -151,7 +157,7 @@ export function LeadHandoverModal({ lead, onClose }: { lead: Lead; onClose: () =
                   )}
                   <span>
                     {HANDOVER_STEP_LABEL[k]}
-                    {s.status === "skipped" && <span className="text-xs text-amber-600"> · bỏ qua — Sale nhắn sau khi khách đồng ý kết bạn</span>}
+                    {s.status === "skipped" && <span className="text-xs text-amber-600"> · {HANDOVER_SKIP_NOTE[k] ?? "bỏ qua"}</span>}
                     {s.error && (
                       <span className={`block whitespace-pre-wrap text-xs ${s.status === "skipped" ? "text-gray-500" : "text-red-600"}`}>
                         {s.error}

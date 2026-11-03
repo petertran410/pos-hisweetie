@@ -1,3 +1,5 @@
+import type { LeadLinkMethod, LeadSource, LeadStatus } from "./lead";
+
 export type ZaloContactKind = "user" | "group";
 
 export interface ZaloContact {
@@ -33,6 +35,17 @@ export interface LinkedCustomer {
 export interface ChatContext {
   customer: { id: number; code: string | null; name: string; phone: string | null };
   salePic: { id: number; name: string } | null;
+  // Lead nguồn của khách (null: không có / không có quyền leads:view)
+  lead: {
+    id: number;
+    code: string;
+    source: LeadSource;
+    channelName: string | null;
+    status: LeadStatus;
+    linkMethod: LeadLinkMethod | null;
+    createdAt: string;
+    cskhName: string | null;
+  } | null;
   myChannels: ChatChannel[];
   // sharedWith: khách khác cùng gắn nhóm này
   contacts: {

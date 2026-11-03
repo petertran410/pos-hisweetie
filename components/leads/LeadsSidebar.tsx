@@ -54,6 +54,8 @@ export function LeadsSidebar({ onChange }: { onChange: (f: LeadFilters) => void 
   const [sources, setSources] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [statuses, setStatuses] = useState<string[]>([]);
+  // Khách hàng POS: chọn 1 (Đã gắn / Chưa gắn)
+  const [linked, setLinked] = useState<string[]>([]);
   const [provinceCode, setProvinceCode] = useState("");
   const [salePicId, setSalePicId] = useState("");
   const [time, setTime] = useState<TimeRangeState>(ALL_TIME);
@@ -64,18 +66,20 @@ export function LeadsSidebar({ onChange }: { onChange: (f: LeadFilters) => void 
       sources: sources.join(",") || undefined,
       categories: categories.join(",") || undefined,
       statuses: statuses.join(",") || undefined,
+      linked: (linked[0] as LeadFilters["linked"]) || undefined,
       provinceCode: provinceCode || undefined,
       salePicId: salePicId ? Number(salePicId) : undefined,
       from: range?.from,
       to: range?.to,
     });
-  }, [sources, categories, statuses, provinceCode, salePicId, time, onChange]);
+  }, [sources, categories, statuses, linked, provinceCode, salePicId, time, onChange]);
 
-  const active = [sources.length, categories.length, statuses.length, provinceCode, salePicId, time.selectedPreset !== "all_time" || time.dateMode === "custom"].filter(Boolean).length;
+  const active = [sources.length, categories.length, statuses.length, linked.length, provinceCode, salePicId, time.selectedPreset !== "all_time" || time.dateMode === "custom"].filter(Boolean).length;
   const clear = () => {
     setSources([]);
     setCategories([]);
     setStatuses([]);
+    setLinked([]);
     setProvinceCode("");
     setSalePicId("");
     setTime(ALL_TIME);
@@ -95,6 +99,15 @@ export function LeadsSidebar({ onChange }: { onChange: (f: LeadFilters) => void 
         <MultiChips label="Nguồn" opts={options(LEAD_SOURCE_LABEL)} value={sources} onChange={setSources} />
         <MultiChips label="Phân loại" opts={options(LEAD_CATEGORY_LABEL)} value={categories} onChange={setCategories} />
         <MultiChips label="Trạng thái" opts={options(LEAD_STATUS_LABEL)} value={statuses} onChange={setStatuses} />
+        <MultiChips
+          label="Khách hàng POS"
+          opts={[
+            { value: "true", label: "Đã gắn" },
+            { value: "false", label: "Chưa gắn" },
+          ]}
+          value={linked}
+          onChange={(v) => setLinked(v.slice(-1))}
+        />
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Khu vực</label>
           <FilterSearchableSelect

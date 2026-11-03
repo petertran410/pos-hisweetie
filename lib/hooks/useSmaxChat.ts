@@ -20,10 +20,14 @@ export function useSaveZaloContact(customerId: number) {
   return useMutation({
     mutationFn: (body: { kind: ZaloContactKind; zaloId: string; name?: string }) =>
       smaxChatApi.createContact(customerId, body),
-    onSuccess: () => {
+    onSuccess: (contact) => {
       queryClient.invalidateQueries({ queryKey: contextKey(customerId) });
       queryClient.invalidateQueries({ queryKey: ["smaxSharedGroups", customerId] });
       toast.success("Đã lưu ID Zalo");
+      if (contact.linkedLead) {
+        toast.success(`Đã gắn ${contact.linkedLead.code} (trùng ID Zalo) vào khách`);
+        queryClient.invalidateQueries({ queryKey: ["leads"] });
+      }
     },
     onError: (e: Error) => toast.error(e.message || "Lưu ID Zalo thất bại"),
   });

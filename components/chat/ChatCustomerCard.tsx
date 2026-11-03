@@ -4,6 +4,8 @@ import Link from "next/link";
 import { Snowflake } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { ChatContext } from "@/lib/types/smaxChat";
+import { LEAD_SOURCE_LABEL, leadHref } from "@/lib/leads/constants";
+import { JourneyStepper, stageMilestones } from "@/components/journey/JourneyStepper";
 import { QUICK_ITEM_MIME, type QuickItem } from "@/lib/chat/quickInsert";
 
 /** Kéo dòng vào ô soạn tin để chèn thông tin (như menu "/"). */
@@ -21,7 +23,7 @@ const shortDate = (d: string) => new Date(d).toLocaleDateString("vi-VN");
 
 /** Thông tin POS của khách cạnh khung chat. Sale PIC chỉ để xem. */
 export function ChatCustomerCard({ context }: { context: ChatContext }) {
-  const { customer, salePic, debt, recentOrders, recentInvoices, recentPackingSlips } = context;
+  const { customer, salePic, lead, debt, recentOrders, recentInvoices, recentPackingSlips } = context;
   const customerHref = `/khach-hang?Code=${encodeURIComponent(customer.code ?? "")}`;
 
   return (
@@ -40,6 +42,24 @@ export function ChatCustomerCard({ context }: { context: ChatContext }) {
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
         <dt className="text-gray-500">Sale PIC</dt>
         <dd>{salePic?.name ?? "—"}</dd>
+        {lead && (
+          <>
+            <dt className="text-gray-500">Lead</dt>
+            <dd className="min-w-0">
+              <span className="flex items-center gap-2">
+                <a href={leadHref(lead.id)} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">
+                  {lead.code}
+                </a>
+                <JourneyStepper compact milestones={stageMilestones({ status: lead.status, customerId: customer.id })} />
+              </span>
+              <span className="block truncate text-xs text-gray-500">
+                {LEAD_SOURCE_LABEL[lead.source]}
+                {lead.channelName ? ` · ${lead.channelName}` : ""}
+                {lead.cskhName ? ` · CSKH ${lead.cskhName}` : ""}
+              </span>
+            </dd>
+          </>
+        )}
       </dl>
       {debt !== null && (
         <div {...dragProps({ type: "debt" })}>
