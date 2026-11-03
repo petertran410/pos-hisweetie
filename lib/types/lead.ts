@@ -147,6 +147,10 @@ export interface JourneyMilestone {
   at: string | null;
   done: boolean;
   ref: string | null;
+  /** Nhãn kèm mốc, vd "Khách cũ" (có mã KH trước khi có lead) */
+  note?: string | null;
+  /** Chưa đạt nhưng có đơn / hóa đơn trước khi có lead (khách cũ) → hiện vàng */
+  warn?: boolean;
 }
 
 export interface JourneyEvent {
