@@ -14,6 +14,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { CustomerGroupForm } from "./CustomerGroupForm";
+import { CancelledCustomerGroupsModal } from "./CancelledCustomerGroupsModal";
 import { createPortal } from "react-dom";
 import { normalizeRectForFixed } from "@/lib/utils/zoom";
 import { FilterMultiSelect } from "@/components/ui/filters";
@@ -139,6 +140,7 @@ function GroupDropdown({
   onChange,
   onEdit,
   onCreate,
+  onShowCancelled,
 }: {
   groups: {
     id: number;
@@ -150,6 +152,7 @@ function GroupDropdown({
   onChange: (ids: number[]) => void;
   onEdit: (e: React.MouseEvent, group: any) => void;
   onCreate: () => void;
+  onShowCancelled: () => void;
 }) {
   const options = useMemo(
     () => groups.map((g) => ({ value: String(g.id), label: g.name })),
@@ -162,12 +165,19 @@ function GroupDropdown({
         <label className="text-sm font-medium text-gray-700">
           Nhóm khách hàng
         </label>
-        <button
-          onClick={onCreate}
-          className="text-xs text-brand hover:underline flex items-center gap-1">
-          <Plus className="w-3 h-3" />
-          Tạo nhóm
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onShowCancelled}
+            className="text-xs text-gray-500 hover:underline">
+            Nhóm đã hủy
+          </button>
+          <button
+            onClick={onCreate}
+            className="text-xs text-brand hover:underline flex items-center gap-1">
+            <Plus className="w-3 h-3" />
+            Tạo nhóm
+          </button>
+        </div>
       </div>
 
       <FilterMultiSelect
@@ -865,6 +875,7 @@ export function CustomersSidebar({
 
   // Group form
   const [showGroupForm, setShowGroupForm] = useState(false);
+  const [showCancelledGroups, setShowCancelledGroups] = useState(false);
   const [editingGroup, setEditingGroup] = useState<any>(null);
 
   // ─── Date filter: Ngày tạo KH ───
@@ -1107,6 +1118,7 @@ export function CustomersSidebar({
               setEditingGroup(null);
               setShowGroupForm(true);
             }}
+            onShowCancelled={() => setShowCancelledGroups(true)}
           />
 
           <div className="border-t border-gray-100" />
@@ -1288,6 +1300,11 @@ export function CustomersSidebar({
           setEditingGroup(null);
         }}
         group={editingGroup}
+      />
+
+      <CancelledCustomerGroupsModal
+        isOpen={showCancelledGroups}
+        onClose={() => setShowCancelledGroups(false)}
       />
     </>
   );

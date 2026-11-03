@@ -53,17 +53,48 @@ export function useUpdateCustomerGroup() {
   });
 }
 
-export function useDeleteCustomerGroup() {
+export function useCancelledCustomerGroups(enabled = true) {
+  return useQuery({
+    queryKey: ["customer-groups", "cancelled"],
+    queryFn: customerGroupsApi.getCancelled,
+    enabled,
+  });
+}
+
+// Hủy nhóm (giữ dữ liệu). removeCustomers = gỡ hết khách khỏi nhóm rồi hủy.
+export function useCancelCustomerGroup() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: number) => customerGroupsApi.delete(id),
-    onSuccess: () => {
+    mutationFn: ({
+      id,
+      removeCustomers,
+    }: {
+      id: number;
+      removeCustomers: boolean;
+    }) => customerGroupsApi.cancel(id, removeCustomers),
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["customer-groups"] });
-      toast.success("Xóa nhóm khách hàng thành công");
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      toast.success(res?.message || "Đã hủy nhóm khách hàng");
     },
-    onError: (error: any) => {
-      toast.error(error?.message || "Xóa nhóm khách hàng thất bại");
+    onError: (error: Error) => {
+      toast.error(error?.message || "Hủy nhóm khách hàng thất bại");
+    },
+  });
+}
+
+export function useRestoreCustomerGroup() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => customerGroupsApi.restore(id),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["customer-groups"] });
+      toast.success(res?.message || "Đã khôi phục nhóm khách hàng");
+    },
+    onError: (error: Error) => {
+      toast.error(error?.message || "Khôi phục nhóm khách hàng thất bại");
     },
   });
 }
