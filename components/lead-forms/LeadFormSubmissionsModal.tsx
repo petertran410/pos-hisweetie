@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Inbox, Loader2, X } from "lucide-react";
 import { leadFormsApi } from "@/lib/api/leadForms";
-import { LEAD_STATUS_COLOR, LEAD_STATUS_LABEL, leadCode } from "@/lib/leads/constants";
+import { LEAD_STATUS_COLOR, LEAD_STATUS_LABEL, leadCode, leadHref } from "@/lib/leads/constants";
 import { TablePagination } from "@/components/shared/TablePagination";
 import type { LeadForm } from "@/lib/types/leadForm";
 
@@ -70,7 +70,7 @@ export function LeadFormSubmissionsModal({ form, onClose }: { form: LeadForm; on
                   <td className="px-4 py-2.5 whitespace-nowrap">
                     {s.lead ? (
                       <div className="space-y-1">
-                        <Link href={`/khach-hang/lead?id=${s.lead.id}`} className="font-medium text-brand hover:underline">
+                        <Link href={leadHref(s.lead.id)} className="font-medium text-brand hover:underline">
                           {leadCode(s.lead.id)}
                         </Link>
                         <div className="text-gray-700">{s.lead.name}</div>

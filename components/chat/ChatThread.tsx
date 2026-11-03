@@ -720,14 +720,19 @@ function MessageBubble({ message: m, showSender }: { message: ChatMessage; showS
   if (m.type === "system") {
     return <div className="my-2 text-center text-xs italic text-gray-500">{m.text}</div>;
   }
-  if (m.stickerId) {
+  if (m.stickerId || m.stickerImage) {
     return (
       <div className={`flex flex-col my-1 ${m.fromMe ? "items-end" : "items-start"}`}>
         {showSender && !m.fromMe && m.senderName && (
           <span className="text-[11px] text-gray-500 ml-2">{m.senderName}</span>
         )}
         <span className={`relative ${m.reactions?.length ? "mb-2.5" : ""} ${m.recalled ? "opacity-50" : ""}`}>
-          <img src={stickerUrl(m.stickerId)} alt="sticker" loading="lazy" className="h-28 w-28 object-contain" />
+          <img
+            src={m.stickerImage || stickerUrl(m.stickerId!)}
+            alt="sticker"
+            loading="lazy"
+            className="h-28 w-28 object-contain"
+          />
           <HoverActions fromMe={m.fromMe} />
           <ReactionSlot reactions={m.reactions} />
         </span>

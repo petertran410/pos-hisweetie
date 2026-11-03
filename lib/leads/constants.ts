@@ -68,6 +68,8 @@ export const LEAD_FIRST_PLATFORMS = new Set(["facebook", "tiktok", "tiktokweb"])
 
 /** Mã lead hiển thị: LEAD + id 6 chữ số (khớp tìm kiếm ở backend). */
 export const leadCode = (id: number) => `LEAD${String(id).padStart(6, "0")}`;
+/** Link mở lead theo mã (giống /khach-hang?Code=); trang lead vẫn nhận ?id= của link cũ. */
+export const leadHref = (id: number) => `/khach-hang/lead?Code=${leadCode(id)}`;
 
 export const options = <T extends string>(labels: Record<T, string>) =>
   (Object.keys(labels) as T[]).map((value) => ({ value, label: labels[value] }));

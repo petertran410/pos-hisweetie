@@ -9,7 +9,7 @@ const byTime = (list: ChatMessage[]) =>
 /** Trích đoạn ngắn của tin (để hiện "Đang trả lời…"): loại nội dung + chữ, vd "[Hình ảnh] giá sỉ". */
 export function messagePreview(m: ChatMessage): string {
   const text = m.text.trim();
-  const tag = m.stickerId
+  const tag = m.stickerId || m.stickerImage
     ? "[Sticker]"
     : m.attachments.some(isImage)
       ? "[Hình ảnh]"
