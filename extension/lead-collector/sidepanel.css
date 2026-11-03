@@ -22,3 +22,5 @@ button.secondary { width: 100%; margin-top: 10px; background: #e6f8fa; color: va
 #result.ok { color: #15803d; }
 #result.err { color: #dc2626; }
 #session.err { color: #dc2626; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.row select { min-width: 0; }

@@ -170,6 +170,38 @@ export function parseShopeeChat({ account, chatLines, pageOrderLines, selection,
   return { name, phones, need, note };
 }
 
+// ───────────── Tỉnh thành / phường (danh mục 34 tỉnh mới, file tĩnh của POS) ─────────────
+
+const locationCache = {};
+
+/** { provinces: [{code, name}], communes: [{code, name, provinceCode}] } lấy từ POS (trình duyệt tự cache). */
+export async function loadLocations(posUrl) {
+  locationCache[posUrl] ??= Promise.all([
+    fetch(`${posUrl}/data/new-province-location.json`).then((r) => r.json()),
+    fetch(`${posUrl}/data/new-commune-location.json`).then((r) => r.json()),
+  ]).then(([p, c]) => ({
+    provinces: (p.provinces ?? []).map(({ code, name }) => ({ code, name })),
+    communes: (c.communes ?? []).map(({ code, name, provinceCode }) => ({ code, name, provinceCode })),
+  }));
+  try {
+    return await locationCache[posUrl];
+  } catch (e) {
+    delete locationCache[posUrl];
+    throw e;
+  }
+}
+
+/** Tỉnh có tên nằm trong 1 đoạn chữ (gõ không dấu vẫn nhận, vd "Thành phố Ho Chi Minh"). */
+export function matchProvince(provinces, texts) {
+  const core = (name) => fold(name).replace(/^(thanh pho|tinh)\s+/, "").trim();
+  for (const t of texts ?? []) {
+    const ft = fold(t);
+    const p = provinces.find((x) => ft.includes(core(x.name)));
+    if (p) return p;
+  }
+  return null;
+}
+
 /** Shop Shopee đang mở webchat (tìm tên tài khoản / mã shop trên trang); không chắc → null. */
 export function shopeeShopFromHints(hints) {
   const found = SHOPEE_SHOPS.filter((s) => hints?.includes(s.account) || hints?.includes(s.shopId));
@@ -202,19 +234,19 @@ export function readPage() {
     if (root.getBoundingClientRect().height > 250) chatLines = lines(root).slice(-400);
     else root = null;
   }
-  // Tên tài khoản khách: chữ dạng username Shopee (không dấu cách) ở thanh tiêu đề ngay trên / đầu cột hội thoại
+  // Thanh tiêu đề ngay trên / đầu cột hội thoại: tài khoản khách (username Shopee, không dấu cách) + địa chỉ ("Thành phố Ho Chi Minh")
   let account = "";
+  const headerTexts = [];
   if (root) {
     const r = root.getBoundingClientRect();
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
       const t = n.textContent.trim();
-      if (!/^(?=.*[a-z])[a-z0-9._]{3,30}$/i.test(t) || !n.parentElement) continue;
+      if (!t || !n.parentElement) continue;
       const b = n.parentElement.getBoundingClientRect();
-      if (b.height && b.top >= r.top - 140 && b.top <= r.top + 40 && b.left >= r.left - 20 && b.left < r.right) {
-        account = t;
-        break;
-      }
+      if (!(b.height && b.top >= r.top - 140 && b.top <= r.top + 40 && b.left >= r.left - 20 && b.left < r.right)) continue;
+      if (headerTexts.length < 30) headerTexts.push(t);
+      if (!account && /^(?=.*[a-z])[a-z0-9._]{3,30}$/i.test(t)) account = t;
     }
   }
   // Khối có mã đơn Shopee ngoài cột hội thoại (danh sách đơn của người mua thường xếp mới nhất trước)
@@ -225,5 +257,5 @@ export function readPage() {
   // Gợi ý shop đang mở: tên tài khoản / mã shop xuất hiện trên trang (chữ, thuộc tính, URL ảnh…)
   const html = document.documentElement.outerHTML;
   const shopHints = ["dieptra.tphcm", "nguyenlieu.royaltea", "397909811", "118504878"].filter((h) => html.includes(h));
-  return { selection, account, chatLines, pageOrderLines, shopHints, url: location.href, hasChat: !!chatLines };
+  return { selection, account, headerTexts, chatLines, pageOrderLines, shopHints, url: location.href, hasChat: !!chatLines };
 }

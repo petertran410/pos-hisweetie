@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Hisweetie – Tạo lead nhanh",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Sidebar thu thập tên, SĐT, nhu cầu, đơn hàng từ hội thoại webchat Shopee (hoặc đoạn bôi đen) và tạo lead POS.",
   "permissions": [
     "sidePanel",

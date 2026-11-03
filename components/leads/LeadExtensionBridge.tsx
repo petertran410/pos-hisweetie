@@ -5,7 +5,20 @@ import { leadsApi } from "@/lib/api/leads";
 import { useAuthStore } from "@/lib/store/auth";
 import type { LeadInput } from "@/lib/types/lead";
 
-const LEAD_FIELDS = ["name", "phone", "source", "category", "channelPid", "channelName", "need", "cskhNote"] as const;
+const LEAD_FIELDS = [
+  "name",
+  "phone",
+  "source",
+  "category",
+  "channelPid",
+  "channelName",
+  "provinceCode",
+  "provinceName",
+  "wardCode",
+  "wardName",
+  "need",
+  "cskhNote",
+] as const;
 
 /**
  * Cầu nối cho extension Chrome "Tạo lead nhanh" (pos-hisweetie/extension/lead-collector):
