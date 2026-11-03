@@ -215,16 +215,31 @@ export function useDeleteCustomer() {
 
 export function useSearchCustomers(
   search?: string,
-  options?: { enabled?: boolean },
+  options?: {
+    enabled?: boolean;
+    // POS: chỉ tìm khách dùng được với bảng giá này (0 = Bảng giá chung).
+    // Bỏ trống → tìm tất cả khách như cũ.
+    priceBookId?: number;
+    branchId?: number;
+  },
 ) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const hasHydrated = useAuthStore((state) => state._hasHydrated);
+  const priceBookId = options?.priceBookId;
+  const branchId = priceBookId !== undefined ? options?.branchId : undefined;
 
   return useQuery({
-    queryKey: ["customers-search", search],
+    queryKey:
+      priceBookId !== undefined
+        ? ["customers-search", search, { priceBookId, branchId }]
+        : ["customers-search", search],
     queryFn: async () => {
       const params: any = {};
       if (search) params.search = search;
+      if (priceBookId !== undefined) {
+        params.priceBookId = priceBookId;
+        if (branchId) params.branchId = branchId;
+      }
       const response = await apiClient.get<{
         data: CustomerSearchResult[];
       }>("/customers/search", params);

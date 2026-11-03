@@ -142,6 +142,7 @@ export function useApplicablePriceBooks(params: {
   customerId?: number;
   userId?: number;
   date?: string;
+  anyCustomer?: boolean;
 }) {
   return useQuery({
     queryKey: ["applicable-price-books", params],
