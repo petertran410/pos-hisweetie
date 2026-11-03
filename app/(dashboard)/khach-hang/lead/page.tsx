@@ -9,9 +9,11 @@ import { LeadFormModal } from "@/components/leads/LeadFormModal";
 import { LeadTemplatesModal } from "@/components/leads/LeadTemplatesModal";
 import type { LeadFilters } from "@/lib/types/lead";
 
-/** Lead: khách tiềm năng CSKH chăm sóc rồi chuyển giao Sale PIC (link Lark mở ?id=). */
+/** Lead: khách tiềm năng CSKH chăm sóc rồi chuyển giao Sale PIC (link mở ?Code=LEAD000012, link cũ ?id=). */
 export default function LeadsPage() {
-  const idParam = Number(useSearchParams().get("id")) || null;
+  const searchParams = useSearchParams();
+  const codeParam = searchParams.get("Code")?.trim() || null;
+  const openId = Number(codeParam?.match(/^lead0*(\d+)$/i)?.[1]) || Number(searchParams.get("id")) || null;
   const [filters, setFilters] = useState<LeadFilters>({});
   const [creating, setCreating] = useState(false);
   const [editingTemplates, setEditingTemplates] = useState(false);
@@ -24,9 +26,11 @@ export default function LeadsPage() {
           <LeadsSidebar onChange={onFilters} />
         </div>
         <LeadsTable
-          key={idParam ?? ""}
+          // mã đổi → bỏ dòng đang mở, lọc theo mã mới và tự mở dòng đó
+          key={codeParam ?? openId ?? ""}
           filters={filters}
-          openId={idParam}
+          initialQuery={codeParam ?? ""}
+          openId={openId}
           onCreateClick={() => setCreating(true)}
           onTemplatesClick={() => setEditingTemplates(true)}
         />

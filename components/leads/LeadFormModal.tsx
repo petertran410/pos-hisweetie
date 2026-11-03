@@ -10,7 +10,7 @@ import { useUsers } from "@/lib/hooks/useUsers";
 import { useNewLocations } from "@/lib/hooks/useNewLocations";
 import { useAuthStore } from "@/lib/store/auth";
 import { FilterSearchableSelect } from "@/components/ui/filters";
-import { LEAD_CATEGORY_LABEL, LEAD_SOURCE_LABEL, LEAD_STATUS_LABEL, SOURCE_CHANNEL_NAMES, SOURCE_PLATFORMS, options } from "@/lib/leads/constants";
+import { LEAD_CATEGORY_LABEL, LEAD_SOURCE_LABEL, LEAD_STATUS_LABEL, SOURCE_CHANNEL_NAMES, SOURCE_PLATFORMS, leadHref, options } from "@/lib/leads/constants";
 import { useQuery } from "@tanstack/react-query";
 import type { Lead, LeadCategory, LeadDuplicates, LeadInput, LeadSource, LeadStatus } from "@/lib/types/lead";
 import { platformLabel } from "@/lib/chat/platforms";
@@ -195,7 +195,7 @@ export function LeadFormModal({
                 {dups.leads.map((l) => (
                   <p key={`l${l.id}`}>
                     Lead{" "}
-                    <Link href={`/khach-hang/lead?id=${l.id}`} target="_blank" className="underline">
+                    <Link href={leadHref(l.id)} target="_blank" className="underline">
                       {l.name}
                     </Link>{" "}
                     ({LEAD_STATUS_LABEL[l.status]})

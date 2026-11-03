@@ -17,12 +17,28 @@ import {
   LEAD_STATUS_COLOR,
   LEAD_STATUS_LABEL,
   leadCode,
+  leadHref,
 } from "@/lib/leads/constants";
 import type { Lead, LeadFilters } from "@/lib/types/lead";
 import { LeadDetailRow } from "./LeadDetailRow";
 
 const DEFAULT_COLUMNS: ColumnConfig<Lead>[] = [
-  { key: "code", label: "Mã Lead", visible: true, render: (l) => <span className="font-medium text-brand">{leadCode(l.id)}</span> },
+  {
+    key: "code",
+    label: "Mã Lead",
+    visible: true,
+    // Mở lead ở tab mới; không bung/thu dòng
+    render: (l) => (
+      <Link
+        href={leadHref(l.id)}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="font-medium text-brand hover:underline">
+        {leadCode(l.id)}
+      </Link>
+    ),
+  },
   { key: "name", label: "Tên", visible: true, render: (l) => <span className="font-medium">{l.name}</span> },
   { key: "phone", label: "SĐT", visible: true, render: (l) => l.phone || "—" },
   { key: "category", label: "Phân loại", visible: true, render: (l) => LEAD_CATEGORY_LABEL[l.category] },
@@ -154,11 +170,14 @@ function LeadCustomersCell({ customers }: { customers: Lead["customers"] }) {
 /** Bảng lead: tìm theo tên/SĐT, bấm dòng mở chi tiết (lead mở sẵn khi có ?id=). */
 export function LeadsTable({
   filters,
+  initialQuery = "",
   openId,
   onCreateClick,
   onTemplatesClick,
 }: {
   filters: LeadFilters;
+  /** Ô tìm điền sẵn (mở từ link ?Code=) */
+  initialQuery?: string;
   openId: number | null;
   onCreateClick: () => void;
   onTemplatesClick: () => void;
@@ -166,8 +185,8 @@ export function LeadsTable({
   const canUpdate = useCan("leads", "update");
   const canTemplates = useCan("settings", "update");
   const { columns, visibleColumns, toggleColumn } = useColumnVisibility("leadTableColumns", DEFAULT_COLUMNS);
-  const [input, setInput] = useState("");
-  const [q, setQ] = useState("");
+  const [input, setInput] = useState(initialQuery);
+  const [q, setQ] = useState(initialQuery);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
   const [expandedId, setExpandedId] = useState<number | null>(openId);
