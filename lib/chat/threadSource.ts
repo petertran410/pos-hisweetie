@@ -13,6 +13,8 @@ export interface ThreadSource {
   tid: string;
   platform: string;
   name: string | null;
+  // Tên khách POS đã gắn (Sale đặt tên gợi nhớ trên Zalo, Smax chỉ có tên Zalo thật) → hiện ở header
+  customerName?: string | null;
   fetchPage: (before?: string) => Promise<ChatMessagesPage>;
   send: (body: SendBody) => Promise<unknown>;
   fetchProfile: () => Promise<ZaloProfile>;
@@ -32,7 +34,8 @@ export const contactTid = (c: Pick<ZaloContact, "zaloId">) => (/^\d+$/.test(c.za
 export function customerSource(
   customerId: number,
   channel: { pagePid: string; platform: string },
-  contact: ZaloContact
+  contact: ZaloContact,
+  customerName?: string | null
 ): ThreadSource {
   const { pagePid } = channel;
   const tid = contactTid(contact);
@@ -43,6 +46,7 @@ export function customerSource(
     tid,
     platform: channel.platform,
     name: contact.name,
+    customerName,
     fetchPage: (before) => smaxChatApi.getMessages(customerId, { pagePid, contactId: contact.id, before }),
     send: (body) => smaxChatApi.send(customerId, { ...body, pagePid, contactId: contact.id }),
     fetchProfile: () => smaxChatApi.getZaloProfile(customerId, pagePid, contact.id),

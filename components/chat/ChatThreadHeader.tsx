@@ -87,6 +87,9 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
     }
   };
 
+  const threadName = p?.name || source.name || source.zaloId;
+  // Đã gắn khách POS (không phải nhóm): tên khách lên tiêu đề, tên trên kênh xuống dòng phụ
+  const posName = !isGroup ? source.customerName || null : null;
   const subtitle =
     source.platform !== "zaloweb"
       ? `${platformLabel(source.platform)}${p?.isComment ? " · Bình luận bài viết" : ""}`
@@ -95,6 +98,7 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
         : f?.isFriend
           ? "Zalo cá nhân · Bạn bè"
           : "Zalo cá nhân";
+  const subtitleText = posName && !isLoading && threadName !== posName ? `${subtitle} · ${threadName}` : subtitle;
 
   return (
     <div className="border-b bg-white">
@@ -107,9 +111,9 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
         />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold leading-tight">
-            {isLoading ? "…" : p?.name || source.name || source.zaloId}
+            {posName || (isLoading ? "…" : threadName)}
           </p>
-          <p className="truncate text-[11px] text-gray-500">{subtitle}</p>
+          <p className="truncate text-[11px] text-gray-500" title={subtitleText}>{subtitleText}</p>
         </div>
         {p?.canPassControlAI && canSend && (
           <MetaAiSwitch on={metaAiOn} busy={busy} onClick={toggleMetaAi} />

@@ -208,7 +208,7 @@ function CollapsedRail({
     ro.observe(listEl);
     return () => ro.disconnect();
   }, [listEl]);
-  const { data, isFetching } = useRecentChats(!!channel && !channel.missing, channel?.pagePid, limit);
+  const { data, isFetching, isPlaceholderData } = useRecentChats(!!channel && !channel.missing, channel?.pagePid, limit);
   // Lọc "Chưa đọc" dùng chung với danh sách "Đang chat gần đây" khi mở rộng
   const unreadOnly = useChatSidebarStore((s) => s.recentUnreadOnly);
   const setUnreadOnly = useChatSidebarStore((s) => s.setRecentUnreadOnly);
@@ -216,11 +216,9 @@ function CollapsedRail({
   const isUnread = (c: RecentChat) => c.unread || newCount(c.tid, c.messageCount) > 0;
   const unreadCount = all.filter(isUnread).length;
   const items = unreadOnly ? all.filter(isUnread) : all;
-  // Còn hội thoại thì ô cuối là "…"
-  const shown = items.length > fit ? items.slice(0, fit - 1) : items;
-  const rest = items.slice(shown.length);
-  // Smax trả đủ số đã xin → có thể còn nữa (backend tối đa 200)
-  const canLoadMore = all.length >= limit && limit < 200;
+  // Smax trả đủ số đã xin → có thể còn nữa (backend tối đa 200); đang tải trang lớn hơn thì giữ nút
+  const canLoadMore = isPlaceholderData || (all.length >= limit && limit < 200);
+  const loadMore = () => setLimitBy({ pagePid: channel?.pagePid ?? null, n: Math.min(200, limit + 30) });
   const toggleMore = (btn: HTMLElement) => {
     if (moreAt) return setMoreAt(null);
     // Mép phải dropdown sát trái thanh, đáy ngang nút "…" (position:fixed bị nhân zoom của <html>)
@@ -261,6 +259,10 @@ function CollapsedRail({
   const [resizing, setResizing] = useState(false);
   const width = railWidth ?? RAIL_WIDTH;
   const showNames = width >= RAIL_NAMES_WIDTH;
+  // Thu gọn (chỉ avatar): còn hội thoại thì ô cuối là "…" (mở khung danh sách);
+  // mở rộng (có tên): hiện hết, cuộn trong thanh, cuối danh sách "Tải thêm hội thoại"
+  const shown = showNames || items.length <= fit ? items : items.slice(0, fit - 1);
+  const rest = items.slice(shown.length);
   const startResize = (e: React.PointerEvent<HTMLDivElement>) => {
     const el = railRef.current;
     if (!el) return;
@@ -425,6 +427,16 @@ function CollapsedRail({
           {unreadOnly && items.length === 0 && !isFetching && showNames && (
             <p className="px-1 text-xs text-gray-500">Không có hội thoại chưa đọc.</p>
           )}
+          {showNames && canLoadMore && (
+            <button
+              onClick={loadMore}
+              disabled={isPlaceholderData}
+              className="flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-md bg-gray-100 px-2 text-xs text-gray-500 hover:bg-cyan-bg hover:text-brand disabled:opacity-60"
+            >
+              {isPlaceholderData ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
+              {isPlaceholderData ? "Đang tải…" : "Tải thêm hội thoại"}
+            </button>
+          )}
           {rest.length > 0 && (
             <button
               onClick={(e) => toggleMore(e.currentTarget)}
@@ -450,7 +462,7 @@ function CollapsedRail({
           items={rest}
           loading={isFetching}
           canLoadMore={canLoadMore}
-          onLoadMore={() => setLimitBy({ pagePid: channel?.pagePid ?? null, n: Math.min(200, limit + 30) })}
+          onLoadMore={loadMore}
           onPick={(c) => {
             setMoreAt(null);
             open(c);
@@ -1158,7 +1170,7 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
       ) : contact ? (
         <ChatThread
           key={`${channel.pagePid}-${contact.id}`}
-          source={customerSource(ctx.customer.id, channel, contact)}
+          source={customerSource(ctx.customer.id, channel, contact, ctx.customer.name)}
           channelName={channel.name}
           recipientLabel={recipientLabel}
           confirmBeforeSend={ctx.confirmBeforeSend}

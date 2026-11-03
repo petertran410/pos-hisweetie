@@ -17,6 +17,9 @@ import { useCan } from "@/lib/hooks/useCan";
 import { useMetaAiTakeOver } from "@/lib/store/metaAiTakeOver";
 
 const COLLAPSED = 8;
+// Mỗi lần "Tải thêm" xin thêm từng này hội thoại (backend tối đa 200)
+const PAGE = 30;
+const MAX_RECENT = 200;
 // Số hội thoại lấy từ Smax khi tìm theo tên
 const SEARCH_LIMIT = 50;
 
@@ -92,7 +95,16 @@ export function useOpenRecentChat(onOpen: Props["onOpen"], onOpenThread: (t: Loo
 
 /** Hội thoại mới nhất trên kênh Zalo đang chọn, khớp với khách POS để mở nhanh. */
 export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
-  const { data, isLoading, isFetching, error, refetch } = useRecentChats(true, pagePid);
+  // Số hội thoại xin Smax theo kênh (đổi kênh → về mặc định)
+  const [limitBy, setLimitBy] = useState<{ pagePid?: string | null; n: number }>({ n: PAGE });
+  const limit = limitBy.pagePid === pagePid ? limitBy.n : PAGE;
+  const { data, isLoading, isFetching, isPlaceholderData, error, refetch } = useRecentChats(true, pagePid, limit);
+  // Smax trả đủ số đã xin → có thể còn nữa (đang tải trang lớn hơn thì giữ nút ở trạng thái "Đang tải…")
+  const canLoadMore = isPlaceholderData || ((data?.items.length ?? 0) >= limit && limit < MAX_RECENT);
+  const loadMore = () => {
+    setShowAll(true);
+    setLimitBy({ pagePid, n: Math.min(MAX_RECENT, limit + PAGE) });
+  };
   const { open } = useOpenRecentChat(onOpen, onOpenThread);
   const [showAll, setShowAll] = useState(false);
   // Fanpage Facebook: lọc tin nhắn Messenger / bình luận bài viết (đổi kênh → về "Tất cả")
@@ -259,12 +271,27 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
           ))}
         </ul>
       )}
-      {!searching && shown.length > COLLAPSED && (
-        <button
-          onClick={() => setShowAll((v) => !v)}
-          className="mt-1 px-1 text-xs text-brand hover:underline">
-          {showAll ? "Thu gọn" : `Xem thêm ${shown.length - COLLAPSED} hội thoại`}
-        </button>
+      {!searching && !isLoading && !error && (
+        <div className="mt-1 flex items-center gap-3 px-1 text-xs">
+          {shown.length > COLLAPSED && (
+            // "Thu gọn" căn phải, "Tải thêm hội thoại" bên trái
+            <button
+              onClick={() => setShowAll((v) => !v)}
+              className={`text-brand hover:underline ${showAll ? "order-last ml-auto" : ""}`}>
+              {showAll ? "Thu gọn" : `Xem thêm ${shown.length - COLLAPSED} hội thoại`}
+            </button>
+          )}
+          {/* Đã hiện hết hội thoại đã tải mà Smax còn → tải tiếp */}
+          {(showAll || shown.length <= COLLAPSED) && canLoadMore && (
+            <button
+              onClick={loadMore}
+              disabled={isPlaceholderData}
+              className="inline-flex items-center gap-1 text-brand hover:underline disabled:opacity-50">
+              {isPlaceholderData && <Loader2 className="h-3 w-3 animate-spin" />}
+              {isPlaceholderData ? "Đang tải…" : "Tải thêm hội thoại"}
+            </button>
+          )}
+        </div>
       )}
     </section>
   );
