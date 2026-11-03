@@ -90,6 +90,15 @@ export function usePriceBook(id: number | null) {
   });
 }
 
+// Phạm vi khách của bảng giá đổi → tìm khách và danh sách bảng giá ở POS
+// phải lấy lại, không dùng kết quả cũ trong cache.
+function invalidatePriceBookScope(
+  queryClient: ReturnType<typeof useQueryClient>
+) {
+  queryClient.invalidateQueries({ queryKey: ["applicable-price-books"] });
+  queryClient.invalidateQueries({ queryKey: ["customers-search"] });
+}
+
 export function useCreatePriceBook() {
   const queryClient = useQueryClient();
 
@@ -97,6 +106,7 @@ export function useCreatePriceBook() {
     mutationFn: priceBooksApi.createPriceBook,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["price-books"] });
+      invalidatePriceBookScope(queryClient);
       toast.success("Tạo bảng giá thành công");
     },
     onError: () => {
@@ -114,6 +124,7 @@ export function useUpdatePriceBook() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["price-books"] });
       queryClient.invalidateQueries({ queryKey: ["price-book"] });
+      invalidatePriceBookScope(queryClient);
       toast.success("Cập nhật bảng giá thành công");
     },
     onError: () => {
@@ -129,6 +140,7 @@ export function useDeletePriceBook() {
     mutationFn: priceBooksApi.deletePriceBook,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["price-books"] });
+      invalidatePriceBookScope(queryClient);
       toast.success("Xóa bảng giá thành công");
     },
     onError: () => {

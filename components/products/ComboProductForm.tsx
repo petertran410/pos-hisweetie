@@ -17,21 +17,20 @@ import { MisaItemDropdown } from "./MisaItemDropdown";
 import { MisaInventoryItem } from "@/lib/api/misa";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { API_URL } from "@/lib/config/api";
-import { toast } from "sonner";
 import { usePublication } from "./publication/usePublication";
 import { PublicationSection } from "./publication/PublicationSection";
+import {
+  ProductImageGallery,
+  toProductImageItems,
+  uploadProductImages,
+  type ProductImageItem,
+} from "./ProductImageGallery";
 
 interface ComboComponent {
   id?: number;
   componentProductId: number;
   componentProduct?: Product;
   quantity: number;
-}
-
-interface ImageItem {
-  url?: string;
-  file?: File;
-  preview: string;
 }
 
 interface ComboProductFormProps {
@@ -45,7 +44,7 @@ export function ComboProductForm({
   onClose,
   onSuccess,
 }: ComboProductFormProps) {
-  const [images, setImages] = useState<ImageItem[]>([]);
+  const [images, setImages] = useState<ProductImageItem[]>([]);
   const [components, setComponents] = useState<ComboComponent[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -173,11 +172,7 @@ export function ComboProductForm({
 
   useEffect(() => {
     if (product?.images) {
-      const loadedImages = product.images.map((img) => ({
-        url: img.image,
-        preview: img.image,
-      }));
-      setImages(loadedImages);
+      setImages(toProductImageItems(product.images));
     }
   }, [product]);
 
@@ -272,43 +267,13 @@ export function ComboProductForm({
   const endIndex = startIndex + itemsPerPage;
   const currentComponents = components.slice(startIndex, endIndex);
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Kích thước ảnh không được vượt quá 2MB");
-      e.target.value = "";
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImages((prev) => [
-        ...prev,
-        { file, preview: reader.result as string },
-      ]);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
-  };
-
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
-      const uploadedUrls: string[] = [];
-
-      for (const img of images) {
-        if (img.file) {
-          const url = await uploadFile(img.file);
-          uploadedUrls.push(url);
-        } else if (img.url) {
-          uploadedUrls.push(img.url);
-        }
-      }
+      const { imageUrls, primaryImageUrl } = await uploadProductImages(
+        images,
+        uploadFile
+      );
 
       // Gói dữ liệu công bố chỉ khi có quyền sửa.
       const publicationPayload = await pub.getPayload(canEditPublication);
@@ -330,7 +295,8 @@ export function ComboProductForm({
           : {}),
         isDirectSale: data.isDirectSale || false,
         isActive: data.isActive ?? true,
-        imageUrls: uploadedUrls,
+        imageUrls,
+        primaryImageUrl,
         ...publicationPayload,
         branchId: selectedBranch?.id,
       };
@@ -837,32 +803,7 @@ export function ComboProductForm({
 
             <div>
               <h3 className="font-semibold mb-3">Hình ảnh</h3>
-              <div className="flex gap-4">
-                {images.map((img, idx) => (
-                  <div key={idx} className="relative w-24 h-24">
-                    <img
-                      src={img.preview}
-                      alt=""
-                      className="w-full h-full object-cover rounded"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(idx)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6">
-                      ✕
-                    </button>
-                  </div>
-                ))}
-                <label className="w-24 h-24 border-2 border-dashed rounded flex items-center justify-center cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    className="hidden"
-                  />
-                  <span className="text-3xl text-gray-400">+</span>
-                </label>
-              </div>
+              <ProductImageGallery images={images} onChange={setImages} />
             </div>
 
             <div>
