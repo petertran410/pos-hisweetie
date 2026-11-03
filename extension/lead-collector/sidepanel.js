@@ -1,10 +1,11 @@
-import { CATEGORIES, ENVS, SOURCES, SOURCE_PLATFORMS, isShopeeChat, leadCode, parseSelection, parseShopeeChat, readPage, shopeeShopFromHints, sourceFromUrl } from "./lead.js";
+import { CATEGORIES, ENVS, SOURCES, SOURCE_PLATFORMS, isShopeeChat, leadCode, loadLocations, matchProvince, parseSelection, parseShopeeChat, readPage, shopeeShopFromHints, sourceFromUrl } from "./lead.js";
 import { call, getSession } from "./api.js";
 
 const $ = (id) => document.getElementById(id);
-const fields = ["name", "phone", "source", "channel", "category", "need", "note"];
+const fields = ["name", "phone", "source", "channel", "category", "province", "ward", "need", "note"];
 let env = "production";
 let channels = [];
+let locations = { provinces: [], communes: [] };
 // Kênh đang hiện trong ô Kênh (kênh Smax theo nguồn): { pagePid, label, name }
 let channelOptions = [];
 // Đã sửa tay → không tự thu thập đè khi đổi hội thoại
@@ -51,6 +52,35 @@ function renderChannels(pick) {
   $("channelRow").hidden = !channelOptions.length;
 }
 
+// ───────────── Tỉnh thành / phường ─────────────
+
+async function loadProvinces() {
+  try {
+    locations = await loadLocations(ENVS[env].pos);
+  } catch {
+    locations = { provinces: [], communes: [] };
+  }
+  const sel = $("province");
+  const keep = sel.value;
+  sel.length = 1;
+  for (const p of locations.provinces) sel.add(new Option(p.name, p.code));
+  sel.value = keep;
+  renderWards();
+}
+
+function setProvince(code) {
+  $("province").value = locations.provinces.some((p) => p.code === code) ? code : "";
+  renderWards();
+}
+
+function renderWards() {
+  const code = $("province").value;
+  const sel = $("ward");
+  sel.length = 0;
+  sel.add(new Option(code ? "— Chọn phường/xã —" : "Chọn tỉnh trước", ""));
+  for (const w of locations.communes.filter((c) => c.provinceCode === code)) sel.add(new Option(w.name, w.code));
+}
+
 // ───────────── Trùng SĐT ─────────────
 
 let dupeTimer;
@@ -95,6 +125,7 @@ function fill(data, source, channelPid) {
   $("note").value = data.note ?? "";
   if (source) $("source").value = source;
   renderChannels(channelPid);
+  setProvince(data.provinceCode ?? "");
   const chips = $("phoneChips");
   chips.textContent = "";
   const phones = data.phones ?? [];
@@ -138,7 +169,9 @@ async function collect() {
     // Shop đang mở: tìm thấy trên trang, không chắc thì dùng shop đã chọn lần trước
     const shop = shopeeShopFromHints(pages.flatMap((p) => p.shopHints ?? []));
     const { lastShopeeChannel } = await chrome.storage.local.get("lastShopeeChannel");
-    fill(parseShopeeChat({ ...chat, selection, url: tab.url }), source, shop?.pagePid ?? lastShopeeChannel);
+    // Tỉnh: địa chỉ khách trên thanh tiêu đề hội thoại ("Thành phố Ho Chi Minh")
+    const province = matchProvince(locations.provinces, chat.headerTexts);
+    fill({ ...parseShopeeChat({ ...chat, selection, url: tab.url }), provinceCode: province?.code }, source, shop?.pagePid ?? lastShopeeChannel);
     setText(info, "Đã thu thập từ hội thoại Shopee đang mở — kiểm tra lại trước khi tạo.", "muted");
   } else if (selection.trim()) {
     fill(parseSelection(selection), source);
@@ -156,6 +189,8 @@ async function submit(e) {
   btn.disabled = true;
   setText($("result"), "Đang tạo…");
   const channel = channelOptions.find((c) => c.pagePid === $("channel").value);
+  const province = locations.provinces.find((p) => p.code === $("province").value);
+  const ward = locations.communes.find((w) => w.code === $("ward").value && w.provinceCode === province?.code);
   const body = {
     name: $("name").value.trim(),
     phone: $("phone").value.trim() || undefined,
@@ -163,6 +198,10 @@ async function submit(e) {
     category: $("category").value,
     channelPid: channel?.pagePid,
     channelName: channel?.name,
+    provinceCode: province?.code,
+    provinceName: province?.name,
+    wardCode: ward?.code,
+    wardName: ward?.name,
     need: $("need").value.trim() || undefined,
     cskhNote: $("note").value.trim() || undefined,
   };
@@ -178,6 +217,7 @@ async function submit(e) {
     r.append(a);
     renderDupes(duplicates);
     for (const f of ["name", "phone", "need", "note"]) $(f).value = "";
+    setProvince("");
     $("phoneChips").textContent = "";
     dirty = false;
   } catch (err) {
@@ -193,6 +233,7 @@ $("collect").onclick = collect;
 $("form").onsubmit = submit;
 $("phone").oninput = checkDupes;
 $("source").onchange = () => renderChannels();
+$("province").onchange = renderWards;
 for (const f of fields) $(f).addEventListener("input", () => (dirty = true));
 
 $("env").onchange = async () => {
@@ -200,6 +241,7 @@ $("env").onchange = async () => {
   chrome.storage.local.set({ env });
   await showSession();
   loadChannels();
+  loadProvinces();
 };
 
 // Chuột phải › "Tạo lead từ …" → điền đoạn bôi đen
@@ -225,7 +267,7 @@ chrome.tabs.onUpdated.addListener((_id, change, tab) => {
   $("env").value = env;
   if (saved.lastCategory) $("category").value = saved.lastCategory;
   await showSession();
-  await loadChannels();
+  await Promise.all([loadChannels(), loadProvinces()]);
   await takePendingSelection();
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   if (isShopeeChat(tab?.url)) collect();

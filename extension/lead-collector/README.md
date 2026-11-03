@@ -23,6 +23,8 @@ Trang khác (Facebook, TikTok, Zalo…): bôi đen tên/SĐT → chuột phải 
 - Không phụ thuộc class của Shopee: tìm ô nhập tin nhắn, lấy cột hội thoại chứa ô đó.
 - Tên = tài khoản khách trên thanh tiêu đề hội thoại (vd `hieuminh2601`).
 - Nhu cầu = các thẻ **Sản phẩm** trong hội thoại (tên SP + giá), mới nhất trước.
+- Tỉnh/Thành = địa chỉ khách trên thanh tiêu đề hội thoại (vd "Thành phố Ho Chi Minh"); Phường/Xã chọn tay.
+  Danh mục 34 tỉnh mới lấy từ POS (`/data/new-province-location.json`, `/data/new-commune-location.json`).
 - Kênh (nguồn Shopee) theo kênh Smax: "Diệp Trà Chi Nhánh Miền Nam" (shop `dieptra.tphcm`), "DIỆP TRÀ - ROYALTEA" (shop `nguyenlieu.royaltea`).
   Tự chọn nếu thấy tên tài khoản / mã shop trên trang, không thì dùng kênh đã chọn lần trước.
 - SĐT viết số (`0901 234 567`, `+84…`, gửi tách nhiều tin `0976` · `259` · `769`) hoặc bằng chữ (`không ba năm chín…`, gõ không dấu/sai chính tả vẫn nhận).
