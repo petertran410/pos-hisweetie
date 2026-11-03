@@ -62,11 +62,9 @@ export function CustomerDetailRow({
   useEffect(() => {
     setComments(customer?.comments ?? "");
   }, [customer?.id, customer?.comments]);
-  const isCommentsDirty =
-    !!customer && comments.trim() !== (customer.comments ?? "").trim();
-
+  // Nút "Lưu" ở footer (giống InvoiceDetailRow) — lưu ghi chú đang nhập.
   const handleSaveComments = () => {
-    if (!customer || !isCommentsDirty || updateComments.isPending) return;
+    if (!customer || updateComments.isPending) return;
     updateComments.mutate({ id: customer.id, comments: comments.trim() });
   };
 
@@ -442,29 +440,6 @@ export function CustomerDetailRow({
                         placeholder="Nhập ghi chú..."
                         className="w-full px-3 py-2 text-md border rounded bg-white resize-none focus:outline-none focus:border-brand"
                       />
-                      {isCommentsDirty && (
-                        <div className="flex items-center justify-end gap-2 mt-1.5">
-                          <span className="mr-auto text-sm text-amber-600">
-                            Ghi chú chưa được lưu
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setComments(customer.comments ?? "")}
-                            disabled={updateComments.isPending}
-                            className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50">
-                            Hủy
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleSaveComments}
-                            disabled={updateComments.isPending}
-                            className="px-3 py-1.5 text-sm font-medium text-white bg-brand rounded hover:bg-brand-dark transition-colors disabled:opacity-50">
-                            {updateComments.isPending
-                              ? "Đang lưu..."
-                              : "Lưu ghi chú"}
-                          </button>
-                        </div>
-                      )}
                     </div>
                   ) : (
                     customer.comments && (
@@ -606,14 +581,25 @@ export function CustomerDetailRow({
                     </button>
                   )}
                 </div>
-                {canUpdateCustomer && (
-                  <button
-                    onClick={() => onEditClick(customer)}
-                    className="px-4 py-2 text-md font-medium text-white bg-brand rounded hover:bg-brand-dark transition-colors shadow-sm">
-                    <Pencil className="w-4 h-4 inline mr-1" />
-                    Chỉnh sửa
-                  </button>
-                )}
+                <div className="flex gap-2">
+                  {/* Lưu ghi chú — chỉ ở tab Thông tin (nơi có ô ghi chú) */}
+                  {canEditComments && activeTab === "info" && (
+                    <button
+                      onClick={handleSaveComments}
+                      disabled={updateComments.isPending}
+                      className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                      {updateComments.isPending ? "Đang lưu..." : "Lưu"}
+                    </button>
+                  )}
+                  {canUpdateCustomer && (
+                    <button
+                      onClick={() => onEditClick(customer)}
+                      className="px-4 py-2 text-md font-medium text-white bg-brand rounded hover:bg-brand-dark transition-colors shadow-sm">
+                      <Pencil className="w-4 h-4 inline mr-1" />
+                      Chỉnh sửa
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
