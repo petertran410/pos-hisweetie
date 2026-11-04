@@ -9,19 +9,23 @@ export function isRestrictedPriceBook(pb: PriceBook) {
   );
 }
 
-// Khách có dùng được bảng giá này không (null/0 = Bảng giá chung).
-// Khách đã gắn bảng giá riêng chỉ dùng được đúng các bảng giá đó.
+// Khách có thuộc bảng giá này không (null/0 = Bảng giá chung).
+// Khách đã gắn bảng giá riêng chỉ thuộc đúng các bảng giá đó.
+// ownPriceBooks: các bảng giá riêng khách đang thuộc (để hiện tên).
 export async function canCustomerUsePriceBook(params: {
   customerId: number;
   priceBookId: number | null;
   branchId?: number;
   userId?: number;
-}) {
+}): Promise<{ allowed: boolean; ownPriceBooks: PriceBook[] }> {
   const usable = await priceBooksApi.getApplicablePriceBooks({
     branchId: params.branchId,
     userId: params.userId,
     customerId: params.customerId,
   });
-  if (!params.priceBookId) return !usable.some(isRestrictedPriceBook);
-  return usable.some((pb) => pb.id === params.priceBookId);
+  const ownPriceBooks = usable.filter(isRestrictedPriceBook);
+  const allowed = params.priceBookId
+    ? usable.some((pb) => pb.id === params.priceBookId)
+    : ownPriceBooks.length === 0;
+  return { allowed, ownPriceBooks };
 }

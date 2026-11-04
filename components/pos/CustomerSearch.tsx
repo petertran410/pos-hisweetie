@@ -271,7 +271,7 @@ export function CustomerSearch({
             if (!createdCustomer) return;
             // Khách mới phải dùng được bảng giá đang chọn mới gắn vào đơn.
             try {
-              const allowed = await canCustomerUsePriceBook({
+              const { allowed } = await canCustomerUsePriceBook({
                 customerId: createdCustomer.id,
                 priceBookId: selectedPriceBookId,
                 branchId: selectedBranch?.id,

@@ -7,6 +7,7 @@ import { useAuthStore } from "@/lib/store/auth";
 import { ChevronDown } from "lucide-react";
 import { priceBooksApi } from "@/lib/api";
 import { toast } from "sonner";
+import Swal from "sweetalert2";
 import { canCustomerUsePriceBook } from "@/lib/utils/price-book-scope";
 
 interface PriceBookDropdownProps {
@@ -65,10 +66,21 @@ export function PriceBookDropdown({
   }, []);
 
   const handleSelectPriceBook = async (priceBookId: number | null) => {
-    if (selectedCustomerId) {
-      let allowed: boolean;
+    const targetName =
+      priceBookId && priceBookId > 0
+        ? (priceBooks.find((p) => p.id === priceBookId)?.name ?? "")
+        : "Bảng giá chung";
+    const customerName = selectedCustomerName ?? "";
+
+    // Khách không thuộc bảng giá đích vẫn chuyển được, nhưng phải xác nhận
+    // và lần chuyển được ghi vào Lịch sử thao tác.
+    // Chọn lại đúng bảng giá đang dùng thì không hỏi lại, không ghi log lần nữa.
+    let outsideCustomerScope = false;
+    const sameAsCurrent = (priceBookId ?? 0) === (selectedPriceBookId ?? 0);
+    if (selectedCustomerId && !sameAsCurrent) {
+      let check: Awaited<ReturnType<typeof canCustomerUsePriceBook>>;
       try {
-        allowed = await canCustomerUsePriceBook({
+        check = await canCustomerUsePriceBook({
           customerId: selectedCustomerId,
           priceBookId,
           branchId: selectedBranch?.id,
@@ -80,15 +92,23 @@ export function PriceBookDropdown({
         );
         return;
       }
-      if (!allowed) {
-        const targetName =
-          priceBookId && priceBookId > 0
-            ? (priceBooks.find((p) => p.id === priceBookId)?.name ?? "")
-            : "Bảng giá chung";
-        toast.error(
-          `Khách hàng "${selectedCustomerName ?? ""}" không thuộc bảng giá "${targetName}".`
-        );
-        return;
+      if (!check.allowed) {
+        const ownNames = check.ownPriceBooks
+          .map((pb) => `"${pb.name}"`)
+          .join(", ");
+        const result = await Swal.fire({
+          title: `Chuyển sang bảng giá "${targetName}"?`,
+          text: `Khách hàng "${customerName}" không thuộc bảng giá "${targetName}"${
+            ownNames ? ` (khách thuộc bảng giá ${ownNames})` : ""
+          }. Lần chuyển này sẽ được ghi vào Lịch sử thao tác.`,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Xác nhận",
+          cancelButtonText: "Hủy",
+        });
+        // Hủy hoặc đóng modal → không chuyển, không ghi log.
+        if (!result.isConfirmed) return;
+        outsideCustomerScope = true;
       }
     }
 
@@ -116,10 +136,33 @@ export function PriceBookDropdown({
         return;
       }
     }
+    // Ghi log trước khi chuyển: ghi không được thì không chuyển, để lần chuyển
+    // nào cũng có trong Lịch sử thao tác.
+    if (outsideCustomerScope && selectedCustomerId) {
+      try {
+        await priceBooksApi.logCustomerSwitch({
+          customerId: selectedCustomerId,
+          fromPriceBookId: selectedPriceBookId ?? 0,
+          toPriceBookId: priceBookId ?? 0,
+          branchId: selectedBranch?.id,
+        });
+      } catch {
+        toast.error(
+          "Không ghi được lịch sử, chưa chuyển bảng giá. Vui lòng thử lại."
+        );
+        return;
+      }
+    }
+
     const pb = priceBooks.find((p) => p.id === priceBookId);
     onSelectPriceBook(priceBookId, pb?.name ?? null);
     setShowDropdown(false);
     setSearch("");
+    if (outsideCustomerScope) {
+      toast.warning(
+        `Đã chuyển khách hàng "${customerName}" sang bảng giá "${targetName}" — khách không thuộc bảng giá này.`
+      );
+    }
   };
 
   const getDisplayName = () => {
