@@ -9,6 +9,9 @@ import { TablePagination } from "@/components/shared/TablePagination";
 import { PAGE_SIZE_OPTIONS } from "@/lib/hooks/usePageSize";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Ban,
   Loader2,
   Check,
@@ -26,6 +29,7 @@ import type {
   WarehouseCustomer,
   WarehouseReceipt,
   WarehouseReceiptQuery,
+  WarehouseReceiptTotals,
 } from "@/lib/api/internal-finance";
 import {
   useCancelWarehouseReceipt,
@@ -105,6 +109,42 @@ function PostedReceipts({
 
 /** Cột tiền căn phải cho thẳng hàng nhau. */
 const MONEY_COLUMNS = ["amount", "confirmed", "difference"];
+
+/** Cột tiền bấm để sắp xếp → tham số `orderBy` gửi backend. */
+const SORT_ORDER_BY = {
+  amount: "amount",
+  confirmed: "confirmedAmount",
+  difference: "difference",
+} as const;
+type SortKey = keyof typeof SORT_ORDER_BY;
+const isSortKey = (key: string): key is SortKey => key in SORT_ORDER_BY;
+
+/** Ô của dòng tổng dưới tên cột (tổng mọi phiếu khớp lọc, trừ phiếu hủy). */
+function totalCell(key: string, totals: WarehouseReceiptTotals) {
+  if (key === "amount" || key === "confirmed")
+    return (
+      <span className="font-semibold text-gray-900">
+        {formatCurrency(
+          key === "amount" ? totals.amount : totals.confirmedAmount,
+        )}
+      </span>
+    );
+  if (key !== "difference") return null;
+  const difference = totals.difference;
+  if (difference > 0)
+    return (
+      <span className="font-semibold text-red-600">
+        Thiếu {formatCurrency(difference)}
+      </span>
+    );
+  if (difference < 0)
+    return (
+      <span className="font-semibold text-amber-700">
+        Dư {formatCurrency(-difference)}
+      </span>
+    );
+  return <span className="font-semibold text-gray-900">0</span>;
+}
 
 /** Số kế toán kho xác nhận (> 0) mới được lập phiếu thu. */
 const confirmedOf = (row: WarehouseReceipt) =>
@@ -525,12 +565,34 @@ export function WarehouseCashTable({
   const allowedFilter = (filters.branchIds || []).filter((id) =>
     viewBranches.includes(Number(id)),
   );
+  // Bấm tên cột tiền: lần 1 giảm dần, lần 2 tăng dần, lần 3 bỏ sắp xếp.
+  const [sort, setSort] = useState<{
+    key: SortKey;
+    dir: "asc" | "desc";
+  } | null>(null);
+  const handleSort = (key: string) => {
+    if (!isSortKey(key)) return;
+    setSort((current) =>
+      current?.key !== key
+        ? { key, dir: "desc" }
+        : current.dir === "desc"
+          ? { key, dir: "asc" }
+          : null,
+    );
+    onFiltersChange({ page: 1 });
+  };
   const query = useWarehouseReceipts({
     ...filters,
     branchIds: allowedFilter.length ? allowedFilter : undefined,
     limit: pageSize,
+    ...(sort
+      ? { orderBy: SORT_ORDER_BY[sort.key], orderDirection: sort.dir }
+      : {}),
   });
   const rows = query.data?.data || [];
+  const totals = query.data?.totals;
+  const showTotals =
+    !!totals && visibleColumns.some((col) => MONEY_COLUMNS.includes(col.key));
   const total = query.data?.total || 0;
   const page = query.data?.page || filters.page || 1;
   const totalPages = Math.ceil(total / pageSize) || 1;
@@ -692,6 +754,15 @@ export function WarehouseCashTable({
           summary={
             <span className="text-gray-500">
               <strong className="text-gray-900">{total}</strong> phiếu
+              {totals && (
+                <>
+                  {" "}
+                  · Tổng{" "}
+                  <strong className="text-gray-900">
+                    {formatCurrency(totals.amount)}
+                  </strong>
+                </>
+              )}
             </span>
           }
           isLoading={query.isLoading}
@@ -857,16 +928,35 @@ export function WarehouseCashTable({
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10 bg-gray-50">
             <tr>
-              {visibleColumns.map((col) => (
-                <th
-                  key={col.key}
-                  style={{ width: col.width, minWidth: col.width }}
-                  className={`whitespace-nowrap px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-gray-500 ${
-                    MONEY_COLUMNS.includes(col.key) ? "text-right" : "text-left"
-                  }`}>
-                  {col.label}
-                </th>
-              ))}
+              {visibleColumns.map((col) => {
+                const sortable = isSortKey(col.key);
+                return (
+                  <th
+                    key={col.key}
+                    style={{ width: col.width, minWidth: col.width }}
+                    onClick={() => handleSort(col.key)}
+                    className={`whitespace-nowrap px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-gray-500 ${
+                      MONEY_COLUMNS.includes(col.key)
+                        ? "text-right"
+                        : "text-left"
+                    } ${sortable ? "cursor-pointer select-none hover:bg-gray-100" : ""}`}>
+                    {sortable ? (
+                      <span className="inline-flex items-center gap-1">
+                        {col.label}
+                        {sort?.key === col.key && sort.dir === "desc" ? (
+                          <ArrowDown className="h-3 w-3 text-brand" />
+                        ) : sort?.key === col.key && sort.dir === "asc" ? (
+                          <ArrowUp className="h-3 w-3 text-brand" />
+                        ) : (
+                          <ArrowUpDown className="h-3 w-3 opacity-40" />
+                        )}
+                      </span>
+                    ) : (
+                      col.label
+                    )}
+                  </th>
+                );
+              })}
               <th
                 style={{ width: "160px", minWidth: "160px" }}
                 className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">
@@ -875,6 +965,25 @@ export function WarehouseCashTable({
             </tr>
           </thead>
           <tbody>
+            {showTotals && (
+              <tr className="border-b bg-gray-50/60">
+                {visibleColumns.map((col) => (
+                  <td
+                    key={col.key}
+                    style={{
+                      width: col.width,
+                      minWidth: col.width,
+                      maxWidth: col.width,
+                    }}
+                    className={`whitespace-nowrap px-4 py-2.5 ${
+                      MONEY_COLUMNS.includes(col.key) ? "text-right" : ""
+                    }`}>
+                    {totalCell(col.key, totals)}
+                  </td>
+                ))}
+                <td className="px-4 py-2.5" />
+              </tr>
+            )}
             {query.isLoading ? (
               <tr>
                 <td colSpan={colSpan} className="py-16 text-center">
