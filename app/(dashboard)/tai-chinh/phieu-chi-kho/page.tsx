@@ -55,7 +55,10 @@ import {
   useWarehouseExpenses,
 } from "@/lib/hooks/useInternalFinance";
 import { isExpenseOpenForEdit } from "@/lib/internal-finance/vehicle-constants";
-import { isOfficeBranch } from "@/lib/internal-finance/office";
+import {
+  isOfficeBranch,
+  isOfficeManualOpen,
+} from "@/lib/internal-finance/office";
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
@@ -238,7 +241,9 @@ function WarehouseExpenseScreen() {
   const canMarkIssuedRow = (row: InternalFinanceEntry) =>
     canAction("mark_issued", row.branchId) &&
     !row.cashIssued &&
-    (inApprovedBatch(row) || isExpenseCheckOpen(row));
+    (inApprovedBatch(row) ||
+      isExpenseCheckOpen(row) ||
+      isOfficeManualOpen(row));
   const canCancelRow = (row: InternalFinanceEntry) =>
     isExpenseCancellable(row) && canAction("cancel", row.branchId);
   // Tick hàng loạt: chọn phiếu còn tick được và user có quyền tick ở kho đó.
@@ -389,7 +394,19 @@ function WarehouseExpenseScreen() {
 
   const handleMarkIssued = async (row: InternalFinanceEntry) => {
     let reason: string | undefined;
-    if (inApprovedBatch(row)) {
+    if (isOfficeManualOpen(row)) {
+      // Văn phòng không có Approval tuần: xác nhận là trừ quỹ luôn.
+      const result = await Swal.fire({
+        title: "Xác nhận đã chi?",
+        html: `<p class="text-sm text-gray-600">Trừ quỹ văn phòng <strong>${formatCurrency(row.amount)}</strong> cho phiếu <strong>${row.code}</strong>.</p>`,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Xác nhận Đã chi",
+        cancelButtonText: "Hủy bỏ",
+        confirmButtonColor: "#0f766e",
+      });
+      if (!result.isConfirmed) return;
+    } else if (inApprovedBatch(row)) {
       const result = await Swal.fire({
         title: "Xác nhận đã chi?",
         text: "Xác nhận khoản chi và ghi vào quỹ nội bộ.",
@@ -457,11 +474,7 @@ function WarehouseExpenseScreen() {
             page={page}
             totalPages={totalPages}
             onPageChange={setPage}
-            onCreate={
-              canAction("create") && !office
-                ? () => setShowForm(true)
-                : undefined
-            }
+            onCreate={canAction("create") ? () => setShowForm(true) : undefined}
             office={office}
             canCheck={canCheckRow}
             canMarkIssued={canMarkIssuedRow}
@@ -545,7 +558,7 @@ function WarehouseExpenseScreen() {
                 </div>
               </div>
               <div className="flex shrink-0 flex-wrap items-center gap-2">
-                {canAction("create") && !office && (
+                {canAction("create") && (
                   <button
                     type="button"
                     onClick={() => setShowForm(true)}
