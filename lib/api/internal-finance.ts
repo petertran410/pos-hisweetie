@@ -749,7 +749,9 @@ export const internalFinanceApi = {
 
   warehouseExpenseMentionCandidates: (
     id: number,
-  ): Promise<Array<{ id: number; name: string }>> =>
+  ): Promise<
+    Array<{ id: number; name: string; blockedReason: string | null }>
+  > =>
     apiClient.get(
       `/internal-finance/warehouse-expenses/${id}/mention-candidates`,
     ),
