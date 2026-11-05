@@ -238,6 +238,11 @@ export function VehicleFinanceForm({
       toast.error("Cần nhập số tiền hợp lệ");
       return;
     }
+    // Phiếu xăng dầu bắt buộc đơn giá để tính số lít (giống app).
+    if (kind === "FUEL" && !(parsedUnitPrice && parsedUnitPrice > 0)) {
+      toast.error("Cần nhập đơn giá xăng dầu");
+      return;
+    }
     if (kind === "VEHICLE_CARE" && !serviceTypes.length) {
       toast.error("Cần chọn ít nhất một loại dịch vụ");
       return;
@@ -416,6 +421,7 @@ export function VehicleFinanceForm({
               }
               className="dt-input h-10 w-full"
               placeholder="đ/lít"
+              required
             />
           </label>
           <div className={labelClass}>
