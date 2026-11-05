@@ -73,12 +73,18 @@ export function WarehouseExpenseNotesPanel({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
+  // Người chưa tag được xếp cuối, chỉ hiện khi gõ tìm (kèm lý do).
   const options = useMemo(
     () =>
-      (candidates.data || []).map((user) => ({
-        value: String(user.id),
-        label: user.name,
-      })),
+      [...(candidates.data || [])]
+        .sort((a, b) => Number(!!a.blockedReason) - Number(!!b.blockedReason))
+        .map((user) => ({
+          value: String(user.id),
+          label: user.name,
+          disabled: !!user.blockedReason,
+          hint: user.blockedReason || undefined,
+          group: user.blockedReason ? "Chưa tag được" : undefined,
+        })),
     [candidates.data],
   );
   const selectedNames = options
@@ -259,6 +265,7 @@ export function WarehouseExpenseNotesPanel({
                 }
                 searchPlaceholder="Tìm người..."
                 multiLabel={(count) => `Đã chọn ${count} người`}
+                hideDisabledUntilSearch
               />
               {selectedNames.length > 0 && (
                 <div className="mt-1.5 text-xs text-gray-600">
