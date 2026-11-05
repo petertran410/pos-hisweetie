@@ -60,6 +60,14 @@ export interface Invoice {
   hasPriceBookWarning?: boolean;
   /** Số phiếu cùng loại từng có liên kết với hóa đơn. */
   packingCount?: number;
+  /** Ghi chú thanh toán mới nhất (API chọn hóa đơn để báo đơn trả về). */
+  paymentNote?: InvoicePaymentNote | null;
+}
+
+/** Ghi chú thanh toán mới nhất của hóa đơn: khách trả tiền mặt hay chuyển khoản. */
+export interface InvoicePaymentNote {
+  paymentType: string;
+  amount: number | null;
 }
 
 export interface InvoicePackingCreatorLink {

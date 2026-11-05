@@ -473,6 +473,7 @@ export function DeliveryOverview() {
               code: r.code,
               grandTotal: r.grandTotal,
               customer: r.customer ?? null,
+              paymentNote: r.paymentNote ?? null,
             }))}
           onClose={() => setShowForm(false)}
           onSubmit={handleSubmit}

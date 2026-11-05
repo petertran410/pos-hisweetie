@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/config/api";
-import type { InvoiceCustomer } from "@/lib/types/invoice";
+import type { InvoiceCustomer, InvoicePaymentNote } from "@/lib/types/invoice";
 import type { ColdCargoWarning } from "@/lib/types/cold-cargo-warning";
 
 export interface Invoice extends ColdCargoWarning {
@@ -291,6 +291,7 @@ export const invoicesApi = {
       grandTotal: number;
       createdAt: string;
       customer: { id: number; name: string } | null;
+      paymentNote?: InvoicePaymentNote | null;
     }>;
     total: number;
   }> => {

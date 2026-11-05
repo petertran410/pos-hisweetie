@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useBranchStore } from "@/lib/store/branch";
-import { X, Search } from "lucide-react";
+import { X, Search, AlertTriangle, Banknote, ChevronDown } from "lucide-react";
 import {
   FilterMultiSelect,
   FilterSearchableSelect,
@@ -50,6 +50,25 @@ export function PackingSlipsSidebar({
   );
   const [type, setType] = useState("all");
   const [paymentMethod, setPaymentMethod] = useState("");
+  // Chỉ phiếu giao hàng lệch tiền mặt so với ghi chú thanh toán của hóa đơn.
+  const [cashWarning, setCashWarning] = useState(false);
+  const [showWarningFilters, setShowWarningFilters] = useState(false);
+  const warningFiltersRef = useRef<HTMLDivElement>(null);
+
+  // Bấm ra ngoài thì thu nhóm cảnh báo lại (giống bộ lọc hóa đơn).
+  useEffect(() => {
+    if (!showWarningFilters) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        warningFiltersRef.current &&
+        !warningFiltersRef.current.contains(event.target as Node)
+      ) {
+        setShowWarningFilters(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showWarningFilters]);
   const [search, setSearch] = useState("");
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
@@ -86,6 +105,7 @@ export function PackingSlipsSidebar({
       if (selectedBranchIds.length > 0) filters.branchIds = selectedBranchIds;
       if (type && type !== "all") filters.type = type;
       if (paymentMethod) filters.paymentMethod = paymentMethod;
+      if (cashWarning) filters.cashWarning = true;
       if (search) filters.search = search;
       if (invoiceSearch) filters.invoiceSearch = invoiceSearch;
       if (customerSearch) filters.customerSearch = customerSearch;
@@ -101,6 +121,7 @@ export function PackingSlipsSidebar({
     selectedBranchIds,
     type,
     paymentMethod,
+    cashWarning,
     search,
     invoiceSearch,
     customerSearch,
@@ -111,6 +132,7 @@ export function PackingSlipsSidebar({
     setSelectedBranchIds(selectedBranch ? [selectedBranch.id] : []);
     setType("all");
     setPaymentMethod("");
+    setCashWarning(false);
     setSearch("");
     setInvoiceSearch("");
     setCustomerSearch("");
@@ -128,6 +150,7 @@ export function PackingSlipsSidebar({
     if (selectedBranchIds.length > 0) n++;
     if (type !== "all") n++;
     if (paymentMethod) n++;
+    if (cashWarning) n++;
     if (search) n++;
     if (invoiceSearch) n++;
     if (customerSearch) n++;
@@ -141,6 +164,7 @@ export function PackingSlipsSidebar({
     selectedBranchIds,
     type,
     paymentMethod,
+    cashWarning,
     search,
     invoiceSearch,
     customerSearch,
@@ -164,6 +188,63 @@ export function PackingSlipsSidebar({
       </div>
 
       <div className="p-4 space-y-3">
+        {/* ── Nhóm cảnh báo báo đơn ── */}
+        <div
+          ref={warningFiltersRef}
+          className="rounded-lg border border-gray-200 overflow-hidden">
+          <button
+            type="button"
+            aria-expanded={showWarningFilters}
+            onClick={() => setShowWarningFilters((current) => !current)}
+            className={`w-full flex items-center justify-between gap-1.5 px-2.5 py-2.5 text-sm transition-colors ${
+              showWarningFilters || cashWarning
+                ? "bg-red-50/60"
+                : "bg-white hover:bg-gray-50"
+            }`}>
+            <span className="flex items-center gap-1.5 min-w-0">
+              <AlertTriangle
+                className={`w-4 h-4 flex-shrink-0 ${
+                  cashWarning ? "text-red-500" : "text-gray-400"
+                }`}
+              />
+              <span className="font-medium text-gray-700 whitespace-nowrap">
+                Cảnh báo báo đơn
+              </span>
+              {cashWarning && (
+                <span className="shrink-0 rounded-full bg-red-100 px-1.5 py-0.5 text-[11px] font-semibold text-red-700">
+                  1
+                </span>
+              )}
+            </span>
+            <ChevronDown
+              className={`w-4 h-4 shrink-0 text-gray-400 transition-transform ${
+                showWarningFilters ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+
+          {showWarningFilters && (
+            <div className="border-t border-gray-100 bg-white p-2">
+              <label
+                className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-gray-50 cursor-pointer"
+                title="Phiếu giao hàng có tiền mặt cần thu khác hóa đơn, hoặc hóa đơn thu tiền mặt mà phiếu chọn chuyển khoản">
+                <input
+                  type="checkbox"
+                  checked={cashWarning}
+                  onChange={(event) => setCashWarning(event.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 accent-brand"
+                />
+                <Banknote className="h-4 w-4 shrink-0 text-red-500" />
+                <span className="text-xs font-medium text-gray-700">
+                  Chỉ phiếu lệch tiền mặt
+                </span>
+              </label>
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-gray-100" />
+
         {/* ── Thời gian tạo ── */}
         <TimeRangeFilter
           label="Thời gian tạo"

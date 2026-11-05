@@ -16,6 +16,8 @@ import type { PackingLoading } from "@/lib/types/packing-loading";
 import { toast } from "sonner";
 import { ColdCargoSelectionWarning } from "@/components/shared/ColdCargoBadge";
 import type { ColdCargoItem } from "@/lib/types/cold-cargo-warning";
+import type { InvoicePaymentNote } from "@/lib/types/invoice";
+import { CashNoteBadge } from "@/components/packing-slips/CashNoteBadge";
 
 interface PackingLoadingFormProps {
   packingLoading?: PackingLoading;
@@ -86,6 +88,7 @@ export function PackingLoadingForm({
     hasColdItems?: boolean;
     coldItemCount?: number;
     coldItems?: ColdCargoItem[];
+    paymentNote?: InvoicePaymentNote | null;
   };
   const [selectedInvoiceCache, setSelectedInvoiceCache] = useState<
     Record<number, InvoiceLite>
@@ -153,6 +156,7 @@ export function PackingLoadingForm({
     hasColdItems?: boolean;
     coldItemCount?: number;
     coldItems?: ColdCargoItem[];
+    paymentNote?: InvoicePaymentNote | null;
   }) => {
     setSelectedInvoiceCache((prev) => ({ ...prev, [document.id]: document }));
     setSelectedInvoiceIds((prev) => [...prev, document.id]);
@@ -257,6 +261,7 @@ export function PackingLoadingForm({
           hasColdItems: invoice.hasColdItems,
           coldItemCount: invoice.coldItemCount,
           coldItems: invoice.coldItems,
+          paymentNote: invoice.paymentNote ?? null,
         };
         if (selectedInvoiceIds.length === 0) {
           setBranchId(invoice.branchId || 0);
@@ -532,6 +537,10 @@ export function PackingLoadingForm({
                     key={invoice.id}
                     className="inline-flex items-center gap-1 bg-brand-soft text-brand-dark px-2 py-1 rounded text-sm">
                     {invoice.code}
+                    <CashNoteBadge
+                      note={invoice.paymentNote}
+                      className="ml-1"
+                    />
                     <button
                       type="button"
                       onClick={(e) => {
@@ -581,6 +590,7 @@ export function PackingLoadingForm({
                                 Đã loading {invoice.packingCount} lần
                               </div>
                             )}
+                            <CashNoteBadge note={invoice.paymentNote} />
                           </div>
                         </label>
                       ))}

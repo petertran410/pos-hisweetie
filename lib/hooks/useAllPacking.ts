@@ -9,6 +9,8 @@ export interface UseAllPackingParams {
   invoiceSearch?: string;
   customerSearch?: string;
   paymentMethod?: string;
+  /** Chỉ phiếu giao hàng lệch tiền mặt so với hóa đơn. */
+  cashWarning?: boolean;
   fromCreatedDate?: string;
   toCreatedDate?: string;
   pageSize?: number;
@@ -38,6 +40,7 @@ export function useAllPacking(
         queryParams.append("customerSearch", params.customerSearch);
       if (params?.paymentMethod)
         queryParams.append("paymentMethod", params.paymentMethod);
+      if (params?.cashWarning) queryParams.append("cashWarning", "true");
       if (params?.fromCreatedDate)
         queryParams.append("fromCreatedDate", params.fromCreatedDate);
       if (params?.toCreatedDate)
