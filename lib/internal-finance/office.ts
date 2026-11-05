@@ -1,11 +1,23 @@
+import type { InternalFinanceEntry } from "@/lib/api/internal-finance";
+
 /**
  * Văn phòng HN (4) và Văn phòng SG (7): không có báo đơn, xe, tick kiểm tra hay
- * Approval tuần. Phiếu chi văn phòng sinh từ đơn PHIẾU CHI Lark đã duyệt.
+ * Approval tuần. Phiếu chi văn phòng sinh từ đơn PHIẾU CHI Lark đã duyệt, hoặc
+ * phiếu tay trừ quỹ khi bấm Đã chi.
  */
 export const OFFICE_BRANCH_IDS = [4, 7];
 
 export const isOfficeBranch = (branchId?: number | null) =>
   branchId != null && OFFICE_BRANCH_IDS.includes(branchId);
+
+/** Phiếu chi tay của văn phòng còn chờ Đã chi. */
+export const isOfficeManualOpen = (row: InternalFinanceEntry) =>
+  isOfficeBranch(row.branchId) &&
+  row.sourceType === "MANUAL_EXPENSE" &&
+  !row.cashIssued &&
+  !row.cashFlow &&
+  !row.weeklyBatch &&
+  !["CANCELLED", "REJECTED"].includes(row.status);
 
 export interface OfficeVoucherDetails {
   method: string | null;

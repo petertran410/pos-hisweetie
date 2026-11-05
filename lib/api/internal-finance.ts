@@ -204,9 +204,25 @@ export interface WarehouseReceiptQuery {
   receiptStatus?: "OPEN" | "POSTED" | "CANCELLED" | "";
   confirmStatus?: "UNCONFIRMED" | "CONFIRMED" | "DIFFERENT" | "";
   search?: string;
+  /** Bấm tên cột tiền để sắp xếp; bỏ trống = phiếu mới trước. */
+  orderBy?: "amount" | "confirmedAmount" | "difference";
+  orderDirection?: "asc" | "desc";
   page?: number;
   limit?: number;
 }
+
+/** Dòng tổng Tiền mặt kho: mọi phiếu khớp bộ lọc, không tính phiếu đã hủy. */
+export interface WarehouseReceiptTotals {
+  amount: number;
+  confirmedAmount: number;
+  /** Số báo đơn − số xác nhận của các phiếu đã xác nhận (dương = thiếu). */
+  difference: number;
+}
+
+export type WarehouseReceiptResponse = Omit<
+  InternalFinanceResponse<WarehouseReceipt>,
+  "totals"
+> & { totals?: WarehouseReceiptTotals };
 
 export interface FinanceAccessSummary {
   superAdmin: boolean;
@@ -599,7 +615,7 @@ export const internalFinanceApi = {
 
   warehouseReceipts: (
     params?: WarehouseReceiptQuery,
-  ): Promise<InternalFinanceResponse<WarehouseReceipt>> =>
+  ): Promise<WarehouseReceiptResponse> =>
     apiClient.get("/internal-finance/warehouse-receipts", params),
 
   warehouseReceipt: (id: number): Promise<WarehouseReceipt> =>

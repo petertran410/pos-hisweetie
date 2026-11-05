@@ -79,9 +79,39 @@ const fmtCurrency = (val: any): string => {
   return new Intl.NumberFormat("en-US").format(Number(val)) + "đ";
 };
 
-function renderSnapshot(entityType: string, snapshot: any): string {
+function renderSnapshot(
+  entityType: string,
+  snapshot: any,
+  actionCode?: string
+): string {
   if (!snapshot) return "";
   const lines: string[] = [];
+
+  // POS: đổi bảng giá cho đơn đang lên sang bảng giá khách không thuộc.
+  // Xét theo actionCode vì entityType là "customers" (log ghi theo khách).
+  if (actionCode === "PRICE_BOOK_CUSTOMER_SWITCH") {
+    const c = snapshot.customer;
+    lines.push(
+      "Thao tác: Đổi bảng giá khi bán hàng (chỉ cho đơn đang lên, không thay đổi Thiết lập giá)"
+    );
+    lines.push(
+      `Khách hàng: ${c?.code ? `${c.code} - ` : ""}${c?.name || "N/A"}`
+    );
+    if (Array.isArray(snapshot.customerPriceBooks)) {
+      const own = snapshot.customerPriceBooks
+        .map((pb: { name: string }) => pb.name)
+        .join(", ");
+      lines.push(`Bảng giá của khách: ${own || "Bảng giá chung"}`);
+    }
+    lines.push(
+      `Bảng giá trước khi đổi: ${snapshot.fromPriceBook?.name || "Bảng giá chung"}`
+    );
+    lines.push(
+      `Bảng giá đổi sang: ${snapshot.toPriceBook?.name || "Bảng giá chung"}`
+    );
+    if (snapshot.branch?.name) lines.push(`Chi nhánh: ${snapshot.branch.name}`);
+    return lines.join("\n");
+  }
 
   if (entityType === "customer_debt_collection_attempts") {
     lines.push(`Khách hàng: ${snapshot.customerName || snapshot.customerCode || "N/A"}`);
@@ -610,7 +640,11 @@ export function AuditLogsTable({
   };
 
   const formatExpandedDetail = (log: any) => {
-    const snapshotText = renderSnapshot(log.entityType, log.snapshot);
+    const snapshotText = renderSnapshot(
+      log.entityType,
+      log.snapshot,
+      log.actionCode
+    );
     const changesText = renderChanges(log.changes);
     return snapshotText + changesText || log.message || "Không có chi tiết";
   };

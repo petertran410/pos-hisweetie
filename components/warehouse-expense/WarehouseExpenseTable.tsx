@@ -17,7 +17,10 @@ import {
   displaySource,
   displayDescription,
 } from "@/lib/internal-finance/display";
-import { officeVoucherDetails } from "@/lib/internal-finance/office";
+import {
+  isOfficeBranch,
+  officeVoucherDetails,
+} from "@/lib/internal-finance/office";
 import { formatCurrency } from "@/lib/utils";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -596,6 +599,10 @@ export function WarehouseExpenseTable({
                           }`}>
                           {APPROVAL_STATUS_LABELS[approvalStatus] ||
                             approvalStatus}
+                        </span>
+                      ) : isOfficeBranch(row.branchId) ? (
+                        <span className="text-xs text-gray-400">
+                          Không cần duyệt
                         </span>
                       ) : (
                         <span className="text-xs text-gray-400">Chưa gửi</span>
