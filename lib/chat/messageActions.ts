@@ -1,7 +1,7 @@
 import { toast } from "sonner";
 import { API_URL, getAuthHeaders } from "@/lib/config/api";
 import type { ChatMessage } from "@/lib/types/smaxChat";
-import { isImage, isVideo } from "@/components/chat/AttachmentPreviewModal";
+import { isAudio, isImage, isVideo } from "@/components/chat/AttachmentPreviewModal";
 
 const byTime = (list: ChatMessage[]) =>
   [...list].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
@@ -15,7 +15,9 @@ export function messagePreview(m: ChatMessage): string {
       ? "[Hình ảnh]"
       : m.attachments.some(isVideo)
         ? "[Video]"
-        : m.attachments.length
+        : m.attachments.some(isAudio)
+          ? "[Tin nhắn thoại]"
+          : m.attachments.length
           ? `[Tệp] ${m.attachments[0].title}`
           : "";
   if (!tag) return text ? text.slice(0, 120) : "[Tin nhắn]";

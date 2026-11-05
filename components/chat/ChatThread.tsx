@@ -27,6 +27,7 @@ import { copyMessages, downloadMessagesMedia, messagePreview, messageThumb } fro
 import {
   AttachmentPreviewModal,
   NoReferrerVideo,
+  isAudio,
   isImage,
   isVideo,
 } from "./AttachmentPreviewModal";
@@ -764,6 +765,8 @@ function MessageBubble({ message: m, showSender }: { message: ChatMessage; showS
               <VideoFrame url={a.url} className="block h-40 w-56 rounded-lg" />
               <PlayBadge />
             </button>
+          ) : isAudio(a) ? (
+            <audio key={i} controls preload="metadata" src={a.url} className="mb-1 h-10 w-64 max-w-full" />
           ) : a.thumbnail || isImage(a) ? (
             <button
               key={i}

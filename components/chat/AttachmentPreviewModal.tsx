@@ -11,6 +11,9 @@ export const isImage = (a: ChatAttachment) => /photo|image/.test(a.type);
 // Video POS gửi đi qua trường `file` → Zalo trả type "file", không thumbnail; nhận theo đuôi tên
 export const isVideo = (a: ChatAttachment) =>
   a.type === "video" || (a.type === "file" && /\.(mp4|mov|m4v|webm)$/i.test(a.title));
+// Tin nhắn thoại Zalo: type "audio", tệp .aac trên CDN Zalo, không tên
+export const isAudio = (a: ChatAttachment) =>
+  a.type === "audio" || /\.(aac|m4a|mp3|ogg|oga|wav|amr)($|\?)/i.test(a.url);
 const isPdf = (a: ChatAttachment) => /\.pdf($|\?)/i.test(a.url) || /\.pdf$/i.test(a.title);
 
 /** Xem ảnh / video / tệp đính kèm Zalo ngay trên trang; album thì chuyển qua lại bằng ‹ › hoặc phím ←/→. */
