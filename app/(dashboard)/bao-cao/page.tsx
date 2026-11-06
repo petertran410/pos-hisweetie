@@ -18,6 +18,7 @@ const GROUP_ROUTES: { group: ReportGroupKey; href: string }[] = [
   { group: "nha-cung-cap", href: "/bao-cao/nha-cung-cap" },
   { group: "tai-chinh", href: "/bao-cao/tai-chinh" },
   { group: "cuoi-ngay", href: "/bao-cao/cuoi-ngay" },
+  { group: "phan-tich", href: "/bao-cao/phan-tich" },
 ];
 
 export default function BaoCaoIndexPage() {

@@ -200,7 +200,9 @@ export function OrdersMobileDetailSheet({
       await updateOrder.mutateAsync({ id: order.id, data: updateData });
       toast.success("Lưu đơn hàng thành công");
     } catch {
-      toast.error("Không thể lưu đơn hàng");
+      // useUpdateOrder đã toast lý do từ backend (vd. khách không được ra
+      // hóa đơn); chỉ cần trả trạng thái về trạng thái thật của đơn.
+      setSelectedStatus(order.status);
     } finally {
       setIsSaving(false);
     }

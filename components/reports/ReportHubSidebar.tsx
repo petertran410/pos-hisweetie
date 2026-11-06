@@ -10,6 +10,7 @@ import {
   Store,
   Wallet,
   ClipboardList,
+  TrendingUp,
 } from "lucide-react";
 import {
   useReportAccess,
@@ -74,6 +75,13 @@ const REPORT_GROUPS: ReportGroup[] = [
     label: "Cuối ngày",
     href: "/bao-cao/cuoi-ngay",
     icon: ClipboardList,
+    available: true,
+  },
+  {
+    key: "phan-tich",
+    label: "Phân tích",
+    href: "/bao-cao/phan-tich",
+    icon: TrendingUp,
     available: true,
   },
 ];

@@ -129,6 +129,14 @@ export const ACTION_LABELS: Record<string, string> = {
   inventory: "Báo cáo tồn kho",
   financial: "Xem báo cáo tài chính",
   customer: "Báo cáo khách hàng",
+  analytics_business: "Phân tích - Kinh doanh",
+  analytics_management: "Phân tích - Quản trị",
+  analytics_customer: "Phân tích - Khách hàng",
+  analytics_periodic: "Phân tích - Định kì / Hằng tuần",
+  analytics_accounting: "Phân tích - Kế toán",
+  analytics_purchasing: "Phân tích - Chuyển kho / Thu mua",
+  analytics_kpi: "Phân tích - KPI Sale",
+  analytics_config: "Phân tích - Sửa cấu hình",
   // ── Báo cáo chi tiết (mỗi loại = 1 quyền, khớp backend reports:*) ──
   eod_synthetic: "Cuối ngày - Tổng hợp",
   eod_document: "Cuối ngày - Bán hàng",
@@ -310,6 +318,20 @@ export const REPORT_SUBGROUPS: ReportSubgroup[] = [
     label: "Báo cáo tài chính",
     actions: ["financial", "export_financial"],
   },
+  {
+    key: "reports_analytics",
+    label: "Báo cáo phân tích",
+    actions: [
+      "analytics_business",
+      "analytics_management",
+      "analytics_customer",
+      "analytics_periodic",
+      "analytics_accounting",
+      "analytics_purchasing",
+      "analytics_kpi",
+      "analytics_config",
+    ],
+  },
 ];
 
 // action → groupKey
@@ -379,6 +401,14 @@ export const REPORT_LEAF_LABELS: Record<string, string> = {
   export_customer: "Xuất Excel",
   export_supplier: "Xuất Excel",
   export_financial: "Xuất Excel",
+  analytics_business: "Kinh doanh",
+  analytics_management: "Quản trị",
+  analytics_customer: "Khách hàng",
+  analytics_periodic: "Định kì / Hằng tuần",
+  analytics_accounting: "Kế toán",
+  analytics_purchasing: "Chuyển kho / Thu mua",
+  analytics_kpi: "KPI Sale",
+  analytics_config: "Sửa cấu hình",
 };
 
 // Quyền báo cáo CŨ (thô) cần ẩn khỏi UI cây (không xóa DB).
