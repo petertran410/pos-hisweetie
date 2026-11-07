@@ -3,7 +3,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, CheckCircle2, Clock, Link2, Loader2, MessageCircle, Pencil, Send, Trash2, Unlink, UserCheck, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Link2, Loader2, MessageCircle, Pencil, PhoneCall, Send, Trash2, Unlink, UserCheck, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { leadsApi } from "@/lib/api/leads";
 import { useLead, useLeadJourney, useSaveLead } from "@/lib/hooks/useLeads";
@@ -27,7 +27,7 @@ import { JourneyStepper } from "@/components/journey/JourneyStepper";
 import { JourneyTimeline } from "@/components/journey/JourneyTimeline";
 import type { HandoverStepKey, LeadConversation, LeadDetail } from "@/lib/types/lead";
 import { LeadFormModal } from "./LeadFormModal";
-import { HANDOVER_SKIP_NOTE, HANDOVER_STEP_LABEL, LeadHandoverModal } from "./LeadHandoverModal";
+import { HANDOVER_STEP_LABEL, handoverSkipNote, LeadHandoverModal, ZALO_PHONE_NOT_FOUND } from "./LeadHandoverModal";
 import { LinkCustomerModal } from "./LinkCustomerModal";
 
 type Tab = "info" | "channels" | "history" | "journey";
@@ -438,6 +438,16 @@ function HistoryTab({ lead }: { lead: LeadDetail }) {
     },
     onError: (e: Error) => toast.error(e.message || "Không gửi lại được"),
   });
+  const confirmPhone = useMutation({
+    mutationFn: (id: number) => leadsApi.confirmHandoverPhone(id),
+    onSuccess: ({ done }) => {
+      queryClient.invalidateQueries({ queryKey: ["lead", lead.id] });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      if (done) toast.success("Đã xác nhận SĐT — lead chuyển sang “Đã chuyển Sale”");
+      else toast.warning("Đã xác nhận SĐT — vẫn còn bước lỗi khác cần gửi lại");
+    },
+    onError: (e: Error) => toast.error(e.message || "Không xác nhận được"),
+  });
 
   if (!lead.handovers.length) return <p className="text-sm text-gray-500">Chưa chuyển giao lần nào.</p>;
   return (
@@ -472,7 +482,7 @@ function HistoryTab({ lead }: { lead: LeadDetail }) {
                   )}
                   <span>
                     {HANDOVER_STEP_LABEL[k]}
-                    {s?.status === "skipped" && <span className="text-xs text-amber-600"> · {HANDOVER_SKIP_NOTE[k] ?? "bỏ qua"}</span>}
+                    {s?.status === "skipped" && <span className="text-xs text-amber-600"> · {handoverSkipNote(k, s)}</span>}
                     {s?.error && (
                       <span className={`block whitespace-pre-wrap text-xs ${s.status === "skipped" ? "text-gray-500" : "text-red-600"}`}>
                         {s.error}
@@ -485,19 +495,39 @@ function HistoryTab({ lead }: { lead: LeadDetail }) {
           </div>
           {h.note && <p className="mt-2 whitespace-pre-wrap text-xs text-gray-600">Ghi chú: {h.note}</p>}
           {canAssign && h.status !== "done" && (
-            <button
-              onClick={async () => {
-                const ok = await confirmAction("Gửi lại các bước lỗi? Bước đã thành công không gửi lại.", {
-                  title: "Gửi lại chuyển giao",
-                  confirmText: "Gửi lại",
-                });
-                if (ok) retry.mutate(h.id);
-              }}
-              disabled={retry.isPending}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-brand hover:bg-cyan-bg disabled:opacity-50">
-              {retry.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Gửi lại bước lỗi
-            </button>
+            <div className="mt-2 flex flex-wrap gap-2">
+            {h.steps.friend?.status === "failed" && ZALO_PHONE_NOT_FOUND.test(h.steps.friend.error ?? "") && (
+              <button
+                onClick={async () => {
+                  const phone = /SĐT\s+(\S+)/.exec(h.steps.friend.error ?? "")?.[1] ?? "";
+                  const ok = await confirmAction(
+                    `Không tìm thấy Zalo của SĐT ${phone} (khách có thể chưa dùng Zalo hoặc tắt tìm kiếm qua SĐT). ` +
+                      "Xác nhận đây đúng là SĐT của khách? Bước kết bạn và tin chào Zalo được tính hoàn tất — Sale liên hệ khách qua SĐT. " +
+                      "Nếu SĐT sai: sửa SĐT Zalo ở tab Thông tin rồi bấm “Gửi lại bước lỗi”.",
+                    { title: "Xác nhận đúng SĐT khách", confirmText: "Đúng SĐT khách" }
+                  );
+                  if (ok) confirmPhone.mutate(h.id);
+                }}
+                disabled={confirmPhone.isPending}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-brand bg-brand px-3 py-1.5 text-white hover:opacity-90 disabled:opacity-50">
+                {confirmPhone.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <PhoneCall className="h-4 w-4" />}
+                Xác nhận đúng SĐT khách
+              </button>
+            )}
+              <button
+                onClick={async () => {
+                  const ok = await confirmAction("Gửi lại các bước lỗi? Bước đã thành công không gửi lại.", {
+                    title: "Gửi lại chuyển giao",
+                    confirmText: "Gửi lại",
+                  });
+                  if (ok) retry.mutate(h.id);
+                }}
+                disabled={retry.isPending}
+                className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-brand hover:bg-cyan-bg disabled:opacity-50">
+                {retry.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Gửi lại bước lỗi
+              </button>
+            </div>
           )}
         </li>
       ))}

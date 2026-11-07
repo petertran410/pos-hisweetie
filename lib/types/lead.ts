@@ -20,6 +20,8 @@ export interface HandoverStep {
   status: "pending" | "ok" | "failed" | "skipped";
   at?: string;
   error?: string;
+  /** Người xác nhận đúng SĐT khách khi không tìm thấy Zalo (bước tính hoàn tất) */
+  confirmedBy?: string;
 }
 
 export interface LeadHandover {

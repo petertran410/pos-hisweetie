@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { leadsApi } from "@/lib/api/leads";
 import { FilterSearchableSelect } from "@/components/ui/filters";
 import { confirmAction } from "@/lib/chat/confirm";
-import type { HandoverStepKey, Lead, LeadHandover } from "@/lib/types/lead";
+import type { HandoverStep, HandoverStepKey, Lead, LeadHandover } from "@/lib/types/lead";
 
 export const HANDOVER_STEP_LABEL: Record<HandoverStepKey, string> = {
   lark: "Tin Lark cho Sale",
@@ -21,6 +21,13 @@ export const HANDOVER_SKIP_NOTE: Partial<Record<HandoverStepKey, string>> = {
   friend: "bỏ qua — khách đã là bạn bè",
   greeting: "bỏ qua — Sale nhắn sau khi khách đồng ý kết bạn",
 };
+
+// Tra ID Zalo theo SĐT không ra → người chuyển giao xác nhận đúng SĐT khách (khớp backend)
+export const ZALO_PHONE_NOT_FOUND = /Không tìm thấy Zalo của SĐT/i;
+
+/** Ghi chú bước "bỏ qua": đã xác nhận đúng SĐT, hoặc lỗi Zalo chấp nhận được */
+export const handoverSkipNote = (k: HandoverStepKey, s: HandoverStep) =>
+  s.confirmedBy ? `đã xác nhận đúng SĐT khách — ${s.confirmedBy}` : HANDOVER_SKIP_NOTE[k] ?? "bỏ qua";
 
 /**
  * Chuyển lead cho Sale PIC: chọn Sale + kênh Zalo cá nhân của Sale, xem trước / sửa tin Lark,
@@ -157,7 +164,7 @@ export function LeadHandoverModal({ lead, onClose }: { lead: Lead; onClose: () =
                   )}
                   <span>
                     {HANDOVER_STEP_LABEL[k]}
-                    {s.status === "skipped" && <span className="text-xs text-amber-600"> · {HANDOVER_SKIP_NOTE[k] ?? "bỏ qua"}</span>}
+                    {s.status === "skipped" && <span className="text-xs text-amber-600"> · {handoverSkipNote(k, s)}</span>}
                     {s.error && (
                       <span className={`block whitespace-pre-wrap text-xs ${s.status === "skipped" ? "text-gray-500" : "text-red-600"}`}>
                         {s.error}

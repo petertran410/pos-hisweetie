@@ -48,6 +48,9 @@ export const leadsApi = {
   ): Promise<{ handover: LeadHandover; done: boolean }> => apiClient.post(`/leads/${id}/handover`, body, 120_000),
   retryHandover: (handoverId: number): Promise<{ handover: LeadHandover; done: boolean }> =>
     apiClient.post(`/leads/handovers/${handoverId}/retry`, { confirmed: true }, 120_000),
+  // Không tìm thấy Zalo theo SĐT → xác nhận SĐT khách đúng, bước kết bạn + tin chào coi như hoàn tất
+  confirmHandoverPhone: (handoverId: number): Promise<{ handover: LeadHandover; done: boolean }> =>
+    apiClient.post(`/leads/handovers/${handoverId}/confirm-phone`, { confirmed: true }),
   channels: (): Promise<{ pagePid: string; name: string; platform: string }[]> => apiClient.get("/leads/channels"),
   // Sale nhận lead: nhân sự phòng ban Lark "Bộ Phận Sales" (filtered=false: Lark lỗi → mọi nhân sự)
   saleCandidates: (): Promise<{ users: { id: number; name: string }[]; filtered: boolean; department: string }> =>
