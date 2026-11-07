@@ -1,4 +1,5 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
+import { useAnalyticsQuery } from "@/lib/hooks/analyticsQuery";
 import type { AnalyticsAxis } from "@/lib/api/analytics-reports";
 import {
   analyticsKhachHangApi,
@@ -21,7 +22,7 @@ function useReady() {
 
 export function useKhFilterOptions() {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "bo-loc"],
     queryFn: () => analyticsKhachHangApi.getFilterOptions(),
     enabled: ready,
@@ -31,7 +32,7 @@ export function useKhFilterOptions() {
 
 export function useKhOverview(filters: KhFilters & { axis?: AnalyticsAxis }) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "tong-quan", filters],
     queryFn: () => analyticsKhachHangApi.getOverview(filters),
     enabled: ready,
@@ -42,7 +43,7 @@ export function useKhOverview(filters: KhFilters & { axis?: AnalyticsAxis }) {
 
 export function useKhWeekly(kind: "vip" | "key", filters: KhWeeklyFilters) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "weekly", kind, filters],
     queryFn: () => analyticsKhachHangApi.getWeekly(kind, filters),
     enabled: ready,
@@ -53,7 +54,7 @@ export function useKhWeekly(kind: "vip" | "key", filters: KhWeeklyFilters) {
 
 export function useKhRepeat(filters: KhFilters) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "khach-quay-lai", filters],
     queryFn: () => analyticsKhachHangApi.getRepeat(filters),
     enabled: ready && filters.months?.length === 1,
@@ -64,7 +65,7 @@ export function useKhRepeat(filters: KhFilters) {
 
 export function useKhNewCustomers(filters: KhFilters) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "khach-moi", filters],
     queryFn: () => analyticsKhachHangApi.getNewCustomers(filters),
     enabled: ready,
@@ -75,7 +76,7 @@ export function useKhNewCustomers(filters: KhFilters) {
 
 export function useKhChurn(filters: KhFilters) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "khach-roi-bo", filters],
     queryFn: () => analyticsKhachHangApi.getChurn(filters),
     enabled: ready,
@@ -86,7 +87,7 @@ export function useKhChurn(filters: KhFilters) {
 
 export function useKhDemand(filters: KhDemandFilters) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "demand", filters],
     queryFn: () => analyticsKhachHangApi.getDemand(filters),
     enabled: ready,
@@ -100,7 +101,7 @@ const CFG_KEY = ["reports", "analytics", "config", "khach-hang"] as const;
 
 export function useKhCustomerList(listKey: KhListKey) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...CFG_KEY, "customer-lists", listKey],
     queryFn: () => analyticsKhachHangApi.listCustomerList(listKey),
     enabled: ready,
@@ -109,7 +110,7 @@ export function useKhCustomerList(listKey: KhListKey) {
 
 export function useKhSalePics() {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...CFG_KEY, "sale-pics"],
     queryFn: () => analyticsKhachHangApi.listSalePics(),
     enabled: ready,
@@ -118,7 +119,7 @@ export function useKhSalePics() {
 
 export function useKhSaleRepRules() {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...CFG_KEY, "sale-rep-rules"],
     queryFn: () => analyticsKhachHangApi.listSaleRepRules(),
     enabled: ready,

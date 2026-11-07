@@ -90,7 +90,6 @@ export function MappingMisaView() {
               }))
             }
             placeholder="Loại Hàng: Tất cả"
-            searchable={false}
             multiLabel={(n) => `Loại Hàng: ${n} loại`}
           />
         </div>

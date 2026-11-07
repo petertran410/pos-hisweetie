@@ -17,6 +17,7 @@ import {
   usePurchaseProducts,
   useRebates,
 } from "@/lib/hooks/useAnalyticsMuaHang";
+import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
 
 /**
  * Cấu hình cho Phân tích › Chuyển Kho + Thu Mua (thay quy tắc viết cứng / bảng
@@ -207,16 +208,12 @@ function EditableTable<T extends { id: number }>({
 
   const inputFor = (c: ColDef<T>) =>
     c.type === "select" ? (
-      <select
-        className={inputCls}
+      <AnalyticsSelect
+        options={c.options ?? []}
         value={draft[c.key] ?? ""}
-        onChange={(e) => setDraft((d) => ({ ...d, [c.key]: e.target.value }))}>
-        {c.options?.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+        onChange={(v) => setDraft((d) => ({ ...d, [c.key]: v }))}
+        className="w-full min-w-[140px]"
+      />
     ) : (
       <input
         className={`${inputCls} ${c.type !== "text" ? "text-right" : ""}`}

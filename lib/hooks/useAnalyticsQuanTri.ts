@@ -1,9 +1,9 @@
 import {
   keepPreviousData,
   useMutation,
-  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { useAnalyticsQuery } from "@/lib/hooks/analyticsQuery";
 import { toast } from "sonner";
 import {
   analyticsQuanTriApi,
@@ -22,7 +22,7 @@ const KEY = ["reports", "analytics", "quan-tri"] as const;
 
 export function useQtFilterOptions() {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "filter-options"],
     queryFn: () => analyticsQuanTriApi.getFilterOptions(),
     enabled: ready,
@@ -32,7 +32,7 @@ export function useQtFilterOptions() {
 
 export function useQtOverview(filters: QtFilters) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "tong-quan", filters],
     queryFn: () => analyticsQuanTriApi.getOverview(filters),
     enabled: ready,
@@ -43,7 +43,7 @@ export function useQtOverview(filters: QtFilters) {
 
 export function useQtProfit(filters: QtFilters, view: QtProfitView) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "loi-nhuan", view, filters],
     queryFn: () => analyticsQuanTriApi.getProfit({ ...filters, view }),
     enabled: ready,
@@ -54,7 +54,7 @@ export function useQtProfit(filters: QtFilters, view: QtProfitView) {
 
 export function useQtCustomers(filters: QtFilters) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "khach-hang", filters],
     queryFn: () => analyticsQuanTriApi.getCustomers(filters),
     enabled: ready,
@@ -65,7 +65,7 @@ export function useQtCustomers(filters: QtFilters) {
 
 export function useQtProducts(filters: QtFilters) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "san-pham", filters],
     queryFn: () => analyticsQuanTriApi.getProducts(filters),
     enabled: ready,
@@ -77,7 +77,7 @@ export function useQtProducts(filters: QtFilters) {
 // ── Cấu hình ───────────────────────────────────────────────────────────────
 export function useQtExclusions() {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "config", "exclusions"],
     queryFn: () => analyticsQuanTriApi.listExclusions(),
     enabled: ready,

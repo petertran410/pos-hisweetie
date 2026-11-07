@@ -2,13 +2,13 @@
 
 import type { ReactNode } from "react";
 import { Lock, RotateCcw } from "lucide-react";
-import { DashSelect } from "@/components/dashboard/DashSelect";
 import { FilterMultiSelect } from "@/components/ui/filters";
 import type {
   KpiSaleFilters,
   KpiSaleOptions,
 } from "@/lib/api/analytics-kpi-sale";
 import { MONTH_OPTIONS } from "./kpiFormat";
+import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
 
 /**
  * Bộ lọc chung của KPI Sale (slicer Power BI): Năm, Tháng, Nhân viên
@@ -43,12 +43,11 @@ export function KpiSaleFilters<F extends KpiSaleFilters>({
   return (
     <div className="dt-panel p-4 space-y-3">
       <div className="flex flex-wrap items-center gap-2.5">
-        <DashSelect
-          ariaLabel="Năm"
+        <AnalyticsSelect
           options={yearOptions}
           value={String(filters.year)}
           onChange={(k) => set({ year: Number(k) } as Partial<F>)}
-          size="md"
+          className="w-36"
         />
         {showMonths && (
           <div className="w-44">
@@ -61,7 +60,6 @@ export function KpiSaleFilters<F extends KpiSaleFilters>({
                 } as Partial<F>)
               }
               placeholder="Tháng: Tất cả"
-              searchable={false}
               multiLabel={(n) => `${n} tháng`}
             />
           </div>

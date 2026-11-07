@@ -99,7 +99,6 @@ export default function Page() {
               values={filters.groups ?? []}
               onChange={(v) => change({ groups: v })}
               placeholder="Nhóm Hàng: Tất cả"
-              searchable={false}
               multiLabel={(n) => `Nhóm Hàng: ${n} nhóm`}
             />
             <div className="relative">

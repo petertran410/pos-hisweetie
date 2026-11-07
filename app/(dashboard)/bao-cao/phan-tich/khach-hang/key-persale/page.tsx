@@ -58,7 +58,6 @@ export default function Page() {
               value={week ? String(week) : ""}
               onChange={(v) => setWeek(v ? Number(v) : undefined)}
               placeholder="Chọn tuần: Tất cả"
-              searchable={false}
             />
           </div>
         }

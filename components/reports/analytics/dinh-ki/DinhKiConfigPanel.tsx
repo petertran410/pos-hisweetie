@@ -5,7 +5,6 @@
 
 import { useMemo, useState } from "react";
 import { Check, Pencil, Plus, Search, Trash2, X } from "lucide-react";
-import { DashSelect } from "@/components/dashboard/DashSelect";
 import {
   dinhKiApi,
   type DkGroupTarget,
@@ -19,6 +18,7 @@ import {
   useDkWeeklySellers,
 } from "@/lib/hooks/useAnalyticsDinhKi";
 import { useAnalyticsConfigMutation } from "@/lib/hooks/useAnalyticsReports";
+import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
 
 type Tab = "targets" | "jam" | "sellers";
 
@@ -82,6 +82,11 @@ export function DinhKiConfigPanel() {
 }
 
 // ── Chỉ tiêu nhóm hàng ───────────────────────────────────────────────────────
+const BRAND_OPTIONS = [
+  { value: "Lermao", label: "Lermao" },
+  { value: "Boduo", label: "Boduo" },
+];
+
 const KIND_OPTIONS: { key: DkTargetKind; label: string }[] = [
   { key: "group2026", label: "Nhóm hàng 2026 (A–D)" },
   { key: "visual", label: "Nhóm hàng hiển thị (1.Boduo…)" },
@@ -139,22 +144,20 @@ function TargetsTab() {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2.5">
-        <DashSelect
-          ariaLabel="Loại nhóm"
+        <AnalyticsSelect
           options={KIND_OPTIONS}
           value={kind}
           onChange={(k) => {
-            setKind(k);
+            setKind(k as DkTargetKind);
             setExtraGroups([]);
           }}
-          size="md"
+          className="w-64"
         />
-        <DashSelect
-          ariaLabel="Năm"
+        <AnalyticsSelect
           options={years}
           value={String(year)}
           onChange={(k) => setYear(Number(k))}
-          size="md"
+          className="w-36"
         />
         <div className="flex-1" />
         <input
@@ -299,15 +302,14 @@ function JamTab() {
     setEditing(null);
   };
   const brandSelect = (
-    <select
-      className={inputCls}
+    <AnalyticsSelect
+      options={BRAND_OPTIONS}
       value={draft.brand}
-      onChange={(e) =>
-        setDraft((d) => ({ ...d, brand: e.target.value as JamDraft["brand"] }))
-      }>
-      <option value="Lermao">Lermao</option>
-      <option value="Boduo">Boduo</option>
-    </select>
+      onChange={(v) =>
+        setDraft((d) => ({ ...d, brand: v as JamDraft["brand"] }))
+      }
+      className="w-full"
+    />
   );
   const actions = (
     <div className="flex gap-1 justify-end">

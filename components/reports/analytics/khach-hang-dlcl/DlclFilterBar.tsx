@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { RotateCcw } from "lucide-react";
-import { DashSelect } from "@/components/dashboard/DashSelect";
 import {
   FilterMultiSelect,
   FilterSearchableSelect,
@@ -12,6 +11,7 @@ import type {
   DlclOptions,
 } from "@/lib/api/analytics-khach-hang-dlcl";
 import { METRIC_OPTIONS } from "../analyticsFormat";
+import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
 
 const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
   value: String(i + 1),
@@ -127,17 +127,15 @@ export function DlclFilterBar({
                 set({ years: ys, year: ys[ys.length - 1] });
               }}
               placeholder="Chọn năm"
-              searchable={false}
               multiLabel={(n) => `${n} năm`}
             />
           </div>
         ) : (
-          <DashSelect
-            ariaLabel="Năm"
+          <AnalyticsSelect
             options={years.map((y) => ({ key: String(y), label: `Năm ${y}` }))}
             value={String(filters.year)}
             onChange={(k) => set({ year: Number(k) })}
-            size="md"
+            className="w-36"
           />
         )}
         <div className="w-44">
@@ -148,7 +146,6 @@ export function DlclFilterBar({
               set({ months: vals.map(Number).sort((a, b) => a - b) })
             }
             placeholder="Cả năm"
-            searchable={false}
             multiLabel={(n) => `${n} tháng`}
           />
         </div>
@@ -248,7 +245,6 @@ export function DlclFilterBar({
             value={str(filters.productPhase)}
             onChange={(v) => set({ productPhase: v || undefined })}
             placeholder="Giai đoạn SP: Tất cả"
-            searchable={false}
           />
         )}
         {on("product") && (
