@@ -24,6 +24,7 @@ import {
   useSaleTeams,
   useTeamMembers,
 } from "@/lib/hooks/useAnalyticsReports";
+import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
 
 type Tab =
   | "parent"
@@ -94,6 +95,11 @@ const TABS: { key: Tab; label: string; hint: string }[] = [
     label: "Mua hàng",
     hint: "Gộp mã hàng, nhân viên loại khỏi số bán, thông số mua hàng (nhà máy, đặt tối thiểu, tồn tối thiểu, quy đổi thùng), rebate (báo cáo Chuyển Kho, Thu Mua).",
   },
+];
+
+const MATCH_TYPE_OPTIONS = [
+  { value: "name_contains", label: "Tên khách chứa" },
+  { value: "code", label: "Mã khách là" },
 ];
 
 const inputCls =
@@ -238,18 +244,14 @@ function ParentRulesTab() {
         />
       </td>
       <td className="p-2 w-44">
-        <select
-          className={inputCls}
+        <AnalyticsSelect
+          options={MATCH_TYPE_OPTIONS}
           value={draft.matchType}
-          onChange={(e) =>
-            setDraft({
-              ...draft,
-              matchType: e.target.value as RuleDraft["matchType"],
-            })
-          }>
-          <option value="name_contains">Tên khách chứa</option>
-          <option value="code">Mã khách là</option>
-        </select>
+          onChange={(v) =>
+            setDraft({ ...draft, matchType: v as RuleDraft["matchType"] })
+          }
+          className="w-full"
+        />
       </td>
       <td className="p-2">
         <input
@@ -661,7 +663,6 @@ function MembersTab() {
                       })
                     }
                     placeholder="— Không thuộc team —"
-                    searchable={false}
                   />
                 </td>
               </tr>
@@ -729,7 +730,6 @@ function ProductGroupsTab() {
             options={GROUP_OPTIONS}
             value={newGroup}
             onChange={(v) => setNewGroup(v || "Nhóm A")}
-            searchable={false}
             showClearOption={false}
           />
         </div>
@@ -781,7 +781,6 @@ function ProductGroupsTab() {
                       v !== g.groupName &&
                       update.mutate({ id: g.id, groupName: v })
                     }
-                    searchable={false}
                     showClearOption={false}
                     allowDeselect={false}
                   />

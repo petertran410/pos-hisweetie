@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { RotateCcw } from "lucide-react";
-import { DashSelect } from "@/components/dashboard/DashSelect";
 import {
   FilterMultiSelect,
   FilterSearchableSelect,
@@ -13,6 +12,7 @@ import type {
   KhFilters,
 } from "@/lib/api/analytics-khach-hang";
 import { METRIC_OPTIONS } from "../analyticsFormat";
+import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
 
 const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
   value: String(i + 1),
@@ -73,12 +73,11 @@ export function KhFilterBar({
   return (
     <div className="dt-panel p-4 space-y-3">
       <div className="flex flex-wrap items-center gap-2.5">
-        <DashSelect
-          ariaLabel="Năm"
+        <AnalyticsSelect
           options={yearOptions}
           value={String(filters.year)}
           onChange={(k) => set({ year: Number(k) })}
-          size="md"
+          className="w-36"
         />
         <div className="w-44">
           {singleMonth ? (
@@ -86,7 +85,6 @@ export function KhFilterBar({
               options={MONTH_OPTIONS}
               value={str(filters.months?.[0])}
               onChange={(v) => v && set({ months: [Number(v)] })}
-              searchable={false}
               allowDeselect={false}
               showClearOption={false}
               placeholder="Chọn tháng"
@@ -99,7 +97,6 @@ export function KhFilterBar({
                 set({ months: vals.map(Number).sort((a, b) => a - b) })
               }
               placeholder="Cả năm"
-              searchable={false}
               multiLabel={(n) => `${n} tháng`}
             />
           )}

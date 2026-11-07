@@ -117,6 +117,9 @@ export const analyticsReportApi = {
     apiClient.get("/reports/analytics/business-overview", p),
   getFilterOptions: (): Promise<AnalyticsFilterOptions> =>
     apiClient.get("/reports/analytics/filter-options"),
+  /** Xoá số liệu lưu tạm (5 phút) ở backend để tính lại ngay. */
+  refresh: (): Promise<{ success: boolean }> =>
+    apiClient.post("/reports/analytics/refresh"),
 
   // Quy tắc khách cha
   listParentRules: (search?: string): Promise<ParentRule[]> =>

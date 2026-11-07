@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { DashSelect } from "@/components/dashboard/DashSelect";
 import { FilterMultiSelect } from "@/components/ui/filters";
 import type { DkBrandStats, DkTopProduct } from "@/lib/api/analytics-dinh-ki";
 import {
@@ -11,6 +10,7 @@ import {
 } from "@/lib/hooks/useAnalyticsDinhKi";
 import { DkBar, DkLoading, DkSection, DkTable, DkTd, DkUpdated } from "./DkUi";
 import { DK, fmtDate, fmtNum, fmtPct, fmtTr, fmtTy, vnNow } from "./dkFormat";
+import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
 
 const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
   value: String(i + 1),
@@ -48,12 +48,11 @@ export function BrandCompare() {
         )}
       </div>
       {isFetching && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
-      <DashSelect
-        ariaLabel="Năm"
+      <AnalyticsSelect
         options={years}
         value={String(year)}
         onChange={(k) => setYear(Number(k))}
-        size="md"
+        className="w-36"
       />
       <div className="w-44">
         <FilterMultiSelect
@@ -61,7 +60,6 @@ export function BrandCompare() {
           values={months.map(String)}
           onChange={(v) => setMonths(v.map(Number).sort((a, b) => a - b))}
           placeholder="Cả năm"
-          searchable={false}
           multiLabel={(n) => `${n} tháng`}
         />
       </div>

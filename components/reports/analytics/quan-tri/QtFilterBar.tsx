@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { RotateCcw } from "lucide-react";
-import { DashSelect } from "@/components/dashboard/DashSelect";
 import {
   FilterMultiSelect,
   FilterSearchableSelect,
@@ -13,6 +12,7 @@ import type {
   QtMetric,
 } from "@/lib/api/analytics-quan-tri";
 import { QT_METRIC_OPTIONS } from "./qtFormat";
+import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
 
 const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
   value: String(i + 1),
@@ -168,12 +168,11 @@ export function QtFilterBar({
   return (
     <div className="dt-panel p-4 space-y-3">
       <div className="flex flex-wrap items-center gap-2.5">
-        <DashSelect
-          ariaLabel="Năm"
+        <AnalyticsSelect
           options={yearOptions}
           value={String(filters.year)}
           onChange={(k) => set({ year: Number(k) })}
-          size="md"
+          className="w-36"
         />
         <div className="w-44">
           <FilterMultiSelect
@@ -183,7 +182,6 @@ export function QtFilterBar({
               set({ months: vals.map(Number).sort((a, b) => a - b) })
             }
             placeholder="Cả năm"
-            searchable={false}
             multiLabel={(n) => `${n} tháng`}
           />
         </div>

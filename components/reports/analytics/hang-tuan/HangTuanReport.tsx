@@ -16,7 +16,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { DashSelect } from "@/components/dashboard/DashSelect";
 import { FilterMultiSelect } from "@/components/ui/filters";
 import type {
   HangTuanFilters,
@@ -27,6 +26,7 @@ import { useHangTuan } from "@/lib/hooks/useAnalyticsDinhKi";
 import { TOOLTIP_STYLE, metricAxis, metricLabel } from "../analyticsFormat";
 import { BarText, Empty, Panel, axisTick } from "../shared/AnalyticsCharts";
 import { fmtDate, fmtNum, fmtPct, vnNow } from "../dinh-ki/dkFormat";
+import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
 
 // Màu của các thẻ HTML (card_*) trong dataset_sale - version 2.
 const C = {
@@ -84,12 +84,11 @@ export function HangTuanReport() {
             style={{ background: C.blue }}>
             BỘ LỌC NHANH
           </span>
-          <DashSelect
-            ariaLabel="Năm"
+          <AnalyticsSelect
             options={years}
             value={String(filters.year)}
             onChange={(k) => set({ year: Number(k), weeks: [] })}
-            size="md"
+            className="w-36"
           />
           <div className="flex-1" />
           {isFetching && (
@@ -117,7 +116,6 @@ export function HangTuanReport() {
             values={(filters.saleTeamIds ?? []).map(String)}
             onChange={(v) => set({ saleTeamIds: v.map(Number) })}
             placeholder="Nhóm Bán: Tất cả"
-            searchable={false}
             multiLabel={(n) => `${n} nhóm bán`}
           />
           <FilterMultiSelect
@@ -140,7 +138,6 @@ export function HangTuanReport() {
               set({ months: v.map(Number).sort((a, b) => a - b), weeks: [] })
             }
             placeholder="Tháng: Cả năm"
-            searchable={false}
             multiLabel={(n) => `${n} tháng`}
           />
           <FilterMultiSelect

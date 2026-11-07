@@ -1,9 +1,9 @@
 import {
   keepPreviousData,
   useMutation,
-  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { useAnalyticsQuery } from "@/lib/hooks/analyticsQuery";
 import { toast } from "sonner";
 import {
   analyticsReportApi,
@@ -19,7 +19,7 @@ function useReady() {
 
 export function useBusinessOverview(filters: AnalyticsBusinessFilters) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: ["reports", "analytics", "business-overview", filters],
     queryFn: () => analyticsReportApi.getBusinessOverview(filters),
     enabled: ready,
@@ -30,7 +30,7 @@ export function useBusinessOverview(filters: AnalyticsBusinessFilters) {
 
 export function useAnalyticsFilterOptions() {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: ["reports", "analytics", "filter-options"],
     queryFn: () => analyticsReportApi.getFilterOptions(),
     enabled: ready,
@@ -43,7 +43,7 @@ const CFG_KEY = ["reports", "analytics", "config"] as const;
 
 export function useParentRules(search?: string) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...CFG_KEY, "parent-rules", search ?? ""],
     queryFn: () => analyticsReportApi.listParentRules(search),
     enabled: ready,
@@ -52,7 +52,7 @@ export function useParentRules(search?: string) {
 
 export function useParentPreview(search: string) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...CFG_KEY, "parent-preview", search],
     queryFn: () => analyticsReportApi.previewParent(search),
     enabled: ready && search.trim().length >= 2,
@@ -61,7 +61,7 @@ export function useParentPreview(search: string) {
 
 export function useSaleTeams() {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...CFG_KEY, "sale-teams"],
     queryFn: () => analyticsReportApi.listTeams(),
     enabled: ready,
@@ -70,7 +70,7 @@ export function useSaleTeams() {
 
 export function useTeamMembers(search?: string) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...CFG_KEY, "members", search ?? ""],
     queryFn: () => analyticsReportApi.listMembers(search),
     enabled: ready,
@@ -83,7 +83,7 @@ export function useProductGroups(p: {
   limit?: number;
 }) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...CFG_KEY, "product-groups", p],
     queryFn: () => analyticsReportApi.listProductGroups(p),
     enabled: ready,

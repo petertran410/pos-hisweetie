@@ -77,8 +77,9 @@ export function FilterMultiSelect({
   }, []);
 
   useEffect(() => {
-    if (open && searchable) searchInputRef.current?.focus();
-  }, [open, searchable]);
+    // Panel chỉ được render sau khi tính xong vị trí (pos) → focus khi đã có panel.
+    if (open && searchable && pos) searchInputRef.current?.focus();
+  }, [open, searchable, !!pos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = useMemo(() => {
     const q = foldSearch(search.trim());
