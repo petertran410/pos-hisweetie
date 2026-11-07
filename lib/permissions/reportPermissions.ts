@@ -13,7 +13,8 @@ export type ReportGroupKey =
   | "nha-cung-cap"
   | "tai-chinh"
   | "cuoi-ngay"
-  | "phan-tich";
+  | "phan-tich"
+  | "lead";
 
 // Map (group, viewTypeValue) → key quyền backend (reports:xxx).
 // Phải khớp VIEWTYPE_KEY_MAP trong reports-permission.guard.ts.
@@ -58,6 +59,11 @@ export const REPORT_VIEWTYPE_PERMISSION: Record<
     Document: "reports:eod_document",
     CashFlow: "reports:eod_cashflow",
     Product: "reports:eod_product",
+  },
+  // Lead (dashboard CRM): cùng quyền xem lead (GET /reports/leads/summary yêu cầu leads:view;
+  // Sale chỉ thấy số liệu lead của mình).
+  lead: {
+    _all: "leads:view",
   },
   // Tài chính gộp 1 quyền cho cả nhóm.
   "tai-chinh": {
