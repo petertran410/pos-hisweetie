@@ -222,6 +222,11 @@ export interface ZaloProfile {
   // Messenger: META_AI = Meta Business AI đang trả lời; bật được khi canPassControlAI
   controlledBy?: string | null;
   canPassControlAI?: boolean;
+  // Zalo cá nhân: tên hội thoại trên Smax (đổi được từ POS) và tên gợi nhớ Sale đặt trên app Zalo
+  // (Smax đồng bộ; nếu có thì được ưu tiên hiện như trên Smax)
+  smaxName?: string | null;
+  alias?: string | null;
+  canRename?: boolean;
   smaxUrl: string;
   // Môi trường thử nghiệm: hỏi xác nhận trước khi gửi
   confirmBeforeSend?: boolean;

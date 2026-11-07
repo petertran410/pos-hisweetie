@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, Loader2, UserPlus } from "lucide-react";
+import { ExternalLink, Loader2, Pencil, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { useCan } from "@/lib/hooks/useCan";
 import type { ThreadSource } from "@/lib/chat/threadSource";
@@ -10,7 +10,9 @@ import { platformLabel } from "@/lib/chat/platforms";
 import { ZaloAvatar } from "./ZaloAvatar";
 import { ThreadKindLogo } from "./ThreadKindIcon";
 import { MetaAiSwitch } from "./MetaAiSwitch";
+import { RenameThreadModal } from "./RenameThreadModal";
 import { confirmAction, openExternal } from "@/lib/chat/confirm";
+import { useChatSidebarStore } from "@/lib/store/chatSidebar";
 
 interface Props {
   source: ThreadSource;
@@ -37,6 +39,7 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
   const canSend = useCan("smax_chat", "send");
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
+  const [renaming, setRenaming] = useState(false);
   const isGroup = source.kind === "group";
   const f = p?.friend;
 
@@ -62,6 +65,18 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
     } finally {
       setBusy(false);
     }
+  };
+
+  const rename = async (name: string) => {
+    const res = await source.rename(name);
+    const shown = res.alias || res.name;
+    queryClient.setQueryData(profileKey, p && { ...p, smaxName: res.name, alias: res.alias, name: shown });
+    // Hội thoại chưa gắn khách đang mở: thanh đầu sidebar đọc tên đã lưu khi mở
+    const st = useChatSidebarStore.getState();
+    if (st.loose?.tid === source.tid) st.openLoose({ ...st.loose, name: shown }, st.ownerId);
+    queryClient.invalidateQueries({ queryKey: ["smaxRecentChats"] });
+    queryClient.invalidateQueries({ queryKey: ["smaxSharedGroups"] });
+    toast.success(`Đã đổi tên thành "${shown}"`);
   };
 
   const act = async (action: "request" | "accept" | "undo") => {
@@ -110,9 +125,20 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
           memberCount={p?.memberCount}
         />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold leading-tight">
-            {posName || (isLoading ? "…" : threadName)}
-          </p>
+          <div className="flex min-w-0 items-center gap-1">
+            <p className="truncate text-sm font-semibold leading-tight">
+              {posName || (isLoading ? "…" : threadName)}
+            </p>
+            {p?.canRename && canSend && (
+              <button
+                onClick={() => setRenaming(true)}
+                title={isGroup ? "Đổi tên nhóm (trên Smax)" : "Đổi tên hội thoại (trên Smax)"}
+                aria-label="Đổi tên hội thoại"
+                className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-brand">
+                <Pencil className="h-3 w-3" />
+              </button>
+            )}
+          </div>
           <p className="truncate text-[11px] text-gray-500" title={subtitleText}>{subtitleText}</p>
         </div>
         {p?.canPassControlAI && canSend && (
@@ -141,6 +167,9 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
         {actions}
       </div>
       {extra && <div className="px-3 pb-1.5">{extra}</div>}
+      {renaming && p && (
+        <RenameThreadModal profile={p} isGroup={isGroup} onSave={rename} onClose={() => setRenaming(false)} />
+      )}
 
 
       {!isGroup && f && !f.isFriend && (

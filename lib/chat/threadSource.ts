@@ -24,6 +24,8 @@ export interface ThreadSource {
   messageAction: (pid: string, action: "recall" | "delete", confirmed?: boolean) => Promise<unknown>;
   // Bật Meta Business AI trả lời hội thoại Messenger
   passControlAI: (confirmed?: boolean) => Promise<unknown>;
+  // Đổi tên hội thoại trên Smax (Zalo cá nhân)
+  rename: (name: string) => Promise<{ name: string; alias: string | null }>;
   // Chỉ chat theo khách (API kết bạn theo contact)
   friendAction?: (action: "request" | "accept" | "undo") => Promise<{ friend: ZaloProfile["friend"] }>;
 }
@@ -55,6 +57,7 @@ export function customerSource(
     messageAction: (pid, action, confirmed) =>
       smaxChatApi.messageAction({ pagePid, tid, pid, action, confirmed }),
     passControlAI: (confirmed) => smaxChatApi.passControlAI({ pagePid, tid, confirmed }),
+    rename: (name) => smaxChatApi.renameThread({ pagePid, tid, name }),
     friendAction: (action) => smaxChatApi.friendAction(customerId, { pagePid, contactId: contact.id, action }),
   };
 }
@@ -74,5 +77,6 @@ export function looseSource(t: LooseThread): ThreadSource {
     messageAction: (pid, action, confirmed) =>
       smaxChatApi.messageAction({ pagePid: t.pagePid, tid: t.tid, pid, action, confirmed }),
     passControlAI: (confirmed) => smaxChatApi.passControlAI({ pagePid: t.pagePid, tid: t.tid, confirmed }),
+    rename: (name) => smaxChatApi.renameThread({ pagePid: t.pagePid, tid: t.tid, name }),
   };
 }

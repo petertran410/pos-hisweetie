@@ -28,6 +28,10 @@ export const smaxChatApi = {
   react: (body: { pagePid: string; tid: string; pid: string; reaction: string; confirmed?: boolean }) =>
     apiClient.post("/smax/chat/threads/reaction", body),
 
+  // Đổi tên hội thoại Zalo cá nhân (1-1 / nhóm) trên Smax
+  renameThread: (body: { pagePid: string; tid: string; name: string }): Promise<{ name: string; alias: string | null }> =>
+    apiClient.patch("/smax/chat/threads/name", body),
+
   // Bật Meta Business AI trả lời hội thoại Messenger (tắt = gửi tin kèm humanAgent)
   passControlAI: (body: { pagePid: string; tid: string; confirmed?: boolean }) =>
     apiClient.post("/smax/chat/threads/meta-ai", body),
