@@ -6,7 +6,7 @@ import { debtTrackingApi } from "@/lib/api/debt-tracking";
 import { smaxChatApi } from "@/lib/api/smaxChat";
 import { packingSlipsApi } from "@/lib/api/packing-slips";
 import { useAuthStore } from "@/lib/store/auth";
-import type { ChatContext } from "@/lib/types/smaxChat";
+import type { ChatContext, OutgoingAttachment } from "@/lib/types/smaxChat";
 import type { CartLine } from "@/lib/store/posInView";
 import { cartText, debtText, invoiceText, orderText, packingSlipText, productText } from "./quickTemplates";
 
@@ -14,7 +14,9 @@ import { cartText, debtText, invoiceText, orderText, packingSlipText, productTex
 export type QuickItem =
   | { type: "invoice" | "order" | "product" | "packingSlip"; id: number }
   | { type: "cart"; lines: CartLine[] }
-  | { type: "debt" };
+  | { type: "debt" }
+  // Tin nhắn nhanh (menu "#"): chèn nguyên nội dung
+  | { type: "text"; text: string; media?: OutgoingAttachment[] };
 
 // Bảng giá mặc định theo chi nhánh khi chưa chọn bảng giá ở /ban-hang: Kho Sài Gòn → BẢNG GIÁ LẺ HCM.
 // Chi nhánh khác (vd Kho Hà Nội) dùng Bảng giá chung = giá gốc.
@@ -49,6 +51,8 @@ export interface QuickResult {
   productImages?: ProductImagePick;
   // Chụp bản in (hoá đơn / đặt hàng) gửi kèm dạng ảnh
   printImage?: { templateFor: "invoice" | "order"; id: number; name: string };
+  // Ảnh/tệp đã có trên POS (media tin nhắn nhanh) — thêm thẳng vào tệp đính kèm
+  attachments?: OutgoingAttachment[];
 }
 
 /** Tải dữ liệu đầy đủ của mục và dựng tin (quyền POS do chính các API kiểm tra). */
@@ -60,6 +64,8 @@ export async function buildQuickMessage(
   branchId: number | undefined
 ): Promise<QuickResult> {
   switch (item.type) {
+    case "text":
+      return { text: item.text, attachments: item.media?.length ? item.media : undefined };
     case "invoice": {
       const invoice = await invoicesApi.getInvoice(item.id);
       return {

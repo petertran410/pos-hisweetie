@@ -104,6 +104,8 @@ export const ACTION_LABELS: Record<string, string> = {
   complete: "Hoàn thành",
   manage: "Quản lý",
   manage_contacts: "Quản lý ID Zalo của khách",
+  manage_library: "Quản lý Thư viện Smax",
+  manage_quick_replies: "Quản lý tin nhắn nhanh chung",
   prepare: "Tổng hợp tuần",
   submit: "Tạo approval tuần",
   mark_issued: "Đã chi",

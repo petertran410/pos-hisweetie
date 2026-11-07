@@ -1,9 +1,16 @@
 import { apiClient } from "@/lib/config/api";
+
+// Media tin nhắn nhanh gửi lên: tệp đã tải lên POS (bỏ url xem trước)
+type QuickReplyMediaInput = { path: string; kind: "image" | "video" | "file"; name: string; size?: number };
 import type {
   ChatChannel,
   ChatContext,
   ChatMessagesPage,
+  LibraryAlbum,
+  LibraryFile,
   OutgoingAttachment,
+  QuickReply,
+  QuickReplyList,
   RecentChat,
   SendBody,
   ZaloProfile,
@@ -87,6 +94,34 @@ export const smaxChatApi = {
     amount: number | null;
     qrUrl: string | null;
   }> => apiClient.get(`${base(customerId)}/payment-info`),
+
+  // Tin nhắn nhanh: chung (cần quyền smax_chat:manage_quick_replies để sửa) + riêng của mình
+  quickReplies: (): Promise<QuickReplyList> => apiClient.get("/smax/chat/quick-replies"),
+  createQuickReply: (body: { shared?: boolean; shortcut: string; content: string; media?: QuickReplyMediaInput[] }): Promise<QuickReply> =>
+    apiClient.post("/smax/chat/quick-replies", body),
+  updateQuickReply: (id: number, body: { shortcut: string; content: string; media?: QuickReplyMediaInput[] }): Promise<QuickReply> =>
+    apiClient.patch(`/smax/chat/quick-replies/${id}`, body),
+  deleteQuickReply: (id: number): Promise<{ ok: true }> => apiClient.delete(`/smax/chat/quick-replies/${id}`),
+
+  // Thư viện Smax: album, tệp (phân trang theo cursor), lấy tệp đã chọn làm tệp đính kèm
+  libraryAlbums: (): Promise<LibraryAlbum[]> => apiClient.get("/smax/chat/library/albums"),
+  libraryFiles: (q: { albumId?: string; keyword?: string; cursor?: number }): Promise<{ files: LibraryFile[]; nextCursor: number | null }> =>
+    apiClient.get("/smax/chat/library/files", {
+      ...(q.albumId ? { albumId: q.albumId } : {}),
+      ...(q.keyword ? { keyword: q.keyword } : {}),
+      ...(q.cursor ? { cursor: String(q.cursor) } : {}),
+    }),
+  // Sửa Thư viện Smax (quyền smax_chat:manage_library): tải lên album đang xem, xoá hẳn trên Smax
+  uploadLibraryFiles: (files: File[], albumId?: string): Promise<{ uploaded: number }> => {
+    const form = new FormData();
+    files.forEach((f) => form.append("files", f));
+    if (albumId) form.append("albumId", albumId);
+    return apiClient.postForm("/smax/chat/library/files", form);
+  },
+  deleteLibraryFiles: (files: Pick<LibraryFile, "id" | "name">[]): Promise<{ deleted: number }> =>
+    apiClient.delete("/smax/chat/library/files", { files: files.map(({ id, name }) => ({ id, name })) }),
+  importLibraryFile: (f: Pick<LibraryFile, "url" | "name" | "mime">): Promise<OutgoingAttachment[]> =>
+    apiClient.post("/smax/chat/library/import", { items: [{ url: f.url, name: f.name, mime: f.mime }] }, 120_000),
 
   uploadAttachment: (file: File): Promise<OutgoingAttachment[]> => {
     const form = new FormData();

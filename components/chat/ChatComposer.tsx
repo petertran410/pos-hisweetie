@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import {
   FileText,
+  Images,
   Loader2,
+  MessageSquareText,
   Paperclip,
   Play,
   QrCode,
@@ -31,6 +33,7 @@ import type {
   ChatContext,
   ChatDraft,
   ChatMessage,
+  LibraryFile,
   OutgoingAttachment,
 } from "@/lib/types/smaxChat";
 import { messagePreview, messageThumb } from "@/lib/chat/messageActions";
@@ -38,6 +41,9 @@ import { renderPrintImage } from "@/lib/utils/print";
 import { QuickInsertMenu, useQuickOptions } from "./QuickInsertMenu";
 import { EmojiStickerPicker } from "./EmojiStickerPicker";
 import { ImageGalleryModal } from "./ImageGalleryModal";
+import { LibraryPickerModal } from "./LibraryPickerModal";
+import { QuickRepliesModal, useQuickReplies } from "./QuickRepliesModal";
+import { norm, type QuickOption } from "./QuickInsertMenu";
 import { addRecentEmoji, addRecentSticker } from "@/lib/chat/stickers";
 
 const MAX_FILES = 10;
@@ -80,7 +86,8 @@ interface Item {
 
 // Mở menu: "/" ở đầu ô hoặc sau khoảng trắng, ngay trước con trỏ — vd "báo giá /hd12".
 // Khi đã mở, chuỗi tìm nhận cả khoảng trắng ("/Lermao Xoài") tới khi Esc / chọn / xuống dòng.
-const SLASH = /(^|\s)\/([^\s/]*)$/;
+// "/" chèn thông tin POS, "#" chèn tin nhắn nhanh
+const SLASH = /(^|\s)([/#])([^\s/#]*)$/;
 
 const productImageKey = (img: { productId: number; kind?: "packingSlip"; id: number }) =>
   `p-${img.kind ?? "product"}-${img.productId}-${img.id}`;
@@ -105,16 +112,18 @@ export function ChatComposer({
 }: Props) {
   const [text, setText] = useState(() => drafts.get(draftKey) ?? "");
   const [items, setItems] = useState<Item[]>([]);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
   // Ảnh sản phẩm đã chèn: hiện để tick chọn ảnh gửi kèm (mặc định chưa chọn)
   const [productPicks, setProductPicks] = useState<
     (ProductImagePick & { selected: number[] })[]
   >([]);
   const [dragging, setDragging] = useState(false);
-  // Menu "/": vị trí dấu "/" trong text + chuỗi lọc
-  const [slash, setSlash] = useState<{ start: number; query: string } | null>(
+  // Menu "/" (thông tin POS) hoặc "#" (tin nhắn nhanh): vị trí ký tự kích hoạt + chuỗi lọc
+  const [slash, setSlash] = useState<{ start: number; query: string; char: "/" | "#" } | null>(
     null,
   );
+  const [quickOpen, setQuickOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [inserting, setInserting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -250,19 +259,42 @@ export function ChatComposer({
     canViewPriceBooks: useCan("price_books", "view"),
     canViewStock: useCan("pos_inventory", "view"),
   };
-  const { options, loading } = useQuickOptions(
+  const pos = useQuickOptions(
     slash?.query ?? "",
     ctx,
-    !!slash,
+    slash?.char === "/",
   );
+  const hash = slash?.char === "#";
+  const quickReplies = useQuickReplies(hash);
+  // Menu "#": tin riêng trước, rồi tin chung; lọc theo mã gõ tắt / nội dung
+  const replyOptions: QuickOption[] = (() => {
+    if (!hash || !quickReplies.data) return [];
+    const q = norm(slash.query);
+    const pick = (list: typeof quickReplies.data.mine, group: string) =>
+      list
+        .filter((r) => !q || norm(r.shortcut).includes(q) || norm(r.content).includes(q))
+        .sort((a, b) => Number(!norm(a.shortcut).startsWith(q)) - Number(!norm(b.shortcut).startsWith(q)))
+        .map((r) => ({
+          key: `qr-${r.id}`,
+          group,
+          label: `#${r.shortcut}`,
+          preview: r.content.trim(),
+          media: r.media,
+          icon: "quick" as const,
+          item: { type: "text" as const, text: r.content, media: r.media },
+        }));
+    return [...pick(quickReplies.data.mine, "Của tôi"), ...pick(quickReplies.data.shared, "Chung")];
+  })();
+  const options = hash ? replyOptions : pos.options;
+  const loading = hash ? quickReplies.isFetching : pos.loading;
 
   const detectSlash = (value: string, caret: number) => {
     // Đang mở: giữ nguyên vị trí "/", chuỗi tìm là đoạn tới con trỏ (cho phép khoảng trắng)
-    if (slash && value[slash.start] === "/" && caret > slash.start) {
+    if (slash && value[slash.start] === slash.char && caret > slash.start) {
       const query = value.slice(slash.start + 1, caret);
       if (!query.includes("\n")) {
         if (query !== slash.query) {
-          setSlash({ start: slash.start, query });
+          setSlash({ ...slash, query });
           setActive(0);
         }
         return;
@@ -270,7 +302,7 @@ export function ChatComposer({
     }
     const m = SLASH.exec(value.slice(0, caret));
     if (!m) return setSlash(null);
-    setSlash({ start: caret - m[2].length - 1, query: m[2] });
+    setSlash({ start: caret - m[3].length - 1, query: m[3], char: m[2] as "/" | "#" });
     setActive(0);
   };
 
@@ -280,7 +312,7 @@ export function ChatComposer({
     replace?: { start: number; end: number },
   ) => {
     setSlash(null);
-    if (!ctx && item.type !== "product") {
+    if (!ctx && item.type !== "product" && item.type !== "text") {
       toast.info("Gắn khách POS cho hội thoại này để gửi nhanh thông tin POS");
       return;
     }
@@ -295,6 +327,7 @@ export function ChatComposer({
         return [before, result.text, after].filter(Boolean).join("\n");
       });
       if (result.qrImageUrl) setQrImageUrl(result.qrImageUrl);
+      if (result.attachments?.length) addReadyAttachments(result.attachments);
       const pick = result.productImages;
       if (pick) {
         // Mặc định chọn hết ảnh, trong giới hạn MAX_FILES tệp/ảnh mỗi lượt
@@ -369,6 +402,52 @@ export function ChatComposer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
+
+  /** Tệp đã có trên POS (media tin nhắn nhanh) → thêm thẳng vào danh sách đính kèm. */
+  const addReadyAttachments = (list: OutgoingAttachment[]) => {
+    const room = Math.max(MAX_FILES - items.length, 0);
+    if (list.length > room) {
+      toast.warning(`Tối đa ${MAX_FILES} tệp mỗi lần gửi — đã bỏ ${list.length - room} tệp của tin nhắn nhanh`);
+    }
+    const stamp = Date.now();
+    setItems((cur) => [
+      ...cur,
+      ...list.slice(0, room).map((a, n) => ({
+        key: `qr-${stamp}-${n}-${a.path}`,
+        file: new File([], a.name),
+        localUrl: a.kind === "file" ? null : a.url,
+        status: "done" as const,
+        result: a,
+      })),
+    ]);
+  };
+
+  /** Tệp chọn từ Thư viện Smax: backend tải về như tệp tải lên → gửi chung luồng đính kèm. */
+  const addLibraryFiles = (files: LibraryFile[]) => {
+    if (disabled || !files.length) return;
+    const accepted = files.slice(0, Math.max(MAX_FILES - items.length, 0));
+    const next: Item[] = accepted.map((f, n) => ({
+      key: `lib-${Date.now()}-${n}-${f.id}`,
+      file: new File([], f.name, { type: f.mime }),
+      localUrl: f.mime.startsWith("image/") ? f.url : null,
+      status: "uploading",
+    }));
+    setItems((cur) => [...cur, ...next]);
+    next.forEach(async (item, n) => {
+      try {
+        const [result] = await smaxChatApi.importLibraryFile(accepted[n]);
+        setItems((cur) => cur.map((i) => (i.key === item.key ? { ...i, status: "done", result } : i)));
+      } catch (e) {
+        setItems((cur) =>
+          cur.map((i) =>
+            i.key === item.key
+              ? { ...i, status: "error", error: (e as Error).message || "Không lấy được tệp từ Thư viện" }
+              : i,
+          ),
+        );
+      }
+    });
+  };
 
   const addFiles = (files: File[]) => {
     if (disabled || !files.length) return;
@@ -530,6 +609,14 @@ export function ChatComposer({
           activeIndex={active}
           onHover={setActive}
           onPick={(o) => pickOption(options.indexOf(o))}
+          title={hash ? "Tin nhắn nhanh" : undefined}
+          emptyText={
+            hash
+              ? quickReplies.data && !quickReplies.data.mine.length && !quickReplies.data.shared.length
+                ? "Chưa có tin nhắn nhanh — bấm biểu tượng tin nhắn nhanh để thêm."
+                : "Không có tin nhắn nhanh phù hợp."
+              : undefined
+          }
         />
       )}
       {inserting && (
@@ -657,6 +744,19 @@ export function ChatComposer({
           onClose={() => setPreview(null)}
         />
       )}
+      {quickOpen && (
+        <QuickRepliesModal
+          onInsert={(r) => insertQuick({ type: "text", text: r.content, media: r.media })}
+          onClose={() => setQuickOpen(false)}
+        />
+      )}
+      {libraryOpen && (
+        <LibraryPickerModal
+          max={Math.max(MAX_FILES - items.length, 0)}
+          onPick={addLibraryFiles}
+          onClose={() => setLibraryOpen(false)}
+        />
+      )}
 
       {/* stretch: ô soạn cao bằng cột nút bên phải, không chừa khoảng trống */}
       <div className="flex items-stretch gap-2">
@@ -681,7 +781,9 @@ export function ChatComposer({
           onClick={(e) => detectSlash(text, e.currentTarget.selectionStart)}
           onBlur={() => setSlash(null)}
           onKeyDown={(e) => {
-            if (slash && !e.nativeEvent.isComposing) {
+            // "#" không khớp tin nhắn nhanh nào (vd hashtag thường) → Enter gửi tin như bình thường
+            if (hash && !options.length && e.key === "Enter" && !e.shiftKey) setSlash(null);
+            else if (slash && !e.nativeEvent.isComposing) {
               if (e.key === "ArrowDown" || e.key === "ArrowUp") {
                 e.preventDefault();
                 const n = options.length || 1;
@@ -724,14 +826,23 @@ export function ChatComposer({
             disabled
               ? ""
               : ctx
-                ? "Nhập tin… gõ / để chèn sản phẩm, hóa đơn, công nợ (Enter gửi, Shift+Enter xuống dòng)"
-                : "Nhập tin… gõ / để chèn sản phẩm (Enter gửi, Shift+Enter xuống dòng)"
+                ? "Nhập tin… gõ / để chèn sản phẩm, hóa đơn, công nợ, # để chèn tin nhắn nhanh (Enter gửi, Shift+Enter xuống dòng)"
+                : "Nhập tin… gõ / để chèn sản phẩm, # để chèn tin nhắn nhanh (Enter gửi, Shift+Enter xuống dòng)"
           }
           className="flex-1 resize-none border rounded-md px-3 py-2 text-sm outline-none focus:border-brand disabled:bg-gray-100"
         />
         {/* Cột phải: đính kèm, emoji/sticker xếp dọc trên nút Gửi */}
         <div className="flex shrink-0 flex-col items-center justify-end gap-1">
           <div className="flex flex-col gap-0.5">
+            <button
+              onClick={() => setQuickOpen(true)}
+              disabled={disabled}
+              title="Tin nhắn nhanh (gõ # trong ô chat để chèn nhanh)"
+              aria-label="Tin nhắn nhanh"
+              className="h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 disabled:opacity-40"
+            >
+              <MessageSquareText className="w-4 h-4" />
+            </button>
             <button
               onClick={() => inputRef.current?.click()}
               disabled={disabled || items.length >= MAX_FILES}
@@ -740,6 +851,15 @@ export function ChatComposer({
               className="h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 disabled:opacity-40"
             >
               <Paperclip className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setLibraryOpen(true)}
+              disabled={disabled || items.length >= MAX_FILES}
+              title="Thư viện Smax — chọn ảnh/tệp có sẵn"
+              aria-label="Thư viện"
+              className="h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 disabled:opacity-40"
+            >
+              <Images className="w-4 h-4" />
             </button>
             <button
               // mousedown: không làm mất con trỏ trong ô soạn

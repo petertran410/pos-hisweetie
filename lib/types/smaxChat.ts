@@ -130,6 +130,38 @@ export interface SharedGroupsResult {
   truncated: boolean;
 }
 
+/** Tin nhắn nhanh sidechat (gõ #mã để chèn): ownerId null = chung, còn lại = riêng của mình. */
+export interface QuickReply {
+  id: number;
+  ownerId: number | null;
+  shortcut: string;
+  content: string;
+  // Ảnh/video/tệp gửi kèm (đã lưu trên POS như tệp đính kèm)
+  media: OutgoingAttachment[];
+  updatedAt: string;
+}
+export interface QuickReplyList {
+  shared: QuickReply[];
+  mine: QuickReply[];
+  canManageShared: boolean;
+}
+
+/** Album / tệp trong Thư viện Smax (https://smax.ai/bizs/<biz>/storages). */
+export interface LibraryAlbum {
+  id: string;
+  name: string;
+  count: number | null;
+  picture: string | null;
+}
+export interface LibraryFile {
+  id: string;
+  name: string;
+  mime: string;
+  size: number | null;
+  url: string;
+  createdAt: string;
+}
+
 /** Tệp đã tải lên POS, chờ gửi qua Zalo (path do backend cấp). */
 export interface OutgoingAttachment {
   path: string;
