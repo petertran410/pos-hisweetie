@@ -37,6 +37,8 @@ export function EmojiStickerPicker({ threadStickerIds, onEmoji, onSticker, onClo
   // Bấm ra ngoài hoặc Esc thì đóng
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
+      // Bấm nút bật/tắt emoji: để nút tự đóng (tránh đóng rồi mở lại)
+      if ((e.target as Element).closest?.("[data-emoji-toggle]")) return;
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     };
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();

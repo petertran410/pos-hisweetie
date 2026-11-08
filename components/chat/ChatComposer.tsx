@@ -47,6 +47,7 @@ import { LibraryPickerModal } from "./LibraryPickerModal";
 import { QuickRepliesModal, useQuickReplies } from "./QuickRepliesModal";
 import { norm, type QuickOption } from "./QuickInsertMenu";
 import { addRecentEmoji, addRecentSticker } from "@/lib/chat/stickers";
+import { CustomTooltip } from "@/components/ui/CustomTooltip";
 
 const MAX_FILES = 10;
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -860,47 +861,52 @@ export function ChatComposer({
             className="block w-full resize-none bg-transparent px-3 pt-2 pb-1 text-sm leading-5 outline-none max-lg:text-base"
           />
         <div className="flex items-center gap-0.5 px-1 pb-1">
-          <button
-            onClick={() => setQuickOpen(true)}
-            disabled={disabled}
-            title="Tin nhắn nhanh (gõ # trong ô chat để chèn nhanh)"
-            aria-label="Tin nhắn nhanh"
-            className="chat-tap h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-brand disabled:opacity-40"
-          >
-            <MessageSquareText className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => inputRef.current?.click()}
-            disabled={disabled || items.length >= MAX_FILES}
-            title={`Đính kèm ảnh, video, tệp (tối đa ${MAX_FILES} tệp, 25MB/tệp)`}
-            aria-label="Đính kèm"
-            className="chat-tap h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-brand disabled:opacity-40"
-          >
-            <Paperclip className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setLibraryOpen(true)}
-            disabled={disabled || items.length >= MAX_FILES}
-            title="Thư viện Smax — chọn ảnh/tệp có sẵn"
-            aria-label="Thư viện"
-            className="chat-tap h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-brand disabled:opacity-40"
-          >
-            <Images className="w-4 h-4" />
-          </button>
-          <button
-            // mousedown: không làm mất con trỏ trong ô soạn
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setPickerOpen((o) => !o)}
-            disabled={disabled}
-            title="Emoji & sticker"
-            aria-label="Emoji và sticker"
-            aria-expanded={pickerOpen}
-            className={`chat-tap h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-100 hover:text-brand disabled:opacity-40 ${
-              pickerOpen ? "bg-cyan-bg text-brand" : "text-gray-500"
-            }`}
-          >
-            <Smile className="w-4 h-4" />
-          </button>
+          <CustomTooltip content="Tin nhắn nhanh (gõ # trong ô chat để chèn nhanh)" delayMs={200}>
+            <button
+              onClick={() => setQuickOpen(true)}
+              disabled={disabled}
+              aria-label="Tin nhắn nhanh"
+              className="chat-tap h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-brand disabled:opacity-40"
+            >
+              <MessageSquareText className="w-4 h-4" />
+            </button>
+          </CustomTooltip>
+          <CustomTooltip content={`Đính kèm ảnh, video, tệp (tối đa ${MAX_FILES} tệp, 25MB/tệp)`} delayMs={200}>
+            <button
+              onClick={() => inputRef.current?.click()}
+              disabled={disabled || items.length >= MAX_FILES}
+              aria-label="Đính kèm"
+              className="chat-tap h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-brand disabled:opacity-40"
+            >
+              <Paperclip className="w-4 h-4" />
+            </button>
+          </CustomTooltip>
+          <CustomTooltip content="Thư viện Smax — chọn ảnh/tệp có sẵn" delayMs={200}>
+            <button
+              onClick={() => setLibraryOpen(true)}
+              disabled={disabled || items.length >= MAX_FILES}
+              aria-label="Thư viện"
+              className="chat-tap h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-brand disabled:opacity-40"
+            >
+              <Images className="w-4 h-4" />
+            </button>
+          </CustomTooltip>
+          <CustomTooltip content="Emoji & sticker" delayMs={200}>
+            <button
+              // mousedown: không làm mất con trỏ trong ô soạn
+              onMouseDown={(e) => e.preventDefault()}
+              data-emoji-toggle
+              onClick={() => setPickerOpen((o) => !o)}
+              disabled={disabled}
+              aria-label="Emoji và sticker"
+              aria-expanded={pickerOpen}
+              className={`chat-tap h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-100 hover:text-brand disabled:opacity-40 ${
+                pickerOpen ? "bg-cyan-bg text-brand" : "text-gray-500"
+              }`}
+            >
+              <Smile className="w-4 h-4" />
+            </button>
+          </CustomTooltip>
           <span className="ml-auto min-w-0 truncate px-1 text-xs text-gray-500" aria-hidden>
             {focused && !disabled ? "Enter gửi · Shift+Enter xuống dòng" : ""}
           </span>

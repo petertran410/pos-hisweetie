@@ -184,7 +184,11 @@ export function CustomTooltip({
         className="relative inline-flex items-center justify-center cursor-help"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        onFocus={handleMouseEnter}
+        // Bấm vào thì ẩn; focus chỉ hiện khi dùng bàn phím (không bật lại sau cú click)
+        onPointerDown={handleMouseLeave}
+        onFocus={(e) => {
+          if ((e.target as HTMLElement).matches?.(":focus-visible")) handleMouseEnter();
+        }}
         onBlur={handleMouseLeave}>
         {children}
       </div>
