@@ -127,7 +127,7 @@ export function EmojiStickerPicker({ threadStickerIds, onEmoji, onSticker, onClo
         )}
       </div>
       {tab === "sticker" && (
-        <p className="border-t px-2 py-1 text-[11px] text-gray-400">Bấm sticker để gửi ngay.</p>
+        <p className="border-t px-2 py-1 text-xs text-gray-500">Bấm sticker để gửi ngay.</p>
       )}
     </div>
   );

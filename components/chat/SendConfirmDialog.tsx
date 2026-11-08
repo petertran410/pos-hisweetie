@@ -3,6 +3,7 @@
 import { FileText, Play } from "lucide-react";
 import type { ChatDraft } from "@/lib/types/smaxChat";
 import { stickerUrl } from "@/lib/chat/stickers";
+import { useEscapeClose } from "@/lib/hooks/useEscapeClose";
 
 interface Props {
   channelName: string;
@@ -14,10 +15,11 @@ interface Props {
 
 /** Môi trường thử nghiệm: xác nhận trước khi gửi tin tới khách thật. */
 export function SendConfirmDialog({ channelName, recipient, draft, onConfirm, onCancel }: Props) {
+  useEscapeClose(onCancel);
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-lg bg-white p-4 shadow-xl text-sm">
-        <h3 className="font-semibold text-base mb-1">Xác nhận gửi tin thật</h3>
+      <div role="dialog" aria-modal="true" aria-labelledby="send-confirm-title" className="w-full max-w-sm rounded-lg bg-white p-4 shadow-xl text-sm">
+        <h3 id="send-confirm-title" className="font-semibold text-base mb-1">Xác nhận gửi tin thật</h3>
         <p className="text-gray-500 mb-3">
           Đang ở môi trường thử nghiệm — tin sẽ được gửi tới khách thật qua Zalo.
         </p>

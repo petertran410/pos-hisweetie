@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  AlertCircle,
   FileText,
   Images,
   Loader2,
@@ -681,7 +682,7 @@ export function ChatComposer({
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-0.5 p-1">
                   <FileText className="h-5 w-5 text-brand" />
-                  <span className="w-full truncate text-center text-[10px] leading-tight">
+                  <span className="w-full truncate text-center text-[11px] leading-tight">
                     {i.file.name}
                   </span>
                 </div>
@@ -692,14 +693,19 @@ export function ChatComposer({
                 </div>
               )}
               {i.status === "error" && (
-                <div className="absolute inset-x-0 bottom-0 bg-red-600/90 px-0.5 text-center text-[9px] leading-tight text-white">
+                <div
+                  role="img"
+                  aria-label={`Lỗi tải lên: ${i.error || i.file.name}`}
+                  className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-0.5 bg-red-600/90 py-0.5 text-[11px] font-medium leading-none text-white"
+                >
+                  <AlertCircle className="h-3 w-3" aria-hidden />
                   Lỗi
                 </div>
               )}
               <button
                 onClick={() => remove(i.key)}
                 aria-label="Bỏ tệp"
-                className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
+                className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -727,7 +733,7 @@ export function ChatComposer({
                 <button
                   onClick={() => removeProductImage(img)}
                   aria-label="Bỏ ảnh"
-                  className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
+                  className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
                 >
                   <X className="h-3 w-3" />
                 </button>

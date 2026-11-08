@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, Fragment, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, Copy, Download, FileText, Forward, MoreHorizontal, Play, Quote, RotateCw } from "lucide-react";
+import { ArrowDown, Check, Copy, Download, FileText, Forward, MoreHorizontal, Play, Quote, RotateCw } from "lucide-react";
 import type { ThreadSource } from "@/lib/chat/threadSource";
 import type {
   ChatContext,
@@ -489,7 +489,7 @@ export function ChatThread({
               return (
                 <Fragment key={first.id}>
                   {newDay && (
-                    <div className="my-2 text-center text-xs text-gray-400">{dayLabel(first.createdAt)}</div>
+                    <div className="my-2 text-center text-xs text-gray-500">{dayLabel(first.createdAt)}</div>
                   )}
                   <MessageRow
                     messages={item.messages}
@@ -560,7 +560,7 @@ export function ChatThread({
                   {p.draft.text}
                 </div>
                 )}
-                <span className="text-[11px] text-gray-500 mt-0.5">
+                <span className="text-xs text-gray-500 mt-0.5">
                   {p.status === "sending" && "Đang gửi…"}
                   {p.status === "sent" && "Đã gửi"}
                   {p.status === "error" && (
@@ -725,7 +725,7 @@ function MessageBubble({ message: m, showSender }: { message: ChatMessage; showS
     return (
       <div className={`flex flex-col my-1 ${m.fromMe ? "items-end" : "items-start"}`}>
         {showSender && !m.fromMe && m.senderName && (
-          <span className="text-[11px] text-gray-500 ml-2">{m.senderName}</span>
+          <span className="text-xs text-gray-500 ml-2">{m.senderName}</span>
         )}
         <span className={`relative ${m.reactions?.length ? "mb-2.5" : ""} ${m.recalled ? "opacity-50" : ""}`}>
           <img
@@ -737,7 +737,7 @@ function MessageBubble({ message: m, showSender }: { message: ChatMessage; showS
           <HoverActions fromMe={m.fromMe} />
           <ReactionSlot reactions={m.reactions} />
         </span>
-        <span className="text-[11px] text-gray-400 mx-1">
+        <span className="text-xs text-gray-500 mx-1">
           {timeLabel(m.createdAt)}
           {m.recalled && RECALLED_TAG}
         </span>
@@ -747,7 +747,7 @@ function MessageBubble({ message: m, showSender }: { message: ChatMessage; showS
   return (
     <div className={`flex flex-col my-1 ${m.fromMe ? "items-end" : "items-start"}`}>
       {showSender && !m.fromMe && m.senderName && (
-        <span className="text-[11px] text-gray-500 ml-2">{m.senderName}</span>
+        <span className="text-xs text-gray-500 ml-2">{m.senderName}</span>
       )}
       <div
         className={`relative max-w-[72%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${
@@ -761,6 +761,7 @@ function MessageBubble({ message: m, showSender }: { message: ChatMessage; showS
             <button
               key={i}
               onClick={() => setPreview(i)}
+              aria-label={`Xem video ${a.title || ""}`.trim()}
               className="relative block mb-1 cursor-zoom-in">
               <VideoFrame url={a.url} className="block h-40 w-56 rounded-lg" />
               <PlayBadge />
@@ -771,6 +772,7 @@ function MessageBubble({ message: m, showSender }: { message: ChatMessage; showS
             <button
               key={i}
               onClick={() => setPreview(i)}
+              aria-label={`Xem ảnh ${a.title || ""}`.trim()}
               className="relative block mb-1 cursor-zoom-in">
               <img src={a.thumbnail || a.url} alt={a.title} className="max-h-48 rounded-lg" />
               {isVideo(a) && (
@@ -793,7 +795,7 @@ function MessageBubble({ message: m, showSender }: { message: ChatMessage; showS
         )}
         {m.text}
       </div>
-      <span className="text-[11px] text-gray-400 mx-1">
+      <span className="text-xs text-gray-500 mx-1">
         {timeLabel(m.createdAt)}
         {m.recalled && RECALLED_TAG}
       </span>
@@ -910,7 +912,7 @@ function AlbumBubble({ messages, showSender }: { messages: ChatMessage[]; showSe
   return (
     <div className={`flex flex-col my-1 ${first.fromMe ? "items-end" : "items-start"}`}>
       {showSender && !first.fromMe && first.senderName && (
-        <span className="text-[11px] text-gray-500 ml-2">{first.senderName}</span>
+        <span className="text-xs text-gray-500 ml-2">{first.senderName}</span>
       )}
       <div className={`relative w-[260px] max-w-[72%] ${albumReactions.length ? "mb-2.5" : ""}`}>
       <HoverActions fromMe={first.fromMe} />
@@ -946,7 +948,7 @@ function AlbumBubble({ messages, showSender }: { messages: ChatMessage[]; showSe
         ))}
       </div>
       </div>
-      <span className="text-[11px] text-gray-400 mx-1">
+      <span className="text-xs text-gray-500 mx-1">
         {media.length} ảnh/video · {timeLabel(last.createdAt)}
         {recalled && RECALLED_TAG}
       </span>
@@ -1052,7 +1054,7 @@ function MessageRow({
           className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
             selected ? "border-brand bg-brand text-white" : "border-gray-300 bg-white"
           }`}>
-          {selected && <span className="text-[10px] leading-none">✓</span>}
+          {selected && <Check className="h-3 w-3" strokeWidth={3} aria-hidden />}
         </span>
       )}
       <div className={`min-w-0 flex-1 ${fromMe ? "order-1" : ""}`}>
@@ -1077,10 +1079,10 @@ function HoverActions({ fromMe }: { fromMe: boolean }) {
   const ctx = useContext(BubbleActionsContext);
   if (!ctx) return null;
   const btn =
-    "flex h-6 w-6 items-center justify-center rounded-full bg-white text-gray-500 shadow-sm ring-1 ring-gray-200 hover:text-brand";
+    "flex h-7 w-7 items-center justify-center rounded-full bg-white text-gray-500 shadow-sm ring-1 ring-gray-200 hover:text-brand";
   return (
     <div
-      className={`pointer-events-none absolute bottom-0 flex gap-1 opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 ${
+      className={`pointer-events-none absolute bottom-0 flex gap-1 opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 ${
         fromMe ? "right-full mr-1.5" : "left-full ml-1.5"
       }`}>
       <button onClick={ctx.onReply} title="Trả lời" aria-label="Trả lời" className={btn}>

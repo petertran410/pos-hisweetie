@@ -59,7 +59,7 @@ export function MessageMenu({ x, y, canReply, hasText, hasMedia, canRecall, canD
     <div
       ref={ref}
       style={{ left, top, width: W }}
-      className="fixed z-[1000] rounded-lg border bg-white py-1 text-sm shadow-xl">
+      className="chat-ui fixed z-[1000] rounded-lg border bg-white py-1 text-sm shadow-xl">
       {items
         .filter((i) => i.show)
         .map(({ key, label, icon: Icon, danger }) => (

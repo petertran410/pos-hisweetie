@@ -245,7 +245,7 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid }: Props) {
             )
           )}
           {remoteReady && noAccent && (
-            <p className="px-1 pt-1 text-[11px] text-gray-400">Gõ có dấu (vd “Thúy”, “cộng đồng”) để tìm đầy đủ hơn.</p>
+            <p className="px-1 pt-1 text-xs text-gray-500">Gõ có dấu (vd “Thúy”, “cộng đồng”) để tìm đầy đủ hơn.</p>
           )}
         </>
       ) : isLoading ? (
@@ -318,7 +318,7 @@ export function RecentChatRow({ c, onClick }: { c: RecentChat; onClick: () => vo
           <span className={`truncate text-sm ${c.unread ? "font-semibold" : "font-medium"}`}>
             {m?.type === "linked" ? linkedChatLabel(m) : c.name || c.zaloId}
           </span>
-          <span className="ml-auto shrink-0 text-[11px] text-gray-400">{ago(c.lastMessageAt)}</span>
+          <span className="ml-auto shrink-0 text-xs text-gray-500">{ago(c.lastMessageAt)}</span>
           {c.unread && <span className="h-2 w-2 shrink-0 rounded-full bg-brand" title="Chưa đọc" />}
         </span>
         <span className={`block truncate text-xs text-gray-500 ${showMetaAi && m?.type === "linked" ? "pr-24" : ""}`}>
@@ -326,11 +326,11 @@ export function RecentChatRow({ c, onClick }: { c: RecentChat; onClick: () => vo
           {c.lastMessage || "…"}
         </span>
         {m?.type !== "linked" && c.lead && (
-          <span className="block text-[11px] text-green-700">Lead · {c.lead.name}</span>
+          <span className="block text-xs text-green-700">Lead · {c.lead.name}</span>
         )}
         {m?.type === "byCode" || m?.type === "byPhone" ? (
           // Gợi ý gắn khách POS (Facebook/Tiktok: chỉ khi SĐT trong hội thoại / của lead trùng khách)
-          <span className="block text-[11px] text-amber-700">
+          <span className="block text-xs text-amber-700">
             {LEAD_FIRST_PLATFORMS.has(c.platform) ? "SĐT trùng khách POS" : "Chưa gắn khách POS"} — gợi ý{" "}
             {m.customer.code ?? m.customer.name}
             {m.type === "byPhone" && !LEAD_FIRST_PLATFORMS.has(c.platform) ? " (theo SĐT)" : ""}
@@ -338,7 +338,7 @@ export function RecentChatRow({ c, onClick }: { c: RecentChat; onClick: () => vo
         ) : (
           m?.type !== "linked" &&
           !c.lead && (
-            <span className={`block text-[11px] ${LEAD_FIRST_PLATFORMS.has(c.platform) ? "text-violet-700" : "text-amber-700"}`}>
+            <span className={`block text-xs ${LEAD_FIRST_PLATFORMS.has(c.platform) ? "text-violet-700" : "text-amber-700"}`}>
               {LEAD_FIRST_PLATFORMS.has(c.platform) ? "Chưa có lead — mở để tạo lead" : "Chưa gắn khách POS"}
             </span>
           )

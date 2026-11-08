@@ -139,7 +139,7 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
               </button>
             )}
           </div>
-          <p className="truncate text-[11px] text-gray-500" title={subtitleText}>{subtitleText}</p>
+          <p className="truncate text-xs text-gray-500" title={subtitleText}>{subtitleText}</p>
         </div>
         {p?.canPassControlAI && canSend && (
           <MetaAiSwitch on={metaAiOn} busy={busy} onClick={toggleMetaAi} />

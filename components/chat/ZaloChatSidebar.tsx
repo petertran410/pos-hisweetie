@@ -68,7 +68,7 @@ export function ZaloChatSidebar() {
     if (!open) return null;
     return (
       <div
-        className="fixed top-0 left-0 z-50 flex flex-col bg-white"
+        className="chat-ui fixed top-0 left-0 z-50 flex flex-col bg-white"
         // html { zoom: 0.85 } → bù kích thước viewport
         style={{ width: "calc(100vw / 0.85)", height: "calc(100dvh / 0.85)" }}
       >
@@ -140,7 +140,7 @@ function ResizableAside({ onClose }: { onClose: () => void }) {
   return (
     <aside
       ref={ref}
-      className={`relative shrink-0 border-l bg-white flex min-h-0 ${
+      className={`chat-ui relative shrink-0 border-l bg-white flex min-h-0 ${
         panelWidth ? "" : "w-[420px] min-[1440px]:w-[720px]"
       } ${resizing ? "select-none" : ""}`}
       // Chừa tối thiểu 480px cho màn hình POS bên trái (html zoom 0.85 → bù viewport)
@@ -294,7 +294,7 @@ function CollapsedRail({
   return (
     <aside
       ref={railRef}
-      className={`relative shrink-0 border-l bg-white flex flex-col gap-2 py-3 min-h-0 ${
+      className={`chat-ui relative shrink-0 border-l bg-white flex flex-col gap-2 py-3 min-h-0 ${
         showNames ? "items-stretch" : "items-center"
       } ${resizing ? "select-none" : ""}`}
       style={{ width }}
@@ -518,7 +518,7 @@ function RailMoreDropdown({
       role="dialog"
       aria-label="Hội thoại khác"
       style={{ right: pos.right, bottom: pos.bottom }}
-      className="fixed z-[1000] flex max-h-[min(70vh,calc(100vh-16px))] w-80 flex-col rounded-lg border bg-white shadow-xl"
+      className="chat-ui fixed z-[1000] flex max-h-[min(70vh,calc(100vh-16px))] w-80 flex-col rounded-lg border bg-white shadow-xl"
     >
       <div className="border-b px-3 py-2 text-xs font-semibold uppercase text-gray-500">
         Hội thoại khác ({items.length}
@@ -614,13 +614,13 @@ function RailChannelPicker({
         {showName && (
           <span className="min-w-0 flex-1 leading-tight">
             <span className="block truncate text-xs font-medium">{active.name}</span>
-            {active.connectionError && <span className="block text-[11px] text-red-600">Mất kết nối</span>}
+            {active.connectionError && <span className="block text-xs text-red-600">Mất kết nối</span>}
           </span>
         )}
       </button>
       {open && (
         <div className="absolute right-full top-0 z-50 mr-2 w-64 rounded-lg border bg-white py-1 text-sm shadow-xl">
-          <p className="px-3 py-1 text-[11px] font-semibold uppercase text-gray-500">
+          <p className="px-3 py-1 text-xs font-semibold uppercase text-gray-500">
             Kênh Zalo của tôi
           </p>
           {channels.map((c) => (
@@ -637,7 +637,7 @@ function RailChannelPicker({
               <ChannelDot c={c} size={26} />
               <span className="min-w-0 flex-1 truncate">{c.name}</span>
               <span
-                className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] ${
+                className={`shrink-0 rounded-full px-1.5 py-0.5 text-xs ${
                   c.connectionError
                     ? "bg-red-100 text-red-700"
                     : "bg-green-100 text-green-700"

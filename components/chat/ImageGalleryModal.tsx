@@ -35,7 +35,7 @@ export function ImageGalleryModal({
   if (!current) return null;
   return createPortal(
     <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/90 p-4"
+      className="chat-ui fixed inset-0 z-[1000] flex items-center justify-center bg-black/90 p-4"
       onClick={onClose}>
       <div className="relative w-full max-w-6xl max-h-[90vh]">
         <button
