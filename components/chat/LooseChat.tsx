@@ -61,7 +61,8 @@ export function LooseChat({ thread }: { thread: LooseThread }) {
   const [hiddenBars, setHiddenBars] = useState(readHiddenBars);
   const barHidden = hiddenBars.includes(source.key);
   const setBarHidden = (hide: boolean) => {
-    const next = hiddenBars.filter((k) => k !== source.key);
+    // Đọc lại localStorage: tab khác có thể vừa ẩn hội thoại khác → không ghi đè mất
+    const next = readHiddenBars().filter((k) => k !== source.key);
     if (hide) next.push(source.key);
     setHiddenBars(next);
     writeHiddenBars(next);

@@ -6,6 +6,7 @@ import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import type { ZaloProfile } from "@/lib/types/smaxChat";
 import { ZaloAvatar } from "./ZaloAvatar";
+import { useEscapeClose } from "@/lib/hooks/useEscapeClose";
 
 const MAX = 100;
 
@@ -24,6 +25,7 @@ export function RenameThreadModal({
   onSave: (name: string) => Promise<void>;
   onClose: () => void;
 }) {
+  useEscapeClose(onClose);
   // Tên đang hiện: tên gợi nhớ (nếu có) hoặc tên trên Smax
   const current = profile.name || profile.smaxName || "";
   const [value, setValue] = useState(current);
@@ -44,11 +46,11 @@ export function RenameThreadModal({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-lg bg-white" onClick={(e) => e.stopPropagation()}>
+    <div className="chat-ui fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label={isGroup ? "Đổi tên nhóm" : "Đổi tên hội thoại"} className="w-full max-w-md rounded-lg bg-white" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b px-5 py-3">
           <h2 className="text-base font-semibold">{isGroup ? "Đổi tên nhóm" : "Đổi tên hội thoại"}</h2>
-          <button onClick={onClose} className="rounded p-1.5 text-gray-500 hover:bg-gray-100">
+          <button onClick={onClose} aria-label="Đóng" className="rounded p-1.5 text-gray-500 hover:bg-gray-100">
             <X className="h-5 w-5" />
           </button>
         </div>

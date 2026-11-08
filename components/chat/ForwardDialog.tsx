@@ -9,6 +9,7 @@ import { useActiveChannel } from "@/lib/chat/channels";
 import { forwardContent, messagePreview } from "@/lib/chat/messageActions";
 import type { ChatMessage, RecentChat } from "@/lib/types/smaxChat";
 import { ZaloAvatar } from "./ZaloAvatar";
+import { useEscapeClose } from "@/lib/hooks/useEscapeClose";
 
 const norm = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").toLowerCase();
@@ -18,6 +19,7 @@ const norm = (s: string) =>
  * Gửi lại nội dung (chữ gộp, ảnh/tệp theo link Zalo, sticker) — Zalo hiện như tin mới.
  */
 export function ForwardDialog({ messages, onClose }: { messages: ChatMessage[]; onClose: () => void }) {
+  useEscapeClose(onClose);
   const { channel } = useActiveChannel();
   const { data, isLoading } = useRecentChats(!!channel, channel?.pagePid);
   const [q, setQ] = useState("");
@@ -60,7 +62,7 @@ export function ForwardDialog({ messages, onClose }: { messages: ChatMessage[]; 
 
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 p-3">
-      <div className="flex max-h-full w-full max-w-sm flex-col rounded-lg bg-white shadow-xl">
+      <div role="dialog" aria-modal="true" aria-label="Chuyển tiếp tin nhắn" className="flex max-h-full w-full max-w-sm flex-col rounded-lg bg-white shadow-xl">
         <div className="flex items-center justify-between border-b px-3 py-2">
           <h3 className="font-semibold">Chuyển tiếp {messages.length > 1 ? `${messages.length} tin` : "tin nhắn"}</h3>
           <button onClick={onClose} className="rounded p-1 hover:bg-gray-100" aria-label="Đóng">
@@ -83,10 +85,10 @@ export function ForwardDialog({ messages, onClose }: { messages: ChatMessage[]; 
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Tìm hội thoại gần đây"
-              className="w-full rounded-md border py-1.5 pl-7 pr-2 text-sm outline-none focus:border-brand"
+              className="w-full rounded-md border py-1.5 pl-7 pr-2 text-sm outline-none focus:border-brand max-lg:text-base"
             />
           </div>
-          <p className="py-1 text-[11px] text-gray-400">Hội thoại gần đây trên kênh {channel?.name}</p>
+          <p className="py-1 text-xs text-gray-500">Hội thoại gần đây trên kênh {channel?.name}</p>
         </div>
 
         <ul className="min-h-0 flex-1 overflow-y-auto px-1 pb-2">
@@ -108,7 +110,7 @@ export function ForwardDialog({ messages, onClose }: { messages: ChatMessage[]; 
                     <span className="block truncate">
                       {c.match?.type === "linked" ? `${c.match.customer.code ?? ""} ${c.match.customer.name}` : c.name}
                     </span>
-                    {c.isGroup && <span className="block truncate text-[11px] text-gray-500">{c.name}</span>}
+                    {c.isGroup && <span className="block truncate text-xs text-gray-500">{c.name}</span>}
                   </span>
                   <span
                     className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${on ? "border-brand bg-brand text-white" : "border-gray-300"}`}>

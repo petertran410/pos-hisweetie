@@ -211,7 +211,7 @@ export function QuickInsertMenu({ options, loading, activeIndex, onHover, onPick
     <div
       ref={listRef}
       className="absolute bottom-full left-2 right-2 mb-1 max-h-72 overflow-y-auto rounded-lg border bg-white py-1 text-sm shadow-xl z-30">
-      <div className="flex items-center justify-between px-3 py-1 text-[11px] text-gray-400">
+      <div className="flex items-center justify-between px-3 py-1 text-xs text-gray-500">
         <span>{title ?? "Gửi nhanh thông tin POS"} — ↑↓ chọn · Enter chèn · Esc đóng</span>
         {loading && <Loader2 className="h-3 w-3 animate-spin" />}
       </div>
@@ -226,7 +226,7 @@ export function QuickInsertMenu({ options, loading, activeIndex, onHover, onPick
         return (
           <div key={o.key}>
             {newGroup && (
-              <div className="px-3 pt-2 pb-0.5 text-[11px] font-semibold uppercase text-gray-500">
+              <div className="px-3 pt-2 pb-0.5 text-xs font-semibold uppercase text-gray-500">
                 {o.group}
               </div>
             )}

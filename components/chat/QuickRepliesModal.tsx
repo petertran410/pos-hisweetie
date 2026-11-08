@@ -10,6 +10,7 @@ import { confirmAction } from "@/lib/chat/confirm";
 import type { LibraryFile, OutgoingAttachment, QuickReply } from "@/lib/types/smaxChat";
 import { norm } from "./QuickInsertMenu";
 import { LibraryPickerModal } from "./LibraryPickerModal";
+import { useEscapeClose } from "@/lib/hooks/useEscapeClose";
 
 // Khớp giới hạn tệp mỗi lượt gửi của ô soạn
 const MEDIA_MAX = 10;
@@ -46,6 +47,7 @@ type Draft = { id: number | null; shortcut: string; content: string; media: Outg
  * tin chung: hiện cho mọi tài khoản, chỉ người có quyền smax_chat:manage_quick_replies được sửa.
  */
 export function QuickRepliesModal({ onInsert, onClose }: { onInsert: (r: QuickReply) => void; onClose: () => void }) {
+  useEscapeClose(onClose);
   const queryClient = useQueryClient();
   const { data, isLoading, isError, error } = useQuickReplies();
   const [tab, setTab] = useState<Tab>("shared");
@@ -207,8 +209,8 @@ export function QuickRepliesModal({ onInsert, onClose }: { onInsert: (r: QuickRe
   );
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="flex h-[80vh] w-full max-w-2xl flex-col rounded-lg bg-white" onClick={(e) => e.stopPropagation()}>
+    <div className="chat-ui fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label="Tin nhắn nhanh" className="flex h-[80vh] w-full max-w-2xl flex-col rounded-lg bg-white" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b px-5 py-3">
           <h2 className="text-base font-semibold">Tin nhắn nhanh</h2>
           <button onClick={onClose} aria-label="Đóng" className="rounded p-1.5 text-gray-500 hover:bg-gray-100">

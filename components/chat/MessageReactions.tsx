@@ -167,7 +167,7 @@ export function ReactionBar({
           title="Bấm để thả ❤️ · rê chuột để chọn cảm xúc khác"
           aria-label="Thả cảm xúc"
           className={`flex h-6 w-6 items-center justify-center rounded-full border bg-white text-gray-500 shadow-sm hover:text-brand ${
-            open ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            open ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
           }`}>
           <Heart className="h-3.5 w-3.5" />
         </button>
@@ -236,7 +236,7 @@ function ReactionPicker({
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
       style={pos ?? { left: -9999, top: -9999 }}
-      className="fixed z-[1000] flex items-center gap-0.5 rounded-full border bg-white px-2 py-1 shadow-xl">
+      className="chat-ui fixed z-[1000] flex items-center gap-0.5 rounded-full border bg-white px-2 py-1 shadow-xl">
       {REACTION_ICONS.map((icon) => (
         <button
           key={icon}

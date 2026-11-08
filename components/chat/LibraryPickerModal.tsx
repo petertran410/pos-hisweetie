@@ -9,6 +9,7 @@ import { smaxChatApi } from "@/lib/api/smaxChat";
 import { useCan } from "@/lib/hooks/useCan";
 import { confirmAction } from "@/lib/chat/confirm";
 import type { LibraryFile } from "@/lib/types/smaxChat";
+import { useEscapeClose } from "@/lib/hooks/useEscapeClose";
 
 /**
  * Chọn ảnh/tệp từ Thư viện Smax (cùng thư viện https://smax.ai/bizs/<biz>/storages) để gửi kèm tin.
@@ -29,6 +30,7 @@ export function LibraryPickerModal({
   onPick: (files: LibraryFile[]) => void;
   onClose: () => void;
 }) {
+  useEscapeClose(onClose);
   const [albumId, setAlbumId] = useState("");
   const [search, setSearch] = useState("");
   const [keyword, setKeyword] = useState("");
@@ -114,8 +116,11 @@ export function LibraryPickerModal({
   );
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+    <div className="chat-ui fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Thư viện"
         className="flex h-[80vh] w-full max-w-4xl flex-col rounded-lg bg-white"
         onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b px-5 py-3">

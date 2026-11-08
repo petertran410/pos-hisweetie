@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
+  AlertCircle,
   FileText,
   Images,
   Loader2,
@@ -19,6 +20,7 @@ import { smaxChatApi } from "@/lib/api/smaxChat";
 import { useCan } from "@/lib/hooks/useCan";
 import { useBranchStore } from "@/lib/store/branch";
 import {
+  COMPOSER_AUTO_MAX,
   COMPOSER_DEFAULT_HEIGHT,
   useChatSidebarStore,
 } from "@/lib/store/chatSidebar";
@@ -45,6 +47,7 @@ import { LibraryPickerModal } from "./LibraryPickerModal";
 import { QuickRepliesModal, useQuickReplies } from "./QuickRepliesModal";
 import { norm, type QuickOption } from "./QuickInsertMenu";
 import { addRecentEmoji, addRecentSticker } from "@/lib/chat/stickers";
+import { CustomTooltip } from "@/components/ui/CustomTooltip";
 
 const MAX_FILES = 10;
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -211,6 +214,19 @@ export function ChatComposer({
   const composerHeight = useChatSidebarStore((s) => s.composerHeight);
   const setComposerHeight = useChatSidebarStore((s) => s.setComposerHeight);
   const rootRef = useRef<HTMLDivElement>(null);
+  const [focused, setFocused] = useState(false);
+
+  // Ô soạn tự giãn theo nội dung: thấp nhất = chiều cao đã kéo (mặc định 1 dòng),
+  // cao nhất ~6 dòng (hoặc chiều cao đã kéo nếu lớn hơn) rồi cuộn trong ô
+  useLayoutEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const max = Math.max(COMPOSER_AUTO_MAX, composerHeight);
+    const h = Math.min(Math.max(el.scrollHeight, composerHeight), max);
+    el.style.height = `${h}px`;
+    el.style.overflowY = el.scrollHeight > max ? "auto" : "hidden";
+  }, [text, composerHeight]);
 
   /** Kéo thanh phân cách lên/xuống để đổi chiều cao ô soạn (khung tin co giãn theo). */
   const startResize = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -532,7 +548,7 @@ export function ChatComposer({
   return (
     <div
       ref={rootRef}
-      className={`relative border-t bg-white p-2 ${dragging ? "ring-2 ring-inset ring-brand" : ""}`}
+      className={`relative border-t bg-white p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] ${dragging ? "ring-2 ring-inset ring-brand" : ""}`}
       onDragOver={(e) => {
         const types = e.dataTransfer.types;
         if (
@@ -589,7 +605,7 @@ export function ChatComposer({
             </span>
             <span className="block truncate text-gray-500">{messagePreview(replyTo)}</span>
           </span>
-          <button onClick={onCancelReply} aria-label="Bỏ trả lời" className="rounded p-0.5 text-gray-500 hover:bg-white">
+          <button onClick={onCancelReply} aria-label="Bỏ trả lời" className="rounded p-1 text-gray-500 hover:bg-white">
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -681,7 +697,7 @@ export function ChatComposer({
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-0.5 p-1">
                   <FileText className="h-5 w-5 text-brand" />
-                  <span className="w-full truncate text-center text-[10px] leading-tight">
+                  <span className="w-full truncate text-center text-[11px] leading-tight">
                     {i.file.name}
                   </span>
                 </div>
@@ -692,14 +708,19 @@ export function ChatComposer({
                 </div>
               )}
               {i.status === "error" && (
-                <div className="absolute inset-x-0 bottom-0 bg-red-600/90 px-0.5 text-center text-[9px] leading-tight text-white">
+                <div
+                  role="img"
+                  aria-label={`Lỗi tải lên: ${i.error || i.file.name}`}
+                  className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-0.5 bg-red-600/90 py-0.5 text-[11px] font-medium leading-none text-white"
+                >
+                  <AlertCircle className="h-3 w-3" aria-hidden />
                   Lỗi
                 </div>
               )}
               <button
                 onClick={() => remove(i.key)}
                 aria-label="Bỏ tệp"
-                className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
+                className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -727,7 +748,7 @@ export function ChatComposer({
                 <button
                   onClick={() => removeProductImage(img)}
                   aria-label="Bỏ ảnh"
-                  className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
+                  className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -758,131 +779,146 @@ export function ChatComposer({
         />
       )}
 
-      {/* stretch: ô soạn cao bằng cột nút bên phải, không chừa khoảng trống */}
-      <div className="flex items-stretch gap-2">
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          accept={ACCEPT}
-          className="hidden"
-          onChange={(e) => {
-            addFiles([...(e.target.files ?? [])]);
-            e.target.value = "";
-          }}
-        />
-        <textarea
-          ref={textRef}
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            detectSlash(e.target.value, e.target.selectionStart);
-          }}
-          onClick={(e) => detectSlash(text, e.currentTarget.selectionStart)}
-          onBlur={() => setSlash(null)}
-          onKeyDown={(e) => {
-            // "#" không khớp tin nhắn nhanh nào (vd hashtag thường) → Enter gửi tin như bình thường
-            if (hash && !options.length && e.key === "Enter" && !e.shiftKey) setSlash(null);
-            else if (slash && !e.nativeEvent.isComposing) {
-              if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                e.preventDefault();
-                const n = options.length || 1;
-                setActive((a) => (a + (e.key === "ArrowDown" ? 1 : n - 1)) % n);
-                return;
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        accept={ACCEPT}
+        className="hidden"
+        onChange={(e) => {
+          addFiles([...(e.target.files ?? [])]);
+          e.target.value = "";
+        }}
+      />
+      {/* Ô soạn tự giãn theo nội dung; thanh công cụ + nút Gửi nằm ngang bên dưới */}
+      <div
+        className={`rounded-lg border transition-colors focus-within:border-brand ${
+          disabled ? "bg-gray-100" : "bg-white"
+        }`}
+      >
+          <textarea
+            ref={textRef}
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              detectSlash(e.target.value, e.target.selectionStart);
+            }}
+            onClick={(e) => detectSlash(text, e.currentTarget.selectionStart)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => {
+              setSlash(null);
+              setFocused(false);
+            }}
+            onKeyDown={(e) => {
+              // "#" không khớp tin nhắn nhanh nào (vd hashtag thường) → Enter gửi tin như bình thường
+              if (hash && !options.length && e.key === "Enter" && !e.shiftKey) setSlash(null);
+              else if (slash && !e.nativeEvent.isComposing) {
+                if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                  e.preventDefault();
+                  const n = options.length || 1;
+                  setActive((a) => (a + (e.key === "ArrowDown" ? 1 : n - 1)) % n);
+                  return;
+                }
+                // Menu đang mở: Enter chỉ để chọn (không gửi "/từ khóa" đi), Shift+Enter vẫn xuống dòng
+                if ((e.key === "Enter" && !e.shiftKey) || (e.key === "Tab" && options.length)) {
+                  e.preventDefault();
+                  if (options.length) pickOption(active);
+                  return;
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setSlash(null);
+                  return;
+                }
               }
-              // Menu đang mở: Enter chỉ để chọn (không gửi "/từ khóa" đi), Shift+Enter vẫn xuống dòng
-              if ((e.key === "Enter" && !e.shiftKey) || (e.key === "Tab" && options.length)) {
+              if (
+                e.key === "Enter" &&
+                !e.shiftKey &&
+                !e.nativeEvent.isComposing
+              ) {
                 e.preventDefault();
-                if (options.length) pickOption(active);
-                return;
+                submit();
               }
-              if (e.key === "Escape") {
+            }}
+            onPaste={(e) => {
+              const files = [...e.clipboardData.files];
+              if (files.length) {
                 e.preventDefault();
-                setSlash(null);
-                return;
+                addFiles(files);
               }
+            }}
+            disabled={disabled}
+            rows={1}
+            maxLength={2000}
+            placeholder={
+              disabled
+                ? ""
+                : ctx
+                  ? "Nhập tin…  / chèn SP, HĐ, công nợ · # tin nhắn nhanh"
+                  : "Nhập tin…  / chèn sản phẩm · # tin nhắn nhanh"
             }
-            if (
-              e.key === "Enter" &&
-              !e.shiftKey &&
-              !e.nativeEvent.isComposing
-            ) {
-              e.preventDefault();
-              submit();
-            }
-          }}
-          onPaste={(e) => {
-            const files = [...e.clipboardData.files];
-            if (files.length) {
-              e.preventDefault();
-              addFiles(files);
-            }
-          }}
-          disabled={disabled}
-          rows={2}
-          style={{ minHeight: composerHeight }}
-          maxLength={2000}
-          placeholder={
-            disabled
-              ? ""
-              : ctx
-                ? "Nhập tin… gõ / để chèn sản phẩm, hóa đơn, công nợ, # để chèn tin nhắn nhanh (Enter gửi, Shift+Enter xuống dòng)"
-                : "Nhập tin… gõ / để chèn sản phẩm, # để chèn tin nhắn nhanh (Enter gửi, Shift+Enter xuống dòng)"
-          }
-          className="flex-1 resize-none border rounded-md px-3 py-2 text-sm outline-none focus:border-brand disabled:bg-gray-100"
-        />
-        {/* Cột phải: đính kèm, emoji/sticker xếp dọc trên nút Gửi */}
-        <div className="flex shrink-0 flex-col items-center justify-end gap-1">
-          <div className="flex flex-col gap-0.5">
+            aria-label="Nội dung tin nhắn"
+            className="block w-full resize-none bg-transparent px-3 pt-2 pb-1 text-sm leading-5 outline-none max-lg:text-base"
+          />
+        <div className="flex items-center gap-0.5 px-1 pb-1">
+          <CustomTooltip content="Tin nhắn nhanh (gõ # trong ô chat để chèn nhanh)" delayMs={200}>
             <button
               onClick={() => setQuickOpen(true)}
               disabled={disabled}
-              title="Tin nhắn nhanh (gõ # trong ô chat để chèn nhanh)"
               aria-label="Tin nhắn nhanh"
-              className="h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 disabled:opacity-40"
+              className="chat-tap h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-brand disabled:opacity-40"
             >
               <MessageSquareText className="w-4 h-4" />
             </button>
+          </CustomTooltip>
+          <CustomTooltip content={`Đính kèm ảnh, video, tệp (tối đa ${MAX_FILES} tệp, 25MB/tệp)`} delayMs={200}>
             <button
               onClick={() => inputRef.current?.click()}
               disabled={disabled || items.length >= MAX_FILES}
-              title={`Đính kèm ảnh, video, tệp (tối đa ${MAX_FILES} tệp, 25MB/tệp)`}
               aria-label="Đính kèm"
-              className="h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 disabled:opacity-40"
+              className="chat-tap h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-brand disabled:opacity-40"
             >
               <Paperclip className="w-4 h-4" />
             </button>
+          </CustomTooltip>
+          <CustomTooltip content="Thư viện Smax — chọn ảnh/tệp có sẵn" delayMs={200}>
             <button
               onClick={() => setLibraryOpen(true)}
               disabled={disabled || items.length >= MAX_FILES}
-              title="Thư viện Smax — chọn ảnh/tệp có sẵn"
               aria-label="Thư viện"
-              className="h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 disabled:opacity-40"
+              className="chat-tap h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-brand disabled:opacity-40"
             >
               <Images className="w-4 h-4" />
             </button>
+          </CustomTooltip>
+          <CustomTooltip content="Emoji & sticker" delayMs={200}>
             <button
               // mousedown: không làm mất con trỏ trong ô soạn
               onMouseDown={(e) => e.preventDefault()}
+              data-emoji-toggle
               onClick={() => setPickerOpen((o) => !o)}
               disabled={disabled}
-              title="Emoji & sticker"
               aria-label="Emoji và sticker"
-              className={`h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-100 disabled:opacity-40 ${
-                pickerOpen ? "text-brand" : "text-gray-500"
+              aria-expanded={pickerOpen}
+              className={`chat-tap h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-100 hover:text-brand disabled:opacity-40 ${
+                pickerOpen ? "bg-cyan-bg text-brand" : "text-gray-500"
               }`}
             >
               <Smile className="w-4 h-4" />
             </button>
-          </div>
+          </CustomTooltip>
+          <span className="ml-auto min-w-0 truncate px-1 text-xs text-gray-500" aria-hidden>
+            {focused && !disabled ? "Enter gửi · Shift+Enter xuống dòng" : ""}
+          </span>
           <button
             onClick={submit}
             disabled={!canSend}
-            aria-label="Gửi"
-            title={uploading ? "Đang tải tệp lên…" : ""}
-            className="h-10 w-10 shrink-0 flex items-center justify-center rounded-md bg-brand text-white disabled:opacity-40"
+            aria-label={uploading ? "Gửi (đang tải tệp lên…)" : "Gửi"}
+            title={uploading ? "Đang tải tệp lên…" : "Gửi (Enter)"}
+            className="chat-tap h-8 shrink-0 inline-flex items-center gap-1.5 rounded-md bg-brand px-3 text-sm font-medium text-white hover:bg-brand-bright disabled:opacity-40"
           >
-            <Send className="w-4 h-4" />
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            Gửi
           </button>
         </div>
       </div>

@@ -37,6 +37,8 @@ export function EmojiStickerPicker({ threadStickerIds, onEmoji, onSticker, onClo
   // Bấm ra ngoài hoặc Esc thì đóng
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
+      // Bấm nút bật/tắt emoji: để nút tự đóng (tránh đóng rồi mở lại)
+      if ((e.target as Element).closest?.("[data-emoji-toggle]")) return;
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     };
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -62,7 +64,7 @@ export function EmojiStickerPicker({ threadStickerIds, onEmoji, onSticker, onClo
       ref={ref}
       // giữ focus ở ô soạn khi bấm emoji
       onMouseDown={(e) => e.preventDefault()}
-      className="absolute bottom-full right-2 z-30 mb-1 flex h-80 w-[340px] max-w-[calc(100%-1rem)] flex-col rounded-lg border bg-white shadow-xl">
+      className="absolute bottom-full left-2 z-30 mb-1 flex h-80 w-[340px] max-w-[calc(100%-1rem)] flex-col rounded-lg border bg-white shadow-xl">
       <div className="flex border-b text-sm font-medium">
         {(onSticker ? (["sticker", "emoji"] as const) : (["emoji"] as const)).map((t) => (
           <button
@@ -127,7 +129,7 @@ export function EmojiStickerPicker({ threadStickerIds, onEmoji, onSticker, onClo
         )}
       </div>
       {tab === "sticker" && (
-        <p className="border-t px-2 py-1 text-[11px] text-gray-400">Bấm sticker để gửi ngay.</p>
+        <p className="border-t px-2 py-1 text-xs text-gray-500">Bấm sticker để gửi ngay.</p>
       )}
     </div>
   );

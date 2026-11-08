@@ -117,14 +117,15 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
 
   return (
     <div className="border-b bg-white">
-      <div className="flex items-center gap-2 px-3 py-1.5">
+      {/* Khung hẹp: nhóm nút tự xuống dòng để tên hội thoại không bị cắt cụt */}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1">
         <ZaloAvatar
           avatar={p?.avatar ?? null}
           isGroup={isGroup}
           members={p?.memberPreview}
           memberCount={p?.memberCount}
         />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[7rem] flex-1">
           <div className="flex min-w-0 items-center gap-1">
             <p className="truncate text-sm font-semibold leading-tight">
               {posName || (isLoading ? "…" : threadName)}
@@ -134,13 +135,14 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
                 onClick={() => setRenaming(true)}
                 title={isGroup ? "Đổi tên nhóm (trên Smax)" : "Đổi tên hội thoại (trên Smax)"}
                 aria-label="Đổi tên hội thoại"
-                className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-brand">
-                <Pencil className="h-3 w-3" />
+                className="shrink-0 rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-brand">
+                <Pencil className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
-          <p className="truncate text-[11px] text-gray-500" title={subtitleText}>{subtitleText}</p>
+          <p className="truncate text-xs text-gray-500" title={subtitleText}>{subtitleText}</p>
         </div>
+        <div className="ml-auto flex shrink-0 items-center gap-1">
         {p?.canPassControlAI && canSend && (
           <MetaAiSwitch on={metaAiOn} busy={busy} onClick={toggleMetaAi} />
         )}
@@ -150,7 +152,8 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
             target="_blank"
             rel="noreferrer"
             title="Mở bình luận trên bài viết Facebook"
-            className="rounded p-1 hover:bg-gray-100">
+            aria-label="Mở bình luận trên bài viết Facebook"
+            className="chat-tap flex h-8 w-8 items-center justify-center rounded hover:bg-gray-100">
             <ThreadKindLogo isComment className="h-4 w-4" />
           </a>
         )}
@@ -160,13 +163,15 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
             target="_blank"
             rel="noreferrer"
             title="Mở hội thoại trên Smax"
-            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-brand">
+            aria-label="Mở hội thoại trên Smax"
+            className="chat-tap flex h-8 w-8 items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-brand">
             <ExternalLink className="h-4 w-4" />
           </a>
         )}
         {actions}
+        </div>
       </div>
-      {extra && <div className="px-3 pb-1.5">{extra}</div>}
+      {extra && <div className="px-3 pb-1">{extra}</div>}
       {renaming && p && (
         <RenameThreadModal profile={p} isGroup={isGroup} onSave={rename} onClose={() => setRenaming(false)} />
       )}

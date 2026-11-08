@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, Fragment, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, Copy, Download, FileText, Forward, MoreHorizontal, Play, Quote, RotateCw } from "lucide-react";
+import { ArrowDown, Check, Copy, Download, FileText, Forward, MoreHorizontal, PanelRight, Play, Quote, RotateCw, X } from "lucide-react";
+import { createPortal } from "react-dom";
 import type { ThreadSource } from "@/lib/chat/threadSource";
 import type {
   ChatContext,
@@ -23,7 +24,17 @@ import { applyReaction, ReactionBar, type ReactionIcon, type Reactions } from ".
 import { confirmAction } from "@/lib/chat/confirm";
 import { useMetaAiTakeOver } from "@/lib/store/metaAiTakeOver";
 import { toast } from "sonner";
-import { copyMessages, downloadMessagesMedia, messagePreview, messageThumb } from "@/lib/chat/messageActions";
+import {
+  copyImage,
+  copyMessages,
+  copyText,
+  downloadMessagesMedia,
+  messagePreview,
+  messageThumb,
+} from "@/lib/chat/messageActions";
+import { ConversationInfoPanel, ConversationInfoSlotContext, type InfoTarget } from "./ConversationInfoPanel";
+import { useChatSidebarStore } from "@/lib/store/chatSidebar";
+import { useEscapeClose } from "@/lib/hooks/useEscapeClose";
 import {
   AttachmentPreviewModal,
   NoReferrerVideo,
@@ -100,6 +111,13 @@ export function ChatThread({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<{ x: number; y: number; messages: ChatMessage[] } | null>(null);
   const [forwarding, setForwarding] = useState<ChatMessage[] | null>(null);
+  // Thông tin hội thoại (ảnh/video, tệp, link): cột bên phải nếu khung cha cấp chỗ, không thì lớp phủ
+  const infoSlot = useContext(ConversationInfoSlotContext);
+  const infoTab = useChatSidebarStore((s) => s.infoTab);
+  const setInfoTab = useChatSidebarStore((s) => s.setInfoTab);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [infoMenu, setInfoMenu] = useState<{ x: number; y: number; target: InfoTarget } | null>(null);
+  useEscapeClose(() => setInfoOpen(false), infoOpen && !infoSlot);
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   // Đang ở gần đáy → tin mới tự cuộn xuống; đang đọc tin cũ → giữ nguyên vị trí
@@ -309,6 +327,57 @@ export function ChatThread({
     if (!failed) toast.success(`Đã ${label} ${what}`);
     else toast.error(`${failed}/${list.length} tin không ${label} được${error ? `: ${error}` : ""}`);
   };
+  // "Xem tin nhắn gốc" từ Thông tin hội thoại: cuộn tới tin (đã tải) và nháy nền
+  const jumpTo = (m: ChatMessage) => {
+    setInfoOpen(false);
+    requestAnimationFrame(() => {
+      const row = scrollRef.current?.querySelector<HTMLElement>(`[data-msg-ids~="${CSS.escape(m.id)}"]`);
+      if (!row) return toast.info("Không tìm thấy tin gốc trong khung chat");
+      stickBottom.current = false;
+      row.scrollIntoView({ block: "center", behavior: "smooth" });
+      row.classList.remove("chat-flash");
+      void row.offsetWidth; // chạy lại hiệu ứng khi bấm lần nữa
+      row.classList.add("chat-flash");
+      setTimeout(() => row.classList.remove("chat-flash"), 1700);
+    });
+  };
+  const infoAction = (t: InfoTarget, a: string) => {
+    const m = t.message;
+    // Chỉ chuyển tiếp / lưu đúng ảnh/tệp/link được chọn (không kèm chữ của tin)
+    const only: ChatMessage = t.attachment
+      ? { ...m, text: "", stickerId: null, stickerImage: null, attachments: [t.attachment] }
+      : { ...m, text: t.url, stickerId: null, stickerImage: null, attachments: [] };
+    if (a === "copy") {
+      if (t.attachment && isImage(t.attachment)) copyImage(t.url);
+      else copyText(t.url, "Đã sao chép link");
+    } else if (a === "forward") setForwarding([only]);
+    else if (a === "download") downloadMessagesMedia([only]);
+    else if (a === "jump") jumpTo(m);
+    else if (a === "recall" || a === "delete") messageAction([m], a);
+  };
+  const infoPanel = (
+    <ConversationInfoPanel
+      messages={messages}
+      hasMore={hasMore}
+      loadingOlder={loadingOlder}
+      onLoadOlder={loadOlder}
+      onMenu={(x, y, target) => setInfoMenu({ x, y, target })}
+    />
+  );
+  const infoShown = infoSlot ? infoTab === "chat" : infoOpen;
+  const infoButton = (
+    <button
+      onClick={() => (infoSlot ? setInfoTab(infoTab === "chat" ? "pos" : "chat") : setInfoOpen(!infoOpen))}
+      title="Thông tin hội thoại: ảnh/video, tệp, link"
+      aria-label="Thông tin hội thoại"
+      aria-pressed={infoShown}
+      className={`chat-tap flex h-8 w-8 items-center justify-center rounded ${
+        infoShown ? "bg-cyan-bg text-brand" : "text-gray-600 hover:bg-gray-100"
+      }`}>
+      <PanelRight className="h-4 w-4" />
+    </button>
+  );
+
   const react = async (m: ChatMessage, icon: ReactionIcon | "NONE") => {
     // Thu hồi không cần xác nhận; thả mới hỏi khi ở môi trường thử nghiệm
     if (
@@ -418,7 +487,12 @@ export function ChatThread({
       <ChatThreadHeader
         source={source}
         channelName={channelName}
-        actions={headerActions}
+        actions={
+          <>
+            {headerActions}
+            {infoButton}
+          </>
+        }
         extra={headerExtra}
         takeOver={takeOver}
         onTakeOverChange={setTakeOver}
@@ -489,7 +563,7 @@ export function ChatThread({
               return (
                 <Fragment key={first.id}>
                   {newDay && (
-                    <div className="my-2 text-center text-xs text-gray-400">{dayLabel(first.createdAt)}</div>
+                    <div className="my-2 text-center text-xs text-gray-500">{dayLabel(first.createdAt)}</div>
                   )}
                   <MessageRow
                     messages={item.messages}
@@ -560,7 +634,7 @@ export function ChatThread({
                   {p.draft.text}
                 </div>
                 )}
-                <span className="text-[11px] text-gray-500 mt-0.5">
+                <span className="text-xs text-gray-500 mt-0.5">
                   {p.status === "sending" && "Đang gửi…"}
                   {p.status === "sent" && "Đã gửi"}
                   {p.status === "error" && (
@@ -666,6 +740,52 @@ export function ChatThread({
           }}
         />
       )}
+      {infoSlot
+        ? createPortal(infoPanel, infoSlot)
+        : infoOpen && (
+            <>
+              <div className="absolute inset-0 z-20 bg-black/20" onClick={() => setInfoOpen(false)} />
+              <section
+                aria-label="Thông tin hội thoại"
+                className="absolute inset-y-0 right-0 z-30 flex w-[min(22rem,100%)] flex-col border-l bg-white shadow-lg">
+                <div className="flex items-center justify-between border-b px-3 py-1.5">
+                  <h3 className="text-xs font-semibold uppercase text-gray-500">Thông tin hội thoại</h3>
+                  <button
+                    onClick={() => setInfoOpen(false)}
+                    aria-label="Đóng Thông tin hội thoại"
+                    className="chat-tap flex h-8 w-8 items-center justify-center rounded text-gray-500 hover:bg-gray-100">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-3">{infoPanel}</div>
+              </section>
+            </>
+          )}
+      {infoMenu && (
+        <MessageMenu
+          x={infoMenu.x}
+          y={infoMenu.y}
+          canReply={false}
+          hasText
+          hasMedia={infoMenu.target.kind !== "link"}
+          canRecall={canReact && canRecallMessage(infoMenu.target.message)}
+          canDelete={canReact}
+          canSelect={false}
+          canJump
+          labels={{
+            copy:
+              infoMenu.target.attachment && isImage(infoMenu.target.attachment) ? "Sao chép ảnh" : "Sao chép link",
+            download:
+              infoMenu.target.attachment && isImage(infoMenu.target.attachment)
+                ? "Lưu ảnh"
+                : infoMenu.target.attachment && isVideo(infoMenu.target.attachment)
+                  ? "Lưu video"
+                  : "Lưu về máy",
+          }}
+          onClose={() => setInfoMenu(null)}
+          onAction={(a) => infoAction(infoMenu.target, a)}
+        />
+      )}
       {forwarding && (
         <ForwardDialog
           messages={forwarding}
@@ -725,7 +845,7 @@ function MessageBubble({ message: m, showSender }: { message: ChatMessage; showS
     return (
       <div className={`flex flex-col my-1 ${m.fromMe ? "items-end" : "items-start"}`}>
         {showSender && !m.fromMe && m.senderName && (
-          <span className="text-[11px] text-gray-500 ml-2">{m.senderName}</span>
+          <span className="text-xs text-gray-500 ml-2">{m.senderName}</span>
         )}
         <span className={`relative ${m.reactions?.length ? "mb-2.5" : ""} ${m.recalled ? "opacity-50" : ""}`}>
           <img
@@ -737,7 +857,7 @@ function MessageBubble({ message: m, showSender }: { message: ChatMessage; showS
           <HoverActions fromMe={m.fromMe} />
           <ReactionSlot reactions={m.reactions} />
         </span>
-        <span className="text-[11px] text-gray-400 mx-1">
+        <span className="text-xs text-gray-500 mx-1">
           {timeLabel(m.createdAt)}
           {m.recalled && RECALLED_TAG}
         </span>
@@ -747,7 +867,7 @@ function MessageBubble({ message: m, showSender }: { message: ChatMessage; showS
   return (
     <div className={`flex flex-col my-1 ${m.fromMe ? "items-end" : "items-start"}`}>
       {showSender && !m.fromMe && m.senderName && (
-        <span className="text-[11px] text-gray-500 ml-2">{m.senderName}</span>
+        <span className="text-xs text-gray-500 ml-2">{m.senderName}</span>
       )}
       <div
         className={`relative max-w-[72%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${
@@ -761,6 +881,7 @@ function MessageBubble({ message: m, showSender }: { message: ChatMessage; showS
             <button
               key={i}
               onClick={() => setPreview(i)}
+              aria-label={`Xem video ${a.title || ""}`.trim()}
               className="relative block mb-1 cursor-zoom-in">
               <VideoFrame url={a.url} className="block h-40 w-56 rounded-lg" />
               <PlayBadge />
@@ -771,6 +892,7 @@ function MessageBubble({ message: m, showSender }: { message: ChatMessage; showS
             <button
               key={i}
               onClick={() => setPreview(i)}
+              aria-label={`Xem ảnh ${a.title || ""}`.trim()}
               className="relative block mb-1 cursor-zoom-in">
               <img src={a.thumbnail || a.url} alt={a.title} className="max-h-48 rounded-lg" />
               {isVideo(a) && (
@@ -793,7 +915,7 @@ function MessageBubble({ message: m, showSender }: { message: ChatMessage; showS
         )}
         {m.text}
       </div>
-      <span className="text-[11px] text-gray-400 mx-1">
+      <span className="text-xs text-gray-500 mx-1">
         {timeLabel(m.createdAt)}
         {m.recalled && RECALLED_TAG}
       </span>
@@ -910,7 +1032,7 @@ function AlbumBubble({ messages, showSender }: { messages: ChatMessage[]; showSe
   return (
     <div className={`flex flex-col my-1 ${first.fromMe ? "items-end" : "items-start"}`}>
       {showSender && !first.fromMe && first.senderName && (
-        <span className="text-[11px] text-gray-500 ml-2">{first.senderName}</span>
+        <span className="text-xs text-gray-500 ml-2">{first.senderName}</span>
       )}
       <div className={`relative w-[260px] max-w-[72%] ${albumReactions.length ? "mb-2.5" : ""}`}>
       <HoverActions fromMe={first.fromMe} />
@@ -946,7 +1068,7 @@ function AlbumBubble({ messages, showSender }: { messages: ChatMessage[]; showSe
         ))}
       </div>
       </div>
-      <span className="text-[11px] text-gray-400 mx-1">
+      <span className="text-xs text-gray-500 mx-1">
         {media.length} ảnh/video · {timeLabel(last.createdAt)}
         {recalled && RECALLED_TAG}
       </span>
@@ -1027,6 +1149,35 @@ function MessageRow({
   onReact: ((icon: ReactionIcon | "NONE") => void) | null;
   children: React.ReactNode;
 }) {
+  // Cảm ứng: nhấn giữ ~0,5s mở menu thao tác (iOS không có chuột phải; nút rê chuột không hiện)
+  const pressed = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const start = useRef({ x: 0, y: 0 });
+  const cancel = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+  };
+  useEffect(() => cancel, []);
+  const longPress = selecting
+    ? {}
+    : {
+        onPointerDown: (e: React.PointerEvent) => {
+          pressed.current = false;
+          if (e.pointerType !== "touch") return;
+          start.current = { x: e.clientX, y: e.clientY };
+          const { clientX, clientY } = e;
+          cancel();
+          timer.current = setTimeout(() => {
+            pressed.current = true;
+            onMenu(clientX, clientY);
+          }, 500);
+        },
+        onPointerMove: (e: React.PointerEvent) => {
+          if (timer.current && Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y) > 10) cancel();
+        },
+        onPointerUp: cancel,
+        onPointerCancel: cancel,
+      };
   if (messages[0].type === "system") return <>{children}</>;
   const fromMe = messages[0].fromMe;
   return (
@@ -1037,14 +1188,22 @@ function MessageRow({
         e.preventDefault();
         onMenu(e.clientX, e.clientY);
       }}
+      {...longPress}
       onClickCapture={(e) => {
+        // Vừa nhấn giữ mở menu: bỏ cú bấm khi nhấc tay (không mở xem ảnh)
+        if (pressed.current) {
+          pressed.current = false;
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
         // Đang chọn nhiều: bấm vào tin để chọn (không mở xem ảnh)
         if (!selecting) return;
         e.preventDefault();
         e.stopPropagation();
         onToggle();
       }}
-      className={`group relative flex items-center gap-1 rounded-lg ${selecting ? "cursor-pointer" : ""} ${
+      className={`group relative flex items-center gap-1 rounded-lg [-webkit-touch-callout:none] ${selecting ? "cursor-pointer" : ""} ${
         selected ? "bg-cyan-bg" : ""
       }`}>
       {selecting && (
@@ -1052,7 +1211,7 @@ function MessageRow({
           className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
             selected ? "border-brand bg-brand text-white" : "border-gray-300 bg-white"
           }`}>
-          {selected && <span className="text-[10px] leading-none">✓</span>}
+          {selected && <Check className="h-3 w-3" strokeWidth={3} aria-hidden />}
         </span>
       )}
       <div className={`min-w-0 flex-1 ${fromMe ? "order-1" : ""}`}>
@@ -1077,10 +1236,10 @@ function HoverActions({ fromMe }: { fromMe: boolean }) {
   const ctx = useContext(BubbleActionsContext);
   if (!ctx) return null;
   const btn =
-    "flex h-6 w-6 items-center justify-center rounded-full bg-white text-gray-500 shadow-sm ring-1 ring-gray-200 hover:text-brand";
+    "flex h-7 w-7 items-center justify-center rounded-full bg-white text-gray-500 shadow-sm ring-1 ring-gray-200 hover:text-brand";
   return (
     <div
-      className={`pointer-events-none absolute bottom-0 flex gap-1 opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 ${
+      className={`pointer-events-none absolute bottom-0 flex gap-1 opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 ${
         fromMe ? "right-full mr-1.5" : "left-full ml-1.5"
       }`}>
       <button onClick={ctx.onReply} title="Trả lời" aria-label="Trả lời" className={btn}>

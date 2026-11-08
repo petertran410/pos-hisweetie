@@ -166,7 +166,7 @@ export function ChatCustomerCard({ context }: { context: ChatContext }) {
                       {p.hasColdItems && (
                         <span
                           title="Đơn có hàng lạnh"
-                          className="inline-flex shrink-0 items-center gap-0.5 rounded bg-red-50 px-1 text-[11px] font-medium text-red-600"
+                          className="inline-flex shrink-0 items-center gap-0.5 rounded bg-red-50 px-1 text-xs font-medium text-red-600"
                         >
                           <Snowflake className="h-3 w-3" />
                           Hàng lạnh
@@ -192,13 +192,6 @@ export function ChatCustomerCard({ context }: { context: ChatContext }) {
           )}
         </div>
       )}
-
-      <p className="text-[11px] text-gray-400">
-        Kéo công nợ, đơn hàng, hóa đơn, báo đơn vào ô chat để gửi.
-      </p>
-      <Link href={customerHref} className="text-brand hover:underline">
-        Mở khách hàng →
-      </Link>
     </div>
   );
 }

@@ -43,7 +43,7 @@ export function AttachmentPreviewModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[1000] flex flex-col bg-black/80 p-4"
+      className="chat-ui fixed inset-0 z-[1000] flex flex-col bg-black/80 p-4"
       onClick={onClose}>
       <div className="flex items-center justify-end gap-2 pb-3" onClick={(e) => e.stopPropagation()}>
         <span className="mr-auto truncate text-sm text-white/80">

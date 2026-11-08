@@ -17,7 +17,7 @@ export function MetaAiSwitch({
       role="switch"
       aria-checked={on}
       title={on ? "Meta Business AI đang trả lời — bấm để tự phản hồi" : "Bật Meta Business AI trả lời hội thoại này"}
-      className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium disabled:opacity-50 ${
+      className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium disabled:opacity-50 ${
         on ? "border-blue-200 bg-blue-50 text-blue-700" : "bg-white text-gray-500 hover:bg-gray-50"
       }`}>
       {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Bot className="h-3 w-3" />}

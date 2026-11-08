@@ -211,14 +211,15 @@ export function GroupCustomersBar({
     }`;
 
   return (
-    <div className="mt-1">
-      <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+    <div>
+      <div className="flex items-center gap-1 overflow-x-auto pb-0.5" role="group" aria-label="Khách POS dùng chung hội thoại">
         {customers.length > 1 &&
           customers.map((c, i) => (
             <button
               key={c.id}
               onClick={() => onSelect(c)}
               title={`${c.code ? `${c.code} · ` : ""}${c.name}`}
+              aria-pressed={c.id === currentId}
               className={chip(c.id === currentId)}>
               {labels[i]}
             </button>
@@ -227,6 +228,7 @@ export function GroupCustomersBar({
           <button
             onClick={() => setAdding(!adding)}
             title={adding ? "Đóng" : "Gắn hội thoại này cho thêm khách POS (vd các chi nhánh dùng chung)"}
+            aria-expanded={adding}
             className="inline-flex shrink-0 items-center gap-0.5 rounded-full px-2 py-0.5 text-xs text-brand hover:bg-cyan-bg">
             {adding ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
             {adding ? "Đóng" : customers.length > 1 ? "Gắn thêm" : "Gắn thêm khách"}
