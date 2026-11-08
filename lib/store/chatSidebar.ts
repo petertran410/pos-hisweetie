@@ -31,6 +31,8 @@ interface ChatSidebarState {
   railWidth: number | null;
   // "Đang chat gần đây": chỉ hiện hội thoại chưa đọc (nhớ cho lần sau)
   recentUnreadOnly: boolean;
+  // Cột bên phải (khung rộng): Thông tin POS hay Thông tin hội thoại (ảnh, tệp, link)
+  infoTab: "pos" | "chat";
   // Đang mở hội thoại chưa gắn khách POS (ưu tiên hơn `customer`)
   loose: LooseThread | null;
   openLoose: (thread: LooseThread, ownerId: number | null) => void;
@@ -44,6 +46,7 @@ interface ChatSidebarState {
   setPosRatio: (r: number | null) => void;
   setRailWidth: (w: number | null) => void;
   setRecentUnreadOnly: (v: boolean) => void;
+  setInfoTab: (t: "pos" | "chat") => void;
 }
 
 export const useChatSidebarStore = create<ChatSidebarState>()(
@@ -60,6 +63,7 @@ export const useChatSidebarStore = create<ChatSidebarState>()(
       posRatio: null,
       railWidth: null,
       recentUnreadOnly: false,
+      infoTab: "pos",
       loose: null,
       openLoose: (loose, ownerId) => set({ loose, ownerId, pagePid: loose.pagePid }),
       setOpen: (open) => set({ open }),
@@ -73,6 +77,7 @@ export const useChatSidebarStore = create<ChatSidebarState>()(
       setPosRatio: (posRatio) => set({ posRatio }),
       setRailWidth: (railWidth) => set({ railWidth }),
       setRecentUnreadOnly: (recentUnreadOnly) => set({ recentUnreadOnly }),
+      setInfoTab: (infoTab) => set({ infoTab }),
     }),
     {
       name: "chat-sidebar",

@@ -35,6 +35,7 @@ import { useFastTitle } from "@/lib/chat/useFastTitle";
 import type { ChatChannel, ChatContext, LinkedCustomer, LooseThread, RecentChat } from "@/lib/types/smaxChat";
 import { ChatCustomerPicker } from "./ChatCustomerPicker";
 import { ChatCustomerCard } from "./ChatCustomerCard";
+import { ConversationInfoSlotContext } from "./ConversationInfoPanel";
 import { GroupCustomersBar } from "./GroupCustomersBar";
 import { ChatThread } from "./ChatThread";
 import { ZaloContactEditor } from "./ZaloContactEditor";
@@ -910,6 +911,10 @@ function CustomerChat({ customerId }: { customerId: number }) {
   const splitRef = useRef<HTMLDivElement>(null);
   const [splitting, setSplitting] = useState(false);
   const pagePid = useChatSidebarStore((s) => s.pagePid);
+  // Cột phải: Thông tin POS | Thông tin hội thoại (ChatThread đưa nội dung vào chỗ này bằng portal)
+  const infoTab = useChatSidebarStore((s) => s.infoTab);
+  const setInfoTab = useChatSidebarStore((s) => s.setInfoTab);
+  const [infoSlot, setInfoSlot] = useState<HTMLDivElement | null>(null);
   // Có kênh dùng được → nút "POS" trên thanh hội thoại mở Thông tin POS (khung hẹp)
   const usableChannel = ctx ? pickChannel(ctx.myChannels, pagePid) : null;
   const hasUsableChannel = !!usableChannel && !usableChannel.missing;
@@ -972,6 +977,7 @@ function CustomerChat({ customerId }: { customerId: number }) {
   }
 
   return (
+    <ConversationInfoSlotContext.Provider value={wide ? infoSlot : null}>
     <div ref={splitRef} className={`flex flex-1 min-h-0 ${splitting ? "select-none" : ""}`}>
       <div className="flex flex-1 min-w-0 min-h-0 flex-col">
         {!wide && !hasUsableChannel && (
@@ -1019,13 +1025,39 @@ function CustomerChat({ customerId }: { customerId: number }) {
             : undefined
         }
       >
-        <h3 className="text-xs font-semibold uppercase text-gray-500 mb-2">
-          Thông tin POS
-        </h3>
-        <ChatCustomerCard context={ctx} />
+        <div role="tablist" aria-label="Thông tin bên phải" className="mb-3 flex gap-4 border-b">
+          {(
+            [
+              ["pos", "Thông tin POS", "Công nợ, đơn, hóa đơn gần đây"],
+              ["chat", "Hội thoại", "Thông tin hội thoại: ảnh/video, tệp, link"],
+            ] as const
+          ).map(([key, label, hint]) => (
+            <button
+              key={key}
+              role="tab"
+              aria-selected={infoTab === key}
+              title={hint}
+              onClick={() => setInfoTab(key)}
+              className={`-mb-px border-b-2 pb-1.5 text-xs font-semibold uppercase ${
+                infoTab === key ? "border-brand text-brand" : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div role="tabpanel" hidden={infoTab !== "pos"}>
+          <ChatCustomerCard context={ctx} />
+        </div>
+        <div role="tabpanel" aria-label="Thông tin hội thoại" hidden={infoTab !== "chat"}>
+          <div ref={setInfoSlot} className="peer" />
+          <p className="hidden py-6 text-center text-xs text-gray-500 peer-empty:block">
+            Mở một hội thoại để xem ảnh/video, tệp và link.
+          </p>
+        </div>
       </div>
       )}
     </div>
+    </ConversationInfoSlotContext.Provider>
   );
 }
 

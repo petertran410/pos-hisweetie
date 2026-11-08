@@ -2,9 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { CheckSquare, Copy, Download, Forward, Reply, Trash2, Undo2 } from "lucide-react";
+import { useEscapeClose } from "@/lib/hooks/useEscapeClose";
+import { CheckSquare, Copy, Download, Forward, MessageSquareText, Reply, Trash2, Undo2 } from "lucide-react";
 
-export type MessageMenuAction = "reply" | "forward" | "copy" | "download" | "select" | "recall" | "delete";
+export type MessageMenuAction = "reply" | "forward" | "copy" | "download" | "select" | "jump" | "recall" | "delete";
 
 interface Props {
   x: number;
@@ -15,13 +16,35 @@ interface Props {
   // Thu hồi: tin của kênh, trong 24 giờ; xoá: chỉ phía mình
   canRecall: boolean;
   canDelete: boolean;
+  // Menu của ảnh/tệp trong "Thông tin hội thoại": không chọn nhiều, có "Xem tin nhắn gốc", nhãn riêng
+  canSelect?: boolean;
+  canJump?: boolean;
+  labels?: Partial<Record<MessageMenuAction, string>>;
   onAction: (a: MessageMenuAction) => void;
   onClose: () => void;
 }
 
+// Menu ảnh/tệp/link trong Thông tin hội thoại: thứ tự như Zalo
+const MEDIA_ORDER: MessageMenuAction[] = ["copy", "forward", "download", "jump", "recall", "delete"];
+
 /** Menu thao tác 1 tin (chuột phải hoặc nút ⋯), kiểu Zalo. */
-export function MessageMenu({ x, y, canReply, hasText, hasMedia, canRecall, canDelete, onAction, onClose }: Props) {
+export function MessageMenu({
+  x,
+  y,
+  canReply,
+  hasText,
+  hasMedia,
+  canRecall,
+  canDelete,
+  canSelect = true,
+  canJump = false,
+  labels,
+  onAction,
+  onClose,
+}: Props) {
   const ref = useRef<HTMLDivElement>(null);
+  // Esc theo tầng: chỉ đóng menu, không đóng lớp phủ bên dưới (Thông tin hội thoại)
+  useEscapeClose(onClose);
 
   useEffect(() => {
     // Mở bằng nhấn giữ (cảm ứng): trình duyệt có thể bắn mousedown khi nhấc tay → bỏ qua lúc đầu
@@ -30,13 +53,10 @@ export function MessageMenu({ x, y, canReply, hasText, hasMedia, canRecall, canD
       if (performance.now() - openedAt < 400) return;
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
     window.addEventListener("scroll", onClose, true);
     return () => {
       document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
       window.removeEventListener("scroll", onClose, true);
     };
   }, [onClose]);
@@ -53,7 +73,8 @@ export function MessageMenu({ x, y, canReply, hasText, hasMedia, canRecall, canD
     { key: "forward", label: "Chuyển tiếp", icon: Forward, show: true },
     { key: "copy", label: "Sao chép", icon: Copy, show: hasText },
     { key: "download", label: "Tải ảnh / tệp", icon: Download, show: hasMedia },
-    { key: "select", label: "Chọn nhiều tin", icon: CheckSquare, show: true },
+    { key: "select", label: "Chọn nhiều tin", icon: CheckSquare, show: canSelect },
+    { key: "jump", label: "Xem tin nhắn gốc", icon: MessageSquareText, show: canJump },
     { key: "recall", label: "Thu hồi", icon: Undo2, show: canRecall, danger: true },
     { key: "delete", label: "Xoá ở phía mình", icon: Trash2, show: canDelete, danger: true },
   ];
@@ -65,7 +86,7 @@ export function MessageMenu({ x, y, canReply, hasText, hasMedia, canRecall, canD
       aria-label="Thao tác tin nhắn"
       style={{ left, top, width: W }}
       className="chat-ui fixed z-[1000] rounded-lg border bg-white py-1 text-sm shadow-xl">
-      {items
+      {(canJump ? MEDIA_ORDER.map((k) => items.find((i) => i.key === k)!) : items)
         .filter((i) => i.show)
         .map(({ key, label, icon: Icon, danger }) => (
           <button
@@ -79,7 +100,7 @@ export function MessageMenu({ x, y, canReply, hasText, hasMedia, canRecall, canD
               danger ? "text-red-600" : ""
             } ${key === "recall" || (key === "delete" && !canRecall) ? "mt-1 border-t pt-2" : ""}`}>
             <Icon className={`h-4 w-4 ${danger ? "text-red-500" : "text-gray-500"}`} />
-            {label}
+            {labels?.[key] ?? label}
           </button>
         ))}
     </div>,

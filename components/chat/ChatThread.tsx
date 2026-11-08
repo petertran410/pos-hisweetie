@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, Fragment, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, Check, Copy, Download, FileText, Forward, MoreHorizontal, Play, Quote, RotateCw } from "lucide-react";
+import { ArrowDown, Check, Copy, Download, FileText, Forward, MoreHorizontal, PanelRight, Play, Quote, RotateCw, X } from "lucide-react";
+import { createPortal } from "react-dom";
 import type { ThreadSource } from "@/lib/chat/threadSource";
 import type {
   ChatContext,
@@ -23,7 +24,17 @@ import { applyReaction, ReactionBar, type ReactionIcon, type Reactions } from ".
 import { confirmAction } from "@/lib/chat/confirm";
 import { useMetaAiTakeOver } from "@/lib/store/metaAiTakeOver";
 import { toast } from "sonner";
-import { copyMessages, downloadMessagesMedia, messagePreview, messageThumb } from "@/lib/chat/messageActions";
+import {
+  copyImage,
+  copyMessages,
+  copyText,
+  downloadMessagesMedia,
+  messagePreview,
+  messageThumb,
+} from "@/lib/chat/messageActions";
+import { ConversationInfoPanel, ConversationInfoSlotContext, type InfoTarget } from "./ConversationInfoPanel";
+import { useChatSidebarStore } from "@/lib/store/chatSidebar";
+import { useEscapeClose } from "@/lib/hooks/useEscapeClose";
 import {
   AttachmentPreviewModal,
   NoReferrerVideo,
@@ -100,6 +111,13 @@ export function ChatThread({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<{ x: number; y: number; messages: ChatMessage[] } | null>(null);
   const [forwarding, setForwarding] = useState<ChatMessage[] | null>(null);
+  // Thông tin hội thoại (ảnh/video, tệp, link): cột bên phải nếu khung cha cấp chỗ, không thì lớp phủ
+  const infoSlot = useContext(ConversationInfoSlotContext);
+  const infoTab = useChatSidebarStore((s) => s.infoTab);
+  const setInfoTab = useChatSidebarStore((s) => s.setInfoTab);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [infoMenu, setInfoMenu] = useState<{ x: number; y: number; target: InfoTarget } | null>(null);
+  useEscapeClose(() => setInfoOpen(false), infoOpen && !infoSlot);
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   // Đang ở gần đáy → tin mới tự cuộn xuống; đang đọc tin cũ → giữ nguyên vị trí
@@ -309,6 +327,57 @@ export function ChatThread({
     if (!failed) toast.success(`Đã ${label} ${what}`);
     else toast.error(`${failed}/${list.length} tin không ${label} được${error ? `: ${error}` : ""}`);
   };
+  // "Xem tin nhắn gốc" từ Thông tin hội thoại: cuộn tới tin (đã tải) và nháy nền
+  const jumpTo = (m: ChatMessage) => {
+    setInfoOpen(false);
+    requestAnimationFrame(() => {
+      const row = scrollRef.current?.querySelector<HTMLElement>(`[data-msg-ids~="${CSS.escape(m.id)}"]`);
+      if (!row) return toast.info("Không tìm thấy tin gốc trong khung chat");
+      stickBottom.current = false;
+      row.scrollIntoView({ block: "center", behavior: "smooth" });
+      row.classList.remove("chat-flash");
+      void row.offsetWidth; // chạy lại hiệu ứng khi bấm lần nữa
+      row.classList.add("chat-flash");
+      setTimeout(() => row.classList.remove("chat-flash"), 1700);
+    });
+  };
+  const infoAction = (t: InfoTarget, a: string) => {
+    const m = t.message;
+    // Chỉ chuyển tiếp / lưu đúng ảnh/tệp/link được chọn (không kèm chữ của tin)
+    const only: ChatMessage = t.attachment
+      ? { ...m, text: "", stickerId: null, stickerImage: null, attachments: [t.attachment] }
+      : { ...m, text: t.url, stickerId: null, stickerImage: null, attachments: [] };
+    if (a === "copy") {
+      if (t.attachment && isImage(t.attachment)) copyImage(t.url);
+      else copyText(t.url, "Đã sao chép link");
+    } else if (a === "forward") setForwarding([only]);
+    else if (a === "download") downloadMessagesMedia([only]);
+    else if (a === "jump") jumpTo(m);
+    else if (a === "recall" || a === "delete") messageAction([m], a);
+  };
+  const infoPanel = (
+    <ConversationInfoPanel
+      messages={messages}
+      hasMore={hasMore}
+      loadingOlder={loadingOlder}
+      onLoadOlder={loadOlder}
+      onMenu={(x, y, target) => setInfoMenu({ x, y, target })}
+    />
+  );
+  const infoShown = infoSlot ? infoTab === "chat" : infoOpen;
+  const infoButton = (
+    <button
+      onClick={() => (infoSlot ? setInfoTab(infoTab === "chat" ? "pos" : "chat") : setInfoOpen(!infoOpen))}
+      title="Thông tin hội thoại: ảnh/video, tệp, link"
+      aria-label="Thông tin hội thoại"
+      aria-pressed={infoShown}
+      className={`chat-tap flex h-8 w-8 items-center justify-center rounded ${
+        infoShown ? "bg-cyan-bg text-brand" : "text-gray-600 hover:bg-gray-100"
+      }`}>
+      <PanelRight className="h-4 w-4" />
+    </button>
+  );
+
   const react = async (m: ChatMessage, icon: ReactionIcon | "NONE") => {
     // Thu hồi không cần xác nhận; thả mới hỏi khi ở môi trường thử nghiệm
     if (
@@ -418,7 +487,12 @@ export function ChatThread({
       <ChatThreadHeader
         source={source}
         channelName={channelName}
-        actions={headerActions}
+        actions={
+          <>
+            {headerActions}
+            {infoButton}
+          </>
+        }
         extra={headerExtra}
         takeOver={takeOver}
         onTakeOverChange={setTakeOver}
@@ -664,6 +738,52 @@ export function ChatThread({
               setSelected(new Set(list.map((m) => m.id)));
             }
           }}
+        />
+      )}
+      {infoSlot
+        ? createPortal(infoPanel, infoSlot)
+        : infoOpen && (
+            <>
+              <div className="absolute inset-0 z-20 bg-black/20" onClick={() => setInfoOpen(false)} />
+              <section
+                aria-label="Thông tin hội thoại"
+                className="absolute inset-y-0 right-0 z-30 flex w-[min(22rem,100%)] flex-col border-l bg-white shadow-lg">
+                <div className="flex items-center justify-between border-b px-3 py-1.5">
+                  <h3 className="text-xs font-semibold uppercase text-gray-500">Thông tin hội thoại</h3>
+                  <button
+                    onClick={() => setInfoOpen(false)}
+                    aria-label="Đóng Thông tin hội thoại"
+                    className="chat-tap flex h-8 w-8 items-center justify-center rounded text-gray-500 hover:bg-gray-100">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-3">{infoPanel}</div>
+              </section>
+            </>
+          )}
+      {infoMenu && (
+        <MessageMenu
+          x={infoMenu.x}
+          y={infoMenu.y}
+          canReply={false}
+          hasText
+          hasMedia={infoMenu.target.kind !== "link"}
+          canRecall={canReact && canRecallMessage(infoMenu.target.message)}
+          canDelete={canReact}
+          canSelect={false}
+          canJump
+          labels={{
+            copy:
+              infoMenu.target.attachment && isImage(infoMenu.target.attachment) ? "Sao chép ảnh" : "Sao chép link",
+            download:
+              infoMenu.target.attachment && isImage(infoMenu.target.attachment)
+                ? "Lưu ảnh"
+                : infoMenu.target.attachment && isVideo(infoMenu.target.attachment)
+                  ? "Lưu video"
+                  : "Lưu về máy",
+          }}
+          onClose={() => setInfoMenu(null)}
+          onAction={(a) => infoAction(infoMenu.target, a)}
         />
       )}
       {forwarding && (
