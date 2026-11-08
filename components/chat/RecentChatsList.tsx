@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Link2Off, Loader2, RotateCw, UserPlus } from "lucide-react";
-import { useRecentChats } from "@/lib/hooks/useSmaxChat";
+import { useRecentChats, useRefreshRecentChats } from "@/lib/hooks/useSmaxChat";
 import { useChatSidebarStore, type ChatCustomerRef } from "@/lib/store/chatSidebar";
 import type { LooseThread, RecentChat, ZaloContactKind } from "@/lib/types/smaxChat";
 import { markSeen, newCount } from "@/lib/chat/seen";
@@ -105,6 +105,7 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid, query = "" }: P
   const [limitBy, setLimitBy] = useState<{ pagePid?: string | null; n: number }>({ n: PAGE });
   const limit = limitBy.pagePid === pagePid ? limitBy.n : PAGE;
   const { data, isLoading, isFetching, isPlaceholderData, error, refetch } = useRecentChats(true, pagePid, limit);
+  const refresh = useRefreshRecentChats(pagePid, limit);
   // Smax trả đủ số đã xin → có thể còn nữa (đang tải trang lớn hơn thì giữ nút ở trạng thái "Đang tải…")
   const canLoadMore = isPlaceholderData || ((data?.items.length ?? 0) >= limit && limit < MAX_RECENT);
   const loadMore = () => setLimitBy({ pagePid, n: Math.min(MAX_RECENT, limit + PAGE) });
@@ -199,7 +200,7 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid, query = "" }: P
       <div className="mb-2 flex items-center gap-2">
         <h3 className="text-xs font-semibold uppercase text-gray-500">{searching ? "Hội thoại" : "Đang chat gần đây"}</h3>
         <button
-          onClick={() => refetch()}
+          onClick={refresh}
           disabled={isFetching}
           title="Tải lại"
           aria-label="Tải lại danh sách hội thoại"
