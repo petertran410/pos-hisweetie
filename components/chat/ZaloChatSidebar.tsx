@@ -819,7 +819,7 @@ function ChatPanel({
             title={showPicker ? "Quay lại hội thoại" : "Đổi khách"}
             aria-label={showPicker ? "Quay lại hội thoại" : "Đổi khách / danh sách hội thoại"}
             aria-pressed={showPicker}
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded ${
+            className={`chat-tap flex h-8 w-8 shrink-0 items-center justify-center rounded ${
               showPicker ? "bg-cyan-bg text-brand" : "text-gray-600 hover:bg-gray-100"
             }`}
           >
@@ -830,7 +830,7 @@ function ChatPanel({
           onClick={onClose}
           title={mobile ? "Đóng chat" : "Thu gọn"}
           aria-label={mobile ? "Đóng chat" : "Thu gọn khung chat"}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-gray-600 hover:bg-gray-100"
+          className="chat-tap flex h-8 w-8 shrink-0 items-center justify-center rounded text-gray-600 hover:bg-gray-100"
         >
           {mobile ? (
             <X className="w-5 h-5" />
@@ -1141,7 +1141,7 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
           title="Thông tin POS: công nợ, đơn, hóa đơn gần đây"
           aria-label="Thông tin POS"
           aria-expanded={posOpen}
-          className={`inline-flex h-8 items-center gap-1 rounded px-2 text-xs font-semibold ${
+          className={`chat-tap inline-flex h-8 items-center gap-1 rounded px-2 text-xs font-semibold ${
             posOpen ? "bg-cyan-bg text-brand" : "text-gray-600 hover:bg-gray-100"
           }`}
         >
@@ -1154,7 +1154,7 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
         title="ID Zalo của khách"
         aria-label="ID Zalo của khách"
         aria-pressed={managing}
-        className={`flex h-8 w-8 items-center justify-center rounded ${managing ? "bg-cyan-bg text-brand" : "text-gray-600 hover:bg-gray-100"}`}
+        className={`chat-tap flex h-8 w-8 items-center justify-center rounded ${managing ? "bg-cyan-bg text-brand" : "text-gray-600 hover:bg-gray-100"}`}
       >
         <Settings2 className="w-4 h-4" />
       </button>
@@ -1189,7 +1189,7 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
               <button
                 onClick={() => setPosOpen(false)}
                 aria-label="Đóng Thông tin POS"
-                className="flex h-8 w-8 items-center justify-center rounded text-gray-500 hover:bg-gray-100"
+                className="chat-tap flex h-8 w-8 items-center justify-center rounded text-gray-500 hover:bg-gray-100"
               >
                 <X className="h-4 w-4" />
               </button>

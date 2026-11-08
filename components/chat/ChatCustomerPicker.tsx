@@ -61,7 +61,7 @@ export function ChatCustomerPicker({ onSelect, onOpenThread }: Props) {
             onKeyDown={(e) => e.key === "Escape" && input && (e.preventDefault(), setInput(""))}
             placeholder="Tìm khách POS (mã, tên, SĐT) hoặc hội thoại"
             aria-label="Tìm khách POS hoặc hội thoại"
-            className="w-full border rounded-md pl-9 pr-8 py-2 text-sm outline-none focus:border-brand"
+            className="w-full border rounded-md pl-9 pr-8 py-2 text-sm outline-none focus:border-brand max-lg:text-base"
           />
           {input && (
             <button

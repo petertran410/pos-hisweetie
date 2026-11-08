@@ -547,7 +547,7 @@ export function ChatComposer({
   return (
     <div
       ref={rootRef}
-      className={`relative border-t bg-white p-2 ${dragging ? "ring-2 ring-inset ring-brand" : ""}`}
+      className={`relative border-t bg-white p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] ${dragging ? "ring-2 ring-inset ring-brand" : ""}`}
       onDragOver={(e) => {
         const types = e.dataTransfer.types;
         if (
@@ -857,7 +857,7 @@ export function ChatComposer({
                   : "Nhập tin…  / chèn sản phẩm · # tin nhắn nhanh"
             }
             aria-label="Nội dung tin nhắn"
-            className="block w-full resize-none bg-transparent px-3 pt-2 pb-1 text-sm leading-5 outline-none"
+            className="block w-full resize-none bg-transparent px-3 pt-2 pb-1 text-sm leading-5 outline-none max-lg:text-base"
           />
         <div className="flex items-center gap-0.5 px-1 pb-1">
           <button
@@ -865,7 +865,7 @@ export function ChatComposer({
             disabled={disabled}
             title="Tin nhắn nhanh (gõ # trong ô chat để chèn nhanh)"
             aria-label="Tin nhắn nhanh"
-            className="h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-brand disabled:opacity-40"
+            className="chat-tap h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-brand disabled:opacity-40"
           >
             <MessageSquareText className="w-4 h-4" />
           </button>
@@ -874,7 +874,7 @@ export function ChatComposer({
             disabled={disabled || items.length >= MAX_FILES}
             title={`Đính kèm ảnh, video, tệp (tối đa ${MAX_FILES} tệp, 25MB/tệp)`}
             aria-label="Đính kèm"
-            className="h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-brand disabled:opacity-40"
+            className="chat-tap h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-brand disabled:opacity-40"
           >
             <Paperclip className="w-4 h-4" />
           </button>
@@ -883,7 +883,7 @@ export function ChatComposer({
             disabled={disabled || items.length >= MAX_FILES}
             title="Thư viện Smax — chọn ảnh/tệp có sẵn"
             aria-label="Thư viện"
-            className="h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-brand disabled:opacity-40"
+            className="chat-tap h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-brand disabled:opacity-40"
           >
             <Images className="w-4 h-4" />
           </button>
@@ -895,7 +895,7 @@ export function ChatComposer({
             title="Emoji & sticker"
             aria-label="Emoji và sticker"
             aria-expanded={pickerOpen}
-            className={`h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-100 hover:text-brand disabled:opacity-40 ${
+            className={`chat-tap h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-100 hover:text-brand disabled:opacity-40 ${
               pickerOpen ? "bg-cyan-bg text-brand" : "text-gray-500"
             }`}
           >
@@ -909,7 +909,7 @@ export function ChatComposer({
             disabled={!canSend}
             aria-label={uploading ? "Gửi (đang tải tệp lên…)" : "Gửi"}
             title={uploading ? "Đang tải tệp lên…" : "Gửi (Enter)"}
-            className="h-8 shrink-0 inline-flex items-center gap-1.5 rounded-md bg-brand px-3 text-sm font-medium text-white hover:bg-brand-bright disabled:opacity-40"
+            className="chat-tap h-8 shrink-0 inline-flex items-center gap-1.5 rounded-md bg-brand px-3 text-sm font-medium text-white hover:bg-brand-bright disabled:opacity-40"
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="w-4 h-4" />}
             Gửi

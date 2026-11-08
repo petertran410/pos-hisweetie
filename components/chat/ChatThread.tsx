@@ -1029,6 +1029,35 @@ function MessageRow({
   onReact: ((icon: ReactionIcon | "NONE") => void) | null;
   children: React.ReactNode;
 }) {
+  // Cảm ứng: nhấn giữ ~0,5s mở menu thao tác (iOS không có chuột phải; nút rê chuột không hiện)
+  const pressed = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const start = useRef({ x: 0, y: 0 });
+  const cancel = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+  };
+  useEffect(() => cancel, []);
+  const longPress = selecting
+    ? {}
+    : {
+        onPointerDown: (e: React.PointerEvent) => {
+          pressed.current = false;
+          if (e.pointerType !== "touch") return;
+          start.current = { x: e.clientX, y: e.clientY };
+          const { clientX, clientY } = e;
+          cancel();
+          timer.current = setTimeout(() => {
+            pressed.current = true;
+            onMenu(clientX, clientY);
+          }, 500);
+        },
+        onPointerMove: (e: React.PointerEvent) => {
+          if (timer.current && Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y) > 10) cancel();
+        },
+        onPointerUp: cancel,
+        onPointerCancel: cancel,
+      };
   if (messages[0].type === "system") return <>{children}</>;
   const fromMe = messages[0].fromMe;
   return (
@@ -1039,14 +1068,22 @@ function MessageRow({
         e.preventDefault();
         onMenu(e.clientX, e.clientY);
       }}
+      {...longPress}
       onClickCapture={(e) => {
+        // Vừa nhấn giữ mở menu: bỏ cú bấm khi nhấc tay (không mở xem ảnh)
+        if (pressed.current) {
+          pressed.current = false;
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
         // Đang chọn nhiều: bấm vào tin để chọn (không mở xem ảnh)
         if (!selecting) return;
         e.preventDefault();
         e.stopPropagation();
         onToggle();
       }}
-      className={`group relative flex items-center gap-1 rounded-lg ${selecting ? "cursor-pointer" : ""} ${
+      className={`group relative flex items-center gap-1 rounded-lg [-webkit-touch-callout:none] ${selecting ? "cursor-pointer" : ""} ${
         selected ? "bg-cyan-bg" : ""
       }`}>
       {selecting && (

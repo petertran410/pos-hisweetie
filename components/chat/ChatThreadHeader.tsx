@@ -117,14 +117,15 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
 
   return (
     <div className="border-b bg-white">
-      <div className="flex items-center gap-2 px-3 py-1">
+      {/* Khung hẹp: nhóm nút tự xuống dòng để tên hội thoại không bị cắt cụt */}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1">
         <ZaloAvatar
           avatar={p?.avatar ?? null}
           isGroup={isGroup}
           members={p?.memberPreview}
           memberCount={p?.memberCount}
         />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[7rem] flex-1">
           <div className="flex min-w-0 items-center gap-1">
             <p className="truncate text-sm font-semibold leading-tight">
               {posName || (isLoading ? "…" : threadName)}
@@ -141,6 +142,7 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
           </div>
           <p className="truncate text-xs text-gray-500" title={subtitleText}>{subtitleText}</p>
         </div>
+        <div className="ml-auto flex shrink-0 items-center gap-1">
         {p?.canPassControlAI && canSend && (
           <MetaAiSwitch on={metaAiOn} busy={busy} onClick={toggleMetaAi} />
         )}
@@ -151,7 +153,7 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
             rel="noreferrer"
             title="Mở bình luận trên bài viết Facebook"
             aria-label="Mở bình luận trên bài viết Facebook"
-            className="flex h-8 w-8 items-center justify-center rounded hover:bg-gray-100">
+            className="chat-tap flex h-8 w-8 items-center justify-center rounded hover:bg-gray-100">
             <ThreadKindLogo isComment className="h-4 w-4" />
           </a>
         )}
@@ -162,11 +164,12 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
             rel="noreferrer"
             title="Mở hội thoại trên Smax"
             aria-label="Mở hội thoại trên Smax"
-            className="flex h-8 w-8 items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-brand">
+            className="chat-tap flex h-8 w-8 items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-brand">
             <ExternalLink className="h-4 w-4" />
           </a>
         )}
         {actions}
+        </div>
       </div>
       {extra && <div className="px-3 pb-1">{extra}</div>}
       {renaming && p && (

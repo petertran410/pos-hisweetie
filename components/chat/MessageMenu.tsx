@@ -24,7 +24,10 @@ export function MessageMenu({ x, y, canReply, hasText, hasMedia, canRecall, canD
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Mở bằng nhấn giữ (cảm ứng): trình duyệt có thể bắn mousedown khi nhấc tay → bỏ qua lúc đầu
+    const openedAt = performance.now();
     const onDown = (e: MouseEvent) => {
+      if (performance.now() - openedAt < 400) return;
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     };
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -41,7 +44,7 @@ export function MessageMenu({ x, y, canReply, hasText, hasMedia, canRecall, canD
   // position:fixed bị nhân CSS zoom của <html> → quy đổi toạ độ con trỏ
   const zoom = typeof window === "undefined" ? 1 : parseFloat(getComputedStyle(document.documentElement).zoom || "1") || 1;
   const W = 180;
-  const H = 270;
+  const H = 300;
   const left = Math.min(x, window.innerWidth - W * zoom - 8) / zoom;
   const top = Math.min(y, window.innerHeight - H * zoom - 8) / zoom;
 
@@ -58,6 +61,8 @@ export function MessageMenu({ x, y, canReply, hasText, hasMedia, canRecall, canD
   return createPortal(
     <div
       ref={ref}
+      role="menu"
+      aria-label="Thao tác tin nhắn"
       style={{ left, top, width: W }}
       className="chat-ui fixed z-[1000] rounded-lg border bg-white py-1 text-sm shadow-xl">
       {items
@@ -65,11 +70,12 @@ export function MessageMenu({ x, y, canReply, hasText, hasMedia, canRecall, canD
         .map(({ key, label, icon: Icon, danger }) => (
           <button
             key={key}
+            role="menuitem"
             onClick={() => {
               onAction(key);
               onClose();
             }}
-            className={`flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-gray-50 ${
+            className={`flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-gray-50 max-lg:py-2.5 ${
               danger ? "text-red-600" : ""
             } ${key === "recall" || (key === "delete" && !canRecall) ? "mt-1 border-t pt-2" : ""}`}>
             <Icon className={`h-4 w-4 ${danger ? "text-red-500" : "text-gray-500"}`} />

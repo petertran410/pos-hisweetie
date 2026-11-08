@@ -48,6 +48,13 @@ html {
 .chat-ui :is(input, textarea):focus-visible {
   box-shadow: 0 0 0 2px rgb(0 183 204 / 25%);
 }
+/* Màn hẹp (khung chat dạng sheet, cảm ứng): nút icon chính tối thiểu 40px */
+@media (max-width: 1023px) {
+  .chat-ui .chat-tap {
+    min-height: 40px;
+    min-width: 40px;
+  }
+}
 
 @font-face {
   font-family: "fg-sf-pro-display-medium-otf";

@@ -85,7 +85,7 @@ export function ForwardDialog({ messages, onClose }: { messages: ChatMessage[]; 
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Tìm hội thoại gần đây"
-              className="w-full rounded-md border py-1.5 pl-7 pr-2 text-sm outline-none focus:border-brand"
+              className="w-full rounded-md border py-1.5 pl-7 pr-2 text-sm outline-none focus:border-brand max-lg:text-base"
             />
           </div>
           <p className="py-1 text-xs text-gray-500">Hội thoại gần đây trên kênh {channel?.name}</p>
