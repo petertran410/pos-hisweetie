@@ -117,7 +117,7 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
 
   return (
     <div className="border-b bg-white">
-      <div className="flex items-center gap-2 px-3 py-1.5">
+      <div className="flex items-center gap-2 px-3 py-1">
         <ZaloAvatar
           avatar={p?.avatar ?? null}
           isGroup={isGroup}
@@ -134,8 +134,8 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
                 onClick={() => setRenaming(true)}
                 title={isGroup ? "Đổi tên nhóm (trên Smax)" : "Đổi tên hội thoại (trên Smax)"}
                 aria-label="Đổi tên hội thoại"
-                className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-brand">
-                <Pencil className="h-3 w-3" />
+                className="shrink-0 rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-brand">
+                <Pencil className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
@@ -150,7 +150,8 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
             target="_blank"
             rel="noreferrer"
             title="Mở bình luận trên bài viết Facebook"
-            className="rounded p-1 hover:bg-gray-100">
+            aria-label="Mở bình luận trên bài viết Facebook"
+            className="flex h-8 w-8 items-center justify-center rounded hover:bg-gray-100">
             <ThreadKindLogo isComment className="h-4 w-4" />
           </a>
         )}
@@ -160,13 +161,14 @@ export function ChatThreadHeader({ source, channelName, actions, extra, takeOver
             target="_blank"
             rel="noreferrer"
             title="Mở hội thoại trên Smax"
-            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-brand">
+            aria-label="Mở hội thoại trên Smax"
+            className="flex h-8 w-8 items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-brand">
             <ExternalLink className="h-4 w-4" />
           </a>
         )}
         {actions}
       </div>
-      {extra && <div className="px-3 pb-1.5">{extra}</div>}
+      {extra && <div className="px-3 pb-1">{extra}</div>}
       {renaming && p && (
         <RenameThreadModal profile={p} isGroup={isGroup} onSave={rename} onClose={() => setRenaming(false)} />
       )}

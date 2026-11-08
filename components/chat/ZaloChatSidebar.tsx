@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   Check,
   ChevronDown,
+  ClipboardList,
   ChevronRight,
   Loader2,
   MessageCircle,
@@ -41,6 +42,7 @@ import { ZaloContactsManager } from "./ZaloContactsManager";
 import { SharedGroupsScanner } from "./SharedGroupsScanner";
 import { ZaloAvatar } from "./ZaloAvatar";
 import { ThreadKindIcon } from "./ThreadKindIcon";
+import { useEscapeClose } from "@/lib/hooks/useEscapeClose";
 
 /**
  * Sidebar chat Zalo (Smax) mép phải. Desktop: đẩy nội dung (rail 44px khi thu
@@ -700,21 +702,35 @@ function ChannelSwitcher() {
   if (!channel) {
     return (
       <>
-        <MessageCircle className="w-5 h-5 text-brand shrink-0" />
+        <MessageCircle className="w-5 h-5 text-brand shrink-0" aria-hidden />
         <p className="shrink-0 text-sm font-semibold leading-tight">
           Chat Zalo
         </p>
       </>
     );
   }
+  const channelStatus = channel.missing
+    ? "Không còn trên Smax"
+    : channel.connectionError
+      ? "Mất kết nối"
+      : "Hoạt động";
   return (
     <>
-      <ZaloAvatar
-        avatar={channel.avatar}
-        isGroup={false}
-        members={[{ name: channel.name, avatar: null }]}
-        size={28}
-      />
+      {/* Chấm trạng thái kênh trên avatar; chỉ hiện nhãn chữ khi kênh có vấn đề */}
+      <span className="relative shrink-0" title={`Kênh ${channelStatus}`}>
+        <ZaloAvatar
+          avatar={channel.avatar}
+          isGroup={false}
+          members={[{ name: channel.name, avatar: null }]}
+          size={28}
+        />
+        <span
+          className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-white ${
+            channel.missing ? "bg-gray-400" : channel.connectionError ? "bg-red-500" : "bg-green-500"
+          }`}
+        />
+        <span className="sr-only">Kênh {channelStatus}</span>
+      </span>
       {usable.length >= 2 ? (
         <select
           value={channel.pagePid}
@@ -740,21 +756,15 @@ function ChannelSwitcher() {
           {channel.name}
         </span>
       )}
-      <span
-        className={`shrink-0 text-xs rounded-full px-2 py-0.5 ${
-          channel.missing
-            ? "bg-gray-100 text-gray-600"
-            : channel.connectionError
-              ? "bg-red-100 text-red-700"
-              : "bg-green-100 text-green-700"
-        }`}
-      >
-        {channel.missing
-          ? "Không còn trên Smax"
-          : channel.connectionError
-            ? "Mất kết nối"
-            : "Hoạt động"}
-      </span>
+      {(channel.missing || channel.connectionError) && (
+        <span
+          className={`shrink-0 text-xs rounded-full px-2 py-0.5 ${
+            channel.missing ? "bg-gray-100 text-gray-600" : "bg-red-100 text-red-700"
+          }`}
+        >
+          {channelStatus}
+        </span>
+      )}
     </>
   );
 }
@@ -785,7 +795,7 @@ function ChatPanel({
 
   return (
     <div className="flex flex-1 min-w-0 min-h-0 flex-col">
-      <div className="flex items-center gap-2 border-b px-3 py-2">
+      <div className="flex items-center gap-2 border-b px-3 py-1">
         <ChannelSwitcher />
         {/* Khách đang chat: căn phải, sát các nút */}
         <p className="min-w-0 flex-1 truncate text-right text-xs text-gray-500">
@@ -805,15 +815,20 @@ function ChatPanel({
           <button
             onClick={() => setPicking(!picking)}
             title={showPicker ? "Quay lại hội thoại" : "Đổi khách"}
-            className="p-1.5 rounded hover:bg-gray-100"
+            aria-label={showPicker ? "Quay lại hội thoại" : "Đổi khách / danh sách hội thoại"}
+            aria-pressed={showPicker}
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded ${
+              showPicker ? "bg-cyan-bg text-brand" : "text-gray-600 hover:bg-gray-100"
+            }`}
           >
             <Users className="w-4 h-4" />
           </button>
         )}
         <button
           onClick={onClose}
-          title="Thu gọn"
-          className="p-1.5 rounded hover:bg-gray-100"
+          title={mobile ? "Đóng chat" : "Thu gọn"}
+          aria-label={mobile ? "Đóng chat" : "Thu gọn khung chat"}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-gray-600 hover:bg-gray-100"
         >
           {mobile ? (
             <X className="w-5 h-5" />
@@ -892,6 +907,10 @@ function CustomerChat({ customerId }: { customerId: number }) {
   const setPosRatio = useChatSidebarStore((s) => s.setPosRatio);
   const splitRef = useRef<HTMLDivElement>(null);
   const [splitting, setSplitting] = useState(false);
+  const pagePid = useChatSidebarStore((s) => s.pagePid);
+  // Có kênh dùng được → nút "POS" trên thanh hội thoại mở Thông tin POS (khung hẹp)
+  const usableChannel = ctx ? pickChannel(ctx.myChannels, pagePid) : null;
+  const hasUsableChannel = !!usableChannel && !usableChannel.missing;
 
   // Kéo thanh chia → đổi tỷ lệ cột POS theo thời gian thực (lưu tỷ lệ, không lưu px)
   const startSplit = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -953,7 +972,7 @@ function CustomerChat({ customerId }: { customerId: number }) {
   return (
     <div ref={splitRef} className={`flex flex-1 min-h-0 ${splitting ? "select-none" : ""}`}>
       <div className="flex flex-1 min-w-0 min-h-0 flex-col">
-        {!wide && (
+        {!wide && !hasUsableChannel && (
         <details className="border-b">
           <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase text-gray-500">
             Thông tin POS
@@ -1019,6 +1038,10 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
   const switchCustomer = useSwitchGroupCustomer();
   const [managing, setManaging] = useState(false);
   const [adding, setAdding] = useState(false);
+  // Khung hẹp: Thông tin POS mở dạng lớp phủ thay cho cột bên phải
+  const wide = useContext(PanelWideContext);
+  const [posOpen, setPosOpen] = useState(false);
+  useEscapeClose(() => setPosOpen(false), posOpen && !wide);
 
   const channels = ctx.myChannels;
   const channel = pickChannel(channels, pagePid);
@@ -1088,6 +1111,7 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
             setAdding(false);
           }}
           title={user ? "" : "Khách chưa có ID Zalo"}
+          aria-pressed={kind === "user"}
           className={`px-3 py-1 ${kind === "user" ? "bg-brand text-white" : "hover:bg-gray-50"} ${
             user ? "" : "text-gray-400"
           }`}
@@ -1100,6 +1124,7 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
             setAdding(false);
           }}
           title={groups.length ? "" : "Khách chưa có nhóm Zalo"}
+          aria-pressed={kind === "group"}
           className={`px-3 py-1 border-l ${kind === "group" ? "bg-brand text-white" : "hover:bg-gray-50"} ${
             groups.length ? "" : "text-gray-400"
           }`}
@@ -1108,10 +1133,26 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
         </button>
       </div>
       )}
+      {!wide && (
+        <button
+          onClick={() => setPosOpen(!posOpen)}
+          title="Thông tin POS: công nợ, đơn, hóa đơn gần đây"
+          aria-label="Thông tin POS"
+          aria-expanded={posOpen}
+          className={`inline-flex h-8 items-center gap-1 rounded px-2 text-xs font-semibold ${
+            posOpen ? "bg-cyan-bg text-brand" : "text-gray-600 hover:bg-gray-100"
+          }`}
+        >
+          <ClipboardList className="h-4 w-4" aria-hidden />
+          POS
+        </button>
+      )}
       <button
         onClick={() => setManaging(!managing)}
         title="ID Zalo của khách"
-        className={`p-1.5 rounded ${managing ? "bg-cyan-bg text-brand" : "hover:bg-gray-100"}`}
+        aria-label="ID Zalo của khách"
+        aria-pressed={managing}
+        className={`flex h-8 w-8 items-center justify-center rounded ${managing ? "bg-cyan-bg text-brand" : "text-gray-600 hover:bg-gray-100"}`}
       >
         <Settings2 className="w-4 h-4" />
       </button>
@@ -1133,7 +1174,30 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
     ) : null;
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col">
+    <div className="relative flex flex-1 min-h-0 flex-col">
+      {posOpen && !wide && (
+        <>
+          <div className="absolute inset-0 z-20 bg-black/20" onClick={() => setPosOpen(false)} />
+          <section
+            aria-label="Thông tin POS"
+            className="absolute inset-x-0 top-0 z-30 flex max-h-[80%] flex-col border-b bg-white shadow-lg"
+          >
+            <div className="flex items-center justify-between border-b px-3 py-1.5">
+              <h3 className="text-xs font-semibold uppercase text-gray-500">Thông tin POS</h3>
+              <button
+                onClick={() => setPosOpen(false)}
+                aria-label="Đóng Thông tin POS"
+                className="flex h-8 w-8 items-center justify-center rounded text-gray-500 hover:bg-gray-100"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-3">
+              <ChatCustomerCard context={ctx} />
+            </div>
+          </section>
+        </>
+      )}
       {(!contact || managing) && (
         <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
           <div className="ml-auto">{toolbar}</div>
