@@ -192,13 +192,6 @@ export function ChatCustomerCard({ context }: { context: ChatContext }) {
           )}
         </div>
       )}
-
-      <p className="text-xs text-gray-500">
-        Kéo công nợ, đơn hàng, hóa đơn, báo đơn vào ô chat để gửi.
-      </p>
-      <Link href={customerHref} className="text-brand hover:underline">
-        Mở khách hàng →
-      </Link>
     </div>
   );
 }
