@@ -62,7 +62,7 @@ export function EmojiStickerPicker({ threadStickerIds, onEmoji, onSticker, onClo
       ref={ref}
       // giữ focus ở ô soạn khi bấm emoji
       onMouseDown={(e) => e.preventDefault()}
-      className="absolute bottom-full right-2 z-30 mb-1 flex h-80 w-[340px] max-w-[calc(100%-1rem)] flex-col rounded-lg border bg-white shadow-xl">
+      className="absolute bottom-full left-2 z-30 mb-1 flex h-80 w-[340px] max-w-[calc(100%-1rem)] flex-col rounded-lg border bg-white shadow-xl">
       <div className="flex border-b text-sm font-medium">
         {(onSticker ? (["sticker", "emoji"] as const) : (["emoji"] as const)).map((t) => (
           <button

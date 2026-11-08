@@ -8,7 +8,10 @@ export interface ChatCustomerRef {
   name: string;
 }
 
-export const COMPOSER_DEFAULT_HEIGHT = 58;
+// Chiều cao tối thiểu ô soạn = 1 dòng (ô tự giãn theo nội dung tới COMPOSER_AUTO_MAX)
+export const COMPOSER_DEFAULT_HEIGHT = 32;
+// ~6 dòng chữ (line-height 20px + padding)
+export const COMPOSER_AUTO_MAX = 132;
 
 interface ChatSidebarState {
   open: boolean;
@@ -71,6 +74,15 @@ export const useChatSidebarStore = create<ChatSidebarState>()(
       setRailWidth: (railWidth) => set({ railWidth }),
       setRecentUnreadOnly: (recentUnreadOnly) => set({ recentUnreadOnly }),
     }),
-    { name: "chat-sidebar" }
+    {
+      name: "chat-sidebar",
+      // v1: ô soạn tự giãn → chiều cao cũ (bố cục nút dọc) không còn đúng nghĩa, về mặc định
+      version: 1,
+      migrate: (persisted, version) => {
+        const st = persisted as Partial<ChatSidebarState>;
+        if (version < 1) st.composerHeight = COMPOSER_DEFAULT_HEIGHT;
+        return st as ChatSidebarState;
+      },
+    }
   )
 );
