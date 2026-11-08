@@ -41,7 +41,7 @@ import { ZaloContactEditor } from "./ZaloContactEditor";
 import { ZaloContactsManager } from "./ZaloContactsManager";
 import { SharedGroupsScanner } from "./SharedGroupsScanner";
 import { ZaloAvatar } from "./ZaloAvatar";
-import { ThreadKindIcon } from "./ThreadKindIcon";
+import { GroupMark, ThreadKindIcon } from "./ThreadKindIcon";
 import { useEscapeClose } from "@/lib/hooks/useEscapeClose";
 
 /**
@@ -400,6 +400,7 @@ function CollapsedRail({
                 key={c.tid}
                 onClick={() => open(c)}
                 title={`${who}\n${c.isGroup ? `${c.name}: ` : ""}${c.lastMessage}`}
+                aria-label={`${c.isGroup ? "Nhóm " : ""}${label}${unseen > 0 ? ` · ${unseen} tin mới` : ""}${c.match ? "" : " · chưa gắn khách POS"}`}
                 className={`relative shrink-0 ${
                   showNames ? "flex min-w-0 items-center gap-2 rounded-md px-1 text-left hover:bg-cyan-bg" : "rounded-full"
                 } ${c.match ? "" : "opacity-50 hover:opacity-80"} disabled:opacity-40`}
@@ -415,8 +416,9 @@ function CollapsedRail({
                   }
                   size={32}
                 />
-                {unseen > 0 && <UnseenBadge count={unseen} />}
+                {unseen > 0 && <UnseenBadge count={unseen} max={9} />}
                 <ThreadKindIcon platform={c.platform} isComment={c.isComment} />
+                <GroupMark show={c.isGroup && !!c.avatar} />
                 </span>
                 {showNames && (
                   <span className={`min-w-0 flex-1 truncate text-xs ${c.unread || unseen > 0 ? "font-semibold" : ""}`}>
