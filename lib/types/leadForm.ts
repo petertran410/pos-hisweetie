@@ -2,6 +2,13 @@ import type { LeadCategory, LeadSource, LeadStatus } from "./lead";
 
 export type LeadFormFieldType = "text" | "textarea" | "select" | "multiselect";
 
+export interface LeadFormProvince {
+  provinceCode: string;
+  provinceName: string | null;
+  wardCode: string | null;
+  wardName: string | null;
+}
+
 /** Trường Lead có sẵn (key cố định) hoặc câu hỏi thêm (key "q_…"). */
 export interface LeadFormField {
   key: string;
@@ -10,6 +17,10 @@ export interface LeadFormField {
   required: boolean;
   type?: LeadFormFieldType;
   options?: string[];
+  /** Ẩn khỏi form khách: lead tự nhận giá trị mặc định */
+  hidden?: boolean;
+  /** Giá trị mặc định (trường hiện → điền sẵn cho khách); Họ tên, SĐT không có */
+  defaultValue?: string | string[] | LeadFormProvince;
 }
 
 export interface LeadForm {
@@ -55,5 +66,5 @@ export interface PublicLeadForm {
   slug: string;
   title: string;
   description: string | null;
-  fields: Omit<LeadFormField, "enabled">[];
+  fields: Omit<LeadFormField, "enabled" | "hidden">[];
 }

@@ -40,8 +40,20 @@ export function PublicLeadForm({ slug, embed }: { slug: string; embed: boolean }
 
 function FormBody({ form }: { form: Form }) {
   const { provinces, communes } = useNewLocations();
-  const [values, setValues] = useState<Record<string, string | string[]>>({});
-  const [province, setProvince] = useState<Province>({ provinceCode: "", provinceName: "", wardCode: "", wardName: "" });
+  // Điền sẵn giá trị mặc định của form (khách sửa được)
+  const [values, setValues] = useState<Record<string, string | string[]>>(() =>
+    Object.fromEntries(
+      form.fields
+        .filter((f) => f.key !== "province" && (typeof f.defaultValue === "string" || Array.isArray(f.defaultValue)))
+        .map((f) => [f.key, f.defaultValue as string | string[]])
+    )
+  );
+  const [province, setProvince] = useState<Province>(() => {
+    const d = form.fields.find((f) => f.key === "province")?.defaultValue;
+    return d && typeof d === "object" && !Array.isArray(d)
+      ? { provinceCode: d.provinceCode, provinceName: d.provinceName ?? "", wardCode: d.wardCode ?? "", wardName: d.wardName ?? "" }
+      : { provinceCode: "", provinceName: "", wardCode: "", wardName: "" };
+  });
   const [honeypot, setHoneypot] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");

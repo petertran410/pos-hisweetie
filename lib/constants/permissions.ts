@@ -131,6 +131,7 @@ export const ACTION_LABELS: Record<string, string> = {
   inventory: "Báo cáo tồn kho",
   financial: "Xem báo cáo tài chính",
   customer: "Báo cáo khách hàng",
+  lead: "Báo cáo Lead",
   analytics_business: "Phân tích - Kinh doanh",
   analytics_management: "Phân tích - Quản trị",
   analytics_customer: "Phân tích - Khách hàng",
@@ -316,6 +317,11 @@ export const REPORT_SUBGROUPS: ReportSubgroup[] = [
     ],
   },
   {
+    key: "reports_lead",
+    label: "Báo cáo Lead",
+    actions: ["lead"],
+  },
+  {
     key: "reports_financial",
     label: "Báo cáo tài chính",
     actions: ["financial", "export_financial"],
@@ -396,6 +402,7 @@ export const REPORT_LEAF_LABELS: Record<string, string> = {
   supplier_return: "Trả hàng nhập",
   supplier_info: "Tổng hợp NCC",
   financial: "Xem báo cáo tài chính",
+  lead: "Xem báo cáo Lead",
   // Quyền xuất Excel theo nhóm.
   export_eod: "Xuất Excel",
   export_sale: "Xuất Excel",

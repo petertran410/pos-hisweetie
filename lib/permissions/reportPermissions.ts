@@ -60,10 +60,10 @@ export const REPORT_VIEWTYPE_PERMISSION: Record<
     CashFlow: "reports:eod_cashflow",
     Product: "reports:eod_product",
   },
-  // Lead (dashboard CRM): cùng quyền xem lead (GET /reports/leads/summary yêu cầu leads:view;
-  // Sale chỉ thấy số liệu lead của mình).
+  // Lead (dashboard CRM): quyền riêng reports:lead (phân ở /cai-dat/vai-tro → Báo cáo → Báo cáo Lead).
+  // Phạm vi số liệu vẫn theo quyền lead: không có leads:update → chỉ lead giao cho mình.
   lead: {
-    _all: "leads:view",
+    _all: "reports:lead",
   },
   // Tài chính gộp 1 quyền cho cả nhóm.
   "tai-chinh": {

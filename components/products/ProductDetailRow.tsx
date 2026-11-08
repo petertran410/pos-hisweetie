@@ -23,6 +23,7 @@ import { usePermission } from "@/lib/hooks/usePermissions";
 import Link from "next/link";
 import { CodeLink } from "../shared/CodeLink";
 import { ProductPublicationTab } from "./ProductPublicationTab";
+import { AttachmentPreviewModal } from "../chat/AttachmentPreviewModal";
 
 interface ProductDetailRowProps {
   productId: number;
@@ -143,6 +144,8 @@ export function ProductDetailRow({
     "view_publication"
   );
 
+  // Ảnh đang xem phóng to (index trong product.images), null = đóng
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<
     | "info"
     | "description"
@@ -341,6 +344,14 @@ export function ProductDetailRow({
     { key: "inventory", label: "Tồn kho" },
   ];
 
+  // Ảnh sản phẩm cho modal xem phóng to (dùng chung AttachmentPreviewModal của chat)
+  const imageItems = (product.images ?? []).map((img, i) => ({
+    url: img.image,
+    thumbnail: null,
+    title: `${product.name} (${i + 1})`,
+    type: "image",
+  }));
+
   const activeInventories = (product.inventories ?? []).filter(
     (inv) => inv.branch?.isActive !== false
   );
@@ -379,11 +390,16 @@ export function ProductDetailRow({
                   {/* Ảnh sản phẩm */}
                   <div className="w-24 h-24 rounded-lg border border-gray-200 overflow-hidden flex-shrink-0 bg-gray-50 flex items-center justify-center">
                     {product.images?.[0] ? (
-                      <img
-                        src={product.images[0].image}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                      />
+                      <button
+                        type="button"
+                        onClick={() => setPreviewIndex(0)}
+                        className="w-full h-full cursor-zoom-in">
+                        <img
+                          src={product.images[0].image}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
                     ) : (
                       <span className="text-xs text-gray-400">N/A</span>
                     )}
@@ -689,6 +705,43 @@ export function ProductDetailRow({
               <div className="space-y-4">
                 <div className="border border-gray-200 rounded-lg p-4">
                   <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                    Hình ảnh sản phẩm
+                    {imageItems.length > 0 && (
+                      <span className="ml-1 font-normal text-gray-400">
+                        ({imageItems.length})
+                      </span>
+                    )}
+                  </h4>
+                  {imageItems.length ? (
+                    <div className="flex flex-wrap gap-3">
+                      {product.images!.map((img, i) => (
+                        <button
+                          key={img.id}
+                          type="button"
+                          onClick={() => setPreviewIndex(i)}
+                          title="Bấm để xem phóng to"
+                          className="relative h-28 w-28 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 cursor-zoom-in hover:border-brand">
+                          <img
+                            src={img.image}
+                            alt={imageItems[i].title}
+                            loading="lazy"
+                            className="h-full w-full object-cover"
+                          />
+                          {img.isPrimary && (
+                            <span className="absolute left-1 top-1 rounded bg-brand px-1.5 py-0.5 text-[10px] font-medium text-white">
+                              Ảnh chính
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-600">Chưa có hình ảnh</p>
+                  )}
+                </div>
+
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">
                     Mô tả
                   </h4>
                   <p className="text-sm text-gray-600">
@@ -933,6 +986,14 @@ export function ProductDetailRow({
             branchId={customerOrdersBranch.id}
             branchName={customerOrdersBranch.name}
             onClose={() => setCustomerOrdersBranch(null)}
+          />
+        )}
+
+        {previewIndex !== null && imageItems.length > 0 && (
+          <AttachmentPreviewModal
+            items={imageItems}
+            index={Math.min(previewIndex, imageItems.length - 1)}
+            onClose={() => setPreviewIndex(null)}
           />
         )}
       </td>

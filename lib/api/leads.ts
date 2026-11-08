@@ -52,6 +52,8 @@ export const leadsApi = {
   confirmHandoverPhone: (handoverId: number): Promise<{ handover: LeadHandover; done: boolean }> =>
     apiClient.post(`/leads/handovers/${handoverId}/confirm-phone`, { confirmed: true }),
   channels: (): Promise<{ pagePid: string; name: string; platform: string }[]> => apiClient.get("/leads/channels"),
+  // Tên kênh gõ tay đã dùng của nguồn (vd "Khác") — gợi ý khi tạo kênh mới
+  channelNames: (source: string): Promise<string[]> => apiClient.get("/leads/channel-names", { source }),
   // Sale nhận lead: nhân sự phòng ban Lark "Bộ Phận Sales" (filtered=false: Lark lỗi → mọi nhân sự)
   saleCandidates: (): Promise<{ users: { id: number; name: string }[]; filtered: boolean; department: string }> =>
     apiClient.get("/leads/sales"),
