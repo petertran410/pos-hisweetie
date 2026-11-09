@@ -27,7 +27,6 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
-  AlertTriangle,
   PackageCheck,
   Truck,
 } from "lucide-react";
@@ -44,6 +43,7 @@ import { ColumnToggle } from "../shared/ColumnToggle";
 import { InvoicePickupSummaryModal } from "./InvoicePickupSummaryModal";
 import { MergeInvoicesModal } from "./MergeInvoicesModal";
 import { DeliveryBookingModal } from "./DeliveryBookingModal";
+import { InvoiceWarningIcon } from "./InvoiceWarningIcon";
 import { useCan } from "@/lib/hooks/useCan";
 import {
   useColumnVisibility,
@@ -1587,20 +1587,18 @@ export function InvoicesTable({
                           className="cursor-pointer"
                         />
                       </td>
-                      {/* Cột ngầm cảnh báo lệch giá bảng giá 2/3 */}
+                      {/* Cột ngầm cảnh báo: lệch giá bảng giá 2/3, lệch SL so với đơn đặt */}
                       <td
                         className={`w-8 px-2 py-2.5 text-center ${
                           expandedInvoiceId === invoice.id
                             ? "border-t-2 border-brand"
                             : ""
                         }`}>
-                        {invoice.hasPriceBookWarning && (
-                          <span
-                            title="Có sản phẩm bán thấp hơn giá niêm yết của bảng giá"
-                            className="inline-flex">
-                            <AlertTriangle className="w-4 h-4 text-yellow-500 fill-yellow-100" />
-                          </span>
-                        )}
+                        <InvoiceWarningIcon
+                          invoiceCode={invoice.code}
+                          warnings={invoice.warnings}
+                          hasPriceBookWarning={invoice.hasPriceBookWarning}
+                        />
                       </td>
                       {visibleColumns.map((col) => (
                         <td

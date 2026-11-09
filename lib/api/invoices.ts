@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/config/api";
-import type { InvoiceCustomer, InvoicePaymentNote } from "@/lib/types/invoice";
+import type { InvoiceCustomer, InvoiceListWarnings, InvoicePaymentNote } from "@/lib/types/invoice";
 import type { ColdCargoWarning } from "@/lib/types/cold-cargo-warning";
 
 export interface Invoice extends ColdCargoWarning {
@@ -47,6 +47,10 @@ export interface Invoice extends ColdCargoWarning {
   }>;
   /** Backend tính theo batch ID của trang hiện tại (bảng giá 2/3). */
   hasPriceBookWarning?: boolean;
+  /** SL theo sản phẩm (quy về đơn vị cơ bản) khác đơn đặt hàng gốc. */
+  hasQuantityWarning?: boolean;
+  /** Chi tiết lý do cảnh báo cho tooltip; null khi không có cảnh báo. */
+  warnings?: InvoiceListWarnings | null;
 }
 
 export interface InvoicesResponse {
