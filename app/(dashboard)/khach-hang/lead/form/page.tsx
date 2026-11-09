@@ -64,7 +64,6 @@ export default function LeadFormsPage() {
                   <th className={th}>Tên form</th>
                   <th className={th}>Đường dẫn</th>
                   <th className={th}>Nguồn · Kênh</th>
-                  <th className={th}>CSKH</th>
                   <th className={th}>Lượt gửi</th>
                   <th className={th}>Đang mở</th>
                   <th className={th}>Ngày tạo</th>
@@ -74,14 +73,14 @@ export default function LeadFormsPage() {
               <tbody>
                 {isLoading && (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-gray-500">
+                    <td colSpan={7} className="py-8 text-center text-gray-500">
                       Đang tải…
                     </td>
                   </tr>
                 )}
                 {forms?.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-gray-500">
+                    <td colSpan={7} className="py-8 text-center text-gray-500">
                       Chưa có form nào — bấm “Tạo form” để bắt đầu
                     </td>
                   </tr>
@@ -101,7 +100,6 @@ export default function LeadFormsPage() {
                       {LEAD_SOURCE_LABEL[f.source]}
                       {f.channelName && <span className="text-gray-500"> · {f.channelName}</span>}
                     </td>
-                    <td className={td}>{f.cskhUserName ?? "—"}</td>
                     <td className={td}>
                       <button onClick={() => setViewing(f)} className="inline-flex items-center gap-1 text-brand hover:underline">
                         <Inbox className="h-3.5 w-3.5" /> {f.submissionCount}

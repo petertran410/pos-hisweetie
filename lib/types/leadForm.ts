@@ -34,8 +34,6 @@ export interface LeadForm {
   channelPid: string | null;
   channelName: string | null;
   category: LeadCategory | null;
-  cskhUserId: number | null;
-  cskhUserName: string | null;
   successMessage: string | null;
   isActive: boolean;
   submissionCount: number;
@@ -44,7 +42,7 @@ export interface LeadForm {
 }
 
 export type LeadFormInput = Partial<
-  Omit<LeadForm, "id" | "cskhUserName" | "submissionCount" | "createdByName" | "createdAt" | "category">
+  Omit<LeadForm, "id" | "submissionCount" | "createdByName" | "createdAt" | "category">
 > & { category?: LeadCategory | "" };
 
 export interface LeadFormAnswer {

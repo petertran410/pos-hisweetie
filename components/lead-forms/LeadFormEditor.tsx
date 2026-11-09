@@ -15,9 +15,7 @@ import {
 import { toast } from "sonner";
 import { leadsApi } from "@/lib/api/leads";
 import { leadFormsApi } from "@/lib/api/leadForms";
-import { useUsers } from "@/lib/hooks/useUsers";
 import { useNewLocations } from "@/lib/hooks/useNewLocations";
-import { useAuthStore } from "@/lib/store/auth";
 import { FilterSearchableSelect } from "@/components/ui/filters";
 import {
   LEAD_CATEGORY_LABEL,
@@ -161,7 +159,7 @@ function DefaultValueInput({
   );
 }
 
-/** Tạo / sửa form thu thập lead: thông tin, nguồn / kênh / CSKH mặc định, trường + câu hỏi thêm. */
+/** Tạo / sửa form thu thập lead: thông tin, nguồn / kênh mặc định, trường + câu hỏi thêm. */
 export function LeadFormEditor({
   form,
   onClose,
@@ -170,8 +168,6 @@ export function LeadFormEditor({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
-  const userId = useAuthStore((s) => s.user?.id ?? null);
-  const { data: users } = useUsers();
   const { data: allChannels } = useQuery({
     queryKey: ["leadChannels"],
     queryFn: () => leadsApi.channels(),
@@ -190,9 +186,6 @@ export function LeadFormEditor({
       (form && (SOURCE_CHANNEL_NAMES[form.source] || form.source === "other")
         ? (form.channelName ?? "")
         : ""),
-  );
-  const [cskhUserId, setCskhUserId] = useState<number | null>(
-    form ? form.cskhUserId : userId,
   );
   const [successMessage, setSuccessMessage] = useState(
     form?.successMessage ?? "",
@@ -291,7 +284,6 @@ export function LeadFormEditor({
         channelName: freeChannel
           ? channel.trim()
           : (channelOptions.find((c) => c.value === channel)?.label ?? ""),
-        cskhUserId,
         successMessage,
         isActive,
         fields: fields.map((f) => {
@@ -427,7 +419,7 @@ export function LeadFormEditor({
 
           {/* 2. Lead tạo từ form */}
           <section className={`${section} bg-white`}>
-            {sectionTitle(2, "Lead tạo từ form", "Nguồn, kênh và người nhận của lead khi khách gửi form")}
+            {sectionTitle(2, "Lead tạo từ form", "Nguồn, kênh của lead khi khách gửi form · báo lead mới vào nhóm Lark nhận lead")}
             <div id="lf-source">
               <span className={label}>
                 Nguồn <span className="text-red-500">*</span>
@@ -491,20 +483,6 @@ export function LeadFormEditor({
                     }
                   />
                 )}
-              </div>
-              <div>
-                <span className={label}>CSKH phụ trách (nhận báo Lark)</span>
-                <FilterSearchableSelect
-                  size="form"
-                  options={(users ?? []).map((u) => ({
-                    value: String(u.id),
-                    label: u.name,
-                  }))}
-                  value={cskhUserId ? String(cskhUserId) : ""}
-                  onChange={(v) => setCskhUserId(v ? Number(v) : null)}
-                  placeholder="— Chọn —"
-                  searchPlaceholder="Tìm nhân sự…"
-                />
               </div>
             </div>
           </section>
