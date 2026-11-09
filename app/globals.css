@@ -39,6 +39,35 @@ html {
   --dt-shadow-card: 0 12px 32px rgba(0, 183, 204, 0.12);
 }
 
+/* Side chat (components/chat): viền focus bàn phím thống nhất màu brand */
+.chat-ui :is(a, button, select, summary, [role="button"], [role="radio"], [role="tab"], [tabindex]):focus-visible,
+.chat-ui:is(a, button, [tabindex]):focus-visible {
+  outline: 2px solid rgb(0 183 204 / 75%);
+  outline-offset: 1px;
+}
+.chat-ui :is(input, textarea):focus-visible {
+  box-shadow: 0 0 0 2px rgb(0 183 204 / 25%);
+}
+/* "Xem tin nhắn gốc": nháy nền tin vừa cuộn tới */
+@keyframes chat-flash {
+  0%, 60% { background-color: rgb(0 183 204 / 18%); }
+  100% { background-color: transparent; }
+}
+.chat-flash {
+  animation: chat-flash 1.6s ease-out;
+  border-radius: 0.5rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-flash { animation: none; background-color: rgb(0 183 204 / 12%); }
+}
+/* Màn hẹp (khung chat dạng sheet, cảm ứng): nút icon chính tối thiểu 40px */
+@media (max-width: 1023px) {
+  .chat-ui .chat-tap {
+    min-height: 40px;
+    min-width: 40px;
+  }
+}
+
 @font-face {
   font-family: "fg-sf-pro-display-medium-otf";
   src: url("https://media.hisweetievietnam.com/fonts/api/font-file.php?id=sf-pro-display-medium-otf")

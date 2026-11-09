@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FileCheck2, X } from "lucide-react";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
@@ -43,6 +44,7 @@ const FORM_OPTIONS = [
   { value: "PHIEU_THU", label: "PHIẾU THU" },
   { value: "PHIEU_CHI_KHO_HN", label: "PHIẾU CHI KHO HN" },
   { value: "PHIEU_CHI_KHO_SG", label: "PHIẾU CHI KHO SG" },
+  { value: "TAM_UNG_LUONG", label: "TẠM ỨNG LƯƠNG" },
 ];
 const FORM_LABELS = Object.fromEntries(
   FORM_OPTIONS.map((option) => [option.value, option.label]),
@@ -204,8 +206,10 @@ export default function DonLarkApprovalPage() {
     });
   }, [branchId, formKind, scope, status, suspect]);
 
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  // Link "Xem đơn Lark" từ Phiếu chi văn phòng: ?search=<mã phiếu>.
+  const searchParam = useSearchParams().get("search")?.trim() || "";
+  const [search, setSearch] = useState(searchParam);
+  const [debouncedSearch, setDebouncedSearch] = useState(searchParam);
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
     return () => clearTimeout(timer);
@@ -312,7 +316,7 @@ export default function DonLarkApprovalPage() {
             FORM_OPTIONS,
             formKind,
             setFormKind,
-            "Cả 4 form",
+            "Tất cả form",
           )}
           {selectFilter(
             "Trạng thái Lark",

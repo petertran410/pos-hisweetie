@@ -2,12 +2,17 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, Loader2, UserPlus } from "lucide-react";
+import { ExternalLink, Loader2, Pencil, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { useCan } from "@/lib/hooks/useCan";
 import type { ThreadSource } from "@/lib/chat/threadSource";
+import { platformLabel } from "@/lib/chat/platforms";
 import { ZaloAvatar } from "./ZaloAvatar";
+import { ThreadKindLogo } from "./ThreadKindIcon";
+import { MetaAiSwitch } from "./MetaAiSwitch";
+import { RenameThreadModal } from "./RenameThreadModal";
 import { confirmAction, openExternal } from "@/lib/chat/confirm";
+import { useChatSidebarStore } from "@/lib/store/chatSidebar";
 
 interface Props {
   source: ThreadSource;
@@ -15,10 +20,13 @@ interface Props {
   // Hiện cùng hàng bên phải (vd Trực tiếp/Nhóm) và dòng phụ bên dưới (chọn nhóm)
   actions?: React.ReactNode;
   extra?: React.ReactNode;
+  // Messenger đang do Meta AI trả lời mà nhân viên đã bấm tắt (tin gửi tiếp kèm HUMAN_AGENT)
+  takeOver?: boolean;
+  onTakeOverChange?: (v: boolean) => void;
 }
 
 /** Thanh đầu hội thoại: avatar + tên Zalo của khách/nhóm, dòng trạng thái kết bạn. */
-export function ChatThreadHeader({ source, channelName, actions, extra }: Props) {
+export function ChatThreadHeader({ source, channelName, actions, extra, takeOver = false, onTakeOverChange }: Props) {
   const profileKey = ["smaxZaloProfile", source.key];
   const { data: p, isLoading } = useQuery({
     queryKey: profileKey,
@@ -31,8 +39,45 @@ export function ChatThreadHeader({ source, channelName, actions, extra }: Props)
   const canSend = useCan("smax_chat", "send");
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
+  const [renaming, setRenaming] = useState(false);
   const isGroup = source.kind === "group";
   const f = p?.friend;
+
+  // Messenger: Meta Business AI đang trả lời (tắt cục bộ = chờ nhân viên gửi tin kèm HUMAN_AGENT)
+  const metaAiOn = p?.controlledBy === "META_AI" && !takeOver;
+  const toggleMetaAi = async () => {
+    if (metaAiOn) {
+      onTakeOverChange?.(true);
+      toast.info("Đã tắt Meta AI cho hội thoại này — tin bạn gửi tiếp theo sẽ lấy lại quyền trả lời");
+      return;
+    }
+    if (p?.controlledBy === "META_AI") return onTakeOverChange?.(false);
+    // Bật ngay, không hỏi xác nhận (người dùng chủ động bấm công tắc)
+    setBusy(true);
+    try {
+      await source.passControlAI(true);
+      queryClient.setQueryData(profileKey, p && { ...p, controlledBy: "META_AI" });
+      queryClient.invalidateQueries({ queryKey: ["smaxRecentChats"] });
+      onTakeOverChange?.(false);
+      toast.success("Đã bật Meta Business AI cho hội thoại");
+    } catch (e) {
+      toast.error((e as Error).message || "Không bật được Meta Business AI");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const rename = async (name: string) => {
+    const res = await source.rename(name);
+    const shown = res.alias || res.name;
+    queryClient.setQueryData(profileKey, p && { ...p, smaxName: res.name, alias: res.alias, name: shown });
+    // Hội thoại chưa gắn khách đang mở: thanh đầu sidebar đọc tên đã lưu khi mở
+    const st = useChatSidebarStore.getState();
+    if (st.loose?.tid === source.tid) st.openLoose({ ...st.loose, name: shown }, st.ownerId);
+    queryClient.invalidateQueries({ queryKey: ["smaxRecentChats"] });
+    queryClient.invalidateQueries({ queryKey: ["smaxSharedGroups"] });
+    toast.success(`Đã đổi tên thành "${shown}"`);
+  };
 
   const act = async (action: "request" | "accept" | "undo") => {
     const label = { request: "gửi lời mời kết bạn", accept: "đồng ý kết bạn", undo: "thu hồi lời mời kết bạn" }[action];
@@ -57,40 +102,80 @@ export function ChatThreadHeader({ source, channelName, actions, extra }: Props)
     }
   };
 
-  const subtitle = isGroup
-    ? `Nhóm Zalo${p?.memberCount ? ` · ${p.memberCount} thành viên` : ""}`
-    : f?.isFriend
-      ? "Zalo cá nhân · Bạn bè"
-      : "Zalo cá nhân";
+  const threadName = p?.name || source.name || source.zaloId;
+  // Đã gắn khách POS (không phải nhóm): tên khách lên tiêu đề, tên trên kênh xuống dòng phụ
+  const posName = !isGroup ? source.customerName || null : null;
+  const subtitle =
+    source.platform !== "zaloweb"
+      ? `${platformLabel(source.platform)}${p?.isComment ? " · Bình luận bài viết" : ""}`
+      : isGroup
+        ? `Nhóm Zalo${p?.memberCount ? ` · ${p.memberCount} thành viên` : ""}`
+        : f?.isFriend
+          ? "Zalo cá nhân · Bạn bè"
+          : "Zalo cá nhân";
+  const subtitleText = posName && !isLoading && threadName !== posName ? `${subtitle} · ${threadName}` : subtitle;
 
   return (
     <div className="border-b bg-white">
-      <div className="flex items-center gap-2 px-3 py-1.5">
+      {/* Khung hẹp: nhóm nút tự xuống dòng để tên hội thoại không bị cắt cụt */}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1">
         <ZaloAvatar
           avatar={p?.avatar ?? null}
           isGroup={isGroup}
           members={p?.memberPreview}
           memberCount={p?.memberCount}
         />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold leading-tight">
-            {isLoading ? "…" : p?.name || source.name || source.zaloId}
-          </p>
-          <p className="truncate text-[11px] text-gray-500">{subtitle}</p>
+        <div className="min-w-[7rem] flex-1">
+          <div className="flex min-w-0 items-center gap-1">
+            <p className="truncate text-sm font-semibold leading-tight">
+              {posName || (isLoading ? "…" : threadName)}
+            </p>
+            {p?.canRename && canSend && (
+              <button
+                onClick={() => setRenaming(true)}
+                title={isGroup ? "Đổi tên nhóm (trên Smax)" : "Đổi tên hội thoại (trên Smax)"}
+                aria-label="Đổi tên hội thoại"
+                className="shrink-0 rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-brand">
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <p className="truncate text-xs text-gray-500" title={subtitleText}>{subtitleText}</p>
         </div>
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+        {p?.canPassControlAI && canSend && (
+          <MetaAiSwitch on={metaAiOn} busy={busy} onClick={toggleMetaAi} />
+        )}
+        {p?.commentUrl && (
+          <a
+            href={p.commentUrl}
+            target="_blank"
+            rel="noreferrer"
+            title="Mở bình luận trên bài viết Facebook"
+            aria-label="Mở bình luận trên bài viết Facebook"
+            className="chat-tap flex h-8 w-8 items-center justify-center rounded hover:bg-gray-100">
+            <ThreadKindLogo isComment className="h-4 w-4" />
+          </a>
+        )}
         {p?.smaxUrl && (
           <a
             href={p.smaxUrl}
             target="_blank"
             rel="noreferrer"
             title="Mở hội thoại trên Smax"
-            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-brand">
+            aria-label="Mở hội thoại trên Smax"
+            className="chat-tap flex h-8 w-8 items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-brand">
             <ExternalLink className="h-4 w-4" />
           </a>
         )}
         {actions}
+        </div>
       </div>
-      {extra && <div className="px-3 pb-1.5">{extra}</div>}
+      {extra && <div className="px-3 pb-1">{extra}</div>}
+      {renaming && p && (
+        <RenameThreadModal profile={p} isGroup={isGroup} onSave={rename} onClose={() => setRenaming(false)} />
+      )}
+
 
       {!isGroup && f && !f.isFriend && (
         <div className="flex items-center gap-2 border-t bg-amber-50 px-3 py-1.5 text-xs text-amber-900">

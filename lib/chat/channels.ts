@@ -13,11 +13,11 @@ export function pickChannel(channels: ChatChannel[], pagePid: string | null): Ch
   );
 }
 
-/** Kênh Zalo của tôi + kênh đang chọn (dùng chung đầu sidebar, thanh thu gọn, gần đây). */
+/** Kênh của tôi (mọi nền tảng) + kênh đang chọn (dùng chung đầu sidebar, thanh thu gọn, gần đây). */
 export function useActiveChannel(enabled = true) {
   const { data: channels, isLoading } = useMyChannels(enabled);
   const pagePid = useChatSidebarStore((s) => s.pagePid);
   const channel = channels ? pickChannel(channels, pagePid) : undefined;
-  const usable = (channels ?? []).filter((c) => !c.missing && c.platform === "zaloweb");
+  const usable = (channels ?? []).filter((c) => !c.missing);
   return { channels: channels ?? [], usable, channel, isLoading };
 }

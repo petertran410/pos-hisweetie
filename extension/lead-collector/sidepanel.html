@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>Tạo lead nhanh</title>
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Tạo lead nhanh</h1>
+      <select id="env" title="POS"></select>
+    </header>
+    <p id="session" class="muted"></p>
+
+    <button id="collect" type="button" class="secondary">Thu thập thông tin lead</button>
+    <p id="collectInfo" class="muted"></p>
+
+    <form id="form">
+      <label>Tên khách *<input id="name" required maxlength="200" autocomplete="off" /></label>
+      <label>SĐT<input id="phone" maxlength="20" inputmode="tel" autocomplete="off" /></label>
+      <div id="phoneChips" class="chips"></div>
+      <div id="dupes"></div>
+      <label>Nguồn *<select id="source" required><option value="">— Chọn —</option></select></label>
+      <label id="channelRow">Kênh<select id="channel"><option value="">— Chọn kênh —</option></select></label>
+      <label>Phân loại *<select id="category" required><option value="">— Chọn —</option></select></label>
+      <div class="row">
+        <label>Tỉnh/Thành<select id="province"><option value="">— Chọn —</option></select></label>
+        <label>Phường/Xã<select id="ward"><option value="">Chọn tỉnh trước</option></select></label>
+      </div>
+      <label>Nhu cầu<textarea id="need" rows="3" maxlength="4000"></textarea></label>
+      <label>Ghi chú CSKH (đơn hàng gần nhất…)<textarea id="note" rows="6" maxlength="4000"></textarea></label>
+      <button id="submit" type="submit">Tạo Lead</button>
+      <p id="result"></p>
+    </form>
+    <script type="module" src="sidepanel.js"></script>
+  </body>
+</html>

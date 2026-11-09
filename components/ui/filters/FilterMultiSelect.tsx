@@ -4,11 +4,15 @@ import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Check, Search, X } from "lucide-react";
 import { useDropdownPosition } from "./useDropdownPosition";
+import { foldSearch } from "./foldSearch";
 
 export interface FilterOption {
   value: string;
   label: string;
   group?: string;
+  /** Hiện nhưng không chọn được; `hint` nói lý do. */
+  disabled?: boolean;
+  hint?: string;
 }
 
 interface FilterMultiSelectProps {
@@ -25,6 +29,8 @@ interface FilterMultiSelectProps {
   panelWidth?: number;
   /** Nút phụ ở cuối mỗi dòng (vd nút sửa). Click vào không toggle chọn. */
   renderOptionAction?: (option: FilterOption) => ReactNode;
+  /** Ẩn lựa chọn `disabled` cho tới khi gõ tìm (tìm vẫn ra, kèm lý do). */
+  hideDisabledUntilSearch?: boolean;
 }
 
 /**
@@ -41,6 +47,7 @@ export function FilterMultiSelect({
   multiLabel = (n) => `Đã chọn ${n}`,
   panelWidth,
   renderOptionAction,
+  hideDisabledUntilSearch = false,
 }: FilterMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -70,14 +77,18 @@ export function FilterMultiSelect({
   }, []);
 
   useEffect(() => {
-    if (open && searchable) searchInputRef.current?.focus();
-  }, [open, searchable]);
+    // Panel chỉ được render sau khi tính xong vị trí (pos) → focus khi đã có panel.
+    if (open && searchable && pos) searchInputRef.current?.focus();
+  }, [open, searchable, !!pos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return options;
-    return options.filter((o) => o.label.toLowerCase().includes(q));
-  }, [options, search]);
+    const q = foldSearch(search.trim());
+    if (!q)
+      return hideDisabledUntilSearch
+        ? options.filter((o) => !o.disabled)
+        : options;
+    return options.filter((o) => foldSearch(o.label).includes(q));
+  }, [options, search, hideDisabledUntilSearch]);
 
   const selectedLabels = useMemo(
     () => options.filter((o) => values.includes(o.value)).map((o) => o.label),
@@ -85,6 +96,7 @@ export function FilterMultiSelect({
   );
 
   const toggle = (v: string) => {
+    if (options.find((o) => o.value === v)?.disabled) return;
     onChange(
       values.includes(v) ? values.filter((x) => x !== v) : [...values, v],
     );
@@ -186,23 +198,33 @@ export function FilterMultiSelect({
                         } ${idx > 0 && !showGroup ? "border-t border-gray-50" : ""}`}>
                         <button
                           type="button"
+                          disabled={opt.disabled}
                           onClick={() => toggle(opt.value)}
-                          className="flex-1 min-w-0 flex items-center gap-2.5 px-3 py-2 text-sm text-left">
+                          title={opt.hint}
+                          className="flex-1 min-w-0 flex items-center gap-2.5 px-3 py-2 text-sm text-left disabled:cursor-not-allowed">
                           <input
                             type="checkbox"
                             checked={checked}
+                            disabled={opt.disabled}
                             onChange={() => {}}
                             className="w-3.5 h-3.5 accent-brand flex-shrink-0"
                           />
                           <span
                             title={opt.label}
                             className={`flex-1 truncate ${
-                              checked
-                                ? "text-brand-dark font-medium"
-                                : "text-gray-700"
+                              opt.disabled
+                                ? "text-gray-400"
+                                : checked
+                                  ? "text-brand-dark font-medium"
+                                  : "text-gray-700"
                             }`}>
                             {opt.label}
                           </span>
+                          {opt.hint && (
+                            <span className="flex-shrink-0 text-xs text-gray-400">
+                              {opt.hint}
+                            </span>
+                          )}
                           {checked && (
                             <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
                           )}

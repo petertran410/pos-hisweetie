@@ -84,6 +84,8 @@ export const ROUTE_PERMISSIONS: Record<
   "/khach-hang/demand-oem": { resource: "customer_demand", action: "view" },
   "/khach-hang/hop-dong": { resource: "contracts", action: "view" },
   "/khach-hang/theo-doi-cong-no": { resource: "debt_tracking", action: "view" },
+  "/khach-hang/lead/form": { resource: "leads", action: "update" },
+  "/khach-hang/lead": { resource: "leads", action: "view" },
   "/khach-hang": { resource: "customers", action: "view" },
   "/so-quy": { resource: "cash_flows", action: "view" },
   "/tai-chinh/so-quy": { resource: "cash_flows", action: "view" },
@@ -99,6 +101,10 @@ export const ROUTE_PERMISSIONS: Record<
   "/tai-chinh/approval-tuan": { resource: "weekly_approval", action: "view" },
   "/tai-chinh/don-lark-approval": {
     resource: "lark_approval",
+    action: "view",
+  },
+  "/tai-chinh/tam-ung-luong": {
+    resource: "salary_advance",
     action: "view",
   },
   "/tai-chinh/xe-co": [
@@ -373,6 +379,12 @@ export const NAV_CONFIG: NavSection[] = [
         label: "Đơn Lark Approval",
         href: "/tai-chinh/don-lark-approval",
         permission: { resource: "lark_approval", action: "view" },
+      },
+      {
+        key: "salary-advances",
+        label: "Tạm ứng lương",
+        href: "/tai-chinh/tam-ung-luong",
+        permission: { resource: "salary_advance", action: "view" },
       },
       {
         key: "vehicle-finance",

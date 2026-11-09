@@ -44,6 +44,8 @@ interface InvoicesSidebarProps {
   showColdCargoFilter?: boolean;
   /** Hiện filter "Thời gian cập nhật" (updatedAt) — chỉ dùng cho trang hóa đơn VAT */
   showUpdatedTimeFilter?: boolean;
+  /** Hiện filter "Thời gian đẩy Misa" (misaSyncedAt) — chỉ dùng cho trang hóa đơn VAT */
+  showMisaSyncedTimeFilter?: boolean;
 }
 
 const STATUS_OPTIONS = [
@@ -418,6 +420,7 @@ export function InvoicesSidebar({
   showPriceWarningFilter = false,
   showColdCargoFilter = false,
   showUpdatedTimeFilter = false,
+  showMisaSyncedTimeFilter = false,
 }: InvoicesSidebarProps) {
   const { data: branches } = useBranches();
   const activeBranches = useMemo(
@@ -509,6 +512,16 @@ export function InvoicesSidebar({
     fromDate: saved.current?.updatedRange?.fromDate ?? "",
     toDate: saved.current?.updatedRange?.toDate ?? "",
   }));
+  // Thời gian đẩy Misa (misaSyncedAt) — chỉ dùng khi showMisaSyncedTimeFilter bật.
+  const [misaSyncedRange, setMisaSyncedRange] = useState<TimeRangeState>(
+    () => ({
+      dateMode: saved.current?.misaSyncedRange?.dateMode ?? "preset",
+      selectedPreset:
+        saved.current?.misaSyncedRange?.selectedPreset ?? "all_time",
+      fromDate: saved.current?.misaSyncedRange?.fromDate ?? "",
+      toDate: saved.current?.misaSyncedRange?.toDate ?? "",
+    })
+  );
   const [creatorIds, setCreatorIds] = useState<string[]>(
     saved.current?.creatorIds || []
   );
@@ -575,6 +588,7 @@ export function InvoicesSidebar({
       createdRange,
       purchaseRange,
       updatedRange,
+      misaSyncedRange,
       creatorIds,
       soldByIds,
       saleChannelId,
@@ -597,6 +611,7 @@ export function InvoicesSidebar({
     createdRange,
     purchaseRange,
     updatedRange,
+    misaSyncedRange,
     creatorIds,
     soldByIds,
     saleChannelId,
@@ -677,6 +692,12 @@ export function InvoicesSidebar({
         updatedRange.dateMode === "custom")
     )
       n++;
+    if (
+      showMisaSyncedTimeFilter &&
+      (misaSyncedRange.selectedPreset !== "all_time" ||
+        misaSyncedRange.dateMode === "custom")
+    )
+      n++;
     if (creatorIds.length > 0) n++;
     if (soldByIds.length > 0) n++;
     if (saleChannelId) n++;
@@ -699,6 +720,8 @@ export function InvoicesSidebar({
     splitTimeFilters,
     updatedRange,
     showUpdatedTimeFilter,
+    misaSyncedRange,
+    showMisaSyncedTimeFilter,
     creatorIds,
     soldByIds,
     saleChannelId,
@@ -759,6 +782,14 @@ export function InvoicesSidebar({
           f.toUpdatedDate = updatedIso.to;
         }
       }
+      // Thời gian đẩy Misa → misaSyncedAt (chỉ khi bật — trang hóa đơn VAT).
+      if (showMisaSyncedTimeFilter) {
+        const misaSyncedIso = rangeToIso(misaSyncedRange);
+        if (misaSyncedIso) {
+          f.fromMisaSyncedDate = misaSyncedIso.from;
+          f.toMisaSyncedDate = misaSyncedIso.to;
+        }
+      }
 
       if (paymentMethod) f.paymentMethod = paymentMethod;
       if (paymentMethod === "transfer" && selectedBankAccountIds.length > 0)
@@ -789,6 +820,8 @@ export function InvoicesSidebar({
     splitTimeFilters,
     updatedRange,
     showUpdatedTimeFilter,
+    misaSyncedRange,
+    showMisaSyncedTimeFilter,
     creatorIds,
     soldByIds,
     saleChannelId,
@@ -825,6 +858,12 @@ export function InvoicesSidebar({
       toDate: "",
     });
     setUpdatedRange({
+      dateMode: "preset",
+      selectedPreset: "all_time",
+      fromDate: "",
+      toDate: "",
+    });
+    setMisaSyncedRange({
       dateMode: "preset",
       selectedPreset: "all_time",
       fromDate: "",
@@ -1003,6 +1042,17 @@ export function InvoicesSidebar({
               label="Thời gian cập nhật"
               value={updatedRange}
               onChange={setUpdatedRange}
+            />
+          </>
+        )}
+
+        {showMisaSyncedTimeFilter && (
+          <>
+            <div className="border-t border-gray-100" />
+            <TimeRangeFilter
+              label="Thời gian đẩy Misa"
+              value={misaSyncedRange}
+              onChange={setMisaSyncedRange}
             />
           </>
         )}

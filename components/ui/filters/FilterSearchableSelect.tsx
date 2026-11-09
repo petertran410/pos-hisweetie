@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Check, Search } from "lucide-react";
 import { useDropdownPosition } from "./useDropdownPosition";
+import { foldSearch } from "./foldSearch";
 import type { FilterOption } from "./FilterMultiSelect";
 
 interface FilterSearchableSelectProps {
@@ -69,14 +70,15 @@ export function FilterSearchableSelect({
   }, []);
 
   useEffect(() => {
-    if (open && searchable) searchInputRef.current?.focus();
-  }, [open, searchable]);
+    // Panel chỉ được render sau khi tính xong vị trí (pos) → focus khi đã có panel.
+    if (open && searchable && pos) searchInputRef.current?.focus();
+  }, [open, searchable, !!pos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = foldSearch(search.trim());
     if (!q) return options;
     return options.filter((o) =>
-      (o.value + " " + o.label).toLowerCase().includes(q),
+      foldSearch(o.value + " " + o.label).includes(q),
     );
   }, [options, search]);
 

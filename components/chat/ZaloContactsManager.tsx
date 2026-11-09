@@ -9,6 +9,7 @@ import { ZaloContactEditor } from "./ZaloContactEditor";
 import { ZaloAvatar } from "./ZaloAvatar";
 import { confirmAction } from "@/lib/chat/confirm";
 import { SharedGroupsScanner } from "./SharedGroupsScanner";
+import { platformLabel } from "@/lib/chat/platforms";
 
 /** Danh sách ID Zalo cá nhân + nhóm của khách (thêm/xóa). Dùng ở sidebar và chi tiết khách. */
 export function ZaloContactsManager({ customerId }: { customerId: number }) {
@@ -25,13 +26,13 @@ export function ZaloContactsManager({ customerId }: { customerId: number }) {
   }
 
   const pagePid = ctx.myChannels.find((c) => c.platform === "zaloweb" && !c.missing)?.pagePid;
-  const { user, groups } = ctx.contacts;
+  const { user, groups, others } = ctx.contacts;
 
-  const row = (c: ZaloContact, label: string) => (
+  const row = (c: ZaloContact, label: string, rowPagePid = pagePid) => (
     <ContactRow
       key={c.id}
       customerId={customerId}
-      pagePid={pagePid}
+      pagePid={rowPagePid}
       contact={c}
       label={label}
       onRemove={
@@ -95,6 +96,20 @@ export function ZaloContactsManager({ customerId }: { customerId: number }) {
           <SharedGroupsScanner customerId={customerId} pagePid={pagePid} hasUserContact={!!user} />
         </div>
       </section>
+
+      {others.length > 0 && (
+        <section>
+          <h4 className="text-xs font-semibold uppercase text-gray-500 mb-1">Kênh khác</h4>
+          <ul className="flex flex-col gap-1">
+            {others.map((c) => {
+              // Hội thoại kênh khác gắn 1 kênh; chỉ đọc được tên/ảnh khi kênh đó liên kết với mình
+              const ch = ctx.myChannels.find((m) => m.pagePid === c.pagePid && !m.missing);
+              return row(c, `${platformLabel(ch?.platform)} · ${ch?.name ?? c.pagePid}`, ch?.pagePid);
+            })}
+          </ul>
+          <p className="mt-1 text-xs text-gray-500">Gắn thêm: mở hội thoại của khách trong danh sách gần đây của kênh đó.</p>
+        </section>
+      )}
     </div>
   );
 }

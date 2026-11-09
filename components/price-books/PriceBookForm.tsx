@@ -87,8 +87,10 @@ export function PriceBookForm({
         : priceBook?.priceBookBranches && priceBook.priceBookBranches.length > 0
           ? "specific"
           : "all",
+      // Checkbox giữ value dạng chuỗi và react-hook-form so sánh === nên mặc
+      // định cũng phải là chuỗi, nếu không ô đã lưu sẽ không được tick.
       selectedBranches:
-        priceBook?.priceBookBranches?.map((b) => b.branchId) || [],
+        priceBook?.priceBookBranches?.map((b) => String(b.branchId)) || [],
       customerGroupScope: priceBook?.forAllCusGroup
         ? "all"
         : priceBook?.priceBookCustomerGroups &&
@@ -96,13 +98,16 @@ export function PriceBookForm({
           ? "specific"
           : "all",
       selectedCustomerGroups:
-        priceBook?.priceBookCustomerGroups?.map((g) => g.customerGroupId) || [],
+        priceBook?.priceBookCustomerGroups?.map((g) =>
+          String(g.customerGroupId)
+        ) || [],
       userScope: priceBook?.forAllUser
         ? "all"
         : priceBook?.priceBookUsers && priceBook.priceBookUsers.length > 0
           ? "specific"
           : "all",
-      selectedUsers: priceBook?.priceBookUsers?.map((u) => u.userId) || [],
+      selectedUsers:
+        priceBook?.priceBookUsers?.map((u) => String(u.userId)) || [],
       customerScope: priceBook?.forAllCustomer
         ? "all"
         : priceBook?.priceBookCustomers &&

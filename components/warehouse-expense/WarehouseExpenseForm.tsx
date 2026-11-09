@@ -24,6 +24,10 @@ import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { toDateInput, vnDateKey, vnDayIso } from "@/lib/internal-finance/dates";
 import { WAREHOUSE_EXPENSE_ITEMS } from "@/lib/internal-finance/vehicle-constants";
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
+import {
+  isOfficeBranch,
+  OFFICE_BRANCH_IDS,
+} from "@/lib/internal-finance/office";
 import { useAuthStore } from "@/lib/store/auth";
 import { formatCurrency } from "@/lib/utils";
 
@@ -68,9 +72,10 @@ export function WarehouseExpenseForm({
   const { data: branchData } = useBranches();
   const branches = useMemo(
     () =>
+      // Kho và văn phòng; phiếu tay văn phòng trừ quỹ khi bấm Đã chi.
       asBranches(branchData).filter(
         (branch) =>
-          [1, 4, 6, 7].includes(branch.id) &&
+          [1, 6, ...OFFICE_BRANCH_IDS].includes(branch.id) &&
           access.can("warehouse_expense", "create", branch.id),
       ),
     [branchData, access],
@@ -219,7 +224,11 @@ export function WarehouseExpenseForm({
   return (
     <FinanceFormSheet
       title={expense ? "Sửa khoản chi" : "Tạo khoản chi khác"}
-      subtitle="Khoản chi sẽ được tổng hợp tuần và gửi Approval Lark."
+      subtitle={
+        isOfficeBranch(selectedBranchId)
+          ? "Bấm Đã chi trên danh sách để trừ quỹ văn phòng."
+          : "Khoản chi sẽ được tổng hợp tuần và gửi Approval Lark."
+      }
       onClose={onClose}
       onSubmit={submit}
       footer={

@@ -29,7 +29,11 @@ import { useAuthStore } from "@/lib/store/auth";
 import { InternalFinanceDateField } from "./InternalFinanceDateField";
 import { EvidenceUploadTiles } from "./EvidenceUploadTiles";
 import { FinanceFormActions, FinanceFormSheet } from "./FinanceFormSheet";
-import { formatCurrency } from "@/lib/utils";
+import {
+  formatCurrency,
+  formatNumberInput,
+  parseNumberInput,
+} from "@/lib/utils";
 
 const BRANCH_FALLBACK: Record<number, string> = {
   6: "Kho Hà Nội",
@@ -50,15 +54,14 @@ const UPLOAD_GROUPS: Record<
   ],
 };
 
-const parseNumber = (value: string) => {
-  const parsed = Number(value.replace(/[^\d.]/g, ""));
-  return value.trim() && Number.isFinite(parsed) ? parsed : null;
-};
+// Số tiền, đơn giá, ODO là số nguyên, hiện dấu phẩy ngăn cách khi gõ (500,000).
+const parseNumber = (value: string) =>
+  value.trim() ? parseNumberInput(value) : null;
 
 const numberText = (value: number | string | null | undefined) =>
   value === null || value === undefined || value === ""
     ? ""
-    : String(Number(value));
+    : formatNumberInput(String(Math.round(Number(value))));
 
 export function VehicleFinanceForm({
   kind: initialKind,
@@ -235,6 +238,11 @@ export function VehicleFinanceForm({
       toast.error("Cần nhập số tiền hợp lệ");
       return;
     }
+    // Phiếu xăng dầu bắt buộc đơn giá để tính số lít (giống app).
+    if (kind === "FUEL" && !(parsedUnitPrice && parsedUnitPrice > 0)) {
+      toast.error("Cần nhập đơn giá xăng dầu");
+      return;
+    }
     if (kind === "VEHICLE_CARE" && !serviceTypes.length) {
       toast.error("Cần chọn ít nhất một loại dịch vụ");
       return;
@@ -384,7 +392,7 @@ export function VehicleFinanceForm({
         <input
           inputMode="numeric"
           value={amount}
-          onChange={(event) => setAmount(event.target.value)}
+          onChange={(event) => setAmount(formatNumberInput(event.target.value))}
           className="dt-input h-10 w-full"
           placeholder="0"
           required
@@ -395,7 +403,7 @@ export function VehicleFinanceForm({
         <input
           inputMode="numeric"
           value={odo}
-          onChange={(event) => setOdo(event.target.value)}
+          onChange={(event) => setOdo(formatNumberInput(event.target.value))}
           className="dt-input h-10 w-full"
           placeholder="Số km trên đồng hồ"
         />
@@ -408,9 +416,12 @@ export function VehicleFinanceForm({
             <input
               inputMode="numeric"
               value={unitPrice}
-              onChange={(event) => setUnitPrice(event.target.value)}
+              onChange={(event) =>
+                setUnitPrice(formatNumberInput(event.target.value))
+              }
               className="dt-input h-10 w-full"
               placeholder="đ/lít"
+              required
             />
           </label>
           <div className={labelClass}>

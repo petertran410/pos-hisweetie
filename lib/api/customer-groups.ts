@@ -13,9 +13,21 @@ export interface CustomerGroup {
   }>;
   autoUpdateMode?: string;
   autoExecute?: boolean;
+  // false = nhóm đã hủy
+  isActive?: boolean;
+  customerCount?: number;
+  customerGroupDetails?: { id: number; customerId: number; groupId: number }[];
   _count?: {
     customerGroupDetails: number;
   };
+}
+
+export interface CancelledCustomerGroup {
+  id: number;
+  name: string;
+  description?: string | null;
+  createdAt: string;
+  creator?: { id: number; name: string } | null;
 }
 
 export interface CreateCustomerGroupDto {
@@ -66,7 +78,22 @@ export const customerGroupsApi = {
     return apiClient.put(`/customer-groups/${id}`, data);
   },
 
-  delete: async (id: number): Promise<{ message: string }> => {
-    return apiClient.delete(`/customer-groups/${id}`);
+  getCancelled: async (): Promise<{
+    data: CancelledCustomerGroup[];
+    total: number;
+  }> => {
+    return apiClient.get("/customer-groups/cancelled");
+  },
+
+  // Hủy nhóm (không xóa dữ liệu). removeCustomers = gỡ hết khách rồi hủy.
+  cancel: async (
+    id: number,
+    removeCustomers = false
+  ): Promise<{ message: string; removedCustomers: number }> => {
+    return apiClient.post(`/customer-groups/${id}/cancel`, { removeCustomers });
+  },
+
+  restore: async (id: number): Promise<{ message: string }> => {
+    return apiClient.post(`/customer-groups/${id}/restore`, {});
   },
 };

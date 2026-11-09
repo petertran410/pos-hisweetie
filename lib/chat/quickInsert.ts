@@ -5,7 +5,8 @@ import { priceBooksApi } from "@/lib/api/price-books";
 import { debtTrackingApi } from "@/lib/api/debt-tracking";
 import { smaxChatApi } from "@/lib/api/smaxChat";
 import { packingSlipsApi } from "@/lib/api/packing-slips";
-import type { ChatContext } from "@/lib/types/smaxChat";
+import { useAuthStore } from "@/lib/store/auth";
+import type { ChatContext, OutgoingAttachment } from "@/lib/types/smaxChat";
 import type { CartLine } from "@/lib/store/posInView";
 import { cartText, debtText, invoiceText, orderText, packingSlipText, productText } from "./quickTemplates";
 
@@ -13,7 +14,16 @@ import { cartText, debtText, invoiceText, orderText, packingSlipText, productTex
 export type QuickItem =
   | { type: "invoice" | "order" | "product" | "packingSlip"; id: number }
   | { type: "cart"; lines: CartLine[] }
-  | { type: "debt" };
+  | { type: "debt" }
+  // Tin nhắn nhanh (menu "#"): chèn nguyên nội dung
+  | { type: "text"; text: string; media?: OutgoingAttachment[] };
+
+// Bảng giá mặc định theo chi nhánh khi chưa chọn bảng giá ở /ban-hang: Kho Sài Gòn → BẢNG GIÁ LẺ HCM.
+// Chi nhánh khác (vd Kho Hà Nội) dùng Bảng giá chung = giá gốc.
+const BRANCH_DEFAULT_PRICE_BOOK: Record<number, number> = { 1: 22 };
+
+// Cùng key với bảng giá đang chọn ở /ban-hang (getPriceBookStorageKey)
+const posPriceBookKey = () => `pos-selected-price-book-${useAuthStore.getState().user?.id || "default"}`;
 
 export interface QuickPerms {
   canViewDebt: boolean;
@@ -41,16 +51,21 @@ export interface QuickResult {
   productImages?: ProductImagePick;
   // Chụp bản in (hoá đơn / đặt hàng) gửi kèm dạng ảnh
   printImage?: { templateFor: "invoice" | "order"; id: number; name: string };
+  // Ảnh/tệp đã có trên POS (media tin nhắn nhanh) — thêm thẳng vào tệp đính kèm
+  attachments?: OutgoingAttachment[];
 }
 
 /** Tải dữ liệu đầy đủ của mục và dựng tin (quyền POS do chính các API kiểm tra). */
 export async function buildQuickMessage(
   item: QuickItem,
-  ctx: ChatContext,
+  // null: hội thoại chưa gắn khách POS — chỉ dựng được tin sản phẩm
+  ctx: ChatContext | null,
   perms: QuickPerms,
   branchId: number | undefined
 ): Promise<QuickResult> {
   switch (item.type) {
+    case "text":
+      return { text: item.text, attachments: item.media?.length ? item.media : undefined };
     case "invoice": {
       const invoice = await invoicesApi.getInvoice(item.id);
       return {
@@ -73,11 +88,19 @@ export async function buildQuickMessage(
       if (perms.canViewSalePrice) {
         price = Number(product.basePrice ?? 0);
         if (perms.canViewPriceBooks) {
-          // Bảng giá áp dụng cho khách đang chat — như khi lên đơn ở /ban-hang
-          const info = await priceBooksApi
-            .getPriceForProduct({ productId: item.id, branchId, customerId: ctx.customer.id })
-            .catch(() => null);
-          if (info?.price != null) price = Number(info.price);
+          // Bảng giá đang chọn ở /ban-hang → bảng giá mặc định của chi nhánh → Bảng giá chung (giá gốc)
+          const priceIn = async (priceBookId: number) => {
+            const info = await priceBooksApi
+              .getPriceForProduct({ productId: item.id, branchId, priceBookId })
+              .catch(() => null);
+            return info?.priceBookId === priceBookId ? Number(info.price) : null;
+          };
+          const selected = Number(localStorage.getItem(posPriceBookKey()));
+          const branchDefault = branchId ? BRANCH_DEFAULT_PRICE_BOOK[branchId] : undefined;
+          const listed =
+            (selected > 0 ? await priceIn(selected) : null) ??
+            (branchDefault ? await priceIn(branchDefault) : null);
+          if (listed != null) price = listed;
         }
       }
       const inv = branchId ? product.inventories?.find((i) => i.branchId === branchId) : undefined;
@@ -110,7 +133,7 @@ export async function buildQuickMessage(
           documents: docs.map((d: any) => ({ code: d.code, customerName: d.customer?.name, soldByName: d.soldBy?.name })),
           creatorName: slip.creator?.name,
           // Cờ hàng lạnh tính sẵn ở "Báo đơn gần đây" (API chi tiết báo đơn không trả)
-          hasColdItems: ctx.recentPackingSlips?.find((r) => r.id === slip.id)?.hasColdItems,
+          hasColdItems: ctx?.recentPackingSlips?.find((r) => r.id === slip.id)?.hasColdItems,
         }),
         productImages: images.length
           ? { kind: "packingSlip", productId: slip.id, name: `Báo đơn ${slip.code}`, images }
@@ -118,6 +141,7 @@ export async function buildQuickMessage(
       };
     }
     case "debt": {
+      if (!ctx) throw new Error("Gắn khách POS cho hội thoại này để gửi công nợ");
       if (ctx.debt === null) throw new Error("Bạn không có quyền xem công nợ");
       const [detail, payment] = await Promise.all([
         perms.canViewDebtTracking

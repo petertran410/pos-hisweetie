@@ -61,7 +61,7 @@ const LABEL_CSS = `
 `;
 
 /** +84xxxxxxxxx → 0xxxxxxxxx cho dễ đọc trên tem. */
-function formatPhone(phone?: string | null): string {
+export function formatPhone(phone?: string | null): string {
   const p = (phone || "").trim();
   return p.startsWith("+84") ? `0${p.slice(3)}` : p;
 }
@@ -103,7 +103,7 @@ function latestPackages(groups: any[][]): number | null {
   return null;
 }
 
-function buildDefaults(invoice: Invoice, packages: number | null): LabelFields {
+export function buildDefaults(invoice: Invoice, packages: number | null): LabelFields {
   const inv: any = invoice;
   const customer = inv.customer || {};
   const delivery = inv.delivery || {};

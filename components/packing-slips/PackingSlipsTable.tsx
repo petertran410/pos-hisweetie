@@ -23,6 +23,8 @@ import {
   type ColumnConfig,
 } from "@/lib/hooks/useColumnVisibility";
 import { apiClient } from "@/lib/config/api";
+import { noteCash } from "@/lib/packing/payment-note";
+import { CashWarningBadge } from "./CashWarning";
 
 const PackingDetailRow = dynamic(
   () =>
@@ -268,7 +270,9 @@ export function PackingSlipsTable({
       render: (slip) =>
         slip.type === "giao-hang" ? (
           slip.paymentMethod === "cash" ? (
-            <span>Tiền mặt - {formatCurrency(slip.cashAmount)}</span>
+            <span className="font-bold">
+              Tiền mặt - {formatCurrency(slip.cashAmount)}
+            </span>
           ) : (
             <span>Chuyển khoản</span>
           )
@@ -277,21 +281,64 @@ export function PackingSlipsTable({
         ),
     },
     {
+      key: "cashInvoices",
+      label: "Thu tiền mặt",
+      visible: true,
+      width: "200px",
+      render: (slip) => {
+        // Mỗi hóa đơn ghi khách trả tiền mặt là 1 dòng: mã hóa đơn - số tiền thu.
+        const rows = (slip.invoices || []).flatMap((entry) => {
+          const amount = noteCash(entry.invoice?.paymentNote);
+          return entry.invoice && amount !== null
+            ? [{ code: entry.invoice.code, amount }]
+            : [];
+        });
+        if (rows.length === 0) return <span className="text-gray-400">-</span>;
+        return (
+          <div className="space-y-0.5">
+            {rows.map((row) => (
+              <div key={row.code} className="whitespace-nowrap">
+                <CodeLink entity="invoice" code={row.code} />
+                <span className="text-gray-400"> - </span>
+                <span className="font-bold text-amber-700">
+                  {formatCurrency(row.amount)} đ
+                </span>
+              </div>
+            ))}
+          </div>
+        );
+      },
+    },
+    {
       key: "coldWarning",
       label: "Cảnh báo",
       visible: true,
-      width: "145px",
-      render: (slip) =>
-        slip.hasColdItems ? (
-          <span
-            className="inline-flex items-center gap-1 font-semibold text-red-600"
-            title={`${slip.coldItemCount || 0} mặt hàng lạnh`}>
-            <Snowflake className="h-4 w-4 shrink-0" />
-            Hàng lạnh
-          </span>
-        ) : (
-          <span className="text-gray-400">-</span>
-        ),
+      width: "220px",
+      render: (slip) => {
+        // Phiếu đã hủy thì không cần cảnh báo lệch tiền mặt.
+        const cash = slip.cancelledAt ? null : slip.cashWarning;
+        if (!slip.hasColdItems && !cash)
+          return <span className="text-gray-400">-</span>;
+        return (
+          <div className="space-y-1">
+            {slip.hasColdItems && (
+              <div>
+                <span
+                  className="inline-flex items-center gap-1 font-semibold text-red-600"
+                  title={`${slip.coldItemCount || 0} mặt hàng lạnh`}>
+                  <Snowflake className="h-4 w-4 shrink-0" />
+                  Hàng lạnh
+                </span>
+              </div>
+            )}
+            {cash && (
+              <div>
+                <CashWarningBadge warning={cash} />
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "feeGuiBen",

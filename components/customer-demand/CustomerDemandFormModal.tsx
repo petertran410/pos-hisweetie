@@ -83,6 +83,7 @@ function CustomerDemandFormBody({
   const createDemand = useCreateCustomerDemand();
   const updateMonth = useUpdateCustomerDemandMonth();
   const nextLineKey = useRef(0);
+  const linesRef = useRef<HTMLDivElement>(null);
   const editMonth = demand?.months.find((month) => month.id === monthId);
   const copyMonth =
     copySource?.months.find((month) => month.id === copyMonthId) ?? null;
@@ -135,8 +136,8 @@ function CustomerDemandFormBody({
 
   const addProduct = (product: Product) => {
     nextLineKey.current += 1;
+    // Dòng mới lên đầu danh sách, giống giỏ hàng ở trang bán hàng.
     setLines((items) => [
-      ...items,
       {
         key: `new-${product.id}-${nextLineKey.current}`,
         product: {
@@ -149,8 +150,12 @@ function CustomerDemandFormBody({
         quantity: "",
         unit: "BASE",
       },
+      ...items,
     ]);
     setProductQuery("");
+    requestAnimationFrame(() =>
+      linesRef.current?.scrollTo({ top: 0, behavior: "smooth" })
+    );
   };
 
   const updateLine = (key: string, patch: Partial<FormLine>) => {
@@ -366,7 +371,7 @@ function CustomerDemandFormBody({
             )}
           </div>
 
-          <div className="cd-demand-lines min-h-0 flex-1">
+          <div ref={linesRef} className="cd-demand-lines min-h-0 flex-1">
             {lines.length === 0 ? (
               <div className="grid min-h-40 place-items-center rounded-[16px] bg-[var(--cd-bg)] px-4 text-center shadow-[inset_0_0_0_1px_var(--cd-hairline)]">
                 <div>

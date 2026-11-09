@@ -317,10 +317,18 @@ export function CustomerPaymentModal({
     const limitedValue = Math.min(numericValue, maxAmount);
 
     const formatted = formatNumberInput(limitedValue.toString());
-    setInvoicePayments((prev) => ({
-      ...prev,
-      [invoiceId]: formatted,
-    }));
+    const nextPayments = { ...invoicePayments, [invoiceId]: formatted };
+    setInvoicePayments(nextPayments);
+
+    // Tiền gắn hóa đơn không được vượt số tiền thu → tăng số tiền thu theo
+    // (không gọi handleTotalAmountChange để khỏi chia lại các hóa đơn).
+    const allocated = Object.values(nextPayments).reduce(
+      (sum, amt) => sum + parseNumberInput(amt),
+      0
+    );
+    if (allocated > parseNumberInput(totalAmount)) {
+      setTotalAmount(formatNumberInput(allocated.toString()));
+    }
   };
 
   const handleInvoiceDebtOffsetChange = (invoiceId: number, value: string) => {
@@ -377,8 +385,10 @@ export function CustomerPaymentModal({
       finalTransDate = parseDateTime(transDate);
     }
 
+    // Bảng cấn trừ chỉ hiện khi tick "Phân bổ vào hóa đơn" → bỏ tick thì
+    // không gửi cấn trừ (trước đây vẫn gửi cấn trừ mặc định đang bị ẩn).
     const debtOffsetsToApply =
-      availableCredit > 0
+      allocateToInvoices && availableCredit > 0
         ? Object.entries(invoiceDebtOffsets)
             .filter(([_, amount]) => parseNumberInput(amount) > 0)
             .map(([invoiceId, amount]) => ({
@@ -418,11 +428,18 @@ export function CustomerPaymentModal({
         return;
       }
 
+      const invoicesTotal = invoicesToPay.reduce(
+        (sum, inv) => sum + inv.amount,
+        0
+      );
       if (finalTotalAmount <= 0 && invoicesToPay.length > 0) {
-        finalTotalAmount = invoicesToPay.reduce(
-          (sum, inv) => sum + inv.amount,
-          0
+        finalTotalAmount = invoicesTotal;
+      }
+      if (invoicesTotal > finalTotalAmount) {
+        alert(
+          `Tổng tiền gắn vào hóa đơn (${formatCurrency(invoicesTotal)}) vượt số tiền thu (${formatCurrency(finalTotalAmount)})`
         );
+        return;
       }
     } else {
       if (finalTotalAmount <= 0 && debtOffsetsToApply.length === 0) {

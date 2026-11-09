@@ -1,7 +1,7 @@
 import { toast } from "sonner";
 import { API_URL, getAuthHeaders } from "@/lib/config/api";
 import type { ChatMessage } from "@/lib/types/smaxChat";
-import { isImage, isVideo } from "@/components/chat/AttachmentPreviewModal";
+import { isAudio, isImage, isVideo } from "@/components/chat/AttachmentPreviewModal";
 
 const byTime = (list: ChatMessage[]) =>
   [...list].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
@@ -9,13 +9,15 @@ const byTime = (list: ChatMessage[]) =>
 /** Trích đoạn ngắn của tin (để hiện "Đang trả lời…"): loại nội dung + chữ, vd "[Hình ảnh] giá sỉ". */
 export function messagePreview(m: ChatMessage): string {
   const text = m.text.trim();
-  const tag = m.stickerId
+  const tag = m.stickerId || m.stickerImage
     ? "[Sticker]"
     : m.attachments.some(isImage)
       ? "[Hình ảnh]"
       : m.attachments.some(isVideo)
         ? "[Video]"
-        : m.attachments.length
+        : m.attachments.some(isAudio)
+          ? "[Tin nhắn thoại]"
+          : m.attachments.length
           ? `[Tệp] ${m.attachments[0].title}`
           : "";
   if (!tag) return text ? text.slice(0, 120) : "[Tin nhắn]";
@@ -38,6 +40,10 @@ export async function copyMessages(list: ChatMessage[]) {
     toast.info("Các tin đã chọn không có chữ để sao chép");
     return;
   }
+  await copyText(text, list.length > 1 ? `Đã sao chép ${list.length} tin` : "Đã sao chép");
+}
+
+export async function copyText(text: string, success = "Đã sao chép") {
   try {
     await navigator.clipboard.writeText(text);
   } catch {
@@ -47,7 +53,43 @@ export async function copyMessages(list: ChatMessage[]) {
       return;
     }
   }
-  toast.success(list.length > 1 ? `Đã sao chép ${list.length} tin` : "Đã sao chép");
+  toast.success(success);
+}
+
+/** Sao chép ảnh vào clipboard (dán được vào Zalo/Word…); không hỗ trợ → sao chép link ảnh. */
+export async function copyImage(url: string) {
+  if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+    try {
+      // Truyền Promise để giữ "thao tác người dùng" trong lúc tải (Safari)
+      const png = fetchMediaBlob(url).then(toPng);
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
+      toast.success("Đã sao chép ảnh");
+      return;
+    } catch {
+      // rơi xuống sao chép link
+    }
+  }
+  await copyText(url, "Đã sao chép link ảnh");
+}
+
+// Clipboard chỉ nhận PNG → vẽ lại ảnh JPEG/WebP
+async function toPng(blob: Blob): Promise<Blob> {
+  if (blob.type === "image/png") return blob;
+  const bmp = await createImageBitmap(blob);
+  const canvas = document.createElement("canvas");
+  canvas.width = bmp.width;
+  canvas.height = bmp.height;
+  canvas.getContext("2d")!.drawImage(bmp, 0, 0);
+  return new Promise((ok, fail) => canvas.toBlob((b) => (b ? ok(b) : fail(new Error("png"))), "image/png"));
+}
+
+/** Tải ảnh/tệp Zalo qua backend (CDN Zalo chặn CORS + hotlink). */
+async function fetchMediaBlob(url: string) {
+  const res = await fetch(`${API_URL}/smax/chat/media?url=${encodeURIComponent(url)}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error(String(res.status));
+  return res.blob();
 }
 
 function legacyCopy(text: string) {
@@ -96,11 +138,7 @@ export async function downloadMessagesMedia(list: ChatMessage[]) {
   let ok = 0;
   for (const f of files) {
     try {
-      const res = await fetch(`${API_URL}/smax/chat/media?url=${encodeURIComponent(f.url)}`, {
-        headers: getAuthHeaders(),
-      });
-      if (!res.ok) throw new Error(String(res.status));
-      const href = URL.createObjectURL(await res.blob());
+      const href = URL.createObjectURL(await fetchMediaBlob(f.url));
       const a = document.createElement("a");
       a.href = href;
       a.download = f.name;

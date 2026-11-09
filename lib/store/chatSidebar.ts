@@ -8,7 +8,10 @@ export interface ChatCustomerRef {
   name: string;
 }
 
-export const COMPOSER_DEFAULT_HEIGHT = 58;
+// Chiều cao tối thiểu ô soạn = 1 dòng (ô tự giãn theo nội dung tới COMPOSER_AUTO_MAX)
+export const COMPOSER_DEFAULT_HEIGHT = 32;
+// ~6 dòng chữ (line-height 20px + padding)
+export const COMPOSER_AUTO_MAX = 132;
 
 interface ChatSidebarState {
   open: boolean;
@@ -24,6 +27,12 @@ interface ChatSidebarState {
   panelWidth: number | null;
   // Tỷ lệ cột "Thông tin POS" / khung chat (kéo thanh chia giữa hai cột); null = 300px mặc định
   posRatio: number | null;
+  // Chiều rộng thanh thu gọn (px) — kéo mép trái để hiện tên hội thoại; null = chỉ avatar
+  railWidth: number | null;
+  // "Đang chat gần đây": chỉ hiện hội thoại chưa đọc (nhớ cho lần sau)
+  recentUnreadOnly: boolean;
+  // Cột bên phải (khung rộng): Thông tin POS hay Thông tin hội thoại (ảnh, tệp, link)
+  infoTab: "pos" | "chat";
   // Đang mở hội thoại chưa gắn khách POS (ưu tiên hơn `customer`)
   loose: LooseThread | null;
   openLoose: (thread: LooseThread, ownerId: number | null) => void;
@@ -35,6 +44,9 @@ interface ChatSidebarState {
   setComposerHeight: (h: number) => void;
   setPanelWidth: (w: number | null) => void;
   setPosRatio: (r: number | null) => void;
+  setRailWidth: (w: number | null) => void;
+  setRecentUnreadOnly: (v: boolean) => void;
+  setInfoTab: (t: "pos" | "chat") => void;
 }
 
 export const useChatSidebarStore = create<ChatSidebarState>()(
@@ -49,6 +61,9 @@ export const useChatSidebarStore = create<ChatSidebarState>()(
       composerHeight: COMPOSER_DEFAULT_HEIGHT,
       panelWidth: null,
       posRatio: null,
+      railWidth: null,
+      recentUnreadOnly: false,
+      infoTab: "pos",
       loose: null,
       openLoose: (loose, ownerId) => set({ loose, ownerId, pagePid: loose.pagePid }),
       setOpen: (open) => set({ open }),
@@ -60,7 +75,19 @@ export const useChatSidebarStore = create<ChatSidebarState>()(
       setComposerHeight: (composerHeight) => set({ composerHeight }),
       setPanelWidth: (panelWidth) => set({ panelWidth }),
       setPosRatio: (posRatio) => set({ posRatio }),
+      setRailWidth: (railWidth) => set({ railWidth }),
+      setRecentUnreadOnly: (recentUnreadOnly) => set({ recentUnreadOnly }),
+      setInfoTab: (infoTab) => set({ infoTab }),
     }),
-    { name: "chat-sidebar" }
+    {
+      name: "chat-sidebar",
+      // v1: ô soạn tự giãn → chiều cao cũ (bố cục nút dọc) không còn đúng nghĩa, về mặc định
+      version: 1,
+      migrate: (persisted, version) => {
+        const st = persisted as Partial<ChatSidebarState>;
+        if (version < 1) st.composerHeight = COMPOSER_DEFAULT_HEIGHT;
+        return st as ChatSidebarState;
+      },
+    }
   )
 );

@@ -28,6 +28,10 @@ import type { PackingSlip } from "@/lib/types/packing-slip";
 import { toast } from "sonner";
 import { ColdCargoSelectionWarning } from "@/components/shared/ColdCargoBadge";
 import type { ColdCargoItem } from "@/lib/types/cold-cargo-warning";
+import type { InvoicePaymentNote } from "@/lib/types/invoice";
+import { invoicePay, packingCashWarning } from "@/lib/packing/payment-note";
+import { CashWarningBox } from "@/components/packing-slips/CashWarning";
+import { CashNoteBadge } from "@/components/packing-slips/CashNoteBadge";
 
 interface PreselectedInvoiceLite {
   id: number;
@@ -37,6 +41,7 @@ interface PreselectedInvoiceLite {
   hasColdItems?: boolean;
   coldItemCount?: number;
   coldItems?: ColdCargoItem[];
+  paymentNote?: InvoicePaymentNote | null;
 }
 
 interface PackingSlipFormProps {
@@ -107,6 +112,7 @@ export function PackingSlipForm({
     hasColdItems?: boolean;
     coldItemCount?: number;
     coldItems?: ColdCargoItem[];
+    paymentNote?: InvoicePaymentNote | null;
   };
   const [selectedInvoiceCache, setSelectedInvoiceCache] = useState<
     Record<number, InvoiceLite>
@@ -133,6 +139,7 @@ export function PackingSlipForm({
           hasColdItems: inv.hasColdItems,
           coldItemCount: inv.coldItemCount,
           coldItems: inv.coldItems,
+          paymentNote: inv.paymentNote ?? null,
         };
       }
     });
@@ -141,8 +148,10 @@ export function PackingSlipForm({
   const [numberOfPackages, setNumberOfPackages] = useState(
     packingSlip?.numberOfPackages || 0
   );
-  const [paymentMethod, setPaymentMethod] = useState(
-    packingSlip?.paymentMethod || "transfer"
+  // Phiếu mới để trống: người tạo phiếu tự chọn (giống trang bán hàng).
+  // Sửa phiếu cũ thì giữ nguyên giá trị đã lưu.
+  const [paymentMethod, setPaymentMethod] = useState<string>(
+    packingSlip?.paymentMethod || ""
   );
   const [cashAmount, setCashAmount] = useState(
     Number(packingSlip?.cashAmount) || 0
@@ -264,6 +273,7 @@ export function PackingSlipForm({
     hasColdItems?: boolean;
     coldItemCount?: number;
     coldItems?: ColdCargoItem[];
+    paymentNote?: InvoicePaymentNote | null;
   }) => {
     setSelectedInvoiceCache((prev) => ({ ...prev, [document.id]: document }));
     setSelectedInvoiceIds((prev) => [...prev, document.id]);
@@ -331,6 +341,7 @@ export function PackingSlipForm({
           hasColdItems: inv.hasColdItems,
           coldItemCount: inv.coldItemCount,
           coldItems: inv.coldItems,
+          paymentNote: inv.paymentNote ?? null,
         };
       }
     }
@@ -419,12 +430,44 @@ export function PackingSlipForm({
             hasColdItems: inv.hasColdItems,
             coldItemCount: inv.coldItemCount,
             coldItems: inv.coldItems,
+            paymentNote: inv.paymentNote ?? null,
           },
         }));
       }
       setSelectedInvoiceIds([...selectedInvoiceIds, invoiceId]);
     }
     setInvoiceSearch("");
+  };
+
+  const selectedInvoices = selectedInvoiceIds
+    .map((id) => selectedInvoiceCache[id])
+    .filter(Boolean);
+
+  // Thanh toán ghi trên hóa đơn chỉ để gợi ý, hệ thống không chọn sẵn hình thức.
+  const invoicePayment =
+    docType === "invoice" ? invoicePay(selectedInvoices) : null;
+  const payDiffers =
+    !!paymentMethod &&
+    !!invoicePayment &&
+    (paymentMethod !== (invoicePayment.cash ? "cash" : "transfer") ||
+      (invoicePayment.cash && cashAmount !== invoicePayment.amount));
+  // Lệch với hóa đơn thì báo trước: lưu xong phiếu sẽ bị gắn cảnh báo ở danh sách.
+  const payWarning =
+    docType === "invoice" && paymentMethod
+      ? packingCashWarning(paymentMethod, cashAmount, selectedInvoices)
+      : null;
+  // Người dùng chọn "Tiền mặt" khi ô số tiền còn trống → điền sẵn số tiền mặt
+  // ghi trên hóa đơn (giống trang bán hàng điền "Khách cần trả"), vẫn sửa được.
+  const choosePaymentMethod = (method: string) => {
+    setPaymentMethod(method);
+    if (method === "cash" && cashAmount <= 0 && invoicePayment?.cash) {
+      setCashAmount(invoicePayment.amount);
+    }
+  };
+  const applyInvoicePayment = () => {
+    if (!invoicePayment) return;
+    setPaymentMethod(invoicePayment.cash ? "cash" : "transfer");
+    setCashAmount(invoicePayment.cash ? invoicePayment.amount : 0);
   };
 
   const savingRef = useRef(false);
@@ -434,6 +477,7 @@ export function PackingSlipForm({
     setSelectedInvoiceIds([]);
     setSelectedInvoiceCache({});
     setNumberOfPackages(0);
+    setPaymentMethod("");
     setCashAmount(0);
     setNote("");
     setHasFeeGuiBen(false);
@@ -477,6 +521,13 @@ export function PackingSlipForm({
 
     if (numberOfPackages <= 0) {
       toast.error("Số kiện phải lớn hơn 0");
+      return;
+    }
+
+    if (!paymentMethod) {
+      toast.error(
+        "Vui lòng chọn hình thức thanh toán: chuyển khoản hoặc tiền mặt"
+      );
       return;
     }
 
@@ -524,10 +575,6 @@ export function PackingSlipForm({
       setIsSaving(false);
     }
   };
-
-  const selectedInvoices = selectedInvoiceIds
-    .map((id) => selectedInvoiceCache[id])
-    .filter(Boolean);
 
   // Server đã filter theo search; client không cần filter lại
   const filteredInvoices = availableInvoices;
@@ -639,6 +686,10 @@ export function PackingSlipForm({
                     key={invoice.id}
                     className="inline-flex items-center gap-1 bg-brand-soft text-brand-dark px-2 py-1 rounded text-sm">
                     {invoice.code}
+                    <CashNoteBadge
+                      note={invoice.paymentNote}
+                      className="ml-1"
+                    />
                     <button
                       type="button"
                       onClick={(e) => {
@@ -688,6 +739,7 @@ export function PackingSlipForm({
                                 Đã giao hàng {invoice.packingCount} lần
                               </div>
                             )}
+                            <CashNoteBadge note={invoice.paymentNote} />
                           </div>
                         </label>
                       ))}
@@ -796,7 +848,7 @@ export function PackingSlipForm({
 
             <div>
               <label className="block text-sm font-medium mb-2">
-                Hình thức thanh toán
+                Hình thức thanh toán <span className="text-red-500">*</span>
               </label>
               <div className="space-y-2">
                 <label className="flex items-center gap-2">
@@ -804,7 +856,7 @@ export function PackingSlipForm({
                     type="radio"
                     value="transfer"
                     checked={paymentMethod === "transfer"}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    onChange={(e) => choosePaymentMethod(e.target.value)}
                     className="cursor-pointer"
                   />
                   <span>Chuyển khoản</span>
@@ -814,7 +866,7 @@ export function PackingSlipForm({
                     type="radio"
                     value="cash"
                     checked={paymentMethod === "cash"}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    onChange={(e) => choosePaymentMethod(e.target.value)}
                     className="cursor-pointer"
                   />
                   <span>Tiền mặt</span>
@@ -824,20 +876,51 @@ export function PackingSlipForm({
               {paymentMethod === "cash" && (
                 <div className="mt-3">
                   <label className="block text-sm font-medium mb-2">
-                    Số tiền
+                    Tiền mặt cần thu
                   </label>
                   <input
                     type="text"
-                    value={formatCurrency(cashAmount)}
-                    onChange={(e) => {
-                      const value = parseFormattedNumber(e.target.value);
-                      setCashAmount(value);
-                    }}
-                    className="w-full border rounded px-3 py-3 sm:py-2 text-base sm:text-sm"
+                    value={cashAmount > 0 ? formatCurrency(cashAmount) : ""}
+                    onChange={(e) =>
+                      setCashAmount(parseFormattedNumber(e.target.value))
+                    }
+                    placeholder="Nhập số tiền"
+                    className="w-full border rounded px-3 py-3 sm:py-2 text-base sm:text-sm font-bold"
                     min="0"
                   />
                 </div>
               )}
+
+              {invoicePayment && (
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                  <span>
+                    Theo hóa đơn:{" "}
+                    {invoicePayment.cash ? (
+                      <>
+                        <b className="font-bold text-amber-700">
+                          thu tiền mặt {formatCurrency(invoicePayment.amount)} đ
+                        </b>{" "}
+                        ({invoicePayment.codes.join(", ")})
+                      </>
+                    ) : (
+                      "khách chuyển khoản"
+                    )}
+                  </span>
+                  {payDiffers && (
+                    <button
+                      type="button"
+                      onClick={applyInvoicePayment}
+                      className="font-semibold text-brand hover:underline">
+                      Dùng theo hóa đơn
+                    </button>
+                  )}
+                </div>
+              )}
+              <CashWarningBox
+                warning={payWarning}
+                title="Khác hóa đơn: phiếu sẽ bị cảnh báo"
+                className="mt-2"
+              />
             </div>
 
             <div>

@@ -144,6 +144,7 @@ export function DashboardHeader() {
       { label: "Quỹ nội bộ", href: "/tai-chinh/quy-noi-bo" },
       { label: "Approval tuần", href: "/tai-chinh/approval-tuan" },
       { label: "Đơn Lark Approval", href: "/tai-chinh/don-lark-approval" },
+      { label: "Tạm ứng lương", href: "/tai-chinh/tam-ung-luong" },
       { label: "Xăng dầu & chăm sóc xe", href: "/tai-chinh/xe-co" },
       { label: "Biến động số dư", href: "/tai-chinh/bien-dong-so-du" },
     ],
@@ -153,6 +154,7 @@ export function DashboardHeader() {
   const customerSubmenu = useMemo(
     () => [
       { label: "Danh sách khách hàng", href: "/khach-hang" },
+      { label: "Lead", href: "/khach-hang/lead" },
       { label: "Khuyến mãi", href: "/khach-hang/khuyen-mai" },
       {
         label: "Demand khách hàng (OEM/đặt hộ)",

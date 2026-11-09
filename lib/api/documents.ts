@@ -1,5 +1,6 @@
 import { apiClient } from "@/lib/config/api";
 import type { ColdCargoItem } from "@/lib/types/cold-cargo-warning";
+import type { InvoicePaymentNote } from "@/lib/types/invoice";
 
 export interface ScannedDocument {
   kind: "invoice" | "consignment";
@@ -12,6 +13,7 @@ export interface ScannedDocument {
   hasColdItems?: boolean;
   coldItemCount?: number;
   coldItems?: ColdCargoItem[];
+  paymentNote?: InvoicePaymentNote | null;
 }
 
 export const documentsApi = {

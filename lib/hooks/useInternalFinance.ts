@@ -11,6 +11,7 @@ import {
   type InternalFinanceResponse,
   type InternalFinanceQuery,
   type LarkApprovalQuery,
+  type SalaryAdvanceQuery,
   type VehicleEntryQuery,
   type VehicleEntryUpdateInput,
   type WarehouseExpenseInput,
@@ -199,6 +200,14 @@ export function useLarkApprovals(params: LarkApprovalQuery) {
   return useQuery({
     queryKey: ["internal-finance", "lark-approvals", params],
     queryFn: () => internalFinanceApi.larkApprovals(params),
+    placeholderData: (previous) => previous,
+  });
+}
+
+export function useSalaryAdvances(params: SalaryAdvanceQuery) {
+  return useQuery({
+    queryKey: ["internal-finance", "salary-advances", params],
+    queryFn: () => internalFinanceApi.salaryAdvances(params),
     placeholderData: (previous) => previous,
   });
 }

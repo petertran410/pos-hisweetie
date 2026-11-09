@@ -7,9 +7,11 @@ import {
   AlertTriangle,
   Check,
   ChevronDown,
+  ClipboardList,
   ChevronRight,
   Loader2,
   MessageCircle,
+  MessageSquareDot,
   MoreHorizontal,
   Settings2,
   Users,
@@ -24,19 +26,24 @@ import { useCan } from "@/lib/hooks/useCan";
 import { useIsClient, useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useChatContext, useRecentChats } from "@/lib/hooks/useSmaxChat";
 import { newCount } from "@/lib/chat/seen";
-import { RecentChatRow, UnseenBadge, useOpenRecentChat } from "./RecentChatsList";
+import { linkedChatLabel, RecentChatRow, UnseenBadge, useOpenRecentChat } from "./RecentChatsList";
 import { pickChannel, useActiveChannel } from "@/lib/chat/channels";
 import { customerSource } from "@/lib/chat/threadSource";
+import { platformLabel } from "@/lib/chat/platforms";
 import { LooseChat } from "./LooseChat";
 import { useFastTitle } from "@/lib/chat/useFastTitle";
-import type { ChatChannel, ChatContext, LooseThread, RecentChat } from "@/lib/types/smaxChat";
+import type { ChatChannel, ChatContext, LinkedCustomer, LooseThread, RecentChat } from "@/lib/types/smaxChat";
 import { ChatCustomerPicker } from "./ChatCustomerPicker";
 import { ChatCustomerCard } from "./ChatCustomerCard";
+import { ConversationInfoSlotContext } from "./ConversationInfoPanel";
+import { GroupCustomersBar } from "./GroupCustomersBar";
 import { ChatThread } from "./ChatThread";
 import { ZaloContactEditor } from "./ZaloContactEditor";
 import { ZaloContactsManager } from "./ZaloContactsManager";
 import { SharedGroupsScanner } from "./SharedGroupsScanner";
 import { ZaloAvatar } from "./ZaloAvatar";
+import { GroupMark, ThreadKindIcon } from "./ThreadKindIcon";
+import { useEscapeClose } from "@/lib/hooks/useEscapeClose";
 
 /**
  * Sidebar chat Zalo (Smax) mép phải. Desktop: đẩy nội dung (rail 44px khi thu
@@ -50,12 +57,13 @@ export function ZaloChatSidebar() {
   const setOpen = useChatSidebarStore((s) => s.setOpen);
   const customer = useCurrentChatCustomer();
   const panelWidth = useChatSidebarStore((s) => s.panelWidth);
+  const railWidth = useChatSidebarStore((s) => s.railWidth);
 
   // Các bảng chi tiết (…DetailRow) chỉ đo lại độ rộng khi window resize →
   // báo khi khung chat mở / thu gọn / kéo đổi độ rộng làm vùng nội dung đổi theo
   useEffect(() => {
     window.dispatchEvent(new Event("resize"));
-  }, [open, panelWidth]);
+  }, [open, panelWidth, railWidth]);
 
   if (!canView || !isClient) return null;
 
@@ -63,7 +71,7 @@ export function ZaloChatSidebar() {
     if (!open) return null;
     return (
       <div
-        className="fixed top-0 left-0 z-50 flex flex-col bg-white"
+        className="chat-ui fixed top-0 left-0 z-50 flex flex-col bg-white"
         // html { zoom: 0.85 } → bù kích thước viewport
         style={{ width: "calc(100vw / 0.85)", height: "calc(100dvh / 0.85)" }}
       >
@@ -135,7 +143,7 @@ function ResizableAside({ onClose }: { onClose: () => void }) {
   return (
     <aside
       ref={ref}
-      className={`relative shrink-0 border-l bg-white flex min-h-0 ${
+      className={`chat-ui relative shrink-0 border-l bg-white flex min-h-0 ${
         panelWidth ? "" : "w-[420px] min-[1440px]:w-[720px]"
       } ${resizing ? "select-none" : ""}`}
       // Chừa tối thiểu 480px cho màn hình POS bên trái (html zoom 0.85 → bù viewport)
@@ -165,6 +173,10 @@ function ResizableAside({ onClose }: { onClose: () => void }) {
 
 // Chiều cao 1 bong bóng hội thoại trên thanh thu gọn (32px + gap 8px)
 const RAIL_ITEM = 40;
+// Thanh thu gọn: rộng mặc định (chỉ avatar); kéo quá RAIL_NAMES_WIDTH thì hiện tên hội thoại
+const RAIL_WIDTH = 48;
+const RAIL_NAMES_WIDTH = 120;
+const RAIL_MAX_WIDTH = 360;
 
 /**
  * Thanh thu gọn: mở chat, chọn nhanh kênh Zalo (avatar), và avatar các hội thoại
@@ -199,13 +211,17 @@ function CollapsedRail({
     ro.observe(listEl);
     return () => ro.disconnect();
   }, [listEl]);
-  const { data, isFetching } = useRecentChats(!!channel && !channel.missing, channel?.pagePid, limit);
-  const items = data?.items ?? [];
-  // Còn hội thoại thì ô cuối là "…"
-  const shown = items.length > fit ? items.slice(0, fit - 1) : items;
-  const rest = items.slice(shown.length);
-  // Smax trả đủ số đã xin → có thể còn nữa (backend tối đa 200)
-  const canLoadMore = items.length >= limit && limit < 200;
+  const { data, isFetching, isPlaceholderData } = useRecentChats(!!channel && !channel.missing, channel?.pagePid, limit);
+  // Lọc "Chưa đọc" dùng chung với danh sách "Đang chat gần đây" khi mở rộng
+  const unreadOnly = useChatSidebarStore((s) => s.recentUnreadOnly);
+  const setUnreadOnly = useChatSidebarStore((s) => s.setRecentUnreadOnly);
+  const all = data?.items ?? [];
+  const isUnread = (c: RecentChat) => c.unread || newCount(c.tid, c.messageCount) > 0;
+  const unreadCount = all.filter(isUnread).length;
+  const items = unreadOnly ? all.filter(isUnread) : all;
+  // Smax trả đủ số đã xin → có thể còn nữa (backend tối đa 200); đang tải trang lớn hơn thì giữ nút
+  const canLoadMore = isPlaceholderData || (all.length >= limit && limit < 200);
+  const loadMore = () => setLimitBy({ pagePid: channel?.pagePid ?? null, n: Math.min(200, limit + 30) });
   const toggleMore = (btn: HTMLElement) => {
     if (moreAt) return setMoreAt(null);
     // Mép phải dropdown sát trái thanh, đáy ngang nút "…" (position:fixed bị nhân zoom của <html>)
@@ -240,58 +256,157 @@ function CollapsedRail({
   const railRef = useRef<HTMLElement>(null);
   useFastTitle(railRef);
 
+  // Kéo mép trái để giãn thanh; thả khi chưa đủ rộng hiện tên thì về lại cỡ avatar
+  const railWidth = useChatSidebarStore((s) => s.railWidth);
+  const setRailWidth = useChatSidebarStore((s) => s.setRailWidth);
+  const [resizing, setResizing] = useState(false);
+  const width = railWidth ?? RAIL_WIDTH;
+  const showNames = width >= RAIL_NAMES_WIDTH;
+  // Thu gọn (chỉ avatar): còn hội thoại thì ô cuối là "…" (mở khung danh sách);
+  // mở rộng (có tên): hiện hết, cuộn trong thanh, cuối danh sách "Tải thêm hội thoại"
+  const shown = showNames || items.length <= fit ? items : items.slice(0, fit - 1);
+  const rest = items.slice(shown.length);
+  const startResize = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = railRef.current;
+    if (!el) return;
+    e.preventDefault();
+    const handle = e.currentTarget;
+    handle.setPointerCapture(e.pointerId);
+    const startX = e.clientX;
+    const startW = el.offsetWidth;
+    // Toạ độ con trỏ theo px màn hình, độ rộng theo px CSS (html có zoom) → quy đổi
+    const scale = el.getBoundingClientRect().width / el.offsetWidth || 1;
+    let w = startW;
+    setResizing(true);
+    const onMove = (ev: PointerEvent) => {
+      w = Math.round(Math.min(RAIL_MAX_WIDTH, Math.max(RAIL_WIDTH, startW + (startX - ev.clientX) / scale)));
+      setRailWidth(w);
+    };
+    const onUp = () => {
+      setResizing(false);
+      if (w < RAIL_NAMES_WIDTH) setRailWidth(null);
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onUp);
+      handle.removeEventListener("pointercancel", onUp);
+    };
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
+    handle.addEventListener("pointercancel", onUp);
+  };
+
   return (
     <aside
       ref={railRef}
-      className="w-12 shrink-0 border-l bg-white flex flex-col items-center gap-2 py-3 min-h-0"
+      className={`chat-ui relative shrink-0 border-l bg-white flex flex-col gap-2 py-3 min-h-0 ${
+        showNames ? "items-stretch" : "items-center"
+      } ${resizing ? "select-none" : ""}`}
+      style={{ width }}
     >
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Kéo để hiện tên hội thoại"
+        title="Kéo sang trái để hiện tên hội thoại · bấm đúp để thu lại"
+        onPointerDown={startResize}
+        onDoubleClick={() => setRailWidth(null)}
+        className="group absolute inset-y-0 -left-1.5 z-20 flex w-3 cursor-col-resize touch-none items-center justify-center"
+      >
+        <span
+          className={`h-10 w-1 rounded-full transition-colors group-hover:bg-brand ${
+            resizing ? "bg-brand" : "bg-transparent"
+          }`}
+        />
+      </div>
       <button
         onClick={onExpand}
         title="Mở chat Zalo"
-        className="h-8 w-8 shrink-0 flex items-center justify-center rounded-md text-brand hover:bg-cyan-bg"
+        className={`h-8 shrink-0 flex items-center gap-2 rounded-md text-brand hover:bg-cyan-bg ${
+          showNames ? "mx-2 px-1.5 text-sm font-medium" : "w-8 justify-center"
+        }`}
       >
-        <MessageCircle className="w-5 h-5" />
+        <MessageCircle className="w-5 h-5 shrink-0" />
+        {showNames && "Mở chat Zalo"}
       </button>
       {customer && (
         <button
           onClick={onExpand}
           title={`Chat với ${customer.code ?? ""} ${customer.name}`}
-          className="h-8 w-8 shrink-0 rounded-full bg-brand text-white text-xs font-semibold"
+          className={`shrink-0 flex items-center gap-2 text-left ${
+            showNames ? "mx-2 rounded-md px-1 hover:bg-cyan-bg" : ""
+          }`}
         >
-          {initials(customer.name)}
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-white text-xs font-semibold">
+            {initials(customer.name)}
+          </span>
+          {showNames && (
+            <span className="min-w-0 flex-1 truncate text-xs font-medium">
+              {customer.code ? `${customer.code} · ` : ""}
+              {customer.name}
+            </span>
+          )}
         </button>
       )}
 
       {/* Kênh đang chọn; từ 2 kênh trở lên bấm để chọn kênh khác */}
       {channel && (
-        <div className="w-full shrink-0 border-t pt-2 flex justify-center">
+        <div className={`w-full shrink-0 border-t pt-2 flex ${showNames ? "px-2" : "justify-center"}`}>
           <RailChannelPicker
             channels={usable}
             active={channel}
-            onPick={setPagePid}
+            onPick={(pid) => {
+              // Đổi kênh → khi mở rộng sẽ thấy danh sách hội thoại của kênh mới
+              selectCustomer(null, userId);
+              setPagePid(pid);
+            }}
+            showName={showNames}
           />
         </div>
+      )}
+
+      {channel && (
+        <button
+          onClick={() => setUnreadOnly(!unreadOnly)}
+          aria-pressed={unreadOnly}
+          title={`${unreadOnly ? "Đang lọc" : "Chỉ hiện"} hội thoại chưa đọc${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
+          className={`relative h-8 shrink-0 flex items-center gap-2 ${
+            showNames ? "mx-2 rounded-md px-1.5 text-xs" : "w-8 self-center justify-center rounded-full"
+          } ${unreadOnly ? "bg-brand text-white" : "text-gray-500 hover:bg-cyan-bg hover:text-brand"}`}
+        >
+          <MessageSquareDot className="h-4 w-4 shrink-0" />
+          {showNames && `Chưa đọc${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
+          {!showNames && unreadCount > 0 && (
+            <span className="absolute -right-1.5 -top-1.5 min-w-[16px] rounded-full bg-brand px-1 text-center text-[10px] font-semibold leading-4 text-white ring-2 ring-white">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </button>
       )}
 
       {/* Hội thoại gần nhất của kênh đang chọn */}
       <div
         ref={setListEl}
-        className={`flex w-full min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto pt-2 pb-1 ${
-          items.length ? "border-t" : ""
-        }`}
+        className={`flex w-full min-h-0 flex-1 flex-col gap-2 overflow-y-auto pt-2 pb-1 ${
+          showNames ? "items-stretch px-2" : "items-center"
+        } ${all.length ? "border-t" : ""}`}
       >
           {shown.map((c) => {
             const unseen = newCount(c.tid, c.messageCount);
             const who = c.match
               ? `${c.match.customer.code ?? ""} ${c.match.customer.name}`
               : `${c.name} (chưa gắn khách POS — mở Smax)`;
+            const label =
+              c.match?.type === "linked" ? linkedChatLabel(c.match) : c.name || c.zaloId;
             return (
               <button
                 key={c.tid}
                 onClick={() => open(c)}
                 title={`${who}\n${c.isGroup ? `${c.name}: ` : ""}${c.lastMessage}`}
-                className={`relative shrink-0 rounded-full ${c.match ? "" : "opacity-50 hover:opacity-80"} disabled:opacity-40`}
+                aria-label={`${c.isGroup ? "Nhóm " : ""}${label}${unseen > 0 ? ` · ${unseen} tin mới` : ""}${c.match ? "" : " · chưa gắn khách POS"}`}
+                className={`relative shrink-0 ${
+                  showNames ? "flex min-w-0 items-center gap-2 rounded-md px-1 text-left hover:bg-cyan-bg" : "rounded-full"
+                } ${c.match ? "" : "opacity-50 hover:opacity-80"} disabled:opacity-40`}
               >
+                <span className="relative shrink-0">
                 <ZaloAvatar
                   avatar={c.avatar}
                   isGroup={c.isGroup}
@@ -302,21 +417,43 @@ function CollapsedRail({
                   }
                   size={32}
                 />
-                {unseen > 0 && <UnseenBadge count={unseen} />}
+                {unseen > 0 && <UnseenBadge count={unseen} max={9} />}
+                <ThreadKindIcon platform={c.platform} isComment={c.isComment} />
+                <GroupMark show={c.isGroup && !!c.avatar} />
+                </span>
+                {showNames && (
+                  <span className={`min-w-0 flex-1 truncate text-xs ${c.unread || unseen > 0 ? "font-semibold" : ""}`}>
+                    {label}
+                  </span>
+                )}
               </button>
             );
           })}
+          {unreadOnly && items.length === 0 && !isFetching && showNames && (
+            <p className="px-1 text-xs text-gray-500">Không có hội thoại chưa đọc.</p>
+          )}
+          {showNames && canLoadMore && (
+            <button
+              onClick={loadMore}
+              disabled={isPlaceholderData}
+              className="flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-md bg-gray-100 px-2 text-xs text-gray-500 hover:bg-cyan-bg hover:text-brand disabled:opacity-60"
+            >
+              {isPlaceholderData ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
+              {isPlaceholderData ? "Đang tải…" : "Tải thêm hội thoại"}
+            </button>
+          )}
           {rest.length > 0 && (
             <button
               onClick={(e) => toggleMore(e.currentTarget)}
               title={`${rest.length}${canLoadMore ? "+" : ""} hội thoại khác`}
               aria-label="Xem thêm hội thoại"
               aria-expanded={!!moreAt}
-              className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-cyan-bg hover:text-brand ${
-                moreAt ? "bg-cyan-bg text-brand" : "bg-gray-100 text-gray-500"
-              }`}
+              className={`relative flex h-8 shrink-0 items-center justify-center gap-1.5 hover:bg-cyan-bg hover:text-brand ${
+                showNames ? "rounded-md px-2 text-xs" : "w-8 self-center rounded-full"
+              } ${moreAt ? "bg-cyan-bg text-brand" : "bg-gray-100 text-gray-500"}`}
             >
               <MoreHorizontal className="h-4 w-4" />
+              {showNames && `${rest.length}${canLoadMore ? "+" : ""} hội thoại khác`}
               {rest.some((c) => newCount(c.tid, c.messageCount) > 0) && (
                 <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
               )}
@@ -330,7 +467,7 @@ function CollapsedRail({
           items={rest}
           loading={isFetching}
           canLoadMore={canLoadMore}
-          onLoadMore={() => setLimitBy({ pagePid: channel?.pagePid ?? null, n: Math.min(200, limit + 30) })}
+          onLoadMore={loadMore}
           onPick={(c) => {
             setMoreAt(null);
             open(c);
@@ -386,7 +523,7 @@ function RailMoreDropdown({
       role="dialog"
       aria-label="Hội thoại khác"
       style={{ right: pos.right, bottom: pos.bottom }}
-      className="fixed z-[1000] flex max-h-[min(70vh,calc(100vh-16px))] w-80 flex-col rounded-lg border bg-white shadow-xl"
+      className="chat-ui fixed z-[1000] flex max-h-[min(70vh,calc(100vh-16px))] w-80 flex-col rounded-lg border bg-white shadow-xl"
     >
       <div className="border-b px-3 py-2 text-xs font-semibold uppercase text-gray-500">
         Hội thoại khác ({items.length}
@@ -435,10 +572,13 @@ function RailChannelPicker({
   channels,
   active,
   onPick,
+  showName = false,
 }: {
   channels: ChatChannel[];
   active: ChatChannel;
   onPick: (pagePid: string) => void;
+  // Thanh thu gọn đã kéo giãn: hiện tên kênh cạnh avatar
+  showName?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -460,22 +600,32 @@ function RailChannelPicker({
   }, [open]);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className={`relative ${showName ? "min-w-0 flex-1" : ""}`}>
       <button
         onClick={() => many && setOpen((o) => !o)}
         title={`${active.name}${active.connectionError ? " · Mất kết nối" : ""}${many ? " — bấm để chọn kênh khác" : ""}`}
-        className={`relative rounded-full ring-2 ring-brand ring-offset-1 ${many ? "cursor-pointer" : "cursor-default"}`}
+        className={`flex items-center gap-2 text-left ${showName ? "w-full rounded-md p-1 hover:bg-cyan-bg" : ""} ${
+          many ? "cursor-pointer" : "cursor-default"
+        }`}
       >
-        <ChannelDot c={active} size={30} />
-        {many && (
-          <span className="absolute -left-1 -bottom-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white text-gray-500 shadow ring-1 ring-gray-200">
-            <ChevronDown className="h-2.5 w-2.5" />
+        <span className="relative shrink-0 rounded-full ring-2 ring-brand ring-offset-1">
+          <ChannelDot c={active} size={30} />
+          {many && (
+            <span className="absolute -left-1 -bottom-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white text-gray-500 shadow ring-1 ring-gray-200">
+              <ChevronDown className="h-2.5 w-2.5" />
+            </span>
+          )}
+        </span>
+        {showName && (
+          <span className="min-w-0 flex-1 leading-tight">
+            <span className="block truncate text-xs font-medium">{active.name}</span>
+            {active.connectionError && <span className="block text-xs text-red-600">Mất kết nối</span>}
           </span>
         )}
       </button>
       {open && (
         <div className="absolute right-full top-0 z-50 mr-2 w-64 rounded-lg border bg-white py-1 text-sm shadow-xl">
-          <p className="px-3 py-1 text-[11px] font-semibold uppercase text-gray-500">
+          <p className="px-3 py-1 text-xs font-semibold uppercase text-gray-500">
             Kênh Zalo của tôi
           </p>
           {channels.map((c) => (
@@ -492,7 +642,7 @@ function RailChannelPicker({
               <ChannelDot c={c} size={26} />
               <span className="min-w-0 flex-1 truncate">{c.name}</span>
               <span
-                className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] ${
+                className={`shrink-0 rounded-full px-1.5 py-0.5 text-xs ${
                   c.connectionError
                     ? "bg-red-100 text-red-700"
                     : "bg-green-100 text-green-700"
@@ -545,36 +695,63 @@ function useCurrentLooseThread(): LooseThread | null {
 /** Đầu sidebar: avatar + chọn kênh Zalo của tôi + tình trạng kênh (thay chữ "Chat Zalo"). */
 function ChannelSwitcher() {
   const { usable, channel } = useActiveChannel();
-  const setPagePid = useChatSidebarStore((s) => s.setPagePid);
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+  // Đổi kênh → về danh sách hội thoại của kênh mới (bỏ hội thoại / khách đang mở)
+  const switchChannel = (pagePid: string) => {
+    const st = useChatSidebarStore.getState();
+    st.selectCustomer(null, userId);
+    st.setPagePid(pagePid);
+  };
   if (!channel) {
     return (
       <>
-        <MessageCircle className="w-5 h-5 text-brand shrink-0" />
+        <MessageCircle className="w-5 h-5 text-brand shrink-0" aria-hidden />
         <p className="shrink-0 text-sm font-semibold leading-tight">
           Chat Zalo
         </p>
       </>
     );
   }
+  const channelStatus = channel.missing
+    ? "Không còn trên Smax"
+    : channel.connectionError
+      ? "Mất kết nối"
+      : "Hoạt động";
   return (
     <>
-      <ZaloAvatar
-        avatar={channel.avatar}
-        isGroup={false}
-        members={[{ name: channel.name, avatar: null }]}
-        size={28}
-      />
+      {/* Chấm trạng thái kênh trên avatar; chỉ hiện nhãn chữ khi kênh có vấn đề */}
+      <span className="relative shrink-0" title={`Kênh ${channelStatus}`}>
+        <ZaloAvatar
+          avatar={channel.avatar}
+          isGroup={false}
+          members={[{ name: channel.name, avatar: null }]}
+          size={28}
+        />
+        <span
+          className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-white ${
+            channel.missing ? "bg-gray-400" : channel.connectionError ? "bg-red-500" : "bg-green-500"
+          }`}
+        />
+        <span className="sr-only">Kênh {channelStatus}</span>
+      </span>
       {usable.length >= 2 ? (
         <select
           value={channel.pagePid}
-          onChange={(e) => setPagePid(e.target.value)}
-          title="Kênh Zalo gửi tin"
+          onChange={(e) => switchChannel(e.target.value)}
+          title={`Kênh gửi tin · ${platformLabel(channel.platform)}`}
           className="min-w-0 max-w-[180px] shrink rounded border px-2 py-1 text-sm font-medium"
         >
-          {usable.map((c) => (
-            <option key={c.pagePid} value={c.pagePid}>
-              {c.name}
-            </option>
+          {/* Nhóm theo loại kênh: Zalo cá nhân, Zalo OA, Facebook… (giữ thứ tự xuất hiện) */}
+          {[...new Set(usable.map((c) => c.platform))].map((pf) => (
+            <optgroup key={pf} label={platformLabel(pf)}>
+              {usable
+                .filter((c) => c.platform === pf)
+                .map((c) => (
+                  <option key={c.pagePid} value={c.pagePid}>
+                    {c.name}
+                  </option>
+                ))}
+            </optgroup>
           ))}
         </select>
       ) : (
@@ -582,21 +759,15 @@ function ChannelSwitcher() {
           {channel.name}
         </span>
       )}
-      <span
-        className={`shrink-0 text-xs rounded-full px-2 py-0.5 ${
-          channel.missing
-            ? "bg-gray-100 text-gray-600"
-            : channel.connectionError
-              ? "bg-red-100 text-red-700"
-              : "bg-green-100 text-green-700"
-        }`}
-      >
-        {channel.missing
-          ? "Không còn trên Smax"
-          : channel.connectionError
-            ? "Mất kết nối"
-            : "Hoạt động"}
-      </span>
+      {(channel.missing || channel.connectionError) && (
+        <span
+          className={`shrink-0 text-xs rounded-full px-2 py-0.5 ${
+            channel.missing ? "bg-gray-100 text-gray-600" : "bg-red-100 text-red-700"
+          }`}
+        >
+          {channelStatus}
+        </span>
+      )}
     </>
   );
 }
@@ -627,7 +798,7 @@ function ChatPanel({
 
   return (
     <div className="flex flex-1 min-w-0 min-h-0 flex-col">
-      <div className="flex items-center gap-2 border-b px-3 py-2">
+      <div className="flex items-center gap-2 border-b px-3 py-1">
         <ChannelSwitcher />
         {/* Khách đang chat: căn phải, sát các nút */}
         <p className="min-w-0 flex-1 truncate text-right text-xs text-gray-500">
@@ -647,15 +818,20 @@ function ChatPanel({
           <button
             onClick={() => setPicking(!picking)}
             title={showPicker ? "Quay lại hội thoại" : "Đổi khách"}
-            className="p-1.5 rounded hover:bg-gray-100"
+            aria-label={showPicker ? "Quay lại hội thoại" : "Đổi khách / danh sách hội thoại"}
+            aria-pressed={showPicker}
+            className={`chat-tap flex h-8 w-8 shrink-0 items-center justify-center rounded ${
+              showPicker ? "bg-cyan-bg text-brand" : "text-gray-600 hover:bg-gray-100"
+            }`}
           >
             <Users className="w-4 h-4" />
           </button>
         )}
         <button
           onClick={onClose}
-          title="Thu gọn"
-          className="p-1.5 rounded hover:bg-gray-100"
+          title={mobile ? "Đóng chat" : "Thu gọn"}
+          aria-label={mobile ? "Đóng chat" : "Thu gọn khung chat"}
+          className="chat-tap flex h-8 w-8 shrink-0 items-center justify-center rounded text-gray-600 hover:bg-gray-100"
         >
           {mobile ? (
             <X className="w-5 h-5" />
@@ -691,6 +867,37 @@ function ChatPanel({
   );
 }
 
+/** Nhóm đang mở của khách + mọi khách POS cùng gắn nhóm đó (theo thứ tự gắn). */
+function useCurrentGroup(ctx: ChatContext | undefined) {
+  const kind = useChatSidebarStore((s) => s.kind);
+  const groupId = useChatSidebarStore((s) => s.groupId);
+  const groups = ctx?.contacts.groups ?? [];
+  const group = kind === "group" ? (groups.find((g) => g.id === groupId) ?? groups[0] ?? null) : null;
+  const customers: LinkedCustomer[] =
+    group && ctx
+      ? [
+          { id: ctx.customer.id, code: ctx.customer.code, name: ctx.customer.name, contactId: group.id },
+          ...group.sharedWith,
+        ].sort((a, b) => a.contactId - b.contactId)
+      : [];
+  return { group, customers };
+}
+
+/** Chuyển sang khách khác cùng nhóm / cùng hội thoại kênh khác (vẫn mở hội thoại đó). */
+function useSwitchGroupCustomer() {
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+  return (c: LinkedCustomer) => {
+    const st = useChatSidebarStore.getState();
+    const kind = st.kind;
+    st.selectCustomer({ id: c.id, code: c.code, name: c.name }, userId);
+    // Kênh khác Zalo cá nhân: hội thoại chọn theo kênh, không theo Trực tiếp/Nhóm
+    if (kind === "group") {
+      st.setKind("group");
+      st.setGroupId(c.contactId);
+    }
+  };
+}
+
 function CustomerChat({ customerId }: { customerId: number }) {
   const {
     data: ctx,
@@ -703,6 +910,14 @@ function CustomerChat({ customerId }: { customerId: number }) {
   const setPosRatio = useChatSidebarStore((s) => s.setPosRatio);
   const splitRef = useRef<HTMLDivElement>(null);
   const [splitting, setSplitting] = useState(false);
+  const pagePid = useChatSidebarStore((s) => s.pagePid);
+  // Cột phải: Thông tin POS | Thông tin hội thoại (ChatThread đưa nội dung vào chỗ này bằng portal)
+  const infoTab = useChatSidebarStore((s) => s.infoTab);
+  const setInfoTab = useChatSidebarStore((s) => s.setInfoTab);
+  const [infoSlot, setInfoSlot] = useState<HTMLDivElement | null>(null);
+  // Có kênh dùng được → nút "POS" trên thanh hội thoại mở Thông tin POS (khung hẹp)
+  const usableChannel = ctx ? pickChannel(ctx.myChannels, pagePid) : null;
+  const hasUsableChannel = !!usableChannel && !usableChannel.missing;
 
   // Kéo thanh chia → đổi tỷ lệ cột POS theo thời gian thực (lưu tỷ lệ, không lưu px)
   const startSplit = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -762,9 +977,10 @@ function CustomerChat({ customerId }: { customerId: number }) {
   }
 
   return (
+    <ConversationInfoSlotContext.Provider value={wide ? infoSlot : null}>
     <div ref={splitRef} className={`flex flex-1 min-h-0 ${splitting ? "select-none" : ""}`}>
       <div className="flex flex-1 min-w-0 min-h-0 flex-col">
-        {!wide && (
+        {!wide && !hasUsableChannel && (
         <details className="border-b">
           <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase text-gray-500">
             Thông tin POS
@@ -809,13 +1025,39 @@ function CustomerChat({ customerId }: { customerId: number }) {
             : undefined
         }
       >
-        <h3 className="text-xs font-semibold uppercase text-gray-500 mb-2">
-          Thông tin POS
-        </h3>
-        <ChatCustomerCard context={ctx} />
+        <div role="tablist" aria-label="Thông tin bên phải" className="mb-3 flex gap-4 border-b">
+          {(
+            [
+              ["pos", "Thông tin POS", "Công nợ, đơn, hóa đơn gần đây"],
+              ["chat", "Hội thoại", "Thông tin hội thoại: ảnh/video, tệp, link"],
+            ] as const
+          ).map(([key, label, hint]) => (
+            <button
+              key={key}
+              role="tab"
+              aria-selected={infoTab === key}
+              title={hint}
+              onClick={() => setInfoTab(key)}
+              className={`-mb-px border-b-2 pb-1.5 text-xs font-semibold uppercase ${
+                infoTab === key ? "border-brand text-brand" : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div role="tabpanel" hidden={infoTab !== "pos"}>
+          <ChatCustomerCard context={ctx} />
+        </div>
+        <div role="tabpanel" aria-label="Thông tin hội thoại" hidden={infoTab !== "chat"}>
+          <div ref={setInfoSlot} className="peer" />
+          <p className="hidden py-6 text-center text-xs text-gray-500 peer-empty:block">
+            Mở một hội thoại để xem ảnh/video, tệp và link.
+          </p>
+        </div>
       </div>
       )}
     </div>
+    </ConversationInfoSlotContext.Provider>
   );
 }
 
@@ -826,8 +1068,14 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
   const canManage = useCan("smax_chat", "manage_contacts");
   const { kind, groupId, pagePid, setKind, setGroupId, setPagePid } =
     useChatSidebarStore();
+  const { customers: groupCustomers } = useCurrentGroup(ctx);
+  const switchCustomer = useSwitchGroupCustomer();
   const [managing, setManaging] = useState(false);
   const [adding, setAdding] = useState(false);
+  // Khung hẹp: Thông tin POS mở dạng lớp phủ thay cho cột bên phải
+  const wide = useContext(PanelWideContext);
+  const [posOpen, setPosOpen] = useState(false);
+  useEscapeClose(() => setPosOpen(false), posOpen && !wide);
 
   const channels = ctx.myChannels;
   const channel = pickChannel(channels, pagePid);
@@ -857,18 +1105,19 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
       </Notice>
     );
   }
-  if (channel.platform !== "zaloweb") {
-    return (
-      <Notice>
-        Chưa hỗ trợ chat qua Zalo OA (<b>{channel.name}</b>) trong POS. Hãy liên
-        kết thêm một kênh Zalo cá nhân. {settingsLink}
-      </Notice>
-    );
-  }
-
-  const { user, groups } = ctx.contacts;
+  // Zalo cá nhân: ID Zalo / nhóm của khách; kênh khác (OA, Facebook, Shopee…): hội thoại đã gắn đúng kênh
+  const zaloweb = channel.platform === "zaloweb";
+  const { user, groups, others } = ctx.contacts;
   const group = groups.find((g) => g.id === groupId) ?? groups[0];
-  const contact = kind === "group" ? group : user;
+  const other = zaloweb ? undefined : others.find((c) => c.pagePid === channel.pagePid);
+  const contact = zaloweb ? (kind === "group" ? group : user) : other;
+  // Khách cùng gắn hội thoại kênh khác này (vd 1 fanpage chat chung nhiều chi nhánh)
+  const otherCustomers: LinkedCustomer[] = other
+    ? [
+        { id: ctx.customer.id, code: ctx.customer.code, name: ctx.customer.name, contactId: other.id },
+        ...other.sharedWith,
+      ].sort((a, b) => a.contactId - b.contactId)
+    : [];
   const missingOthers = channels.filter((c) => c.missing);
 
   const sendDisabledReason = !canSend
@@ -878,14 +1127,17 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
       : null;
 
   const recipientLabel = contact
-    ? kind === "group"
-      ? `Nhóm ${contact.name ?? ""} (ID ${contact.zaloId})`
-      : `${contact.name || ctx.customer.name} (ID ${contact.zaloId})`
+    ? !zaloweb
+      ? `${platformLabel(channel.platform)} · ${contact.name || ctx.customer.name}`
+      : kind === "group"
+        ? `Nhóm ${contact.name ?? ""} (ID ${contact.zaloId})`
+        : `${contact.name || ctx.customer.name} (ID ${contact.zaloId})`
     : "";
 
   // Trực tiếp / Nhóm + quản lý ID Zalo — nằm cùng hàng với avatar & tên Zalo của khách
   const toolbar = (
     <div className="flex items-center gap-1">
+      {zaloweb && (
       <div className="inline-flex rounded-md border overflow-hidden text-sm">
         <button
           onClick={() => {
@@ -893,6 +1145,7 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
             setAdding(false);
           }}
           title={user ? "" : "Khách chưa có ID Zalo"}
+          aria-pressed={kind === "user"}
           className={`px-3 py-1 ${kind === "user" ? "bg-brand text-white" : "hover:bg-gray-50"} ${
             user ? "" : "text-gray-400"
           }`}
@@ -905,6 +1158,7 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
             setAdding(false);
           }}
           title={groups.length ? "" : "Khách chưa có nhóm Zalo"}
+          aria-pressed={kind === "group"}
           className={`px-3 py-1 border-l ${kind === "group" ? "bg-brand text-white" : "hover:bg-gray-50"} ${
             groups.length ? "" : "text-gray-400"
           }`}
@@ -912,17 +1166,34 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
           Nhóm
         </button>
       </div>
+      )}
+      {!wide && (
+        <button
+          onClick={() => setPosOpen(!posOpen)}
+          title="Thông tin POS: công nợ, đơn, hóa đơn gần đây"
+          aria-label="Thông tin POS"
+          aria-expanded={posOpen}
+          className={`chat-tap inline-flex h-8 items-center gap-1 rounded px-2 text-xs font-semibold ${
+            posOpen ? "bg-cyan-bg text-brand" : "text-gray-600 hover:bg-gray-100"
+          }`}
+        >
+          <ClipboardList className="h-4 w-4" aria-hidden />
+          POS
+        </button>
+      )}
       <button
         onClick={() => setManaging(!managing)}
         title="ID Zalo của khách"
-        className={`p-1.5 rounded ${managing ? "bg-cyan-bg text-brand" : "hover:bg-gray-100"}`}
+        aria-label="ID Zalo của khách"
+        aria-pressed={managing}
+        className={`chat-tap flex h-8 w-8 items-center justify-center rounded ${managing ? "bg-cyan-bg text-brand" : "text-gray-600 hover:bg-gray-100"}`}
       >
         <Settings2 className="w-4 h-4" />
       </button>
     </div>
   );
   const groupSelect =
-    kind === "group" && groups.length >= 2 ? (
+    zaloweb && kind === "group" && groups.length >= 2 ? (
       <select
         value={group?.id}
         onChange={(e) => setGroupId(Number(e.target.value))}
@@ -937,7 +1208,30 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
     ) : null;
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col">
+    <div className="relative flex flex-1 min-h-0 flex-col">
+      {posOpen && !wide && (
+        <>
+          <div className="absolute inset-0 z-20 bg-black/20" onClick={() => setPosOpen(false)} />
+          <section
+            aria-label="Thông tin POS"
+            className="absolute inset-x-0 top-0 z-30 flex max-h-[80%] flex-col border-b bg-white shadow-lg"
+          >
+            <div className="flex items-center justify-between border-b px-3 py-1.5">
+              <h3 className="text-xs font-semibold uppercase text-gray-500">Thông tin POS</h3>
+              <button
+                onClick={() => setPosOpen(false)}
+                aria-label="Đóng Thông tin POS"
+                className="chat-tap flex h-8 w-8 items-center justify-center rounded text-gray-500 hover:bg-gray-100"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-3">
+              <ChatCustomerCard context={ctx} />
+            </div>
+          </section>
+        </>
+      )}
       {(!contact || managing) && (
         <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
           <div className="ml-auto">{toolbar}</div>
@@ -974,18 +1268,50 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
       ) : contact ? (
         <ChatThread
           key={`${channel.pagePid}-${contact.id}`}
-          source={customerSource(ctx.customer.id, channel.pagePid, contact)}
+          source={customerSource(ctx.customer.id, channel, contact, ctx.customer.name)}
           channelName={channel.name}
           recipientLabel={recipientLabel}
           confirmBeforeSend={ctx.confirmBeforeSend}
           sendDisabledReason={sendDisabledReason}
           ctx={ctx}
           headerActions={toolbar}
-          headerExtra={groupSelect}
+          headerExtra={
+            other ? (
+              <GroupCustomersBar
+                group={other}
+                link={{ kind: "user", pagePid: channel.pagePid }}
+                customers={otherCustomers}
+                currentId={ctx.customer.id}
+                onSelect={switchCustomer}
+              />
+            ) : zaloweb && kind === "group" && group ? (
+              <>
+                {groupSelect}
+                <GroupCustomersBar
+                  group={group}
+                  customers={groupCustomers}
+                  currentId={ctx.customer.id}
+                  onSelect={switchCustomer}
+                />
+              </>
+            ) : (
+              groupSelect
+            )
+          }
         />
       ) : (
         <div className="flex-1 overflow-y-auto p-4 text-sm">
-          {adding ? (
+          {!zaloweb ? (
+            <div className="text-center text-gray-500 py-6">
+              <p className="mb-1">
+                Khách chưa gắn hội thoại trên kênh <b>{channel.name}</b> ({platformLabel(channel.platform)}).
+              </p>
+              <p>
+                Bấm nút <Users className="inline h-3.5 w-3.5" /> ở trên, mở hội thoại của khách trong danh sách gần đây
+                của kênh này rồi gắn khách POS.
+              </p>
+            </div>
+          ) : adding ? (
             <ZaloContactEditor
               customerId={ctx.customer.id}
               kind={kind}

@@ -23,10 +23,15 @@ import {
 import { useFormattedNumber } from "@/lib/hooks/useFormattedNumber";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { API_URL } from "@/lib/config/api";
-import { toast } from "sonner";
 import { X } from "lucide-react";
 import { usePublication } from "./publication/usePublication";
 import { PublicationSection } from "./publication/PublicationSection";
+import {
+  ProductImageGallery,
+  toProductImageItems,
+  uploadProductImages,
+  type ProductImageItem,
+} from "./ProductImageGallery";
 
 interface ProductFormProps {
   product?: Product;
@@ -35,19 +40,13 @@ interface ProductFormProps {
   onSuccess: () => void;
 }
 
-interface ImageItem {
-  url?: string;
-  file?: File;
-  preview: string;
-}
-
 export function ProductForm({
   product,
   productType,
   onClose,
   onSuccess,
 }: ProductFormProps) {
-  const [images, setImages] = useState<ImageItem[]>([]);
+  const [images, setImages] = useState<ProductImageItem[]>([]);
   const [activeTab, setActiveTab] = useState<
     "info" | "description" | "publication"
   >("info");
@@ -55,7 +54,6 @@ export function ProductForm({
   // Toàn bộ state + logic phần Công bố gói trong hook dùng chung.
   const pub = usePublication(product);
 
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showCostConfirmation, setShowCostConfirmation] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<any>(null);
   const [attributes, setAttributes] = useState<
@@ -91,10 +89,7 @@ export function ProductForm({
   const { selectedBranch } = useBranchStore();
   const canViewCostPrice = usePermission("products", "view_cost_price");
   const canViewSalePrice = usePermission("products", "view_sale_price");
-  const canEditPublication = usePermission(
-    "products",
-    "edit_publication"
-  );
+  const canEditPublication = usePermission("products", "edit_publication");
   const canLinkMisa = usePermission("products", "link_misa");
   const canViewFactory = usePermission("products", "view_factory");
   const canAssignFactory = usePermission("products", "assign_factory");
@@ -180,11 +175,7 @@ export function ProductForm({
 
   useEffect(() => {
     if (product?.images) {
-      const loadedImages = product.images.map((img) => ({
-        url: img.image,
-        preview: img.image,
-      }));
-      setImages(loadedImages);
+      setImages(toProductImageItems(product.images));
     }
   }, [product]);
 
@@ -283,16 +274,10 @@ export function ProductForm({
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
-      const uploadedUrls: string[] = [];
-
-      for (const img of images) {
-        if (img.file) {
-          const url = await uploadFile(img.file);
-          uploadedUrls.push(url);
-        } else if (img.url) {
-          uploadedUrls.push(img.url);
-        }
-      }
+      const { imageUrls, primaryImageUrl } = await uploadProductImages(
+        images,
+        uploadFile
+      );
 
       // Upload tài liệu + gói dữ liệu công bố chỉ khi có quyền sửa.
       const publicationPayload = await pub.getPayload(canEditPublication);
@@ -320,7 +305,8 @@ export function ProductForm({
         ...(canViewCostPrice ? { purchasePrice: purchasePrice.value } : {}),
         // Chỉ gửi giá bán khi có quyền xem, tránh NaN/0 ghi đè.
         ...(canViewSalePrice ? { basePrice: basePrice.value } : {}),
-        imageUrls: uploadedUrls,
+        imageUrls,
+        primaryImageUrl,
         // Dữ liệu công bố (documents + publicationLocation/Date/Link) — hook
         // trả {} khi thiếu quyền để tránh xóa trắng dữ liệu thật.
         ...publicationPayload,
@@ -346,9 +332,7 @@ export function ProductForm({
         shippingWeight: shippingWeightValue || undefined,
         shippingWeightUnit: data.shippingWeightUnit || "g",
         vat:
-          data.vat != null && !isNaN(Number(data.vat))
-            ? Number(data.vat)
-            : 8,
+          data.vat != null && !isNaN(Number(data.vat)) ? Number(data.vat) : 8,
         unit: data.unit || undefined,
         conversionValue: Math.max(
           1,
@@ -390,41 +374,8 @@ export function ProductForm({
     await submitProduct(finalData);
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Kích thước ảnh không được vượt quá 2MB");
-      e.target.value = "";
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImages((prev) => [
-        ...prev,
-        { file, preview: reader.result as string },
-      ]);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
-  };
-
   useEffect(() => {
-    if (product?.images) {
-      setImages(
-        product.images.map((img) => ({
-          url: img.image,
-          preview: img.image,
-        }))
-      );
-    } else {
-      setImages([]);
-    }
+    setImages(toProductImageItems(product?.images));
   }, [product?.id]);
 
   return (
@@ -482,133 +433,76 @@ export function ProductForm({
           onSubmit={handleSubmit(onSubmit)}
           className="flex-1 overflow-y-auto bg-gray-50">
           <div className={activeTab === "info" ? "p-6 space-y-5" : "hidden"}>
-            {/* Khối trên: thông tin cơ bản (trái) + ảnh (phải) */}
+            {/* Thông tin cơ bản; ảnh nằm ở section riêng bên dưới */}
             <FormSection title="Thông tin chung" collapsible={false}>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-2 grid grid-cols-2 gap-4 content-start">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Mã hàng
-                    </label>
-                    <input
-                      {...register("code")}
-                      className="w-full border rounded px-3 py-2 bg-white"
-                      placeholder="Tự động"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Tên hàng <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      {...register("name", { required: true })}
-                      className="w-full border rounded px-3 py-2 bg-white"
-                      placeholder="Nhập tên hàng"
-                    />
-                  </div>
-
-                  <CategoryDropdown
-                    type="parent"
-                    label="Loại Hàng"
-                    placeholder="Chọn loại hàng"
-                    value={watch("parentName")}
-                    onChange={(value) => setValue("parentName", value)}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Mã hàng
+                  </label>
+                  <input
+                    {...register("code")}
+                    className="w-full border rounded px-3 py-2 bg-white"
+                    placeholder="Tự động"
                   />
-                  <CategoryDropdown
-                    type="middle"
-                    label="Nguồn Gốc"
-                    placeholder="Chọn nguồn gốc"
-                    value={watch("middleName")}
-                    onChange={(value) => setValue("middleName", value)}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Tên hàng <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    {...register("name", { required: true })}
+                    className="w-full border rounded px-3 py-2 bg-white"
+                    placeholder="Nhập tên hàng"
                   />
-                  <CategoryDropdown
-                    type="child"
-                    label="Danh Mục"
-                    placeholder="Chọn danh mục"
-                    value={watch("childName")}
-                    onChange={(value) => setValue("childName", value)}
-                  />
-                  <TrademarkDropdown
-                    label="Thương hiệu"
-                    placeholder="Chọn thương hiệu"
-                    value={watch("tradeMarkId")}
-                    onChange={(value) => setValue("tradeMarkId", value)}
-                  />
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Loại vận chuyển
-                    </label>
-                    <select
-                      value={watch("cargoType")}
-                      onChange={(e) =>
-                        setValue(
-                          "cargoType",
-                          e.target.value as "COLD" | "NORMAL"
-                        )
-                      }
-                      className="w-full border rounded px-3 py-2 bg-white">
-                      <option value="NORMAL">Hàng thường</option>
-                      <option value="COLD">Hàng lạnh</option>
-                    </select>
-                  </div>
                 </div>
 
-                {/* Khối ảnh bên phải */}
-                <div className="flex flex-col">
+                <CategoryDropdown
+                  type="parent"
+                  label="Loại Hàng"
+                  placeholder="Chọn loại hàng"
+                  value={watch("parentName")}
+                  onChange={(value) => setValue("parentName", value)}
+                />
+                <CategoryDropdown
+                  type="middle"
+                  label="Nguồn Gốc"
+                  placeholder="Chọn nguồn gốc"
+                  value={watch("middleName")}
+                  onChange={(value) => setValue("middleName", value)}
+                />
+                <CategoryDropdown
+                  type="child"
+                  label="Danh Mục"
+                  placeholder="Chọn danh mục"
+                  value={watch("childName")}
+                  onChange={(value) => setValue("childName", value)}
+                />
+                <TrademarkDropdown
+                  label="Thương hiệu"
+                  placeholder="Chọn thương hiệu"
+                  value={watch("tradeMarkId")}
+                  onChange={(value) => setValue("tradeMarkId", value)}
+                />
+                <div>
                   <label className="block text-sm font-medium mb-1">
-                    Hình ảnh
+                    Loại vận chuyển
                   </label>
-                  <div className="flex gap-3">
-                    {/* Ô vuông: bấm để thêm ảnh */}
-                    <label className="w-28 h-28 shrink-0 border-2 border-dashed rounded flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 bg-white">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageSelect}
-                        className="hidden"
-                      />
-                      <span className="text-3xl text-gray-400 leading-none">
-                        +
-                      </span>
-                      <span className="text-xs text-gray-400 mt-1">
-                        Thêm ảnh
-                      </span>
-                    </label>
-
-                    {/* Cột các ô vuông: nơi ảnh đã upload hiển thị */}
-                    <div className="flex flex-col gap-2">
-                      {Array.from({ length: 4 }).map((_, index) => {
-                        const img = images[index];
-                        return (
-                          <div
-                            key={index}
-                            className="relative w-16 h-16 border rounded bg-gray-50 overflow-hidden">
-                            {img ? (
-                              <>
-                                <img
-                                  src={img.preview}
-                                  alt=""
-                                  onClick={() => setPreviewImage(img.preview)}
-                                  className="w-full h-full object-cover cursor-pointer"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => removeImage(index)}
-                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                                  ×
-                                </button>
-                              </>
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-gray-400 mt-2">
-                    Mỗi ảnh không quá 2 MB
-                  </p>
+                  <select
+                    value={watch("cargoType")}
+                    onChange={(e) =>
+                      setValue("cargoType", e.target.value as "COLD" | "NORMAL")
+                    }
+                    className="w-full border rounded px-3 py-2 bg-white">
+                    <option value="NORMAL">Hàng thường</option>
+                    <option value="COLD">Hàng lạnh</option>
+                  </select>
                 </div>
               </div>
+            </FormSection>
+
+            <FormSection title="Hình ảnh">
+              <ProductImageGallery images={images} onChange={setImages} />
             </FormSection>
 
             {/* Section: Nhà máy sản xuất (mới) — chỉ hiện khi có quyền view_factory */}
@@ -628,7 +522,6 @@ export function ProductForm({
                 )}
               </FormSection>
             )}
-
 
             {/* Section: Giá vốn, giá bán */}
             {(canViewCostPrice || canViewSalePrice) && (
@@ -859,7 +752,9 @@ export function ProductForm({
               title="Quản lý theo đơn vị tính và thuộc tính"
               description="Thêm đặc điểm như hương vị, dung tích, màu sắc.">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-medium text-gray-700">Thuộc tính</h4>
+                <h4 className="text-sm font-medium text-gray-700">
+                  Thuộc tính
+                </h4>
                 <div className="flex gap-2">
                   {["Vị", "Loại", "Màu sắc", "Kích cỡ"].map((preset) => (
                     <button
@@ -878,7 +773,10 @@ export function ProductForm({
                   <button
                     type="button"
                     onClick={() =>
-                      setAttributes((prev) => [...prev, { name: "", value: "" }])
+                      setAttributes((prev) => [
+                        ...prev,
+                        { name: "", value: "" },
+                      ])
                     }
                     className="px-2 py-1 text-xs border rounded hover:bg-gray-50">
                     + Tùy chỉnh
@@ -1002,25 +900,6 @@ export function ProductForm({
             setIsSubmitting(false);
           }}
         />
-      )}
-
-      {previewImage && (
-        <div
-          className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-8"
-          onClick={() => setPreviewImage(null)}>
-          <img
-            src={previewImage}
-            alt=""
-            className="max-w-full max-h-full object-contain rounded"
-            onClick={(e) => e.stopPropagation()}
-          />
-          <button
-            type="button"
-            onClick={() => setPreviewImage(null)}
-            className="absolute top-4 right-4 bg-white/90 text-gray-700 rounded-full w-9 h-9 flex items-center justify-center hover:bg-white">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
       )}
     </div>
   );

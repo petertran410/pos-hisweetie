@@ -14,6 +14,8 @@ interface KpiCardProps {
   valueSuffix?: string;
   delta?: string;
   deltaDir?: DeltaDir;
+  /** Ghi đè màu delta khi "giảm" mới là tốt (vd thời gian xử lý). Mặc định theo deltaDir. */
+  deltaTone?: "good" | "bad" | "neutral";
   vs?: string;
   accent?: string;
 }
@@ -27,11 +29,18 @@ export function KpiCard({
   valueSuffix,
   delta,
   deltaDir = "flat",
+  deltaTone,
   vs,
   accent = "#00B7CC",
 }: KpiCardProps) {
-  const deltaColor =
-    deltaDir === "up"
+  const toneColor = {
+    good: "#2E8B8F",
+    bad: "#C0392B",
+    neutral: "#5A8A92",
+  };
+  const deltaColor = deltaTone
+    ? toneColor[deltaTone]
+    : deltaDir === "up"
       ? "#2E8B8F"
       : deltaDir === "down"
         ? "#C0392B"

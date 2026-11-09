@@ -1,4 +1,6 @@
 import type { ColdCargoWarning } from "./cold-cargo-warning";
+import type { InvoicePaymentNote } from "./invoice";
+import type { PackingCashWarning } from "@/lib/packing/payment-note";
 
 export interface PackingSlip extends ColdCargoWarning {
   id: number;
@@ -26,6 +28,8 @@ export interface PackingSlip extends ColdCargoWarning {
     id: number;
     name: string;
   } | null;
+  /** Phiếu lệch tiền mặt so với ghi chú thanh toán của hóa đơn (backend tính). */
+  cashWarning?: PackingCashWarning | null;
   type?: string;
   branch?: {
     id: number;
@@ -57,6 +61,8 @@ export interface PackingSlipInvoice {
       name: string;
       contactNumber?: string;
     };
+    /** Ghi chú thanh toán mới nhất (danh sách báo đơn trả về). */
+    paymentNote?: InvoicePaymentNote | null;
   };
 }
 

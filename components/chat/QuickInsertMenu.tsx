@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ClipboardList, CreditCard, FileText, Loader2, Package, ShoppingCart } from "lucide-react";
+import { ClipboardList, CreditCard, FileText, Loader2, MessageSquareText, Package, Play, ShoppingCart } from "lucide-react";
 import { useCan } from "@/lib/hooks/useCan";
 import { useProducts } from "@/lib/hooks/useProducts";
 import { invoicesApi } from "@/lib/api/invoices";
@@ -10,7 +10,7 @@ import { ordersApi } from "@/lib/api/orders";
 import { useBranchStore } from "@/lib/store/branch";
 import { usePosInViewStore } from "@/lib/store/posInView";
 import type { QuickItem } from "@/lib/chat/quickInsert";
-import type { ChatContext } from "@/lib/types/smaxChat";
+import type { ChatContext, OutgoingAttachment } from "@/lib/types/smaxChat";
 import { formatCurrency } from "@/lib/utils";
 
 export interface QuickOption {
@@ -18,8 +18,31 @@ export interface QuickOption {
   group: string;
   label: string;
   hint?: string;
-  icon: "invoice" | "order" | "product" | "cart" | "debt";
+  icon: "invoice" | "order" | "product" | "cart" | "debt" | "quick";
   item: QuickItem;
+  // Tin nhắn nhanh: nội dung xem trước + ảnh/tệp nhỏ bên cạnh
+  preview?: string;
+  media?: OutgoingAttachment[];
+}
+
+const THUMBS = 3;
+
+/** Ảnh nhỏ media của tin nhắn nhanh (tối đa THUMBS, thừa hiện "+n"). */
+function MediaThumbs({ media }: { media: OutgoingAttachment[] }) {
+  return (
+    <span className="flex shrink-0 items-center gap-1">
+      {media.slice(0, THUMBS).map((m, i) =>
+        m.kind === "image" ? (
+          <img key={i} src={m.url} alt={m.name} loading="lazy" className="h-9 w-9 rounded border object-cover" />
+        ) : (
+          <span key={i} title={m.name} className="flex h-9 w-9 items-center justify-center rounded border bg-gray-50 text-gray-500">
+            {m.kind === "video" ? <Play className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+          </span>
+        )
+      )}
+      {media.length > THUMBS && <span className="text-xs text-gray-500">+{media.length - THUMBS}</span>}
+    </span>
+  );
 }
 
 const ICONS = {
@@ -28,9 +51,10 @@ const ICONS = {
   product: Package,
   cart: ShoppingCart,
   debt: CreditCard,
+  quick: MessageSquareText,
 };
 
-const norm = (s: string) =>
+export const norm = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").toLowerCase();
 
 function useDebounced(value: string, ms = 300) {
@@ -42,7 +66,10 @@ function useDebounced(value: string, ms = 300) {
   return v;
 }
 
-/** Các lựa chọn của menu "/": gợi ý từ màn hình bên trái, sản phẩm, hóa đơn, đặt hàng, công nợ. */
+/**
+ * Các lựa chọn của menu "/": gợi ý từ màn hình bên trái, sản phẩm, hóa đơn, đặt hàng, công nợ.
+ * ctx null (chưa gắn khách POS): chỉ có sản phẩm.
+ */
 export function useQuickOptions(query: string, ctx: ChatContext | null, enabled: boolean) {
   const entries = usePosInViewStore((s) => s.entries);
   const branchId = useBranchStore((s) => s.selectedBranch?.id);
@@ -52,7 +79,6 @@ export function useQuickOptions(query: string, ctx: ChatContext | null, enabled:
   const q = useDebounced(query.trim());
   const search = q.length >= 2 ? q : "";
   const customerId = ctx?.customer.id ?? 0;
-  enabled = enabled && !!ctx;
 
   const products = useProducts(
     { search, limit: 8, isActive: true, branchId },
@@ -61,13 +87,13 @@ export function useQuickOptions(query: string, ctx: ChatContext | null, enabled:
   const invoices = useQuery({
     queryKey: ["chatQuickInvoices", customerId, search],
     queryFn: () => invoicesApi.getInvoices({ search, customerIds: [customerId], pageSize: 5 }),
-    enabled: enabled && canInvoices && !!search,
+    enabled: enabled && !!ctx && canInvoices && !!search,
     retry: false,
   });
   const orders = useQuery({
     queryKey: ["chatQuickOrders", customerId, search],
     queryFn: () => ordersApi.getOrders({ search, customerId, limit: 5 }),
-    enabled: enabled && canOrders && !!search,
+    enabled: enabled && !!ctx && canOrders && !!search,
     retry: false,
   });
 
@@ -85,6 +111,8 @@ export function useQuickOptions(query: string, ctx: ChatContext | null, enabled:
 
     // Gợi ý: mục đang mở bên trái (mới mở lên đầu) + công nợ khách đang chat
     for (const e of Object.values(entries).reverse()) {
+      // Chưa gắn khách POS: chỉ gợi ý sản phẩm
+      if (!ctx && e.type !== "product") continue;
       if (e.type === "cart") {
         if (e.lines.length && match("gio hang bao gia", e.label))
           push({
@@ -167,10 +195,13 @@ interface MenuProps {
   activeIndex: number;
   onHover: (i: number) => void;
   onPick: (o: QuickOption) => void;
+  // Menu "#" (tin nhắn nhanh) dùng tiêu đề / câu báo trống riêng
+  title?: string;
+  emptyText?: string;
 }
 
 /** Bảng chọn nhanh hiện phía trên ô soạn tin. */
-export function QuickInsertMenu({ options, loading, activeIndex, onHover, onPick }: MenuProps) {
+export function QuickInsertMenu({ options, loading, activeIndex, onHover, onPick, title, emptyText }: MenuProps) {
   const listRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     listRef.current?.querySelector(`[data-index="${activeIndex}"]`)?.scrollIntoView({ block: "nearest" });
@@ -180,13 +211,13 @@ export function QuickInsertMenu({ options, loading, activeIndex, onHover, onPick
     <div
       ref={listRef}
       className="absolute bottom-full left-2 right-2 mb-1 max-h-72 overflow-y-auto rounded-lg border bg-white py-1 text-sm shadow-xl z-30">
-      <div className="flex items-center justify-between px-3 py-1 text-[11px] text-gray-400">
-        <span>Gửi nhanh thông tin POS — ↑↓ chọn · Enter chèn · Esc đóng</span>
+      <div className="flex items-center justify-between px-3 py-1 text-xs text-gray-500">
+        <span>{title ?? "Gửi nhanh thông tin POS"} — ↑↓ chọn · Enter chèn · Esc đóng</span>
         {loading && <Loader2 className="h-3 w-3 animate-spin" />}
       </div>
       {options.length === 0 && !loading && (
         <p className="px-3 py-2 text-gray-500">
-          Không có mục phù hợp. Gõ tên/mã sản phẩm, mã hóa đơn hoặc đơn hàng (từ 2 ký tự).
+          {emptyText ?? "Không có mục phù hợp. Gõ tên/mã sản phẩm, mã hóa đơn hoặc đơn hàng (từ 2 ký tự)."}
         </p>
       )}
       {options.map((o, i) => {
@@ -195,7 +226,7 @@ export function QuickInsertMenu({ options, loading, activeIndex, onHover, onPick
         return (
           <div key={o.key}>
             {newGroup && (
-              <div className="px-3 pt-2 pb-0.5 text-[11px] font-semibold uppercase text-gray-500">
+              <div className="px-3 pt-2 pb-0.5 text-xs font-semibold uppercase text-gray-500">
                 {o.group}
               </div>
             )}
@@ -210,8 +241,18 @@ export function QuickInsertMenu({ options, loading, activeIndex, onHover, onPick
               className={`flex w-full items-center gap-2 px-3 py-1.5 text-left ${
                 i === activeIndex ? "bg-cyan-bg" : ""
               }`}>
-              <Icon className="h-4 w-4 shrink-0 text-brand" />
-              <span className="min-w-0 flex-1 truncate">{o.label}</span>
+              <Icon className={`h-4 w-4 shrink-0 text-brand ${o.preview !== undefined ? "self-start mt-0.5" : ""}`} />
+              {o.preview !== undefined ? (
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">{o.label}</span>
+                  {o.preview && (
+                    <span className="line-clamp-2 whitespace-pre-wrap break-words text-xs text-gray-500">{o.preview}</span>
+                  )}
+                </span>
+              ) : (
+                <span className="min-w-0 flex-1 truncate">{o.label}</span>
+              )}
+              {o.media?.length ? <MediaThumbs media={o.media} /> : null}
               {o.hint && <span className="shrink-0 text-xs text-gray-500">{o.hint}</span>}
             </button>
           </div>

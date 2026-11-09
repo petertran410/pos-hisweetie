@@ -128,7 +128,7 @@ export interface Product {
   updatedAt: string;
   tradeMark?: { id: number; name: string };
   variant?: { id: number; name: string };
-  images?: { id: number; image: string }[];
+  images?: { id: number; image: string; isPrimary?: boolean }[];
   documents?: {
     id: number;
     url: string;

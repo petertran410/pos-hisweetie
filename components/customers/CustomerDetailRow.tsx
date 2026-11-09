@@ -5,7 +5,11 @@ import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import { useCustomer } from "@/lib/hooks/useCustomers";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Pencil, Trash2, Loader2, ExternalLink, MapPin } from "lucide-react";
-import { useDeleteCustomer, useUpdateCustomer } from "@/lib/hooks/useCustomers";
+import {
+  useDeleteCustomer,
+  useUpdateCustomer,
+  useUpdateCustomerComments,
+} from "@/lib/hooks/useCustomers";
 import { CustomerInvoicesTab } from "./CustomerInvoicesTab";
 import { CustomerOrdersTab } from "./CustomerOrdersTab";
 import { CustomerConsignmentsTab } from "./CustomerConsignmentsTab";
@@ -15,6 +19,9 @@ import { useCan } from "@/lib/hooks/useCan";
 import { CodeLink } from "../shared/CodeLink";
 import { ZaloContactsManager } from "../chat/ZaloContactsManager";
 import { useRegisterCustomerInView } from "@/lib/store/customersInView";
+import { useCustomerJourney } from "@/lib/hooks/useLeads";
+import { CustomerJourneyTab } from "../journey/CustomerJourneyTab";
+import { LEAD_SOURCE_LABEL, leadHref } from "@/lib/leads/constants";
 
 interface CustomerDetailRowProps {
   customerId: number;
@@ -41,13 +48,33 @@ export function CustomerDetailRow({
     | "debts_total"
     | "debts_own"
     | "zalo"
+    | "journey"
   >("info");
 
   const canUpdateCustomer = useCan("customers", "update");
   const canDeleteCustomer = useCan("customers", "delete");
   const canViewDebt = useCan("customers", "view_debt");
   const canViewZalo = useCan("smax_chat", "view");
+  // Lead nguồn của khách (dòng "Từ lead" + tab "Hành trình")
+  const canViewLeads = useCan("leads", "view");
+  const journey = useCustomerJourney(customerId, canViewLeads);
+  const sourceLead = journey.data?.lead ?? null;
   useRegisterCustomerInView(customer, "Chi tiết khách hàng");
+
+  // ─── Ghi chú sửa trực tiếp (giống ghi chú ở OrderDetailRow) ───
+  // Sửa được khi có quyền sửa khách hàng HOẶC quyền riêng sửa ghi chú.
+  const canUpdateComments = useCan("customers", "update_comments");
+  const canEditComments = canUpdateCustomer || canUpdateComments;
+  const updateComments = useUpdateCustomerComments();
+  const [comments, setComments] = useState("");
+  useEffect(() => {
+    setComments(customer?.comments ?? "");
+  }, [customer?.id, customer?.comments]);
+  // Nút "Lưu" ở footer (giống InvoiceDetailRow) — lưu ghi chú đang nhập.
+  const handleSaveComments = () => {
+    if (!customer || updateComments.isPending) return;
+    updateComments.mutate({ id: customer.id, comments: comments.trim() });
+  };
 
   // ─── Sticky width trick (giống OrderDetailRow) ───
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -167,7 +194,8 @@ export function CustomerDetailRow({
           ]
         : [{ key: "debts", label: "Công nợ" }]
       : []),
-    ...(canViewZalo ? [{ key: "zalo", label: "Zalo" }] : []),
+    ...(canViewZalo ? [{ key: "zalo", label: "Smax" }] : []),
+    ...(canViewLeads ? [{ key: "journey", label: "Hành trình" }] : []),
   ] as const;
 
   const groups =
@@ -285,6 +313,25 @@ export function CustomerDetailRow({
                             {groups.length > 0 ? groups.join(", ") : "Chưa có"}
                           </span>
                         </span>
+                        {sourceLead && (
+                          <>
+                            <span className="text-gray-300">|</span>
+                            <span>
+                              Từ lead:{" "}
+                              <a
+                                href={leadHref(sourceLead.id)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-brand hover:underline">
+                                {sourceLead.code}
+                              </a>{" "}
+                              <span className="text-gray-700">
+                                · {LEAD_SOURCE_LABEL[sourceLead.source]}
+                                {sourceLead.cskh ? ` · CSKH ${sourceLead.cskh.name}` : ""}
+                              </span>
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -394,23 +441,52 @@ export function CustomerDetailRow({
                   </div>
                   {/* )} */}
 
-                  {/* ── Ghi chú ── */}
-                  {customer.comments && (
-                    <div className="flex items-start gap-1 text-md text-gray-700">
-                      <svg
-                        className="w-4 h-4 text-gray-400 mt-0.5 shrink-0"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
-                      <span>Ghi chú: {customer.comments}</span>
+                  {/* ── Ghi chú: có quyền sửa → sửa trực tiếp; không quyền → chỉ xem ── */}
+                  {canEditComments ? (
+                    <div className="max-w-3xl">
+                      <label
+                        htmlFor={`customer-comments-${customer.id}`}
+                        className="flex items-center gap-1 text-md font-medium text-gray-500 mb-1.5">
+                        <Pencil className="w-4 h-4 text-gray-400" />
+                        Ghi chú:
+                      </label>
+                      <textarea
+                        id={`customer-comments-${customer.id}`}
+                        value={comments}
+                        onChange={(e) =>
+                          setComments(e.target.value.slice(0, 1000))
+                        }
+                        onKeyDown={(e) => {
+                          // Ctrl/Cmd + Enter để lưu nhanh
+                          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                            e.preventDefault();
+                            handleSaveComments();
+                          }
+                        }}
+                        maxLength={1000}
+                        rows={3}
+                        placeholder="Nhập ghi chú..."
+                        className="w-full px-3 py-2 text-md border rounded bg-white resize-none focus:outline-none focus:border-brand"
+                      />
                     </div>
+                  ) : (
+                    customer.comments && (
+                      <div className="flex items-start gap-1 text-md text-gray-700">
+                        <svg
+                          className="w-4 h-4 text-gray-400 mt-0.5 shrink-0"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
+                        </svg>
+                        <span>Ghi chú: {customer.comments}</span>
+                      </div>
+                    )
                   )}
                 </div>
               )}
@@ -431,6 +507,9 @@ export function CustomerDetailRow({
                 <div className="max-w-md">
                   <ZaloContactsManager customerId={customer.id} />
                 </div>
+              )}
+              {activeTab === "journey" && (
+                <CustomerJourneyTab customerId={customer.id} />
               )}
               {activeTab === "debts" && (
                 <CustomerDebtsTab
@@ -533,14 +612,25 @@ export function CustomerDetailRow({
                     </button>
                   )}
                 </div>
-                {canUpdateCustomer && (
-                  <button
-                    onClick={() => onEditClick(customer)}
-                    className="px-4 py-2 text-md font-medium text-white bg-brand rounded hover:bg-brand-dark transition-colors shadow-sm">
-                    <Pencil className="w-4 h-4 inline mr-1" />
-                    Chỉnh sửa
-                  </button>
-                )}
+                <div className="flex gap-2">
+                  {/* Lưu ghi chú — chỉ ở tab Thông tin (nơi có ô ghi chú) */}
+                  {canEditComments && activeTab === "info" && (
+                    <button
+                      onClick={handleSaveComments}
+                      disabled={updateComments.isPending}
+                      className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                      {updateComments.isPending ? "Đang lưu..." : "Lưu"}
+                    </button>
+                  )}
+                  {canUpdateCustomer && (
+                    <button
+                      onClick={() => onEditClick(customer)}
+                      className="px-4 py-2 text-md font-medium text-white bg-brand rounded hover:bg-brand-dark transition-colors shadow-sm">
+                      <Pencil className="w-4 h-4 inline mr-1" />
+                      Chỉnh sửa
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>

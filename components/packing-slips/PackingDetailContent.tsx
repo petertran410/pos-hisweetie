@@ -14,6 +14,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { CodeLink } from "@/components/shared/CodeLink";
 import type { PackingItemType } from "@/lib/hooks/usePackingDetail";
 import type { ColdCargoItem } from "@/lib/types/cold-cargo-warning";
+import { CashWarningBox } from "./CashWarning";
 
 interface PackingDetailContentProps {
   item: any;
@@ -55,9 +56,13 @@ function feeText(enabled: boolean, amount: unknown) {
 
 function paymentText(data: any) {
   if (data.paymentMethod === "cash") {
-    return data.cashAmount != null
-      ? `Tiền mặt · ${formatCurrency(data.cashAmount)} đ`
-      : "Tiền mặt";
+    return (
+      <span className="font-bold">
+        {data.cashAmount != null
+          ? `Tiền mặt · ${formatCurrency(data.cashAmount)} đ`
+          : "Tiền mặt"}
+      </span>
+    );
   }
   if (data.paymentMethod === "transfer") return "Chuyển khoản";
   return "-";
@@ -85,6 +90,11 @@ export function PackingDetailContent({
   const coldItemCount =
     Number(data.coldItemCount ?? item?.coldItemCount ?? coldItems.length) || 0;
   const imageCount = Number(data.imageCount ?? item?.imageCount ?? images.length) || 0;
+  // Chi tiết mới tải có `cashWarning` mới nhất; chưa tải xong thì dùng của dòng danh sách.
+  const cashWarning =
+    type === "giao-hang" && !data.cancelledAt
+      ? (data.cashWarning !== undefined ? data.cashWarning : item?.cashWarning)
+      : null;
   const showImageLoading = isLoading && images.length === 0 && imageCount > 0;
   const gridClass = compact
     ? "grid grid-cols-1 gap-x-6"
@@ -139,6 +149,7 @@ export function PackingDetailContent({
             </Field>
             <Field label="Người chi:">{textOrDash(data.expensePayer?.name)}</Field>
           </div>
+          <CashWarningBox warning={cashWarning} className="mt-1" />
         </div>
       )}
 

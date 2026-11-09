@@ -9,6 +9,7 @@ import { Toaster, toast } from "sonner";
 import { useEffect, useState } from "react";
 import { initBranchCrossTabSync } from "@/lib/store/branch";
 import { initNotificationPrefsCrossTabSync } from "@/lib/store/notificationPrefs";
+import { LeadExtensionBridge } from "@/components/leads/LeadExtensionBridge";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -68,6 +69,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
+      {/* Extension Chrome "Tạo lead nhanh" gọi API qua tab POS (mọi trang, kể cả Tổng quan) */}
+      <LeadExtensionBridge />
       <Toaster
         // Giữ các toast trong stack cùng chiều rộng, không thu nhỏ khi hover.
         expand

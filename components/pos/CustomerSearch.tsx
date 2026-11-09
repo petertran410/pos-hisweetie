@@ -6,6 +6,10 @@ import { Plus, X } from "lucide-react";
 import { PriceBookDropdown } from "./PriceBookDropdown";
 import { CustomerDetailModal } from "./CustomerDetailModal";
 import { CustomerForm } from "../customers/CustomerForm";
+import { useBranchStore } from "@/lib/store/branch";
+import { useAuthStore } from "@/lib/store/auth";
+import { canCustomerUsePriceBook } from "@/lib/utils/price-book-scope";
+import { toast } from "sonner";
 
 interface CustomerSearchProps {
   selectedCustomer: any;
@@ -38,10 +42,32 @@ export function CustomerSearch({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  const { data: customersData } = useSearchCustomers(
-    searchDebounced || undefined
-  );
+  const { selectedBranch } = useBranchStore();
+  const { user } = useAuthStore();
+
+  // Chỉ tìm khách dùng được với bảng giá đang chọn (0 = Bảng giá chung:
+  // ẩn khách đã gắn bảng giá riêng).
+  const { data: customersData, isFetching: isFetchingCustomers } =
+    useSearchCustomers(searchDebounced || undefined, {
+      priceBookId: selectedPriceBookId ?? 0,
+      branchId: selectedBranch?.id,
+    });
   const customers = customersData?.data || [];
+  // Tab khôi phục từ localStorage có thể chỉ có id, chưa có tên bảng giá.
+  const priceBookLabel =
+    selectedPriceBookId && selectedPriceBookId > 0
+      ? selectedPriceBookName
+        ? `bảng giá "${selectedPriceBookName}"`
+        : "bảng giá đang chọn"
+      : `bảng giá "Bảng giá chung"`;
+  const showNoResult =
+    showDropdown &&
+    !selectedCustomer &&
+    !!search &&
+    search === searchDebounced &&
+    !isFetchingCustomers &&
+    !!customersData &&
+    customers.length === 0;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -212,6 +238,12 @@ export function CustomerSearch({
                 ))}
               </div>
             )}
+
+            {showNoResult && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg z-50 px-4 py-3 text-sm text-gray-500">
+                {`Không tìm thấy khách hàng trong ${priceBookLabel}`}
+              </div>
+            )}
           </div>
 
           <button
@@ -226,6 +258,7 @@ export function CustomerSearch({
             onSelectPriceBook={onSelectPriceBook}
             cartItems={cartItems}
             selectedCustomerId={selectedCustomer?.id}
+            selectedCustomerName={selectedCustomer?.name}
           />
         </div>
       </div>
@@ -233,11 +266,28 @@ export function CustomerSearch({
       {showCreateModal && (
         <CustomerForm
           onClose={() => setShowCreateModal(false)}
-          onSuccess={(createdCustomer) => {
+          onSuccess={async (createdCustomer) => {
             setShowCreateModal(false);
-            if (createdCustomer) {
-              onSelectCustomer(createdCustomer);
+            if (!createdCustomer) return;
+            // Khách mới phải dùng được bảng giá đang chọn mới gắn vào đơn.
+            try {
+              const { allowed } = await canCustomerUsePriceBook({
+                customerId: createdCustomer.id,
+                priceBookId: selectedPriceBookId,
+                branchId: selectedBranch?.id,
+                userId: user?.id,
+              });
+              if (!allowed) {
+                toast.error(
+                  `Đã tạo khách hàng "${createdCustomer.name}" nhưng khách không thuộc ${priceBookLabel}.`
+                );
+                return;
+              }
+            } catch {
+              toast.error("Không thể kiểm tra bảng giá của khách hàng.");
+              return;
             }
+            onSelectCustomer(createdCustomer);
           }}
         />
       )}

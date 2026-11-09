@@ -37,6 +37,14 @@ export function expenseSourceAction(
   if (entry.sourceType === "MANUAL_EXPENSE") {
     return { kind: "edit", label: "Sửa phiếu" };
   }
+  // Phiếu sinh từ đơn Lark Approval đã duyệt: mọi thay đổi làm trên Lark.
+  if (entry.sourceType === "LARK_APPROVAL") {
+    return {
+      kind: "link",
+      label: "Xem đơn Lark",
+      href: `/tai-chinh/don-lark-approval?search=${encodeURIComponent(entry.code)}`,
+    };
+  }
   // Phiếu đồng bộ từ Lark không có báo đơn / phiếu xe: sửa chứng từ tại chỗ.
   if (entry.sourceType === "LARK_IMPORT") {
     return { kind: "evidence", label: "Sửa chứng từ" };

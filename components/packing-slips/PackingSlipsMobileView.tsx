@@ -11,6 +11,7 @@ import { useBranches } from "@/lib/hooks/useBranches";
 import { formatCurrency } from "@/lib/utils";
 import { PackingDetailActions } from "./PackingDetailActions";
 import { PackingDetailContent } from "./PackingDetailContent";
+import { CashWarningBadge } from "./CashWarning";
 import {
   Search,
   Plus,
@@ -128,6 +129,12 @@ function PackingMobileCard({
       {/* Dashed divider */}
       <div className="border-t border-dashed border-gray-200 mb-3" />
 
+      {typeKey === "giao-hang" && !item.cancelledAt && item.cashWarning && (
+        <div className="mb-3 rounded-lg bg-red-50 px-2.5 py-1.5">
+          <CashWarningBadge warning={item.cashWarning} />
+        </div>
+      )}
+
       {item.hasColdItems && (
         <div className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-red-600">
           <Snowflake className="h-3.5 w-3.5 shrink-0" />
@@ -188,7 +195,7 @@ function PackingMobileCard({
           <div className="text-right">
             {item.paymentMethod === "cash" && Number(item.cashAmount) > 0 ? (
               <>
-                <p className="text-xs text-gray-400 leading-none mb-0.5">
+                <p className="text-xs font-bold text-gray-600 leading-none mb-0.5">
                   Tiền mặt
                 </p>
                 <p className="text-sm font-bold text-green-600 leading-none">
@@ -226,6 +233,9 @@ function PackingMobileFilterSheet({
   const [localCustomerSearch, setLocalCustomerSearch] = useState(
     filters.customerSearch || ""
   );
+  const [localCashWarning, setLocalCashWarning] = useState<boolean>(
+    !!filters.cashWarning
+  );
 
   // Lock scroll
   useEffect(() => {
@@ -246,6 +256,7 @@ function PackingMobileFilterSheet({
     if (localBranchIds.length > 0) next.branchIds = localBranchIds;
     if (localInvoiceSearch) next.invoiceSearch = localInvoiceSearch;
     if (localCustomerSearch) next.customerSearch = localCustomerSearch;
+    if (localCashWarning) next.cashWarning = true;
     onApply(next);
   };
 
@@ -253,12 +264,14 @@ function PackingMobileFilterSheet({
     setLocalBranchIds([]);
     setLocalInvoiceSearch("");
     setLocalCustomerSearch("");
+    setLocalCashWarning(false);
   };
 
   const activeCount =
     (localBranchIds.length > 0 ? 1 : 0) +
     (localInvoiceSearch ? 1 : 0) +
-    (localCustomerSearch ? 1 : 0);
+    (localCustomerSearch ? 1 : 0) +
+    (localCashWarning ? 1 : 0);
 
   return (
     <div
@@ -301,6 +314,29 @@ function PackingMobileFilterSheet({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
+          {/* Cảnh báo */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+              Cảnh báo
+            </p>
+            <label className="flex items-center gap-3 rounded-xl bg-gray-100 px-3 py-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={localCashWarning}
+                onChange={(e) => setLocalCashWarning(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 accent-brand"
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-gray-800">
+                  Chỉ phiếu lệch tiền mặt
+                </span>
+                <span className="block text-xs text-gray-500">
+                  Phiếu giao hàng có tiền mặt cần thu khác hóa đơn
+                </span>
+              </span>
+            </label>
+          </div>
+
           {/* Mã hóa đơn */}
           <div>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
@@ -679,6 +715,7 @@ export function PackingSlipsMobileView({
     ...(filters.customerSearch
       ? { customerSearch: filters.customerSearch }
       : {}),
+    ...(filters.cashWarning ? { cashWarning: true } : {}),
     pageSize: limit,
     currentItem: (page - 1) * limit,
   });
@@ -691,7 +728,8 @@ export function PackingSlipsMobileView({
   const activeFilterCount =
     (filters.branchIds?.length ? 1 : 0) +
     (filters.invoiceSearch ? 1 : 0) +
-    (filters.customerSearch ? 1 : 0);
+    (filters.customerSearch ? 1 : 0) +
+    (filters.cashWarning ? 1 : 0);
 
   const handleCreateSelect = (type: "giao-hang" | "dong-hang" | "loading") => {
     setShowCreateSheet(false);

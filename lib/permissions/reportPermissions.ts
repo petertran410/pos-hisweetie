@@ -12,7 +12,9 @@ export type ReportGroupKey =
   | "hang-hoa"
   | "nha-cung-cap"
   | "tai-chinh"
-  | "cuoi-ngay";
+  | "cuoi-ngay"
+  | "phan-tich"
+  | "lead";
 
 // Map (group, viewTypeValue) → key quyền backend (reports:xxx).
 // Phải khớp VIEWTYPE_KEY_MAP trong reports-permission.guard.ts.
@@ -58,9 +60,25 @@ export const REPORT_VIEWTYPE_PERMISSION: Record<
     CashFlow: "reports:eod_cashflow",
     Product: "reports:eod_product",
   },
+  // Lead (dashboard CRM): quyền riêng reports:lead (phân ở /cai-dat/vai-tro → Báo cáo → Báo cáo Lead).
+  // Phạm vi số liệu vẫn theo quyền lead: không có leads:update → chỉ lead giao cho mình.
+  lead: {
+    _all: "reports:lead",
+  },
   // Tài chính gộp 1 quyền cho cả nhóm.
   "tai-chinh": {
     _all: "reports:financial",
+  },
+  // Phân tích (thay Power BI): mỗi trang 1 quyền + quyền sửa cấu hình.
+  "phan-tich": {
+    Business: "reports:analytics_business",
+    Management: "reports:analytics_management",
+    Customer: "reports:analytics_customer",
+    Periodic: "reports:analytics_periodic",
+    Accounting: "reports:analytics_accounting",
+    Purchasing: "reports:analytics_purchasing",
+    Kpi: "reports:analytics_kpi",
+    Config: "reports:analytics_config",
   },
 };
 
@@ -76,7 +94,7 @@ export const REPORT_GROUP_PERMISSIONS: Record<ReportGroupKey, string[]> =
 
 // Map nhóm cấp 1 (slug route) → key quyền xuất Excel của nhóm. Phải khớp
 // seed add-report-export-permissions.ts.
-export const REPORT_GROUP_EXPORT_KEY: Record<ReportGroupKey, string> = {
+export const REPORT_GROUP_EXPORT_KEY: Partial<Record<ReportGroupKey, string>> = {
   "ban-hang": "reports:export_sale",
   "hang-hoa": "reports:export_product",
   "nha-cung-cap": "reports:export_supplier",
@@ -112,8 +130,10 @@ export function useReportAccess(): ReportAccess {
       return keys.some((k) => perms.has(k));
     };
 
-    const canExport = (group: ReportGroupKey) =>
-      has(REPORT_GROUP_EXPORT_KEY[group]);
+    const canExport = (group: ReportGroupKey) => {
+      const key = REPORT_GROUP_EXPORT_KEY[group];
+      return !!key && has(key);
+    };
 
     const anyReport =
       superAdmin ||

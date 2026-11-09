@@ -145,8 +145,21 @@ export const priceBooksApi = {
     customerId?: number;
     userId?: number;
     date?: string;
+    // true → liệt kê mọi bảng giá chọn được, bỏ qua phạm vi khách hàng
+    anyCustomer?: boolean;
   }): Promise<PriceBook[]> => {
     return apiClient.get("/price-books/applicable", params);
+  },
+
+  // POS: ghi Lịch sử khi chuyển khách sang bảng giá khách không thuộc
+  // (0 hoặc bỏ trống = Bảng giá chung).
+  logCustomerSwitch: (data: {
+    customerId: number;
+    fromPriceBookId?: number;
+    toPriceBookId?: number;
+    branchId?: number;
+  }): Promise<{ success: boolean }> => {
+    return apiClient.post("/price-books/customer-switch-log", data);
   },
 
   getPriceForProduct: (params: {

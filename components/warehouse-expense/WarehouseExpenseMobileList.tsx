@@ -16,6 +16,7 @@ import {
   displaySource,
   displayDescription,
 } from "@/lib/internal-finance/display";
+import { officeVoucherDetails } from "@/lib/internal-finance/office";
 import { formatCurrency } from "@/lib/utils";
 import {
   CardAction,
@@ -59,7 +60,10 @@ export function WarehouseExpenseMobileList({
   onOpenPayerSummary,
   onExport,
   isExporting = false,
+  office = false,
 }: {
+  /** Đang xem văn phòng: phiếu từ đơn Lark, không có tick hay Approval tuần. */
+  office?: boolean;
   /** Mở báo cáo chi tiêu theo người chi. */
   onOpenPayerSummary?: () => void;
   /** Xuất Excel toàn bộ phiếu theo bộ lọc. */
@@ -141,10 +145,12 @@ export function WarehouseExpenseMobileList({
 
   return (
     <FinanceMobileShell
-      title="Phiếu chi kho"
+      title={office ? "Phiếu chi văn phòng" : "Phiếu chi kho"}
       search={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder="Tìm mã, nội dung, xe, báo đơn..."
+      searchPlaceholder={
+        office ? "Tìm mã, nội dung..." : "Tìm mã, nội dung, xe, báo đơn..."
+      }
       activeFilterCount={activeFilterCount}
       onOpenFilter={onOpenFilter}
       actions={
@@ -178,12 +184,14 @@ export function WarehouseExpenseMobileList({
               {selectMode ? "Xong" : "Chọn"}
             </button>
           )}
-          <Link
-            href="/tai-chinh/approval-tuan"
-            className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium text-gray-700">
-            <CalendarRange className="h-3.5 w-3.5" />
-            Approval tuần
-          </Link>
+          {!office && (
+            <Link
+              href="/tai-chinh/approval-tuan"
+              className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium text-gray-700">
+              <CalendarRange className="h-3.5 w-3.5" />
+              Approval tuần
+            </Link>
+          )}
         </>
       }
       summary={
@@ -215,6 +223,14 @@ export function WarehouseExpenseMobileList({
         const cancelled = row.status === "CANCELLED";
         const warehouse = WAREHOUSE_BRANCH_IDS.includes(row.branchId);
         const noteCount = row._count?.reviewNotes || 0;
+        const details = officeVoucherDetails(row.sourceSnapshot);
+        const officeMeta = [
+          details.department,
+          details.method,
+          details.totalAmount && details.totalAmount !== Number(row.amount)
+            ? `Tổng ${formatCurrency(details.totalAmount)}`
+            : null,
+        ].filter(Boolean);
         return (
           <FinanceMobileCard
             key={row.id}
@@ -277,6 +293,9 @@ export function WarehouseExpenseMobileList({
                       .filter(Boolean)
                       .join(" · ")}
                   </div>
+                )}
+                {officeMeta.length > 0 && (
+                  <div className="truncate">{officeMeta.join(" · ")}</div>
                 )}
                 {cancelled && row.cancelReason && (
                   <div className="text-red-600">

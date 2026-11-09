@@ -202,8 +202,10 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
       });
 
       toast.success("Lưu đơn hàng thành công");
-    } catch (error) {
-      toast.error("Không thể lưu đơn hàng");
+    } catch {
+      // useUpdateOrder đã toast lý do từ backend (vd. khách không được ra
+      // hóa đơn); chỉ cần trả dropdown về trạng thái thật của đơn.
+      setSelectedStatus(order.status);
     } finally {
       setIsSaving(false);
     }
