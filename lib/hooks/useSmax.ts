@@ -58,3 +58,47 @@ export function useUnlinkSmaxChannel() {
     onError: (e: any) => toast.error(e.message || "Gỡ thất bại"),
   });
 }
+
+const TOKEN_KEY = ["smaxUserToken"];
+
+/** Tình trạng token đăng nhập Smax (backend thử token với Smax mỗi lần tải). */
+export function useSmaxUserToken() {
+  return useQuery({
+    queryKey: TOKEN_KEY,
+    queryFn: () => smaxApi.getUserToken(),
+    retry: false,
+    staleTime: 0,
+  });
+}
+
+// Token đổi → các tính năng chat dùng token (thả cảm xúc, thu hồi, đổi tên, Thư viện…) tải lại
+const refreshTokenFeatures = (queryClient: ReturnType<typeof useQueryClient>) => {
+  for (const key of ["smaxThreadMessages", "smaxZaloProfile", "smaxLibraryAlbums", "smaxLibraryFiles", "smaxRecentChats"])
+    queryClient.invalidateQueries({ queryKey: [key] });
+};
+
+export function useSaveSmaxUserToken() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (token: string) => smaxApi.setUserToken(token),
+    onSuccess: (status) => {
+      queryClient.setQueryData(TOKEN_KEY, status);
+      refreshTokenFeatures(queryClient);
+      toast.success("Đã lưu token đăng nhập Smax — có hiệu lực ngay");
+    },
+    onError: (e: Error) => toast.error(e.message || "Lưu token thất bại"),
+  });
+}
+
+export function useClearSmaxUserToken() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => smaxApi.clearUserToken(),
+    onSuccess: (status) => {
+      queryClient.setQueryData(TOKEN_KEY, status);
+      refreshTokenFeatures(queryClient);
+      toast.success(status.source === "env" ? "Đã xoá — đang dùng token trong .env" : "Đã xoá token đăng nhập Smax");
+    },
+    onError: (e: Error) => toast.error(e.message || "Xoá token thất bại"),
+  });
+}

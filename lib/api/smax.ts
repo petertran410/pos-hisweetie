@@ -14,7 +14,25 @@ export interface SmaxZaloChannel {
   users: { id: number; name: string; email: string; phone?: string | null }[];
 }
 
+/** Tình trạng token đăng nhập Smax (backend không trả nguyên token). */
+export interface SmaxUserTokenStatus {
+  // db = lưu trên POS (trang này), env = SMAX_USER_TOKEN trong .env backend, null = chưa có
+  source: "db" | "env" | null;
+  envConfigured: boolean;
+  last4: string | null;
+  expiresAt: string | null;
+  updatedAt: string | null;
+  updatedBy: string | null;
+  // null = chưa có token để kiểm tra
+  valid: boolean | null;
+  error: string | null;
+}
+
 export const smaxApi = {
+  getUserToken: (): Promise<SmaxUserTokenStatus> => apiClient.get("/smax/user-token"),
+  setUserToken: (token: string): Promise<SmaxUserTokenStatus> => apiClient.put("/smax/user-token", { token }),
+  clearUserToken: (): Promise<SmaxUserTokenStatus> => apiClient.delete("/smax/user-token"),
+
   getZaloChannels: (): Promise<SmaxZaloChannel[]> =>
     apiClient.get("/smax/zalo-channels"),
 
