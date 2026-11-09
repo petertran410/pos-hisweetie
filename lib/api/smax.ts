@@ -14,8 +14,11 @@ export interface SmaxZaloChannel {
   users: { id: number; name: string; email: string; phone?: string | null }[];
 }
 
-/** Tình trạng token đăng nhập Smax (backend không trả nguyên token). */
-export interface SmaxUserTokenStatus {
+/** user = token đăng nhập (SMAX_USER_TOKEN); api = Partner API token (SMAX_API_TOKEN). */
+export type SmaxTokenKind = "user" | "api";
+
+/** Tình trạng token Smax (backend không trả nguyên token). */
+export interface SmaxTokenStatus {
   // db = lưu trên POS (trang này), env = SMAX_USER_TOKEN trong .env backend, null = chưa có
   source: "db" | "env" | null;
   envConfigured: boolean;
@@ -26,12 +29,15 @@ export interface SmaxUserTokenStatus {
   // null = chưa có token để kiểm tra
   valid: boolean | null;
   error: string | null;
+  // Token dùng được nhưng có vấn đề (vd Smax trả 0 hội thoại / thiếu quyền)
+  warning?: string | null;
 }
 
 export const smaxApi = {
-  getUserToken: (): Promise<SmaxUserTokenStatus> => apiClient.get("/smax/user-token"),
-  setUserToken: (token: string): Promise<SmaxUserTokenStatus> => apiClient.put("/smax/user-token", { token }),
-  clearUserToken: (): Promise<SmaxUserTokenStatus> => apiClient.delete("/smax/user-token"),
+  getToken: (kind: SmaxTokenKind): Promise<SmaxTokenStatus> => apiClient.get(`/smax/${kind}-token`),
+  setToken: (kind: SmaxTokenKind, token: string): Promise<SmaxTokenStatus> =>
+    apiClient.put(`/smax/${kind}-token`, { token }),
+  clearToken: (kind: SmaxTokenKind): Promise<SmaxTokenStatus> => apiClient.delete(`/smax/${kind}-token`),
 
   getZaloChannels: (): Promise<SmaxZaloChannel[]> =>
     apiClient.get("/smax/zalo-channels"),

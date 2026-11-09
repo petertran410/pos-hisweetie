@@ -14,7 +14,7 @@ import {
   useUnlinkSmaxChannel,
 } from "@/lib/hooks/useSmax";
 import { useUsers } from "@/lib/hooks/useUsers";
-import { SmaxUserTokenPanel } from "@/components/settings/SmaxUserTokenPanel";
+import { SmaxTokenPanel } from "@/components/settings/SmaxTokenPanel";
 
 // Tab theo loại kênh trên Smax (platform). Chat trên POS hiện chỉ dùng Zalo cá nhân.
 const TABS = [
@@ -278,7 +278,7 @@ export default function SmaxSettingsPage() {
   const hasOther = (channels ?? []).some((c) => !KNOWN_PLATFORMS.includes(c.platform));
   const tabs = [...TABS, ...(hasOther ? [{ key: "other" as const, label: "Khác" }] : [])];
   // Tab cấu hình (không phải loại kênh) → không đếm số kênh
-  const configTabs = [{ key: "token" as const, label: "Token đăng nhập" }];
+  const configTabs = [{ key: "token" as const, label: "Token Smax" }];
   const count = (key: TabKey) => (channels ?? []).filter((c) => tabOf(c.platform) === key).length;
 
   return (
@@ -319,7 +319,10 @@ export default function SmaxSettingsPage() {
           </div>
         </div>
         {tab === "token" ? (
-          <SmaxUserTokenPanel />
+          <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-6">
+            <SmaxTokenPanel kind="api" />
+            <SmaxTokenPanel kind="user" />
+          </div>
         ) : (
           <ChannelsTab
             key={tab}
