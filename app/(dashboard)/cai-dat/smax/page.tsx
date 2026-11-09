@@ -14,6 +14,7 @@ import {
   useUnlinkSmaxChannel,
 } from "@/lib/hooks/useSmax";
 import { useUsers } from "@/lib/hooks/useUsers";
+import { SmaxTokenPanel } from "@/components/settings/SmaxTokenPanel";
 
 // Tab theo loại kênh trên Smax (platform). Chat trên POS hiện chỉ dùng Zalo cá nhân.
 const TABS = [
@@ -25,7 +26,7 @@ const TABS = [
   { key: "shopee", label: "Shopee", platforms: ["shopee"] },
   { key: "website", label: "Website Livechat", platforms: ["custom", "web", "livechat"] },
 ] as const;
-type TabKey = (typeof TABS)[number]["key"] | "other";
+type TabKey = (typeof TABS)[number]["key"] | "other" | "token";
 const KNOWN_PLATFORMS: readonly string[] = TABS.flatMap((t) => t.platforms);
 
 const tabOf = (platform: string): TabKey =>
@@ -276,6 +277,8 @@ export default function SmaxSettingsPage() {
   // Loại kênh Smax mới chưa có tab riêng → gom vào tab "Khác"
   const hasOther = (channels ?? []).some((c) => !KNOWN_PLATFORMS.includes(c.platform));
   const tabs = [...TABS, ...(hasOther ? [{ key: "other" as const, label: "Khác" }] : [])];
+  // Tab cấu hình (không phải loại kênh) → không đếm số kênh
+  const configTabs = [{ key: "token" as const, label: "Token Smax" }];
   const count = (key: TabKey) => (channels ?? []).filter((c) => tabOf(c.platform) === key).length;
 
   return (
@@ -301,14 +304,33 @@ export default function SmaxSettingsPage() {
                 {channels && <span className="ml-1 text-xs text-gray-400">({count(t.key)})</span>}
               </button>
             ))}
+            {configTabs.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`ml-auto px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+                  tab === t.key
+                    ? "border-brand text-brand"
+                    : "border-transparent text-gray-600 hover:text-gray-900"
+                }`}>
+                {t.label}
+              </button>
+            ))}
           </div>
         </div>
-        <ChannelsTab
-          key={tab}
-          channels={(channels ?? []).filter((c) => tabOf(c.platform) === tab)}
-          isLoading={isLoading}
-          error={error}
-        />
+        {tab === "token" ? (
+          <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-6">
+            <SmaxTokenPanel kind="api" />
+            <SmaxTokenPanel kind="user" />
+          </div>
+        ) : (
+          <ChannelsTab
+            key={tab}
+            channels={(channels ?? []).filter((c) => tabOf(c.platform) === tab)}
+            isLoading={isLoading}
+            error={error}
+          />
+        )}
       </div>
     </PagePermissionGuard>
   );
