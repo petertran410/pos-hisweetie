@@ -58,6 +58,10 @@ export interface Invoice {
   paymentNotes?: PaymentNote[];
   /** Backend tính theo batch ID của trang hiện tại (bảng giá 2/3). */
   hasPriceBookWarning?: boolean;
+  /** SL theo sản phẩm (quy về đơn vị cơ bản) khác đơn đặt hàng gốc. */
+  hasQuantityWarning?: boolean;
+  /** Chi tiết lý do cảnh báo cho tooltip; null khi không có cảnh báo. */
+  warnings?: InvoiceListWarnings | null;
   /** Số phiếu cùng loại từng có liên kết với hóa đơn. */
   packingCount?: number;
   /** Ghi chú thanh toán mới nhất (API chọn hóa đơn để báo đơn trả về). */
@@ -161,3 +165,23 @@ export const INVOICE_STATUS_STRING_TO_NUMBER: Record<string, number> = {
   delivered: 7,
   returned: 8,
 };
+
+/** Lý do cảnh báo của hóa đơn trên danh sách (backend tính theo trang). */
+export interface InvoiceListWarnings {
+  price: { productCode: string; productName: string; price: number; listPrice: number }[];
+  quantity: {
+    productCode: string;
+    productName: string;
+    unit: string | null;
+    /** Tổng SL đặt hàng. */
+    orderQuantity: number;
+    /** SL đã xuất ở các hóa đơn trước của cùng đơn (đơn tách giao). */
+    previousQuantity: number;
+    /** SL cần giao ở hóa đơn này = max(đặt − đã xuất trước, 0). */
+    expectedQuantity: number;
+    invoiceQuantity: number;
+  }[];
+  orderCode: string | null;
+  /** Hóa đơn trước của cùng đơn đặt; có → so với SL còn lại. */
+  previousInvoiceCodes: string[];
+}

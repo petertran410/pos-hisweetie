@@ -15,9 +15,7 @@ import {
 import { toast } from "sonner";
 import { leadsApi } from "@/lib/api/leads";
 import { leadFormsApi } from "@/lib/api/leadForms";
-import { useUsers } from "@/lib/hooks/useUsers";
 import { useNewLocations } from "@/lib/hooks/useNewLocations";
-import { useAuthStore } from "@/lib/store/auth";
 import { FilterSearchableSelect } from "@/components/ui/filters";
 import {
   LEAD_CATEGORY_LABEL,
@@ -26,7 +24,7 @@ import {
   SOURCE_PLATFORMS,
   options,
 } from "@/lib/leads/constants";
-import type { LeadCategory, LeadSource } from "@/lib/types/lead";
+import type { LeadSource } from "@/lib/types/lead";
 import type {
   LeadForm,
   LeadFormField,
@@ -161,7 +159,7 @@ function DefaultValueInput({
   );
 }
 
-/** Tạo / sửa form thu thập lead: thông tin, nguồn / kênh / CSKH mặc định, trường + câu hỏi thêm. */
+/** Tạo / sửa form thu thập lead: thông tin, nguồn / kênh mặc định, trường + câu hỏi thêm. */
 export function LeadFormEditor({
   form,
   onClose,
@@ -170,8 +168,6 @@ export function LeadFormEditor({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
-  const userId = useAuthStore((s) => s.user?.id ?? null);
-  const { data: users } = useUsers();
   const { data: allChannels } = useQuery({
     queryKey: ["leadChannels"],
     queryFn: () => leadsApi.channels(),
@@ -190,12 +186,6 @@ export function LeadFormEditor({
       (form && (SOURCE_CHANNEL_NAMES[form.source] || form.source === "other")
         ? (form.channelName ?? "")
         : ""),
-  );
-  const [category, setCategory] = useState<LeadCategory | "">(
-    form?.category ?? "",
-  );
-  const [cskhUserId, setCskhUserId] = useState<number | null>(
-    form ? form.cskhUserId : userId,
   );
   const [successMessage, setSuccessMessage] = useState(
     form?.successMessage ?? "",
@@ -259,10 +249,11 @@ export function LeadFormEditor({
             msg: `Trường ẩn "${hiddenNoDefault.label || "câu hỏi"}" cần giá trị mặc định`,
             target: fieldId(hiddenNoDefault.key),
           }
-        : !categoryFromForm && !category
+        : !categoryFromForm
           ? {
-              msg: "Chọn phân loại mặc định (form không bắt buộc khách chọn phân loại)",
-              target: "lf-category",
+              // Lead bắt buộc có phân loại: lấy từ trường "Bạn là" (bắt buộc, hoặc ẩn + giá trị mặc định)
+              msg: `Trường "${categoryField?.label || "Phân loại lead"}" cần bật bắt buộc, hoặc ẩn kèm giá trị mặc định`,
+              target: fieldId("category"),
             }
           : noLabel
             ? { msg: "Câu hỏi chưa có nội dung", target: fieldId(noLabel.key) }
@@ -293,8 +284,6 @@ export function LeadFormEditor({
         channelName: freeChannel
           ? channel.trim()
           : (channelOptions.find((c) => c.value === channel)?.label ?? ""),
-        category,
-        cskhUserId,
         successMessage,
         isActive,
         fields: fields.map((f) => {
@@ -430,7 +419,7 @@ export function LeadFormEditor({
 
           {/* 2. Lead tạo từ form */}
           <section className={`${section} bg-white`}>
-            {sectionTitle(2, "Lead tạo từ form", "Nguồn, kênh và người nhận của lead khi khách gửi form")}
+            {sectionTitle(2, "Lead tạo từ form", "Nguồn, kênh của lead khi khách gửi form · báo lead mới vào nhóm Lark nhận lead")}
             <div id="lf-source">
               <span className={label}>
                 Nguồn <span className="text-red-500">*</span>
@@ -458,7 +447,7 @@ export function LeadFormEditor({
               </div>
               {err("lf-source") && <p className="mt-1 text-xs text-red-600">{showIssue!.msg}</p>}
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label htmlFor="lf-channel" className={label}>Kênh</label>
                 {freeChannel ? (
@@ -494,40 +483,6 @@ export function LeadFormEditor({
                     }
                   />
                 )}
-              </div>
-              <div id="lf-category">
-                <label htmlFor="lf-category-select" className={label}>Phân loại mặc định</label>
-                <select
-                  id="lf-category-select"
-                  value={category}
-                  onChange={(e) =>
-                    setCategory(e.target.value as LeadCategory | "")
-                  }
-                  aria-invalid={err("lf-category")}
-                  className={`${input} ${err("lf-category") ? "border-red-400 ring-1 ring-red-300" : ""}`}
-                >
-                  <option value="">— Không —</option>
-                  {options(LEAD_CATEGORY_LABEL).map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-                {err("lf-category") && <p className="mt-1 text-xs text-red-600">{showIssue!.msg}</p>}
-              </div>
-              <div>
-                <span className={label}>CSKH phụ trách (nhận báo Lark)</span>
-                <FilterSearchableSelect
-                  size="form"
-                  options={(users ?? []).map((u) => ({
-                    value: String(u.id),
-                    label: u.name,
-                  }))}
-                  value={cskhUserId ? String(cskhUserId) : ""}
-                  onChange={(v) => setCskhUserId(v ? Number(v) : null)}
-                  placeholder="— Chọn —"
-                  searchPlaceholder="Tìm nhân sự…"
-                />
               </div>
             </div>
           </section>
