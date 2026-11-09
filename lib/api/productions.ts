@@ -1,6 +1,10 @@
 import { apiClient } from "@/lib/config/api";
+import type { ManufacturerMaterial, OwnMaterial } from "./manufacturers";
 
 export interface SavedProductionComponent {
+  unit?: string | null;
+  conversionFactor?: number | string | null;
+  unitCost?: number | string | null;
   id: number;
   componentProductId: number;
   componentCode: string;
@@ -12,6 +16,15 @@ export interface SavedProductionComponent {
 }
 
 export interface Production {
+  manufacturerId?: number | null;
+  manufacturer?: { id: number; code: string; name: string; supplierId?: number | null } | null;
+  manufacturerMaterials?: ManufacturerMaterial[];
+  externalTemplateId?: number | null;
+  externalTemplateName?: string | null;
+  manufacturerMaterialCost?: number | string;
+  totalPayable?: number | string;
+  paidAmount?: number | string;
+  debtAmount?: number | string;
   id: number;
   code: string;
   sourceBranchId: number;
@@ -68,6 +81,8 @@ export interface ProductionPurchaseOrder {
 
 /** Giá thành + giá vốn bình quân đề xuất của phiếu gửi sản xuất. */
 export interface ProductionCostPreview {
+  manufacturerMaterialCost?: number;
+  totalPayable?: number;
   productionId: number;
   productName: string;
   receiveBranchId: number;
@@ -93,6 +108,7 @@ export interface ProductionComponentData {
 }
 
 export interface ProductionQueryParams {
+  manufacturerIds?: number[];
   branchIds?: number[];
   status?: number[];
   fromManufacturedDate?: string;
@@ -111,6 +127,10 @@ export interface ProductionQueryParams {
 }
 
 export interface CreateProductionData {
+  manufacturerId?: number;
+  externalTemplateId?: number | null;
+  ownMaterials?: OwnMaterial[];
+  manufacturerMaterials?: ManufacturerMaterial[];
   code?: string;
   sourceBranchId: number;
   destinationBranchId: number;
@@ -162,8 +182,10 @@ export const productionsApi = {
       receivedQuantity?: number;
       newCost?: number;
       costScope?: "receiveBranch" | "allBranches";
+      expectedOldCost?: number;
       // Phí chốt = giá trị phiếu nhập được tạo.
       processingFee?: number;
+      manufacturerMaterials?: ManufacturerMaterial[];
       feeForeignAmount?: number;
       feeExchangeRate?: number;
     },

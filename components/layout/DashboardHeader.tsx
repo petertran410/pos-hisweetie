@@ -100,6 +100,7 @@ export function DashboardHeader() {
         items: [
           { label: "Nhà cung cấp", href: "/san-pham/nha-cung-cap" },
           { label: "Nhà máy", href: "/san-pham/nha-may" },
+          { label: "Nhà sản xuất", href: "/san-pham/nha-san-xuat" },
           {
             label: "Biến động giá nhà máy",
             href: "/san-pham/nha-may/bien-dong-gia",

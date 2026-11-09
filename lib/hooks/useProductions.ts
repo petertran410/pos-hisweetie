@@ -95,6 +95,8 @@ function useFactoryProductionMutation<TVars>(
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       queryClient.invalidateQueries({ queryKey: ["supplier-debt-timeline"] });
+      queryClient.invalidateQueries({ queryKey: ["manufacturer-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["payables"] });
       // Nhận hàng tạo phiếu nhập → danh sách nhập hàng / trả tiền NCC đổi.
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       toast.success(

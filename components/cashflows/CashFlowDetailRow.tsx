@@ -65,6 +65,7 @@ export function CashFlowDetailRow({
   const { data: cashFlow, isLoading } = useCashFlow(cashFlowId);
   const { data: relatedPayments } = useRelatedInvoicePayments(cashFlowId);
   const invoicePayments: any[] = relatedPayments?.invoicePayments || [];
+  const payableAllocations: any[] = relatedPayments?.payableAllocations || [];
   const orderPayments: any[] = relatedPayments?.orderPayments || [];
   const debtOffsets: any[] = relatedPayments?.debtOffsets || [];
   const purchaseOrderPayments: any[] =
@@ -138,6 +139,7 @@ export function CashFlowDetailRow({
     return Array.from(map.values());
   }, [invoicePayments, debtOffsets]);
   const hasInvoicePayments =
+    payableAllocations.length > 0 ||
     invoicePayments.length > 0 ||
     orderPayments.length > 0 ||
     debtOffsets.length > 0 ||
@@ -834,6 +836,19 @@ export function CashFlowDetailRow({
 
                         {/* Bảng phiếu nhập hàng (PN) liên quan — đối xứng
                             "Hóa đơn liên quan" của KH. */}
+                        {payableAllocations.length > 0 && <div>
+                          <p className="mb-2 text-sm font-semibold">Phiếu gửi sản xuất liên quan</p>
+                          <div className="overflow-x-auto border"><table className="w-full min-w-[480px] text-sm">
+                            <thead className="bg-gray-50 text-left"><tr><th className="p-2">Phiếu</th><th className="p-2">Nguồn</th><th className="p-2 text-right">Tiền phân bổ</th><th className="p-2 text-right">Còn nợ</th><th className="p-2">Trạng thái</th></tr></thead>
+                            <tbody>{payableAllocations.map((row) => <tr key={row.id} className="border-t">
+                              <td className="p-2"><Link className="text-brand" href={`/san-pham/san-xuat?Code=${row.targetCode}`}>{row.targetCode}</Link></td>
+                              <td className="p-2">{row.source === "credit" ? "Cấn ứng trước" : "Tiền mới"}</td>
+                              <td className="p-2 text-right">{formatCurrency(Number(row.amount))}</td>
+                              <td className="p-2 text-right">{formatCurrency(Number(row.production?.debtAmount ?? 0))}</td>
+                              <td className="p-2">{row.status === 2 ? "Đã hủy" : "Đã phân bổ"}</td>
+                            </tr>)}</tbody>
+                          </table></div>
+                        </div>}
                         {purchaseOrderPayments.length > 0 && (
                           <div>
                             <p className="text-sm font-semibold mb-2" style={{ color: "var(--dt-text-secondary)" }}>

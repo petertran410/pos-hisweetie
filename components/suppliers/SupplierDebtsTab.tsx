@@ -2,6 +2,7 @@
 
 import { Download, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   useSupplierDebtTimeline,
   useExportSupplierDebtTimeline,
@@ -9,7 +10,9 @@ import {
 } from "@/lib/hooks/useSuppliers";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
-import { SupplierPaymentBulkModal } from "./SupplierPaymentBulkModal";
+import { PayablePaymentModal } from "../manufacturers/PayablePaymentModal";
+import { manufacturersApi } from "@/lib/api/manufacturers";
+import { usePermission } from "@/lib/hooks/usePermissions";
 import { CodeLink } from "../shared/CodeLink";
 import { PermissionGate } from "../permissions/PermissionGate";
 import {
@@ -30,6 +33,8 @@ export function SupplierDebtsTab({
   const limit = 10;
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showExportDebtModal, setShowExportDebtModal] = useState(false);
+  const canViewPayments = usePermission("cash_flows", "view");
+  const payables = useQuery({ queryKey: ["payables", "S", supplierId], queryFn: () => manufacturersApi.payables("S", supplierId), enabled: canViewPayments });
 
   const { data, isLoading } = useSupplierDebtTimeline(supplierId);
   const { exportToFile: exportTimeline, isExporting: exportingTimeline } =
@@ -153,6 +158,12 @@ export function SupplierDebtsTab({
         </div>
       </div>
 
+      {payables.data && <div className="mb-3 flex flex-wrap gap-4 border-y py-2 text-sm">
+        <span>Nợ tiền hàng: <strong>{formatCurrency(payables.data.purchaseDebt)}</strong></span>
+        <span>Nợ sản xuất: <strong>{formatCurrency(payables.data.productionDebt)}</strong></span>
+        <span>Ứng trước chưa cấn: <strong className="text-green-700">{formatCurrency(payables.data.availableCredit)}</strong></span>
+        <span>Tổng nợ ròng: <strong className="text-red-600">{formatCurrency(payables.data.totalDebt)}</strong></span>
+      </div>}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -188,8 +199,10 @@ export function SupplierDebtsTab({
                 const isPayment = item.type === "payment";
                 const isBalanceAdjustment = item.type === "balance_adjustment";
                 const isSupplierReturn = item.type === "supplier_return";
+                const isProductionFee = item.type === "production_fee";
+                const isFxAdjustment = item.type === "fx_adjustment";
                 // Phát sinh nợ phải trả NCC (cộng nợ).
-                const isDebit = isPurchase || isBalanceAdjustment;
+                const isDebit = isPurchase || isProductionFee || isBalanceAdjustment || (isFxAdjustment && item.amount >= 0);
 
                 return (
                   <tr
@@ -204,6 +217,8 @@ export function SupplierDebtsTab({
                           className="text-md font-medium text-brand hover:underline">
                           {item.code}
                         </Link>
+                      ) : isProductionFee ? (
+                        <CodeLink entity="production" code={item.code} className="text-md font-medium text-brand hover:underline" />
                       ) : isPayment ? (
                         <Link
                           href={`/tai-chinh/so-quy?Code=${item.code}`}
@@ -228,6 +243,10 @@ export function SupplierDebtsTab({
                     <td className="px-4 py-3 text-md">
                       {isPurchase
                         ? "Nhập hàng"
+                        : isProductionFee
+                          ? "Sản xuất"
+                        : isFxAdjustment
+                          ? "Chênh lệch tỷ giá"
                         : isPayment
                           ? "Thanh toán"
                           : isBalanceAdjustment
@@ -245,7 +264,7 @@ export function SupplierDebtsTab({
                       <span
                         className={isDebit ? "text-red-600" : "text-green-600"}>
                         {isDebit ? "+" : "-"}
-                        {formatCurrency(item.amount)}
+                        {formatCurrency(Math.abs(item.amount))}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-md text-right font-medium">
@@ -292,9 +311,9 @@ export function SupplierDebtsTab({
       )}
 
       {showPaymentModal && (
-        <SupplierPaymentBulkModal
-          supplierId={supplierId}
-          supplierDebt={supplierDebt}
+        <PayablePaymentModal
+          accountType="S"
+          accountId={supplierId}
           onClose={() => setShowPaymentModal(false)}
         />
       )}
