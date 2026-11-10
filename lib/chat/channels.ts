@@ -21,3 +21,8 @@ export function useActiveChannel(enabled = true) {
   const usable = (channels ?? []).filter((c) => !c.missing);
   return { channels: channels ?? [], usable, channel, isLoading };
 }
+
+/** Nhóm Zalo dùng được trên kênh: ID nhóm của đúng tài khoản Zalo đó (hoặc chưa rõ tài khoản). */
+export function groupsOnChannel<T extends { pagePid?: string | null }>(groups: T[], pagePid: string | undefined): T[] {
+  return groups.filter((g) => !g.pagePid || g.pagePid === pagePid);
+}

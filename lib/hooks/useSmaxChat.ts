@@ -18,7 +18,7 @@ export function useChatContext(customerId: number | undefined, enabled: boolean)
 export function useSaveZaloContact(customerId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: { kind: ZaloContactKind; zaloId: string; name?: string }) =>
+    mutationFn: (body: { kind: ZaloContactKind; zaloId: string; name?: string; pagePid?: string }) =>
       smaxChatApi.createContact(customerId, body),
     onSuccess: (contact) => {
       queryClient.invalidateQueries({ queryKey: contextKey(customerId) });

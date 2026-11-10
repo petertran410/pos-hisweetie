@@ -9,7 +9,8 @@ export interface ZaloContact {
   // Zalo cá nhân: số Zalo; kênh khác (Zalo OA, Facebook, Shopee…): tid hội thoại (fb…, zl…, sp…)
   zaloId: string;
   name: string | null;
-  // Kênh của hội thoại kênh khác (null = ID Zalo cá nhân, dùng với mọi kênh Zalo cá nhân)
+  // Kênh của hội thoại kênh khác (null = ID Zalo cá nhân, dùng với mọi kênh Zalo cá nhân).
+  // Nhóm Zalo: tài khoản Zalo thấy ID nhóm này (cùng 1 nhóm, mỗi tài khoản 1 ID; null = chưa rõ)
   pagePid?: string | null;
 }
 
@@ -50,7 +51,8 @@ export interface ChatContext {
   // sharedWith: khách khác cùng gắn nhóm này
   contacts: {
     user: ZaloContact | null;
-    groups: (ZaloContact & { sharedWith: LinkedCustomer[] })[];
+    // pageName: tên tài khoản Zalo (kênh) thấy ID nhóm
+    groups: (ZaloContact & { sharedWith: LinkedCustomer[]; pageName?: string | null })[];
     // Hội thoại trên kênh khác Zalo cá nhân, mỗi cái gắn 1 kênh (pagePid)
     others: (ZaloContact & { sharedWith: LinkedCustomer[] })[];
   };

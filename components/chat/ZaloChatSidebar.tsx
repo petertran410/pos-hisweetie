@@ -27,7 +27,7 @@ import { useIsClient, useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useChatContext, useRecentChats } from "@/lib/hooks/useSmaxChat";
 import { newCount } from "@/lib/chat/seen";
 import { linkedChatLabel, RecentChatRow, UnseenBadge, useOpenRecentChat } from "./RecentChatsList";
-import { pickChannel, useActiveChannel } from "@/lib/chat/channels";
+import { pickChannel, useActiveChannel, groupsOnChannel } from "@/lib/chat/channels";
 import { customerSource } from "@/lib/chat/threadSource";
 import { platformLabel } from "@/lib/chat/platforms";
 import { LooseChat } from "./LooseChat";
@@ -871,7 +871,9 @@ function ChatPanel({
 function useCurrentGroup(ctx: ChatContext | undefined) {
   const kind = useChatSidebarStore((s) => s.kind);
   const groupId = useChatSidebarStore((s) => s.groupId);
-  const groups = ctx?.contacts.groups ?? [];
+  const pagePid = useChatSidebarStore((s) => s.pagePid);
+  // ID nhóm của đúng tài khoản Zalo đang chọn (cùng 1 nhóm, mỗi tài khoản 1 ID)
+  const groups = ctx ? groupsOnChannel(ctx.contacts.groups, pickChannel(ctx.myChannels, pagePid)?.pagePid) : [];
   const group = kind === "group" ? (groups.find((g) => g.id === groupId) ?? groups[0] ?? null) : null;
   const customers: LinkedCustomer[] =
     group && ctx
@@ -1107,7 +1109,9 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
   }
   // Zalo cá nhân: ID Zalo / nhóm của khách; kênh khác (OA, Facebook, Shopee…): hội thoại đã gắn đúng kênh
   const zaloweb = channel.platform === "zaloweb";
-  const { user, groups, others } = ctx.contacts;
+  const { user, others } = ctx.contacts;
+  // ID nhóm của đúng tài khoản Zalo đang chọn (ID nhóm tài khoản khác không gửi được qua kênh này)
+  const groups = groupsOnChannel(ctx.contacts.groups, channel.pagePid);
   const group = groups.find((g) => g.id === groupId) ?? groups[0];
   const other = zaloweb ? undefined : others.find((c) => c.pagePid === channel.pagePid);
   const contact = zaloweb ? (kind === "group" ? group : user) : other;
@@ -1157,7 +1161,13 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
             setKind("group");
             setAdding(false);
           }}
-          title={groups.length ? "" : "Khách chưa có nhóm Zalo"}
+          title={
+            groups.length
+              ? ""
+              : ctx.contacts.groups.length
+                ? "Nhóm của khách gắn qua tài khoản Zalo khác"
+                : "Khách chưa có nhóm Zalo"
+          }
           aria-pressed={kind === "group"}
           className={`px-3 py-1 border-l ${kind === "group" ? "bg-brand text-white" : "hover:bg-gray-50"} ${
             groups.length ? "" : "text-gray-400"

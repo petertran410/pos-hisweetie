@@ -182,7 +182,11 @@ function LinkCustomerBar({
     try {
       let linked: LinkedCustomer[];
       if (thread.isGroup) {
-        linked = await linkGroupCustomers(picked, { zaloId: thread.zaloId, name: zaloName || undefined });
+        linked = await linkGroupCustomers(
+          picked,
+          { zaloId: thread.zaloId, name: zaloName || undefined },
+          { kind: "group", pagePid: thread.pagePid },
+        );
       } else {
         // Kênh khác Zalo cá nhân: lưu tid hội thoại kèm kênh (ID khách riêng theo từng trang)
         const zaloweb = (thread.platform ?? "zaloweb") === "zaloweb";
