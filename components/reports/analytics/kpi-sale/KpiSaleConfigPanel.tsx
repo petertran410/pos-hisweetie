@@ -37,7 +37,7 @@ const TABS: { key: Tab; label: string; hint: string }[] = [
   {
     key: "product-targets",
     label: "Chỉ tiêu nhóm hàng",
-    hint: "KPI theo nhóm hàng 2026 (kpi_sale_by_product) — dùng cho Bảng Cơ Cấu Sản Phẩm và % Hiệu Quả của Bảng Thu Nhập.",
+    hint: "KPI theo nhóm hàng 2026 (kpi_sale_by_product) — dùng cho Bảng Cơ Cấu Sản Phẩm. % Hiệu Quả của Bảng Thu Nhập dùng KPI tháng.",
   },
   {
     key: "rep-rules",

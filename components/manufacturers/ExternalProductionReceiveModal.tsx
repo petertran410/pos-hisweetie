@@ -7,7 +7,6 @@ import { Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { NumericInput } from "@/components/ui/NumericInput";
 import { productionsApi, type Production } from "@/lib/api/productions";
-import { useProductionCostPreview } from "@/lib/hooks/useProductions";
 import { materialTotal, type ManufacturerMaterial } from "@/lib/api/manufacturers";
 import { ManufacturerMaterialsEditor, numericClass } from "./ManufacturerMaterialsEditor";
 
@@ -29,18 +28,10 @@ export function ExternalProductionReceiveModal({ production, onClose }: { produc
   const [fee, setFee] = useState(Number(cny ? production.feeForeignAmount : production.processingFee ?? 0));
   const [rate, setRate] = useState(Number(production.feeExchangeRate ?? 1));
   const [date, setDate] = useState(today());
-  const [apply, setApply] = useState(true);
-  const [scope, setScope] = useState<"receiveBranch" | "allBranches">("receiveBranch");
-  const [editedCost, setEditedCost] = useState<number | null>(null);
-  const preview = useProductionCostPreview(production.id, quantity);
   const materials = supplied.reduce((sum, line) => sum + materialTotal(line), 0);
   const payable = cny ? Math.round((materials + fee) * rate) : materials + fee;
   const totalCost = Number(production.materialValue ?? 0) + payable;
   const unitCost = quantity > 0 ? totalCost / quantity : 0;
-  const oldCost = Number(preview.data?.oldCost ?? 0);
-  const other = oldCost > 0 ? Math.max(0, Number(preview.data?.onHand ?? 0)) : 0;
-  const proposed = quantity > 0 ? Math.round(((other * oldCost + quantity * unitCost) / (other + quantity)) * 100) / 100 : 0;
-  const cost = editedCost ?? proposed;
   const receive = useMutation({
     mutationFn: () => {
       if (!(quantity > 0) || !date) throw new Error("Nhập số lượng nhận và ngày nhận hợp lệ");
@@ -52,12 +43,10 @@ export function ExternalProductionReceiveModal({ production, onClose }: { produc
         completedDate: completed.toISOString(), receivedQuantity: quantity, manufacturerMaterials: supplied,
         processingFee: cny ? undefined : fee, feeForeignAmount: cny ? fee : undefined,
         feeExchangeRate: cny ? rate : undefined,
-        newCost: apply && cost > 0 ? cost : undefined, costScope: scope,
-        expectedOldCost: apply ? oldCost : undefined,
       });
     },
     onSuccess: () => {
-      for (const key of ["productions", "products", "suppliers", "manufacturer-accounts", "payables", "supplier-debt-timeline"]) queryClient.invalidateQueries({ queryKey: [key] });
+      for (const key of ["productions", "production-cost-history", "products", "suppliers", "manufacturer-accounts", "payables", "supplier-debt-timeline"]) queryClient.invalidateQueries({ queryKey: [key] });
       toast.success("Đã nhận thành phẩm và ghi nhận công nợ"); onClose();
     },
     onError: (error: Error) => toast.error(error.message),
@@ -82,17 +71,9 @@ export function ExternalProductionReceiveModal({ production, onClose }: { produc
           <div><dt className="text-gray-500">Giá thành cả lô</dt><dd className="font-medium">{vnd(totalCost)}</dd></div>
           <div><dt className="text-gray-500">Giá thành / đơn vị nhận</dt><dd className="font-medium">{vnd(unitCost)}</dd></div>
         </dl>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={apply} onChange={(event) => setApply(event.target.checked)} />Cập nhật giá vốn thành phẩm</label>
-        {apply && <div className="grid gap-3 sm:grid-cols-3">
-          <div className="text-sm text-gray-500">Giá vốn hiện tại: {vnd(oldCost)}<br />Giá bình quân đề xuất: {vnd(proposed)}</div>
-          <label className="text-sm">Giá vốn xác nhận<NumericInput className={numericClass} value={cost} onValueChange={setEditedCost} maxFractionDigits={6} /></label>
-          <label className="text-sm">Phạm vi<select className="w-full rounded border p-2" value={scope} onChange={(event) => setScope(event.target.value as typeof scope)}>
-            <option value="receiveBranch">Kho nhận</option><option value="allBranches">Tất cả chi nhánh</option></select></label>
-        </div>}
-        {preview.isError && <p className="text-sm text-red-600">Không tải được giá vốn hiện tại. Hãy đóng và mở lại.</p>}
       </fieldset>
       <footer className="flex justify-end gap-2 border-t px-4 py-3"><button onClick={onClose} disabled={receive.isPending} className="rounded border px-3 py-2 text-sm">Đóng</button>
-        <button onClick={() => receive.mutate()} disabled={receive.isPending || (apply && !preview.data)} className="flex items-center gap-1 rounded bg-brand px-3 py-2 text-sm text-white disabled:opacity-50"><Check size={16} />{receive.isPending ? "Đang nhận..." : "Nhận và hoàn thành"}</button></footer>
+        <button onClick={() => receive.mutate()} disabled={receive.isPending} className="flex items-center gap-1 rounded bg-brand px-3 py-2 text-sm text-white disabled:opacity-50"><Check size={16} />{receive.isPending ? "Đang nhận..." : "Nhận và hoàn thành"}</button></footer>
     </div>
   </div>, document.body);
 }

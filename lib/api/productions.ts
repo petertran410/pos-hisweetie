@@ -67,6 +67,20 @@ export interface Production {
   completedDate?: string | null;
   costAppliedAt?: string | null;
   appliedUnitCost?: number | string | null;
+  batchUnitCost?: number | string | null;
+  outputSpecSnapshot?: {
+    unit: string | null;
+    weight: string | null;
+    weightUnit: string | null;
+    conversionValue: string;
+    masterUnitId: number | null;
+    isPieceUnit: boolean;
+  } | null;
+  costSnapshotAt?: string | null;
+  costAppliedById?: number | null;
+  costAppliedByName?: string | null;
+  costAppliedScope?: "receiveBranch" | "allBranches" | null;
+  costApplicationSnapshot?: { basis: string; changes: Array<{ branchId: number; before: string; after: string }> } | null;
   /** Phiếu nhập nhận thành phẩm còn hiệu lực (tạm hoặc đã nhập), mới nhất trước. */
   purchaseOrders?: ProductionPurchaseOrder[];
 }
@@ -152,7 +166,68 @@ export interface CreateProductionData {
   feeExchangeRate?: number;
 }
 
+export interface ProductionCostHistoryQuery {
+  productId: number;
+  manufacturerId?: number;
+  fromDate?: string;
+  toDate?: string;
+  variantKey?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ProductionCostHistoryRow {
+  id: number;
+  code: string;
+  productId: number;
+  productCode: string;
+  productName: string;
+  manufacturerId: number;
+  manufacturerName: string;
+  completedDate: string;
+  externalTemplateName: string | null;
+  receivedQuantity: number;
+  materialValue: number;
+  manufacturerMaterialCost: number;
+  processingFee: number;
+  totalCost: number;
+  unitCost: number | null;
+  variantKey: string;
+  variantLabel: string;
+  snapshotMissing: boolean;
+  canApply: boolean;
+  deltaAmount: number | null;
+  deltaPercent: number | null;
+  previousProductionId: number | null;
+  costAppliedAt: string | null;
+  costAppliedByName: string | null;
+  costAppliedScope: string | null;
+}
+
+export interface ProductionCostHistoryResponse {
+  data: ProductionCostHistoryRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  variants: Array<{ key: string; label: string }>;
+}
+
+export interface CostApplicationPreview {
+  productionId: number;
+  code: string;
+  productName: string;
+  scope: "receiveBranch" | "allBranches";
+  unitCost: number;
+  variantLabel: string;
+  targets: Array<{ branchId: number; branchName: string; cost: number; delta: number }>;
+}
+
 export const productionsApi = {
+  costHistory: (query: ProductionCostHistoryQuery, chart = false) =>
+    apiClient.get<ProductionCostHistoryResponse>(`/productions/cost-history${chart ? "/chart" : ""}`, query),
+
+  costApplicationPreview: (id: number, scope: "receiveBranch" | "allBranches") =>
+    apiClient.get<CostApplicationPreview>(`/productions/${id}/cost-application-preview`, { scope }),
   getAll: (params?: ProductionQueryParams) =>
     apiClient.get<{ total: number; pageSize: number; data: Production[] }>(
       "/productions",
@@ -183,6 +258,7 @@ export const productionsApi = {
       newCost?: number;
       costScope?: "receiveBranch" | "allBranches";
       expectedOldCost?: number;
+      expectedCosts?: Array<{ branchId: number; cost: number }>;
       // Phí chốt = giá trị phiếu nhập được tạo.
       processingFee?: number;
       manufacturerMaterials?: ManufacturerMaterial[];
@@ -204,9 +280,11 @@ export const productionsApi = {
   applyCost: (
     id: number,
     data: {
-      newCost: number;
+      basis?: "batch";
+      newCost?: number;
       scope?: "receiveBranch" | "allBranches";
       expectedOldCost?: number;
+      expectedCosts?: Array<{ branchId: number; cost: number }>;
     },
   ) => apiClient.post<Production>(`/productions/${id}/apply-cost`, data),
 

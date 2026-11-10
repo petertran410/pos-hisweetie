@@ -11,6 +11,7 @@ import {
   useReceiveProduction,
 } from "@/lib/hooks/useProductions";
 import type { Production } from "@/lib/api/productions";
+import { usePermission } from "@/lib/hooks/usePermissions";
 
 const vnd = (v: number) =>
   `${(Math.round(v * 100) / 100).toLocaleString("vi-VN")} đ`;
@@ -53,12 +54,13 @@ export function ProductionReceiveModal({
   onClose: () => void;
 }) {
   const isReceive = mode === "receive";
+  const canApplyCost = usePermission("productions", "apply_cost");
   const [receivedQuantity, setReceivedQuantity] = useState(
     Number(production.quantity),
   );
   const [debouncedQuantity, setDebouncedQuantity] = useState(receivedQuantity);
   const [completedDate, setCompletedDate] = useState(todayStr());
-  const [applyCost, setApplyCost] = useState(true);
+  const [applyCost, setApplyCost] = useState(false);
   // null = chưa sửa → dùng giá đề xuất.
   const [editedCost, setEditedCost] = useState<number | null>(null);
   const [scope, setScope] = useState<"receiveBranch" | "allBranches">(
@@ -101,6 +103,7 @@ export function ProductionReceiveModal({
   const sentDay = production.sentDate?.slice(0, 10);
 
   const handleSubmit = () => {
+    if ((!isReceive || applyCost) && !canApplyCost) return;
     if (isReceive) {
       if (receivedQuantity <= 0) {
         alert("Số lượng nhận phải lớn hơn 0");
@@ -118,6 +121,7 @@ export function ProductionReceiveModal({
             receivedQuantity,
             newCost: applyCost && newCost > 0 ? newCost : undefined,
             costScope: scope,
+            expectedOldCost: applyCost ? preview?.oldCost : undefined,
             ...(isCnyFee
               ? { feeForeignAmount: feeForeign, feeExchangeRate: feeRate }
               : { processingFee: feeVnd }),
@@ -153,6 +157,7 @@ export function ProductionReceiveModal({
         </div>
 
         <div className="px-5 py-4 overflow-y-auto flex-1 space-y-4 text-sm">
+          {!isReceive && !canApplyCost && <p role="alert" className="text-red-700">Bạn không có quyền Áp dụng giá vốn gia công.</p>}
           <div className="rounded border bg-gray-50 px-3 py-2">
             <div className="font-medium">{production.productName}</div>
             <div className="text-gray-500">
@@ -272,7 +277,7 @@ export function ProductionReceiveModal({
                 </div>
               </div>
 
-              {isReceive && (
+              {isReceive && canApplyCost && (
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -283,7 +288,7 @@ export function ProductionReceiveModal({
                 </label>
               )}
 
-              {(applyCost || !isReceive) && (
+              {canApplyCost && (applyCost || !isReceive) && (
                 <div className="space-y-3">
                   <div className="rounded border divide-y">
                     <Row
@@ -351,7 +356,7 @@ export function ProductionReceiveModal({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={isPending || (!isReceive && (!preview || newCost <= 0))}
+            disabled={isPending || (!isReceive && (!canApplyCost || !preview || newCost <= 0)) || (applyCost && !canApplyCost)}
             className="px-4 py-2 text-sm text-white bg-brand rounded hover:bg-brand-dark disabled:opacity-50">
             {isPending
               ? "Đang lưu..."
