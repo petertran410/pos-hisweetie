@@ -1,101 +1,141 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2, Wallet, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Plus, RefreshCw, SlidersHorizontal, X } from "lucide-react";
 import { toast } from "sonner";
-import Link from "next/link";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { usePermission } from "@/lib/hooks/usePermissions";
-import { manufacturersApi, type Manufacturer, type PayableSummary } from "@/lib/api/manufacturers";
-import { apiClient } from "@/lib/config/api";
-import type { Production } from "@/lib/api/productions";
+import { manufacturersApi, type Manufacturer } from "@/lib/api/manufacturers";
 import { PartnerPicker } from "@/components/manufacturers/ProductionPickers";
-import { PayablePaymentModal } from "@/components/manufacturers/PayablePaymentModal";
-
-interface AccountGroup extends PayableSummary {
-  manufacturerProductionDebt: number;
-  heldMaterialValue: number;
-  batches: Array<{ id: number; totalAmount: number; status: number; transDate: string; cashFlow?: { id: number; code: string } | null; allocations: Array<{ targetCode: string; amount: number }> }>;
-}
-interface AccountsResponse { manufacturer: Manufacturer; productions: Production[]; groups: AccountGroup[] }
-const money = (amount: unknown) => `${Number(amount ?? 0).toLocaleString("vi-VN", { maximumFractionDigits: 2 })} đ`;
+import { ManufacturerSidebar, type ManufacturerView } from "@/components/manufacturers/ManufacturerSidebar";
+import { ManufacturerDetailPanel, PanelState } from "@/components/manufacturers/ManufacturerDetailPanel";
 
 export default function ManufacturersPage() {
   return <PagePermissionGuard resource="productions" action="view"><ManufacturersView /></PagePermissionGuard>;
 }
 
 function ManufacturersView() {
-  const queryClient = useQueryClient();
   const canCreate = usePermission("productions", "create");
   const canUpdate = usePermission("productions", "update");
-  const canDelete = usePermission("productions", "delete");
-  const canPay = usePermission("cash_flows", "create");
-  const canCancelPayment = usePermission("cash_flows", "delete");
+  const [view, setView] = useState<ManufacturerView>("info");
   const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
   const [page, setPage] = useState(0);
   const [includeInactive, setIncludeInactive] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const [editing, setEditing] = useState<Manufacturer | "new" | null>(null);
-  const [paying, setPaying] = useState<{ type: "S" | "M"; id: number } | null>(null);
-  const list = useQuery({ queryKey: ["manufacturers", search, page, includeInactive], queryFn: () => manufacturersApi.list({ search, pageSize: 20, currentItem: page * 20, includeInactive }) });
-  const accounts = useQuery({ queryKey: ["manufacturer-accounts", selected], queryFn: () => apiClient.get<AccountsResponse>(`/manufacturers/${selected}/accounts`), enabled: !!selected });
-  const templates = useQuery({ queryKey: ["manufacturer-templates", selected], queryFn: () => manufacturersApi.templates(selected!), enabled: !!selected });
-  const cancel = useMutation({
-    mutationFn: manufacturersApi.cancelPayment,
-    onSuccess: () => {
-      for (const key of ["manufacturer-accounts", "payables", "suppliers", "productions", "purchase-orders", "cashflows", "supplier-debt-timeline"]) queryClient.invalidateQueries({ queryKey: [key] });
-      toast.success("Đã hủy thanh toán");
-    },
-    onError: (error: Error) => toast.error(error.message),
+  const [mobileFilters, setMobileFilters] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => { setQuery(search.trim()); setPage(0); }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+  const list = useQuery({
+    queryKey: ["manufacturers", query, page, includeInactive],
+    queryFn: () => manufacturersApi.list({ search: query, pageSize: 20, currentItem: page * 20, includeInactive }),
   });
-  const removeTemplate = useMutation({
-    mutationFn: manufacturersApi.removeTemplate,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["manufacturer-templates"] }),
-    onError: (error: Error) => toast.error(error.message),
-  });
-  return <div className="flex h-full min-h-0 flex-col bg-white">
-    <header className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><h1 className="text-xl font-semibold">Nhà sản xuất</h1>
-      {canCreate && <button onClick={() => setEditing("new")} className="flex items-center gap-1 rounded bg-brand px-3 py-2 text-sm text-white"><Plus size={16} />Thêm nhà sản xuất</button>}</header>
-    <div className="flex min-h-0 flex-1 flex-col overflow-auto xl:flex-row">
-      <section className="min-w-0 border-r xl:w-[40%]">
-        <div className="flex flex-wrap gap-2 p-3"><label className="relative min-w-48 flex-1"><Search size={16} className="absolute left-2 top-2.5 text-gray-400" /><input aria-label="Tìm nhà sản xuất" className="w-full rounded border py-2 pl-8 pr-2 text-sm" value={search} onChange={(event) => { setSearch(event.target.value); setPage(0); }} placeholder="Tìm nhà sản xuất" /></label>
-          <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={includeInactive} onChange={(event) => { setIncludeInactive(event.target.checked); setPage(0); }} />Cả ngừng hoạt động</label></div>
-        {list.isError && <p className="p-3 text-sm text-red-600">Không tải được nhà sản xuất</p>}
-        <table className="w-full text-sm"><thead className="bg-gray-50 text-left"><tr><th className="p-3">Nhà sản xuất</th><th className="p-3">NCC liên kết</th><th className="w-10" /></tr></thead><tbody>
-          {list.data?.data.map((row) => <tr key={row.id} className={`cursor-pointer border-b ${selected === row.id ? "bg-brand-soft" : "hover:bg-gray-50"}`} onClick={() => setSelected(row.id)}>
-            <td className="p-3"><button className="text-left font-medium">{row.name}</button><div className="text-xs text-gray-500">{row.code}{!row.isActive ? " · Ngừng hoạt động" : ""}</div></td>
-            <td className="p-3">{row.supplier?.name ?? "-"}</td><td className="p-2">{canUpdate && <button title="Sửa nhà sản xuất" className="p-1" onClick={(event) => { event.stopPropagation(); setEditing(row); }}><Pencil size={16} /></button>}</td>
-          </tr>)}
-          {!list.data?.data.length && <tr><td colSpan={3} className="p-6 text-center text-gray-500">{list.isLoading ? "Đang tải..." : "Chưa có nhà sản xuất"}</td></tr>}
-        </tbody></table>
-        <div className="flex items-center justify-between p-3 text-sm"><span>{list.data?.total ?? 0} nhà sản xuất</span><div className="flex items-center gap-2">
-          <button title="Trang trước" disabled={page === 0} className="rounded border p-1 disabled:opacity-40" onClick={() => setPage(page - 1)}><ChevronLeft size={16} /></button>
-          <span>{page + 1}</span><button title="Trang sau" disabled={(page + 1) * 20 >= (list.data?.total ?? 0)} className="rounded border p-1 disabled:opacity-40" onClick={() => setPage(page + 1)}><ChevronRight size={16} /></button></div></div>
+  const rows = list.data?.data ?? [];
+  const total = list.data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / 20));
+  const active = rows.filter((row) => row.isActive).length;
+  const linked = rows.filter((row) => row.supplierId).length;
+  const titles: Record<ManufacturerView, string> = {
+    info: "Tổng hợp nhà sản xuất",
+    debt: "Công nợ theo nhà sản xuất",
+    productions: "Phiếu gửi theo nhà sản xuất",
+    templates: "Mẫu phối trộn theo nhà sản xuất",
+  };
+  return (
+    <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-gray-50/50">
+      <ManufacturerSidebar
+        view={view} onViewChange={setView}
+        search={search} onSearchChange={(value) => { setSearch(value); setSelected(null); }}
+        includeInactive={includeInactive} onIncludeInactiveChange={(value) => { setIncludeInactive(value); setPage(0); setSelected(null); }}
+        selected={selected} onSelect={setSelected}
+        mobileOpen={mobileFilters} onClose={() => setMobileFilters(false)}
+      />
+      <section aria-label="Dữ liệu nhà sản xuất" className="m-3 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white lg:my-4 lg:ml-0 lg:mr-4">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2 lg:hidden">
+          <span className="text-sm font-medium text-gray-800">Nhà sản xuất</span>
+          <button type="button" className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-600"
+            onClick={() => setMobileFilters(true)} aria-expanded={mobileFilters}><SlidersHorizontal size={15} />Bộ lọc</button>
+        </div>
+        {selected ? (
+          <ManufacturerDetailPanel key={selected} id={selected} view={view} onBack={() => setSelected(null)} onEdit={setEditing} />
+        ) : (
+          <>
+            <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-2.5">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                <h2 className="text-base font-semibold text-gray-900">{titles[view]}</h2>
+                {list.data && <span className="text-sm text-gray-500">{total.toLocaleString("vi-VN")} nhà sản xuất</span>}
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <button type="button" title="Làm mới danh sách" aria-label="Làm mới danh sách" disabled={list.isFetching} onClick={() => list.refetch()}
+                  className="rounded-lg border border-gray-200 p-2 text-gray-500 hover:bg-gray-50 disabled:opacity-50"><RefreshCw size={15} className={list.isFetching ? "animate-spin" : ""} /></button>
+                {canCreate && <button type="button" onClick={() => setEditing("new")} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-dark">
+                  <Plus size={15} />Thêm nhà sản xuất
+                </button>}
+              </div>
+            </header>
+            {list.data && rows.length > 0 && !list.isError && (
+              <div className="flex shrink-0 flex-wrap gap-x-8 gap-y-1 border-b bg-gray-50 px-4 py-2 text-sm">
+                <span className="text-gray-500">Đang hiển thị: <strong className="font-semibold text-gray-900">{rows.length}</strong></span>
+                <span className="text-gray-500">Đang hoạt động: <strong className="font-semibold text-green-700">{active}</strong></span>
+                <span className="text-gray-500">Có NCC liên kết: <strong className="font-semibold text-brand-dark">{linked}</strong></span>
+              </div>
+            )}
+            <div className="min-h-0 flex-1 overflow-auto">
+              {list.isLoading ? <PanelState loading /> : list.isError ? <PanelState onRetry={() => list.refetch()}>Không tải được danh sách nhà sản xuất</PanelState> :
+                !rows.length ? <PanelState>{query ? "Không tìm thấy nhà sản xuất phù hợp" : "Chưa có nhà sản xuất"}</PanelState> : (
+                  <table className="w-full min-w-[820px] text-sm">
+                    <thead className="sticky top-0 z-10 bg-gray-50">
+                      <tr>{["STT", "Mã nhà sản xuất", "Nhà sản xuất", "Điện thoại", "NCC liên kết", "Tiền tệ", "Trạng thái"].map((label) => (
+                        <th key={label} className="whitespace-nowrap px-3 py-2 text-left font-medium text-gray-600">{label}</th>
+                      ))}<th className="w-12"><span className="sr-only">Thao tác</span></th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      <tr className="bg-amber-50 font-semibold">
+                        <td className="px-3 py-2" /><td className="px-3 py-2 text-gray-800" colSpan={2}>Tổng trang này</td>
+                        <td className="px-3 py-2 text-gray-700">{rows.length} NSX</td>
+                        <td className="px-3 py-2 text-brand-dark">{linked} liên kết</td><td />
+                        <td className="px-3 py-2 text-green-700">{active} hoạt động</td><td />
+                      </tr>
+                      {rows.map((row, index) => (
+                        <tr key={row.id} className="cursor-pointer hover:bg-gray-50" onClick={() => setSelected(row.id)}>
+                          <td className="px-3 py-2.5 text-gray-400">{page * 20 + index + 1}</td>
+                          <td className="whitespace-nowrap px-3 py-2.5">
+                            <button type="button" className="text-left font-medium text-brand hover:underline" onClick={(event) => { event.stopPropagation(); setSelected(row.id); }}>{row.code}</button>
+                          </td>
+                          <td className="min-w-48 max-w-80 px-3 py-2.5">
+                            <button type="button" className="break-words text-left font-medium text-gray-900 hover:text-brand" onClick={(event) => { event.stopPropagation(); setSelected(row.id); }}>{row.name}</button>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2.5 text-gray-600">{row.contactNumber || "-"}</td>
+                          <td className="max-w-64 break-words px-3 py-2.5 text-gray-600">{row.supplier?.name ?? "-"}</td>
+                          <td className="px-3 py-2.5 text-gray-600">{row.currency}</td>
+                          <td className={`whitespace-nowrap px-3 py-2.5 ${row.isActive ? "text-green-700" : "text-gray-400"}`}>{row.isActive ? "Đang hoạt động" : "Ngừng hoạt động"}</td>
+                          <td className="px-3 py-2.5">{canUpdate && <button type="button" title="Sửa nhà sản xuất" aria-label={`Sửa ${row.name}`} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-brand"
+                            onClick={(event) => { event.stopPropagation(); setEditing(row); }}><Pencil size={15} /></button>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+            </div>
+            <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t px-4 py-2 text-sm text-gray-500">
+              <span>{total > 0 ? `${page * 20 + 1}–${Math.min((page + 1) * 20, total)} / ${total.toLocaleString("vi-VN")} nhà sản xuất` : "0 nhà sản xuất"}</span>
+              <div className="flex items-center gap-2">
+                <button type="button" title="Trang trước" disabled={page === 0 || list.isLoading} className="rounded-lg border border-gray-200 p-1.5 hover:bg-gray-50 disabled:opacity-40" onClick={() => setPage(page - 1)}><ChevronLeft size={16} /></button>
+                <span className="min-w-16 text-center">Trang {page + 1}/{totalPages}</span>
+                <button type="button" title="Trang sau" disabled={page + 1 >= totalPages || list.isLoading} className="rounded-lg border border-gray-200 p-1.5 hover:bg-gray-50 disabled:opacity-40" onClick={() => setPage(page + 1)}><ChevronRight size={16} /></button>
+              </div>
+            </footer>
+          </>
+        )}
       </section>
-      <section className="min-w-0 flex-1 space-y-5 p-4">
-        {!selected ? <p className="text-sm text-gray-500">Chọn nhà sản xuất</p> : accounts.isLoading ? <p>Đang tải công nợ...</p> : accounts.isError ? <p className="text-sm text-red-600">Không tải được công nợ NSX</p> : <>
-          <div><h2 className="text-lg font-semibold">{accounts.data?.manufacturer.name}</h2><div className="text-sm text-gray-500">{accounts.data?.manufacturer.contactNumber} {accounts.data?.manufacturer.address}</div></div>
-          {accounts.data?.groups.map((group) => <section key={`${group.accountType}:${group.accountId}`} className="space-y-3 border-y py-3">
-            <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold">{group.accountType === "S" ? `Thanh toán qua NCC: ${group.partnerName}` : "Thanh toán riêng NSX"}</h3>
-              {canPay && <button className="flex items-center gap-1 rounded border px-2 py-1 text-sm" onClick={() => setPaying({ type: group.accountType, id: group.accountId })}><Wallet size={15} />Thanh toán / ứng trước</button>}</div>
-            <div className="flex flex-wrap gap-4 text-sm"><span>Nợ NSX này: <strong>{money(group.manufacturerProductionDebt)}</strong></span><span>Hàng đang gửi: <strong>{money(group.heldMaterialValue)}</strong></span><span>Ứng trước chung: <strong className="text-green-700">{money(group.availableCredit)}</strong></span><span>Tổng nợ đối tác: <strong className="text-red-700">{money(group.totalDebt)}</strong></span></div>
-            <div className="overflow-x-auto"><table className="w-full min-w-[480px] text-sm"><thead className="bg-gray-50 text-left"><tr><th className="p-2">Thanh toán</th><th className="p-2">Ngày</th><th className="p-2 text-right">Thực chi</th><th className="p-2">Chứng từ phân bổ</th><th /></tr></thead>
-              <tbody>{group.batches.map((batch) => <tr key={batch.id} className="border-b"><td className="p-2">{batch.cashFlow?.code ?? `Cấn ứng #${batch.id}`}{batch.status === 2 && <span className="block text-xs text-red-600">Đã hủy</span>}</td><td className="p-2">{new Date(batch.transDate).toLocaleDateString("vi-VN")}</td><td className="p-2 text-right">{money(batch.totalAmount)}</td><td className="p-2">{[...new Set(batch.allocations.map((line) => line.targetCode))].join(", ") || "Ứng trước"}</td><td className="p-2">{canCancelPayment && batch.status !== 2 && <button title="Hủy lần thanh toán" disabled={cancel.isPending} className="p-1 text-red-600" onClick={() => { if (confirm("Hủy toàn bộ lần thanh toán và các phân bổ liên quan?")) cancel.mutate(batch.id); }}><X size={15} /></button>}</td></tr>)}
-                {!group.batches.length && <tr><td colSpan={5} className="p-3 text-center text-gray-500">Chưa có thanh toán</td></tr>}</tbody>
-            </table></div>
-          </section>)}
-          <section className="space-y-2"><h3 className="text-sm font-semibold">Phiếu gửi sản xuất</h3><div className="overflow-x-auto"><table className="w-full min-w-[500px] text-sm"><thead className="bg-gray-50 text-left"><tr><th className="p-2">Phiếu / thành phẩm</th><th className="p-2">Trạng thái</th><th className="p-2 text-right">Phải trả</th><th className="p-2 text-right">Còn nợ</th></tr></thead><tbody>
-            {accounts.data?.productions.map((row) => <tr key={row.id} className="border-b"><td className="p-2"><Link className="text-brand" href={`/san-pham/san-xuat?Code=${row.code}`}>{row.code}</Link><div className="text-xs text-gray-500">{row.productName}</div></td><td className="p-2">{({ 1: "Phiếu tạm", 2: "Hoàn thành", 3: "Đã hủy", 4: "Đã gửi" } as Record<number, string>)[row.status]}</td><td className="p-2 text-right">{money(row.totalPayable)}</td><td className="p-2 text-right">{row.status === 2 ? money(row.debtAmount) : "-"}</td></tr>)}
-          </tbody></table></div></section>
-          <section className="space-y-2"><h3 className="text-sm font-semibold">Mẫu phối trộn</h3>{templates.data?.map((row) => <div key={row.id} className="flex items-center justify-between border-b py-2 text-sm"><span>{row.name} · {Number(row.baseQuantity).toLocaleString("vi-VN")}</span>{canDelete && <button title="Ngừng dùng mẫu" disabled={removeTemplate.isPending} className="p-1 text-red-600" onClick={() => { if (confirm("Ngừng dùng mẫu phối trộn này?")) removeTemplate.mutate(row.id); }}><Trash2 size={15} /></button>}</div>)}</section>
-        </>}
-      </section>
+      {editing && <ManufacturerEditor value={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}
     </div>
-    {editing && <ManufacturerEditor value={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}
-    {paying && <PayablePaymentModal accountType={paying.type} accountId={paying.id} onClose={() => setPaying(null)} />}
-  </div>;
+  );
 }
 
 function ManufacturerEditor({ value, onClose }: { value: Manufacturer | null; onClose: () => void }) {

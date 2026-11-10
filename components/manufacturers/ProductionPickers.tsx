@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { productsApi, type Product } from "@/lib/api/products";
 import { manufacturersApi } from "@/lib/api/manufacturers";
-import { apiClient } from "@/lib/config/api";
+import { suppliersApi } from "@/lib/api/suppliers";
 
 const fieldClass = "w-full min-w-0 rounded border border-gray-300 bg-white px-2 py-2 text-sm disabled:bg-gray-100";
 
@@ -47,12 +47,12 @@ export function PartnerPicker({ value, label, onChange, manufacturer = false, di
   useEffect(() => { const timer = setTimeout(() => setQuery(search), 250); return () => clearTimeout(timer); }, [search]);
   const selected = useQuery({
     queryKey: [manufacturer ? "manufacturer" : "supplier-picker", value],
-    queryFn: () => apiClient.get<{ id: number; code?: string; name: string }>(`/${manufacturer ? "manufacturers" : "suppliers"}/${value}`),
+    queryFn: async () => manufacturer ? manufacturersApi.get(value!) : suppliersApi.getSupplier(value!),
     enabled: !!value,
   });
   const results = useQuery({
     queryKey: ["partner-picker", manufacturer, query],
-    queryFn: () => manufacturer ? manufacturersApi.list({ search: query, pageSize: 30 }) : apiClient.get<{ data: Array<{ id: number; code?: string; name: string }> }>("/suppliers", { search: query, pageSize: 30 }),
+    queryFn: async () => manufacturer ? manufacturersApi.list({ search: query, pageSize: 30 }) : suppliersApi.getSuppliers({ name: query.trim() || undefined, pageSize: 30 }),
     enabled: open,
   });
   return <div className="relative min-w-0">
