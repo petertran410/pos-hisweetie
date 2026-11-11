@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { Product, ProductComponent } from "@/lib/api/products";
 import { useUpdateProduct } from "@/lib/hooks/useProducts";
 import { useBranchStore } from "@/lib/store/branch";
-import { Loader2 } from "lucide-react";
+import { Images, Loader2 } from "lucide-react";
 import Swal from "sweetalert2";
 import { ProductForm } from "./ProductForm";
 import { ComboProductForm } from "./ComboProductForm";
@@ -347,13 +347,19 @@ export function ProductDetailContent({
                   <button
                     type="button"
                     onClick={() => setPreviewIndex(primaryImageIndex)}
-                    aria-label={`Xem ảnh ${product.name}`}
-                    className="w-full h-full cursor-zoom-in focus-visible:outline-brand">
+                    aria-label={`Xem ${imageItems.length} ảnh của ${product.name}`}
+                    className="relative w-full h-full cursor-zoom-in focus-visible:outline-brand">
                     <img
                       src={primaryImage.image}
                       alt={product.name}
                       className="w-full h-full object-cover"
                     />
+                    {imageItems.length > 1 && (
+                      <span className="absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 rounded bg-black/70 px-1.5 py-1 text-[11px] font-medium text-white">
+                        <Images className="h-3.5 w-3.5" />
+                        {imageItems.length} ảnh
+                      </span>
+                    )}
                   </button>
                 ) : (
                   <span className="text-xs text-gray-400">N/A</span>
@@ -945,6 +951,7 @@ export function ProductDetailContent({
           items={imageItems}
           index={Math.min(previewIndex, imageItems.length - 1)}
           onClose={() => setPreviewIndex(null)}
+          showThumbnailStrip
         />
       )}
     </div>

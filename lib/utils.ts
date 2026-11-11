@@ -18,10 +18,37 @@ export function formatDate(date: string | Date | undefined): string {
   return new Date(date).toLocaleString("vi-VN");
 }
 
-export function formatNumberInput(value: string): string {
-  const number = value.replace(/\D/g, "");
-  if (number === "") return "";
-  return new Intl.NumberFormat("en-US").format(Number(number));
+export function formatNumberInput(
+  value: string,
+  maxFractionDigits = 0
+): string {
+  const normalized = value.replace(/,/g, "");
+  const fractionLimit = Math.max(0, Math.floor(maxFractionDigits));
+
+  if (fractionLimit === 0) {
+    const digits = normalized.replace(/\D/g, "");
+    if (digits === "") return "";
+    return new Intl.NumberFormat("en-US").format(Number(digits));
+  }
+
+  const numeric = normalized.replace(/[^\d.]/g, "");
+  const dotIndex = numeric.indexOf(".");
+  const integerDigits = (
+    dotIndex === -1 ? numeric : numeric.slice(0, dotIndex)
+  ).replace(/\D/g, "");
+
+  if (integerDigits === "" && dotIndex === -1) return "";
+
+  const integerPart = new Intl.NumberFormat("en-US").format(
+    Number(integerDigits || "0")
+  );
+  if (dotIndex === -1) return integerPart;
+
+  const fractionPart = numeric
+    .slice(dotIndex + 1)
+    .replace(/\D/g, "")
+    .slice(0, fractionLimit);
+  return `${integerPart}.${fractionPart}`;
 }
 
 export function parseNumberInput(value: string): number {

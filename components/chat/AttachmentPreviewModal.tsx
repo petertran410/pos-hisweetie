@@ -21,10 +21,12 @@ export function AttachmentPreviewModal({
   items,
   index: startIndex,
   onClose,
+  showThumbnailStrip = false,
 }: {
   items: ChatAttachment[];
   index: number;
   onClose: () => void;
+  showThumbnailStrip?: boolean;
 }) {
   const [index, setIndex] = useState(startIndex);
   const a = items[index];
@@ -48,7 +50,7 @@ export function AttachmentPreviewModal({
       onClick={onClose}>
       <div className="flex items-center justify-end gap-2 pb-3" onClick={(e) => e.stopPropagation()}>
         <span className="mr-auto truncate text-sm text-white/80">
-          {many && `${index + 1}/${items.length} `}
+          {many && !showThumbnailStrip && `${index + 1}/${items.length} `}
           {a.title}
         </span>
         <a
@@ -66,7 +68,7 @@ export function AttachmentPreviewModal({
         </button>
       </div>
       <div className="relative flex min-h-0 flex-1 items-center justify-center">
-        {many && (
+        {many && !showThumbnailStrip && (
           <>
             <button
               onClick={(e) => {
@@ -132,6 +134,58 @@ export function AttachmentPreviewModal({
           )}
         </div>
       </div>
+      {showThumbnailStrip && many && (
+        <div
+          className="flex shrink-0 justify-center pt-3"
+          onClick={(e) => e.stopPropagation()}>
+          <div className="flex max-w-full items-center gap-2 rounded-lg bg-white/95 p-2 text-gray-700 shadow-lg lg:p-3">
+            <button
+              type="button"
+              onClick={() => go(-1)}
+              aria-label="Ảnh trước"
+              title="Ảnh trước"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded hover:bg-gray-100">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <div className="flex max-w-[calc(100vw-11rem)] gap-2 overflow-x-auto lg:max-w-lg">
+              {items.map((item, itemIndex) => (
+                <button
+                  key={`${item.url}-${itemIndex}`}
+                  type="button"
+                  onClick={() => setIndex(itemIndex)}
+                  aria-label={`Xem ảnh ${itemIndex + 1}`}
+                  aria-current={itemIndex === index ? "true" : undefined}
+                  className={`h-12 w-12 shrink-0 overflow-hidden rounded border-2 bg-gray-100 lg:h-16 lg:w-16 ${
+                    itemIndex === index
+                      ? "border-brand"
+                      : "border-gray-300 hover:border-gray-400"
+                  }`}>
+                  {isImage(item) ? (
+                    <img
+                      src={item.thumbnail || item.url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <FileText className="m-auto h-5 w-5 text-gray-500" />
+                  )}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => go(1)}
+              aria-label="Ảnh sau"
+              title="Ảnh sau"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded hover:bg-gray-100">
+              <ChevronRight className="h-5 w-5" />
+            </button>
+            <span className="min-w-12 shrink-0 text-center text-sm font-medium">
+              {index + 1} / {items.length}
+            </span>
+          </div>
+        </div>
+      )}
     </div>,
     document.body
   );
