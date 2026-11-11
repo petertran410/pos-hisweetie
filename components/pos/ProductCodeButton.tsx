@@ -17,7 +17,7 @@ interface ProductCodeButtonProps {
   code: string;
 }
 
-const codeClassName = "break-all text-left text-xs font-medium lg:text-sm";
+const codeClassName = "break-all text-left text-sm font-medium lg:text-base";
 
 export function ProductCodeButton(props: ProductCodeButtonProps) {
   const canView = usePermission("products", "view");
