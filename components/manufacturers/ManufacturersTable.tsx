@@ -1,17 +1,17 @@
 "use client";
 
 import { Fragment, useRef, useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Loader2,
+  History,
   Plus,
   RefreshCw,
   Search,
 } from "lucide-react";
-import { manufacturersApi, type Manufacturer } from "@/lib/api/manufacturers";
+import type { Manufacturer } from "@/lib/api/manufacturers";
 import {
   useColumnVisibility,
   type ColumnConfig,
@@ -105,6 +105,7 @@ export function ManufacturersTable({
   onViewChange,
   onEdit,
   onCreate,
+  onOpenCostHistory,
 }: {
   rows: Manufacturer[];
   total: number;
@@ -124,6 +125,7 @@ export function ManufacturersTable({
   onViewChange: (view: ManufacturerView) => void;
   onEdit: (value: Manufacturer) => void;
   onCreate: () => void;
+  onOpenCostHistory: () => void;
 }) {
   const canCreate = usePermission("productions", "create");
   const { columns, visibleColumns, toggleColumn } = useColumnVisibility(
@@ -132,26 +134,8 @@ export function ManufacturersTable({
   );
   const headerCheckbox = useRef<HTMLInputElement>(null);
   const [selection, setSelection] = useState<number[]>([]);
-  const focused = useQuery({
-    queryKey: ["manufacturer", selected],
-    queryFn: () => manufacturersApi.get(selected!),
-    enabled:
-      !!selected &&
-      !loading &&
-      !error &&
-      !rows.some((row) => row.id === selected),
-  });
-  const displayRows =
-    focused.data &&
-    selected === focused.data.id &&
-    !rows.some((row) => row.id === selected)
-      ? [focused.data, ...rows]
-      : rows;
-  const selectedCount = displayRows.filter((row) =>
-    selection.includes(row.id),
-  ).length;
-  const allSelected =
-    displayRows.length > 0 && selectedCount === displayRows.length;
+  const selectedCount = rows.filter((row) => selection.includes(row.id)).length;
+  const allSelected = rows.length > 0 && selectedCount === rows.length;
   useEffect(() => {
     if (headerCheckbox.current)
       headerCheckbox.current.indeterminate = selectedCount > 0 && !allSelected;
@@ -190,6 +174,14 @@ export function ManufacturersTable({
         <div className="flex max-w-full flex-wrap items-center gap-2">
           <button
             type="button"
+            onClick={onOpenCostHistory}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+          >
+            <History size={16} />
+            Lịch sử giá thành
+          </button>
+          <button
+            type="button"
             title="Làm mới danh sách"
             aria-label="Làm mới danh sách"
             disabled={refreshing}
@@ -226,12 +218,12 @@ export function ManufacturersTable({
                       setSelection((previous) =>
                         allSelected
                           ? previous.filter(
-                              (id) => !displayRows.some((row) => row.id === id),
+                              (id) => !rows.some((row) => row.id === id),
                             )
                           : [
                               ...new Set([
                                 ...previous,
-                                ...displayRows.map((row) => row.id),
+                                ...rows.map((row) => row.id),
                               ]),
                             ],
                       )
@@ -283,7 +275,7 @@ export function ManufacturersTable({
                   </button>
                 </td>
               </tr>
-            ) : !displayRows.length ? (
+            ) : !rows.length ? (
               <tr>
                 <td
                   colSpan={colSpan}
@@ -295,7 +287,7 @@ export function ManufacturersTable({
                 </td>
               </tr>
             ) : (
-              displayRows.map((row) => (
+              rows.map((row) => (
                 <Fragment key={row.id}>
                   <tr
                     className={`cursor-pointer transition-colors ${selected === row.id ? "bg-brand-soft" : "border-b hover:bg-gray-50"}`}
@@ -375,29 +367,12 @@ export function ManufacturersTable({
                       colSpan={colSpan}
                       view={view}
                       onViewChange={onViewChange}
-                      onClose={() => onSelect(null)}
                       onEdit={onEdit}
                     />
                   )}
                 </Fragment>
               ))
             )}
-            {!loading &&
-              !error &&
-              selected &&
-              !rows.some((row) => row.id === selected) &&
-              !focused.data && (
-                <tr>
-                  <td
-                    colSpan={colSpan}
-                    className="p-4 text-center text-sm text-gray-500"
-                  >
-                    {focused.isError
-                      ? "Không tải được nhà sản xuất đã chọn"
-                      : "Đang tải nhà sản xuất đã chọn..."}
-                  </td>
-                </tr>
-              )}
           </tbody>
         </table>
       </div>

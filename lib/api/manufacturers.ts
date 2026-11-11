@@ -92,7 +92,15 @@ export interface PayablePayment {
   allocations: PayableAllocation[];
 }
 export const manufacturersApi = {
-  list: (params?: { search?: string; includeInactive?: boolean; pageSize?: number; currentItem?: number }) =>
+  list: (params?: {
+    search?: string;
+    includeInactive?: boolean;
+    isActive?: boolean;
+    hasInProgress?: boolean;
+    hasDebt?: boolean;
+    pageSize?: number;
+    currentItem?: number;
+  }) =>
     apiClient.get<{ data: Manufacturer[]; total: number }>("/manufacturers", params),
   get: (id: number) => apiClient.get<Manufacturer>(`/manufacturers/${id}`),
   create: (data: Omit<Manufacturer, "id" | "code" | "supplier">) => apiClient.post<Manufacturer>("/manufacturers", data),

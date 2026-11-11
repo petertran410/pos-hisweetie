@@ -46,7 +46,7 @@ export function ExternalProductionReceiveModal({ production, onClose }: { produc
       });
     },
     onSuccess: () => {
-      for (const key of ["productions", "production-cost-history", "products", "suppliers", "manufacturer-accounts", "payables", "supplier-debt-timeline"]) queryClient.invalidateQueries({ queryKey: [key] });
+      for (const key of ["productions", "production-cost-history", "products", "suppliers", "manufacturers", "manufacturer-accounts", "payables", "supplier-debt-timeline"]) queryClient.invalidateQueries({ queryKey: [key] });
       toast.success("Đã nhận thành phẩm và ghi nhận công nợ"); onClose();
     },
     onError: (error: Error) => toast.error(error.message),

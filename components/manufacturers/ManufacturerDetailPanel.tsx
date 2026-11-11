@@ -4,7 +4,6 @@ import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ChevronLeft,
   Loader2,
   Pencil,
   RefreshCw,
@@ -48,22 +47,21 @@ interface AccountsResponse {
 
 const money = (value: unknown) =>
   `${Number(value ?? 0).toLocaleString("vi-VN", { maximumFractionDigits: 2 })} đ`;
-const th = "whitespace-nowrap px-3 py-2 text-left font-medium text-gray-600";
+const th =
+  "whitespace-nowrap px-3 py-2 text-left text-sm font-semibold text-gray-700";
 const td = "px-3 py-2.5 align-top";
 const button =
-  "inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-50";
+  "inline-flex min-h-8 items-center justify-center gap-1.5 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50";
 
 export function ManufacturerDetailPanel({
   id,
   view,
-  onBack,
   onEdit,
   embedded = false,
   onViewChange,
 }: {
   id: number;
   view: ManufacturerView;
-  onBack: () => void;
   onEdit: (manufacturer: Manufacturer) => void;
   embedded?: boolean;
   onViewChange?: (view: ManufacturerView) => void;
@@ -74,7 +72,7 @@ export function ManufacturerDetailPanel({
   const canPay = usePermission("cash_flows", "create");
   const canCancelPayment = usePermission("cash_flows", "delete");
   const [paying, setPaying] = useState<{ type: "S" | "M"; id: number } | null>(
-    null,
+    null
   );
   const accounts = useQuery({
     queryKey: ["manufacturer-accounts", id],
@@ -90,6 +88,7 @@ export function ManufacturerDetailPanel({
     mutationFn: manufacturersApi.cancelPayment,
     onSuccess: () => {
       for (const key of [
+        "manufacturers",
         "manufacturer-accounts",
         "payables",
         "suppliers",
@@ -116,75 +115,70 @@ export function ManufacturerDetailPanel({
   const totalDebt =
     data?.groups.reduce(
       (sum, group) => sum + Number(group.manufacturerProductionDebt),
-      0,
+      0
     ) ?? 0;
   const heldValue =
     data?.groups.reduce(
       (sum, group) => sum + Number(group.heldMaterialValue),
-      0,
+      0
     ) ?? 0;
   const completed = data?.productions.filter((row) => row.status === 2) ?? [];
   const title = MANUFACTURER_VIEWS.find((item) => item.value === view)!.label;
+  const refreshing =
+    accounts.isFetching || (view === "templates" && templates.isFetching);
+  const refresh = () => {
+    void accounts.refetch();
+    if (view === "templates") void templates.refetch();
+  };
 
   return (
-    <>
-      {embedded ? (
-        <div className="px-4 pt-4">
-          <div className="mb-3 flex items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="text-lg font-bold text-brand">
-                {data?.manufacturer.code ?? "Nhà sản xuất"}
-              </span>
-              {data && (
-                <>
-                  <span className="text-gray-300">-</span>
-                  <h3 className="min-w-0 break-words text-lg font-semibold text-gray-800">
-                    {data.manufacturer.name}
-                  </h3>
-                  <span
-                    className={`rounded px-2 py-0.5 text-xs font-medium ${data.manufacturer.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}
-                  >
-                    {data.manufacturer.isActive
-                      ? "Đang hoạt động"
-                      : "Ngừng hoạt động"}
-                  </span>
-                </>
-              )}
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <button
-                type="button"
-                title="Làm mới dữ liệu"
-                aria-label="Làm mới dữ liệu"
-                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100"
-                disabled={accounts.isFetching}
-                onClick={() => {
-                  accounts.refetch();
-                  if (view === "templates") templates.refetch();
-                }}
-              >
-                <RefreshCw
-                  size={15}
-                  className={accounts.isFetching ? "animate-spin" : ""}
-                />
-              </button>
-              <button
-                type="button"
-                title="Đóng chi tiết"
-                aria-label="Đóng chi tiết"
-                onClick={onBack}
-                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100"
-              >
-                <X size={17} />
-              </button>
-            </div>
+    <div
+      className={`${embedded ? "min-w-0" : "flex min-h-0 flex-1 flex-col"} border border-gray-200 bg-white p-4`}>
+      <header className="mb-4 min-w-0 shrink-0 border-b border-gray-200">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-lg font-bold text-brand">
+              {data?.manufacturer.code ?? "Nhà sản xuất"}
+            </span>
+            {data && (
+              <>
+                <span className="text-gray-400">-</span>
+                <h3 className="min-w-0 break-words text-lg font-semibold text-gray-800">
+                  {data.manufacturer.name}
+                </h3>
+                <span
+                  className={`rounded px-2 py-0.5 text-xs font-medium ${data.manufacturer.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+                  {data.manufacturer.isActive
+                    ? "Đang hoạt động"
+                    : "Ngừng hoạt động"}
+                </span>
+              </>
+            )}
           </div>
-          <div className="overflow-x-auto border-b border-gray-200">
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            <span className="mr-2 text-sm font-medium text-gray-600">
+              {data?.manufacturer.currency}
+            </span>
+            <button
+              type="button"
+              title="Làm mới dữ liệu"
+              aria-label="Làm mới dữ liệu"
+              className="flex h-8 w-8 items-center justify-center rounded text-gray-400 hover:bg-gray-100"
+              disabled={refreshing}
+              onClick={refresh}>
+              <RefreshCw
+                size={15}
+                className={refreshing ? "animate-spin" : ""}
+              />
+            </button>
+          </div>
+        </div>
+        {onViewChange ? (
+          <div className="mt-1 overflow-x-auto">
             <div
               role="tablist"
               aria-label="Chi tiết nhà sản xuất"
-              className="flex min-w-max gap-1"
-            >
+              className="flex min-w-max gap-1">
               {MANUFACTURER_VIEWS.map((tab) => (
                 <button
                   key={tab.value}
@@ -192,87 +186,16 @@ export function ManufacturerDetailPanel({
                   role="tab"
                   aria-selected={view === tab.value}
                   onClick={() => onViewChange?.(tab.value)}
-                  className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${view === tab.value ? "border-brand text-brand" : "border-transparent text-gray-500 hover:text-gray-800"}`}
-                >
+                  className={`shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${view === tab.value ? "border-brand text-brand" : "border-transparent text-gray-600 hover:text-gray-900"}`}>
                   {tab.value === "info" ? "Thông tin" : tab.label}
                 </button>
               ))}
             </div>
           </div>
-        </div>
-      ) : (
-        <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-2.5">
-          <div className="flex min-w-0 items-center gap-3">
-            <button
-              type="button"
-              onClick={onBack}
-              className={`${button} shrink-0 border-transparent px-1.5`}
-              title="Quay lại danh sách"
-            >
-              <ChevronLeft size={16} />
-              <span className="hidden sm:inline">Quay lại</span>
-            </button>
-            <div className="min-w-0">
-              <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-              {data && (
-                <p className="mt-0.5 break-words text-xs text-gray-500">
-                  {data.manufacturer.code} · {data.manufacturer.name}
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              title="Làm mới dữ liệu"
-              aria-label="Làm mới dữ liệu"
-              className="rounded-lg border border-gray-200 p-2 text-gray-500 hover:bg-gray-50"
-              disabled={accounts.isFetching}
-              onClick={() => {
-                accounts.refetch();
-                if (view === "templates") templates.refetch();
-              }}
-            >
-              <RefreshCw
-                size={15}
-                className={accounts.isFetching ? "animate-spin" : ""}
-              />
-            </button>
-            {canUpdate && data && (
-              <button
-                type="button"
-                className={button}
-                onClick={() => onEdit(data.manufacturer)}
-              >
-                <Pencil size={15} />
-                Chỉnh sửa
-              </button>
-            )}
-          </div>
-        </header>
-      )}
-      {data && !accounts.isError && !embedded && (
-        <div className="flex shrink-0 flex-wrap gap-x-8 gap-y-1 border-b bg-gray-50 px-4 py-2 text-sm">
-          <span className="text-gray-500">
-            Phiếu sản xuất:{" "}
-            <strong className="font-semibold text-gray-900">
-              {data.productions.length}
-            </strong>
-          </span>
-          <span className="text-gray-500">
-            Hàng đang gửi:{" "}
-            <strong className="font-semibold text-brand-dark">
-              {money(heldValue)}
-            </strong>
-          </span>
-          <span className="text-gray-500">
-            Nợ NSX:{" "}
-            <strong className="font-semibold text-orange-600">
-              {money(totalDebt)}
-            </strong>
-          </span>
-        </div>
-      )}
+        ) : (
+          <h2 className="py-2.5 text-sm font-medium text-brand">{title}</h2>
+        )}
+      </header>
       <div className={embedded ? "min-w-0" : "min-h-0 flex-1 overflow-auto"}>
         {accounts.isLoading ? (
           <PanelState loading />
@@ -283,94 +206,42 @@ export function ManufacturerDetailPanel({
         ) : (
           data && (
             <>
-              {view === "costHistory" && <ProductionCostHistoryPanel manufacturerId={id} />}
+              {view === "costHistory" && (
+                <ProductionCostHistoryPanel manufacturerId={id} />
+              )}
               {view === "info" && (
-                <div className={embedded ? "p-4" : ""}>
-                  {embedded && (
-                    <div className="mb-6 flex flex-wrap items-start justify-between gap-3 text-sm">
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-gray-500">
-                        <span>
-                          Phiếu sản xuất:{" "}
-                          <span className="font-medium text-gray-700">
-                            {data.productions.length}
-                          </span>
-                        </span>
-                        <span>
-                          Hàng đang gửi:{" "}
-                          <span className="font-medium text-brand-dark">
-                            {money(heldValue)}
-                          </span>
-                        </span>
-                      </div>
-                      <span className="text-gray-500">
-                        Nợ hiện tại của NSX:{" "}
-                        <strong className="font-semibold text-red-600">
-                          {money(totalDebt)}
-                        </strong>
-                      </span>
-                    </div>
-                  )}
-                  <dl
-                    className={`grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2 ${embedded ? "mb-5" : "px-4 py-2"}`}
-                  >
+                <div className="space-y-4">
+                  <dl className="mb-2 grid grid-cols-1 gap-x-8 pb-2 text-sm sm:grid-cols-2 xl:grid-cols-3">
                     {[
-                      ...(!embedded
-                        ? [
-                            ["Mã nhà sản xuất", data.manufacturer.code],
-                            ["Tên nhà sản xuất", data.manufacturer.name],
-                          ]
-                        : []),
                       ["Điện thoại", data.manufacturer.contactNumber],
                       ["Email", data.manufacturer.email],
+                      ["Tiền tệ", data.manufacturer.currency],
                       [
                         "Nhà cung cấp liên kết",
                         data.manufacturer.supplier?.name,
                       ],
-                      ["Tiền tệ", data.manufacturer.currency],
+                      [
+                        "Trạng thái",
+                        data.manufacturer.isActive
+                          ? "Đang hoạt động"
+                          : "Ngừng hoạt động",
+                      ],
                       ["Địa chỉ", data.manufacturer.address],
-                      ...(!embedded
-                        ? [
-                            [
-                              "Trạng thái",
-                              data.manufacturer.isActive
-                                ? "Đang hoạt động"
-                                : "Ngừng hoạt động",
-                            ],
-                          ]
-                        : []),
                     ].map(([label, value]) => (
                       <div
                         key={label}
-                        className={`${embedded ? "flex gap-2" : "grid grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-3 border-b border-gray-100 py-3"} ${label === "Địa chỉ" && embedded ? "sm:col-span-2" : ""}`}
-                      >
-                        <dt className="shrink-0 text-gray-500">{label}:</dt>
-                        <dd className="min-w-0 break-words text-gray-700">
+                        className="mb-2 flex min-w-0 flex-col gap-2 border-b border-gray-200 pb-1">
+                        <dt className="text-gray-500">{label}:</dt>
+                        <dd className="min-w-0 break-words text-gray-900">
                           {value || "-"}
                         </dd>
                       </div>
                     ))}
                   </dl>
-                  {data.manufacturer.note && (
-                    <div
-                      className={`${embedded ? "mb-5" : "border-b px-4 py-3"} text-sm`}
-                    >
-                      <p className="mb-1 text-gray-500">Ghi chú</p>
-                      <p className="whitespace-pre-wrap break-words text-gray-800">
-                        {data.manufacturer.note}
-                      </p>
-                    </div>
-                  )}
-                  {!embedded && (
-                    <SectionHeading>Đối tác thanh toán</SectionHeading>
-                  )}
-                  {embedded && (
-                    <h4 className="mb-2 text-sm font-medium text-gray-600">
-                      Đối tác thanh toán
-                    </h4>
-                  )}
-                  <div className="overflow-x-auto">
+                  <SectionHeading>Đối tác thanh toán</SectionHeading>
+                  <div className="overflow-x-auto rounded-lg border border-gray-200">
                     <table className="w-full min-w-[640px] text-sm">
-                      <thead className="bg-gray-50">
+                      <thead className="border-b border-gray-200 bg-gray-100">
                         <tr>
                           <th className={th}>Đối tác</th>
                           <th className={`${th} text-right`}>Nợ NSX này</th>
@@ -382,12 +253,11 @@ export function ManufacturerDetailPanel({
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-gray-200 bg-white">
                         {data.groups.map((group) => (
                           <tr
                             key={`${group.accountType}:${group.accountId}`}
-                            className="hover:bg-gray-50"
-                          >
+                            className="hover:bg-gray-50">
                             <td className={td}>
                               <div className="font-medium text-gray-900">
                                 {group.partnerName}
@@ -399,46 +269,102 @@ export function ManufacturerDetailPanel({
                               </div>
                             </td>
                             <td
-                              className={`${td} text-right tabular-nums text-orange-600`}
-                            >
+                              className={`${td} text-right tabular-nums text-orange-600`}>
                               {money(group.manufacturerProductionDebt)}
                             </td>
                             <td
-                              className={`${td} text-right tabular-nums text-green-700`}
-                            >
+                              className={`${td} text-right tabular-nums text-green-700`}>
                               {money(group.availableCredit)}
                             </td>
                             <td
-                              className={`${td} text-right tabular-nums font-medium`}
-                            >
+                              className={`${td} text-right tabular-nums font-medium`}>
                               {money(group.totalDebt)}
                             </td>
                           </tr>
                         ))}
+                        {!data.groups.length && (
+                          <tr>
+                            <td colSpan={4}>
+                              <PanelState>
+                                Chưa có đối tác thanh toán
+                              </PanelState>
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
-                  {embedded && canUpdate && (
-                    <div className="mt-5 flex justify-end border-t border-gray-200 pt-4">
-                      <button
-                        type="button"
-                        onClick={() => onEdit(data.manufacturer)}
-                        className="inline-flex items-center gap-1.5 rounded bg-brand px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-dark"
-                      >
-                        <Pencil size={16} />
-                        Chỉnh sửa
-                      </button>
+                  <div className="flex flex-col gap-6 lg:flex-row">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="mb-1.5 text-sm text-gray-500">
+                        Ghi chú nhà sản xuất:
+                      </h4>
+                      <p className="min-h-28 whitespace-pre-wrap break-words rounded border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900">
+                        {data.manufacturer.note || "-"}
+                      </p>
                     </div>
-                  )}
+                    <dl className="w-full shrink-0 space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm lg:w-96">
+                      <div className="flex items-start justify-between gap-4">
+                        <dt className="text-gray-600">Phiếu gửi sản xuất:</dt>
+                        <dd className="font-semibold tabular-nums text-gray-900">
+                          {data.productions.length}
+                        </dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-4">
+                        <dt className="text-gray-600">Đã hoàn thành:</dt>
+                        <dd className="font-semibold tabular-nums text-gray-900">
+                          {completed.length}
+                        </dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-4 border-t border-gray-200 pt-2">
+                        <dt className="text-gray-600">Hàng đang gửi:</dt>
+                        <dd className="break-words text-right font-semibold tabular-nums text-brand">
+                          {money(heldValue)}
+                        </dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-4">
+                        <dt className="text-gray-600">Phải trả NSX:</dt>
+                        <dd className="break-words text-right font-semibold tabular-nums text-gray-900">
+                          {money(
+                            completed.reduce(
+                              (sum, row) => sum + Number(row.totalPayable ?? 0),
+                              0
+                            )
+                          )}
+                        </dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-4">
+                        <dt className="text-gray-600">Đã thanh toán:</dt>
+                        <dd className="break-words text-right font-semibold tabular-nums text-green-600">
+                          {money(
+                            completed.reduce(
+                              (sum, row) => sum + Number(row.paidAmount ?? 0),
+                              0
+                            )
+                          )}
+                        </dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-4 border-t-2 border-red-200 pt-2">
+                        <dt className="font-bold text-gray-900">
+                          Nợ hiện tại của NSX:
+                        </dt>
+                        <dd className="break-words text-right font-bold tabular-nums text-red-600">
+                          {money(totalDebt)}
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
                 </div>
+              )}
+              {view === "debt" && !data.groups.length && (
+                <PanelState>Chưa có công nợ nhà sản xuất</PanelState>
               )}
               {view === "debt" &&
                 data.groups.map((group) => (
                   <section
                     key={`${group.accountType}:${group.accountId}`}
-                    className="border-b last:border-b-0"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                    className="mb-6 last:mb-0">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                       <div className="min-w-0">
                         <h3 className="break-words text-sm font-semibold text-gray-800">
                           {group.accountType === "S"
@@ -469,22 +395,21 @@ export function ManufacturerDetailPanel({
                       {canPay && (
                         <button
                           type="button"
-                          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-dark"
+                          className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded bg-brand px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-brand-dark"
                           onClick={() =>
                             setPaying({
                               type: group.accountType,
                               id: group.accountId,
                             })
-                          }
-                        >
+                          }>
                           <Wallet size={15} />
                           Thanh toán / ứng trước
                         </button>
                       )}
                     </div>
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto rounded-lg border border-gray-200">
                       <table className="w-full min-w-[680px] text-sm">
-                        <thead className="bg-gray-50">
+                        <thead className="border-b border-gray-200 bg-gray-100">
                           <tr>
                             <th className={th}>Mã thanh toán</th>
                             <th className={th}>Ngày</th>
@@ -494,7 +419,7 @@ export function ManufacturerDetailPanel({
                             <th className="w-12" />
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-gray-200 bg-white">
                           {group.batches.length > 0 && (
                             <tr className="bg-amber-50 font-semibold">
                               <td className={td} colSpan={2}>
@@ -507,8 +432,8 @@ export function ManufacturerDetailPanel({
                                     .reduce(
                                       (sum, row) =>
                                         sum + Number(row.totalAmount),
-                                      0,
-                                    ),
+                                      0
+                                    )
                                 )}
                               </td>
                               <td colSpan={3} />
@@ -520,8 +445,7 @@ export function ManufacturerDetailPanel({
                                 {batch.cashFlow ? (
                                   <Link
                                     className="text-brand hover:underline"
-                                    href={`/tai-chinh/so-quy?Code=${batch.cashFlow.code}`}
-                                  >
+                                    href={`/tai-chinh/so-quy?Code=${batch.cashFlow.code}`}>
                                     {batch.cashFlow.code}
                                   </Link>
                                 ) : (
@@ -529,31 +453,27 @@ export function ManufacturerDetailPanel({
                                 )}
                               </td>
                               <td
-                                className={`${td} whitespace-nowrap text-gray-600`}
-                              >
+                                className={`${td} whitespace-nowrap text-gray-600`}>
                                 {new Date(batch.transDate).toLocaleDateString(
-                                  "vi-VN",
+                                  "vi-VN"
                                 )}
                               </td>
                               <td
-                                className={`${td} whitespace-nowrap text-right tabular-nums`}
-                              >
+                                className={`${td} whitespace-nowrap text-right tabular-nums`}>
                                 {money(batch.totalAmount)}
                               </td>
                               <td
-                                className={`${td} max-w-64 break-words text-gray-600`}
-                              >
+                                className={`${td} max-w-64 break-words text-gray-600`}>
                                 {[
                                   ...new Set(
                                     batch.allocations.map(
-                                      (line) => line.targetCode,
-                                    ),
+                                      (line) => line.targetCode
+                                    )
                                   ),
                                 ].join(", ") || "Ứng trước"}
                               </td>
                               <td
-                                className={`${td} whitespace-nowrap ${batch.status === 2 ? "text-red-600" : "text-green-700"}`}
-                              >
+                                className={`${td} whitespace-nowrap ${batch.status === 2 ? "text-red-600" : "text-green-700"}`}>
                                 {batch.status === 2
                                   ? "Đã hủy"
                                   : "Đã thanh toán"}
@@ -569,12 +489,11 @@ export function ManufacturerDetailPanel({
                                     onClick={() => {
                                       if (
                                         confirm(
-                                          "Hủy toàn bộ lần thanh toán và các phân bổ liên quan?",
+                                          "Hủy toàn bộ lần thanh toán và các phân bổ liên quan?"
                                         )
                                       )
                                         cancel.mutate(batch.id);
-                                    }}
-                                  >
+                                    }}>
                                     <X size={15} />
                                   </button>
                                 )}
@@ -594,9 +513,9 @@ export function ManufacturerDetailPanel({
                   </section>
                 ))}
               {view === "productions" && (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
                   <table className="w-full min-w-[760px] text-sm">
-                    <thead className="sticky top-0 z-10 bg-gray-50">
+                    <thead className="sticky top-0 z-10 border-b border-gray-200 bg-gray-100">
                       <tr>
                         <th className={th}>Mã phiếu</th>
                         <th className={th}>Thành phẩm</th>
@@ -606,7 +525,7 @@ export function ManufacturerDetailPanel({
                         <th className={`${th} text-right`}>Còn nợ</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-gray-200 bg-white">
                       {data.productions.length > 0 && (
                         <tr className="bg-amber-50 font-semibold">
                           <td className={td} colSpan={3}>
@@ -617,28 +536,26 @@ export function ManufacturerDetailPanel({
                               completed.reduce(
                                 (sum, row) =>
                                   sum + Number(row.totalPayable ?? 0),
-                                0,
-                              ),
+                                0
+                              )
                             )}
                           </td>
                           <td
-                            className={`${td} text-right tabular-nums text-green-700`}
-                          >
+                            className={`${td} text-right tabular-nums text-green-700`}>
                             {money(
                               completed.reduce(
                                 (sum, row) => sum + Number(row.paidAmount ?? 0),
-                                0,
-                              ),
+                                0
+                              )
                             )}
                           </td>
                           <td
-                            className={`${td} text-right tabular-nums text-orange-600`}
-                          >
+                            className={`${td} text-right tabular-nums text-orange-600`}>
                             {money(
                               completed.reduce(
                                 (sum, row) => sum + Number(row.debtAmount ?? 0),
-                                0,
-                              ),
+                                0
+                              )
                             )}
                           </td>
                         </tr>
@@ -648,8 +565,7 @@ export function ManufacturerDetailPanel({
                           <td className={`${td} font-medium`}>
                             <Link
                               className="text-brand hover:underline"
-                              href={`/san-pham/san-xuat?Code=${row.code}`}
-                            >
+                              href={`/san-pham/san-xuat?Code=${row.code}`}>
                               {row.code}
                             </Link>
                           </td>
@@ -663,18 +579,15 @@ export function ManufacturerDetailPanel({
                             <ProductionStatus status={row.status} />
                           </td>
                           <td
-                            className={`${td} whitespace-nowrap text-right tabular-nums`}
-                          >
+                            className={`${td} whitespace-nowrap text-right tabular-nums`}>
                             {money(row.totalPayable)}
                           </td>
                           <td
-                            className={`${td} whitespace-nowrap text-right tabular-nums text-green-700`}
-                          >
+                            className={`${td} whitespace-nowrap text-right tabular-nums text-green-700`}>
                             {row.status === 2 ? money(row.paidAmount) : "-"}
                           </td>
                           <td
-                            className={`${td} whitespace-nowrap text-right tabular-nums text-orange-600`}
-                          >
+                            className={`${td} whitespace-nowrap text-right tabular-nums text-orange-600`}>
                             {row.status === 2 ? money(row.debtAmount) : "-"}
                           </td>
                         </tr>
@@ -698,9 +611,9 @@ export function ManufacturerDetailPanel({
                     Không tải được mẫu phối trộn
                   </PanelState>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto rounded-lg border border-gray-200">
                     <table className="w-full min-w-[600px] text-sm">
-                      <thead className="sticky top-0 z-10 bg-gray-50">
+                      <thead className="sticky top-0 z-10 border-b border-gray-200 bg-gray-100">
                         <tr>
                           <th className={th}>Tên mẫu</th>
                           <th className={`${th} text-right`}>
@@ -713,12 +626,11 @@ export function ManufacturerDetailPanel({
                           <th className="w-12" />
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-gray-200 bg-white">
                         {templates.data?.map((row) => (
                           <tr key={row.id} className="hover:bg-gray-50">
                             <td
-                              className={`${td} max-w-80 break-words font-medium text-gray-900`}
-                            >
+                              className={`${td} max-w-80 break-words font-medium text-gray-900`}>
                               {row.name}
                             </td>
                             <td className={`${td} text-right tabular-nums`}>
@@ -730,7 +642,7 @@ export function ManufacturerDetailPanel({
                             <td className={`${td} text-right tabular-nums`}>
                               {Number(row.processingFee).toLocaleString(
                                 "vi-VN",
-                                { maximumFractionDigits: 2 },
+                                { maximumFractionDigits: 2 }
                               )}{" "}
                               {row.currency === "VND" ? "đ" : "CNY"}
                             </td>
@@ -747,8 +659,7 @@ export function ManufacturerDetailPanel({
                                       confirm("Ngừng dùng mẫu phối trộn này?")
                                     )
                                       removeTemplate.mutate(row.id);
-                                  }}
-                                >
+                                  }}>
                                   <Trash2 size={15} />
                                 </button>
                               )}
@@ -770,6 +681,17 @@ export function ManufacturerDetailPanel({
           )
         )}
       </div>
+      {canUpdate && data && !accounts.isError && (
+        <footer className="mt-4 flex shrink-0 justify-end border-t border-gray-200 pt-4">
+          <button
+            type="button"
+            onClick={() => onEdit(data.manufacturer)}
+            className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded bg-brand px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-brand-dark">
+            <Pencil size={15} />
+            Chỉnh sửa
+          </button>
+        </footer>
+      )}
       {paying && (
         <PayablePaymentModal
           accountType={paying.type}
@@ -777,16 +699,12 @@ export function ManufacturerDetailPanel({
           onClose={() => setPaying(null)}
         />
       )}
-    </>
+    </div>
   );
 }
 
 function SectionHeading({ children }: { children: ReactNode }) {
-  return (
-    <h3 className="border-b px-4 pb-2 pt-4 text-sm font-semibold text-gray-800">
-      {children}
-    </h3>
-  );
+  return <h3 className="text-sm font-semibold text-gray-700">{children}</h3>;
 }
 
 export function PanelState({
@@ -801,8 +719,7 @@ export function PanelState({
   return (
     <div
       className="flex min-h-40 flex-col items-center justify-center gap-2 p-5 text-center text-sm text-gray-400"
-      role={loading ? "status" : undefined}
-    >
+      role={loading ? "status" : undefined}>
       {loading ? (
         <>
           <Loader2 className="h-6 w-6 animate-spin text-brand" />

@@ -92,6 +92,7 @@ function useFactoryProductionMutation<TVars>(
     mutationFn,
     onSuccess: (production) => {
       queryClient.invalidateQueries({ queryKey: ["productions"] });
+      queryClient.invalidateQueries({ queryKey: ["manufacturers"] });
       queryClient.invalidateQueries({ queryKey: ["production-cost-history"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });

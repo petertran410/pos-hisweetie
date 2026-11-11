@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useDropdownPosition } from "@/components/ui/filters/useDropdownPosition";
 import { productsApi, type Product } from "@/lib/api/products";
 import { manufacturersApi } from "@/lib/api/manufacturers";
 import { suppliersApi } from "@/lib/api/suppliers";
@@ -14,6 +16,20 @@ export function ProductPicker({ value, label, onChange, disabled, branchId }: {
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const position = useDropdownPosition(open && !disabled, inputRef, 256);
+  useEffect(() => {
+    if (!open) return;
+    const closeOutside = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!inputRef.current?.contains(target) && !panelRef.current?.contains(target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, [open]);
   useEffect(() => { const timer = setTimeout(() => setQuery(search), 250); return () => clearTimeout(timer); }, [search]);
   const selected = useQuery({ queryKey: ["products", value], queryFn: () => productsApi.getProduct(value!), enabled: !!value });
   const results = useQuery({
@@ -22,19 +38,31 @@ export function ProductPicker({ value, label, onChange, disabled, branchId }: {
     enabled: open,
   });
   return <div className="relative min-w-0">
-    <input aria-label={label || "Sản phẩm"} className={fieldClass} disabled={disabled}
+    <input ref={inputRef} aria-label={label || "Sản phẩm"} className={fieldClass} disabled={disabled}
       value={open ? search : selected.data ? `${selected.data.code} - ${selected.data.name}` : ""}
       placeholder="Tìm mã hoặc tên sản phẩm" onFocus={() => { setOpen(true); setSearch(""); }}
-      onChange={(event) => setSearch(event.target.value)} onBlur={() => setTimeout(() => setOpen(false), 150)} />
-    {open && <div className="absolute inset-x-0 top-full z-50 max-h-64 overflow-auto rounded border bg-white shadow-lg">
+      onChange={(event) => setSearch(event.target.value)}
+      onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); setOpen(false); } }}
+      onBlur={(event) => { if (!panelRef.current?.contains(event.relatedTarget as Node)) setOpen(false); }} />
+    {open && !disabled && position && typeof document !== "undefined" && createPortal(<div ref={panelRef}
+      aria-label={`Kết quả tìm ${label || "sản phẩm"}`}
+      className="fixed z-[1300] overflow-auto rounded border bg-white shadow-lg"
+      style={{
+        left: position.left, width: position.width, maxHeight: position.maxHeight, top: position.top,
+        ...(position.dropUp ? { transform: "translateY(-100%)" } : {}),
+      }}
+      onMouseDown={(event) => event.preventDefault()}>
       {results.isLoading ? <div className="p-3 text-sm">Đang tải...</div> : results.isError ? <div className="p-3 text-sm text-red-600">Không tải được sản phẩm</div> :
         results.data?.data.filter((product) => [2, 4].includes(product.type)).map((product) =>
           <button type="button" key={product.id} className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
-            onMouseDown={(event) => event.preventDefault()} onClick={() => { onChange(product); setOpen(false); }}>
+            onClick={() => {
+              if (inputRef.current?.matches(":disabled")) return;
+              onChange(product); setOpen(false);
+            }}>
             {product.code} - {product.name}
           </button>)}
       {results.data?.data.length === 0 && <div className="p-3 text-sm text-gray-500">Không có sản phẩm</div>}
-    </div>}
+    </div>, document.body)}
   </div>;
 }
 

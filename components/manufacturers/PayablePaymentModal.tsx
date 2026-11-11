@@ -75,7 +75,7 @@ export function PayablePaymentModal({ accountType, accountId, onClose }: { accou
       return manufacturersApi.pay(accountType, accountId, { ...data, requestKey: request.current!.key });
     },
     onSuccess: () => {
-      for (const key of ["payables", "suppliers", "supplier-debt-timeline", "purchase-orders", "productions", "manufacturer-accounts", "cashflows"]) queryClient.invalidateQueries({ queryKey: [key] });
+      for (const key of ["payables", "suppliers", "supplier-debt-timeline", "purchase-orders", "productions", "manufacturers", "manufacturer-accounts", "cashflows"]) queryClient.invalidateQueries({ queryKey: [key] });
       toast.success("Đã lưu thanh toán"); onClose();
     },
     onError: (error: Error) => toast.error(error.message),

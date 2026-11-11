@@ -10,14 +10,12 @@ export function ManufacturerDetailRow({
   colSpan,
   view,
   onViewChange,
-  onClose,
   onEdit,
 }: {
   id: number;
   colSpan: number;
   view: ManufacturerView;
   onViewChange: (view: ManufacturerView) => void;
-  onClose: () => void;
   onEdit: (value: Manufacturer) => void;
 }) {
   const wrapper = useRef<HTMLDivElement>(null);
@@ -32,13 +30,19 @@ export function ManufacturerDetailRow({
       scrollElement = scrollElement.parentElement;
     }
     if (!scrollElement) return;
+    const container = scrollElement;
     const update = () => {
-      element.style.width = `${scrollElement.clientWidth}px`;
+      const width = `${container.clientWidth}px`;
+      if (element.style.width !== width) element.style.width = width;
     };
     update();
     const observer = new ResizeObserver(update);
-    observer.observe(scrollElement.parentElement ?? scrollElement);
-    return () => observer.disconnect();
+    observer.observe(container);
+    window.addEventListener("resize", update);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", update);
+    };
   }, []);
   return (
     <tr>
@@ -48,13 +52,12 @@ export function ManufacturerDetailRow({
       >
         <div
           ref={wrapper}
-          className="sticky left-0 bg-white"
+          className="sticky left-0 bg-gray-50"
           style={{ width: 0 }}
         >
           <ManufacturerDetailPanel
             id={id}
             view={view}
-            onBack={onClose}
             onEdit={onEdit}
             embedded
             onViewChange={onViewChange}

@@ -95,7 +95,7 @@ function ExternalProductionFormContent({ sourceBranchId, destinationBranchId, pr
     },
     onSuccess: (saved) => {
       if (!saved) return;
-      for (const key of ["productions", "products", "manufacturer-accounts", "suppliers", "supplier-debt-timeline"]) queryClient.invalidateQueries({ queryKey: [key] });
+      for (const key of ["productions", "products", "manufacturers", "manufacturer-accounts", "suppliers", "supplier-debt-timeline"]) queryClient.invalidateQueries({ queryKey: [key] });
       toast.success("Đã lưu phiếu gửi sản xuất"); onClose();
     },
     onError: (error: Error) => toast.error(error.message),

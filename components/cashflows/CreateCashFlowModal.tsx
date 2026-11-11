@@ -23,7 +23,7 @@ import { invoicesApi } from "@/lib/api/invoices";
 import { cashflowsApi } from "@/lib/api/cashflows";
 import { purchaseOrdersApi } from "@/lib/api/purchase-orders";
 import { formatCurrency } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface CreateCashFlowModalProps {
   isOpen: boolean;
@@ -96,6 +96,7 @@ export function CreateCashFlowModal({
   type,
   isReceipt,
 }: CreateCashFlowModalProps) {
+  const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const { selectedBranch } = useBranchStore();
   const [transDate, setTransDate] = useState("");
@@ -876,6 +877,9 @@ export function CreateCashFlowModal({
         });
       }
 
+      if (partnerType === "S") {
+        queryClient.invalidateQueries({ queryKey: ["manufacturers"] });
+      }
       resetForm();
       onClose();
     } catch (error) {
