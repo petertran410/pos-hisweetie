@@ -13,9 +13,12 @@ import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { CodeLink } from "../shared/CodeLink";
 import { ProductionReceiveModal } from "./ProductionReceiveModal";
+import { BatchCostApplyModal } from "./BatchCostApplyModal";
+import { ExternalProductionReceiveModal } from "../manufacturers/ExternalProductionReceiveModal";
+import { ManufacturerMaterialsEditor } from "../manufacturers/ManufacturerMaterialsEditor";
 
-const vnd = (v: unknown) =>
-  `${Math.round(Number(v ?? 0)).toLocaleString("vi-VN")} đ`;
+const vnd = (v: unknown, precise = false) =>
+  `${(precise ? Number(v ?? 0) : Math.round(Number(v ?? 0))).toLocaleString("vi-VN", { maximumFractionDigits: precise ? 6 : 0 })} đ`;
 
 interface ProductionDetailRowProps {
   productionId: number;
@@ -64,8 +67,10 @@ export function ProductionDetailRow({
     "receive" | "applyCost" | null
   >(null);
   const canUpdate = usePermission("productions", "update");
+  const canApplyCost = usePermission("productions", "apply_cost");
   // "Admin có thể hủy": phiếu gửi đã gửi/hoàn thành dùng quyền Xóa phiếu SX.
   const canCancelSent = usePermission("productions", "delete");
+  const canCreatePurchaseOrder = usePermission("purchase_orders", "create");
   const { mutate: sendProduction, isPending: isSending } = useSendProduction();
   const { mutate: cancelSent, isPending: isCancelling } =
     useCancelSentProduction();
@@ -135,6 +140,9 @@ export function ProductionDetailRow({
       cancelSent({ id: production.id, reason: res.value || undefined });
     }
   };
+
+  // Phiếu nhập nhận hàng còn hiệu lực (tạm hoặc đã nhập) — tối đa 1.
+  const activePurchaseOrder = production?.purchaseOrders?.[0];
 
   if (isLoading) {
     return (
@@ -289,8 +297,8 @@ export function ProductionDetailRow({
 
                   {production.isExternal && (
                     <>
-                      <InfoItem label="Nhà máy:">
-                        {production.factory?.name || "-"}
+                      <InfoItem label={production.manufacturerId ? "Nhà sản xuất:" : "Nhà máy:"}>
+                        {production.manufacturer?.name || production.factory?.name || "-"}
                       </InfoItem>
                       <InfoItem label="Nhà cung cấp:">
                         {production.supplier?.name || "-"}
@@ -300,10 +308,17 @@ export function ProductionDetailRow({
                         {production.feeCurrency === "CNY" &&
                           ` (${Number(production.feeForeignAmount ?? 0).toLocaleString("vi-VN")} CNY × ${Number(production.feeExchangeRate ?? 0).toLocaleString("vi-VN")})`}
                       </InfoItem>
+                      {!!production.manufacturerId && <>
+                        <InfoItem label="Nguyên liệu NSX bổ sung:">{vnd(production.manufacturerMaterialCost)}</InfoItem>
+                        <InfoItem label="Phải trả NSX:">{vnd(production.totalPayable)}</InfoItem>
+                        <InfoItem label="Đã thanh toán:">{vnd(production.paidAmount)}</InfoItem>
+                        <InfoItem label="Còn nợ:">{vnd(production.debtAmount)}</InfoItem>
+                        <InfoItem label="Mẫu phối trộn:">{production.externalTemplateName || "-"}</InfoItem>
+                      </>}
                       <InfoItem
                         label={
                           production.status === 4
-                            ? "NCC đang giữ hàng (giá vốn NVL):"
+                            ? "Đơn vị sản xuất đang giữ (giá vốn NVL):"
                             : "Giá vốn nguyên liệu đã gửi:"
                         }>
                         {production.status === 1
@@ -320,6 +335,20 @@ export function ProductionDetailRow({
                           ? formatDate(production.completedDate)
                           : "-"}
                       </InfoItem>
+                      {activePurchaseOrder && (
+                        <InfoItem label="Phiếu nhập hàng:">
+                          <CodeLink
+                            entity="purchase-order"
+                            code={activePurchaseOrder.code}
+                            className="font-medium text-brand hover:underline"
+                          />
+                          {activePurchaseOrder.isDraft && (
+                            <span className="ml-1 text-amber-600">
+                              (Phiếu tạm)
+                            </span>
+                          )}
+                        </InfoItem>
+                      )}
                       {production.status === 2 && (
                         <>
                           <InfoItem label="Số lượng nhận:">
@@ -330,23 +359,33 @@ export function ProductionDetailRow({
                           </InfoItem>
                           <InfoItem label="Giá thành / sp:">
                             {vnd(
-                              Number(production.totalCost) /
-                                Number(
-                                  production.receivedQuantity ||
-                                    production.quantity ||
-                                    1,
-                                ),
+                              production.batchUnitCost != null
+                                ? Number(production.batchUnitCost)
+                                : Number(production.totalCost) /
+                                  Number(production.receivedQuantity || production.quantity || 1),
+                              !!production.manufacturerId,
                             )}
                           </InfoItem>
                           <InfoItem label="Giá vốn đã áp:">
                             {production.costAppliedAt ? (
-                              vnd(production.appliedUnitCost)
+                              vnd(production.appliedUnitCost, !!production.manufacturerId)
                             ) : (
                               <span className="text-amber-600">
                                 Chưa áp giá vốn
                               </span>
                             )}
                           </InfoItem>
+                          {production.manufacturerId && !production.costSnapshotAt && (
+                            <InfoItem label="Snapshot giá thành:">
+                              <span className="text-amber-700">Thiếu snapshot lịch sử</span>
+                            </InfoItem>
+                          )}
+                          {production.costAppliedAt && (
+                            <InfoItem label="Thực hiện áp giá:">
+                              {production.costAppliedByName || "-"} · {formatDate(production.costAppliedAt)} ·{" "}
+                              {production.costAppliedScope === "allBranches" ? "Tất cả chi nhánh" : "Kho nhận"}
+                            </InfoItem>
+                          )}
                         </>
                       )}
                     </>
@@ -377,6 +416,7 @@ export function ProductionDetailRow({
                             <th className="px-3 py-2 text-right">
                               Số lượng trừ kho
                             </th>
+                            {!!production.manufacturerId && <th className="px-3 py-2 text-right">Lượng gửi</th>}
                           </tr>
                         </thead>
                         <tbody>
@@ -390,6 +430,7 @@ export function ProductionDetailRow({
                                   { maximumFractionDigits: 3 },
                                 )}
                               </td>
+                              {!!production.manufacturerId && <td className="px-3 py-2 text-right">{Number(c.actualGrams).toLocaleString("vi-VN")} {c.unit}</td>}
                             </tr>
                           ))}
                         </tbody>
@@ -397,6 +438,8 @@ export function ProductionDetailRow({
                     </div>
                   )}
 
+                {!!production.manufacturerId && <ManufacturerMaterialsEditor
+                  value={production.manufacturerMaterials ?? []} onChange={() => {}} currency={production.feeCurrency ?? "VND"} disabled />}
                 {production.note && (
                   <div>
                     <label className="block text-md font-medium text-gray-500 mb-1.5">
@@ -413,14 +456,22 @@ export function ProductionDetailRow({
               <div className="flex items-center justify-end gap-2 pt-4 mt-4 border-t border-gray-200">
                 {production.isExternal &&
                   canCancelSent &&
-                  (production.status === 4 || production.status === 2) && (
+                  (production.status === 4 || production.status === 2) &&
+                  (activePurchaseOrder ? (
+                    // Đã có phiếu nhập: hủy phiếu nhập trước (trả tồn thành
+                    // phẩm, bỏ phí khỏi nợ) thì phiếu mới về Đã gửi.
+                    <span className="mr-auto text-sm text-gray-500">
+                      Muốn hủy phiếu: hủy phiếu nhập {activePurchaseOrder.code}{" "}
+                      trước.
+                    </span>
+                  ) : (
                     <button
                       onClick={handleCancelSent}
                       disabled={isCancelling}
                       className="px-4 py-2 text-md font-medium text-red-600 border border-red-300 rounded hover:bg-red-50 transition-colors mr-auto disabled:opacity-50">
                       Hủy phiếu
                     </button>
-                  )}
+                  ))}
                 {onEdit &&
                   production.status !== 3 &&
                   (!production.isExternal || production.status === 1) && (
@@ -445,8 +496,20 @@ export function ProductionDetailRow({
                     </button>
                   )}
                 {production.isExternal &&
+                  !production.manufacturerId &&
+                  canCreatePurchaseOrder &&
+                  production.status === 4 &&
+                  !activePurchaseOrder && (
+                    <Link
+                      href={`/san-pham/nhap-hang/new?productionId=${production.id}`}
+                      className="px-4 py-2 text-md font-medium text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors">
+                      Mở form nhập hàng
+                    </Link>
+                  )}
+                {production.isExternal &&
                   canUpdate &&
-                  production.status === 4 && (
+                  production.status === 4 &&
+                  !activePurchaseOrder && (
                     <button
                       onClick={() => setReceiveMode("receive")}
                       className="px-4 py-2 text-md font-medium text-white bg-brand rounded hover:bg-brand-dark transition-colors">
@@ -454,25 +517,30 @@ export function ProductionDetailRow({
                     </button>
                   )}
                 {production.isExternal &&
-                  canUpdate &&
+                  canApplyCost &&
                   production.status === 2 &&
+                  (!production.manufacturerId || (
+                    production.batchUnitCost != null &&
+                    !!production.costSnapshotAt &&
+                    !!production.outputSpecSnapshot?.unit &&
+                    !!production.outputSpecSnapshot.conversionValue
+                  )) &&
                   !production.costAppliedAt && (
                     <button
                       onClick={() => setReceiveMode("applyCost")}
                       className="px-4 py-2 text-md font-medium text-white bg-brand rounded hover:bg-brand-dark transition-colors">
-                      Áp giá vốn
+                      Áp dụng giá vốn
                     </button>
                   )}
               </div>
             </div>
           </div>
         </div>
-        {receiveMode && (
-          <ProductionReceiveModal
-            production={production}
-            mode={receiveMode}
-            onClose={() => setReceiveMode(null)}
-          />
+        {receiveMode && (production.manufacturerId
+          ? receiveMode === "receive"
+            ? <ExternalProductionReceiveModal production={production} onClose={() => setReceiveMode(null)} />
+            : canApplyCost && <BatchCostApplyModal productionId={production.id} onClose={() => setReceiveMode(null)} />
+          : <ProductionReceiveModal production={production} mode={receiveMode} onClose={() => setReceiveMode(null)} />
         )}
       </td>
     </tr>

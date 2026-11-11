@@ -19,6 +19,7 @@ import type { Production } from "@/lib/api/productions";
 import { ProductionDetailRow } from "./ProductionDetailRow";
 import { SelectBranchModal } from "./SelectBranchModal";
 import { ProductionForm } from "./ProductionForm";
+import { ExternalProductionForm } from "../manufacturers/ExternalProductionForm";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { CodeLink } from "../shared/CodeLink";
 import { ColumnToggle } from "../shared/ColumnToggle";
@@ -86,7 +87,7 @@ const DEFAULT_COLUMNS: ColumnConfig<Production>[] = [
     render: (prod) =>
       prod.isExternal ? (
         <div>
-          <div>{prod.factory?.name || prod.supplier?.name || "-"}</div>
+          <div>{prod.manufacturer?.name || prod.factory?.name || prod.supplier?.name || "-"}</div>
           {prod.factory && prod.supplier && (
             <div className="text-xs text-gray-400">{prod.supplier.name}</div>
           )}
@@ -550,7 +551,12 @@ export function ProductionTable({ filters }: ProductionTableProps) {
       {showProductionForm &&
         selectedSourceBranch &&
         selectedDestinationBranch && (
-          <ProductionForm
+          isExternalForm && (!selectedProduction || selectedProduction.manufacturerId) ? <ExternalProductionForm
+            sourceBranchId={selectedSourceBranch}
+            destinationBranchId={selectedDestinationBranch}
+            production={selectedProduction}
+            onClose={handleCloseForm}
+          /> : <ProductionForm
             sourceBranchId={selectedSourceBranch}
             destinationBranchId={selectedDestinationBranch}
             production={selectedProduction}

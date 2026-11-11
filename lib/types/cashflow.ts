@@ -83,6 +83,7 @@ export interface CashFlowsResponse {
 }
 
 export interface CashFlowRelatedPaymentsResponse {
+  payableAllocations?: Array<Record<string, unknown>>;
   invoicePayments?: Array<Record<string, unknown>>;
   orderPayments?: Array<Record<string, unknown>>;
   debtOffsets?: Array<Record<string, unknown>>;

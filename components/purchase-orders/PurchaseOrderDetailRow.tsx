@@ -498,6 +498,20 @@ export function PurchaseOrderDetailRow({
                           <span className="text-sm text-gray-400">-</span>
                         )}
                       </div>
+
+                      {/* Nhận hàng từ phiếu Gửi sản xuất (giá trị = phí SX) */}
+                      {purchaseOrder.production && (
+                        <div className="flex flex-col gap-2 mb-2 border-b pb-1">
+                          <label className="text-sm text-gray-500">
+                            Phiếu sản xuất:
+                          </label>
+                          <CodeLink
+                            entity="production"
+                            code={purchaseOrder.production.code}
+                            className="text-sm text-brand hover:underline font-medium"
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {/* Ghi chú */}

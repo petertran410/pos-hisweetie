@@ -1,6 +1,8 @@
 "use client";
 
 import { createPortal } from "react-dom";
+import { useEffect, useRef } from "react";
+import { usePermission } from "@/lib/hooks/usePermissions";
 import { X } from "lucide-react";
 import Link from "next/link";
 import { useOrdersPendingByProduct } from "@/lib/hooks/useOrders";
@@ -20,6 +22,7 @@ interface ProductCustomerOrdersModalProps {
   branchId?: number;
   branchName?: string;
   onClose: () => void;
+  zIndex?: number;
 }
 
 const formatDateTime = (d?: string) =>
@@ -37,7 +40,27 @@ export function ProductCustomerOrdersModal({
   branchId,
   branchName,
   onClose,
+  zIndex = 50,
 }: ProductCustomerOrdersModalProps) {
+  const canViewSalePrice = usePermission("products", "view_sale_price");
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const previousFocus = document.activeElement;
+    closeRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
+        previousFocus.focus();
+      }
+    };
+  }, [onClose]);
   const selectedBranch = useBranchStore((s) => s.selectedBranch);
 
   // Ưu tiên branch truyền vào (dòng chi nhánh cụ thể), fallback branch đang chọn.
@@ -54,7 +77,12 @@ export function ProductCustomerOrdersModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      data-product-detail-overlay
+      role="dialog"
+      aria-modal="true"
+      aria-label="Đơn hàng khách đang đặt"
+      style={{ zIndex }}
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
       onClick={onClose}>
       <div
         className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col"
@@ -80,6 +108,9 @@ export function ProductCustomerOrdersModal({
             </p>
           </div>
           <button
+            ref={closeRef}
+            type="button"
+            aria-label="Đóng đơn hàng khách đang đặt"
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors shrink-0 ml-3">
             <X className="w-5 h-5" />
@@ -120,9 +151,11 @@ export function ProductCustomerOrdersModal({
                   <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">
                     SL đặt
                   </th>
-                  <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">
-                    Thành tiền
-                  </th>
+                  {canViewSalePrice && (
+                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">
+                      Thành tiền
+                    </th>
+                  )}
                   <th className="px-4 py-2.5 text-left font-medium whitespace-nowrap">
                     Trạng thái
                   </th>
@@ -150,9 +183,11 @@ export function ProductCustomerOrdersModal({
                     <td className="px-4 py-2.5 text-right text-gray-900 whitespace-nowrap">
                       {Number(o.quantity).toLocaleString()}
                     </td>
-                    <td className="px-4 py-2.5 text-right text-gray-900 whitespace-nowrap">
-                      {Number(o.grandTotal).toLocaleString()} đ
-                    </td>
+                    {canViewSalePrice && (
+                      <td className="px-4 py-2.5 text-right text-gray-900 whitespace-nowrap">
+                        {Number(o.grandTotal).toLocaleString()} đ
+                      </td>
+                    )}
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       <span
                         className={`px-2 py-0.5 rounded-full text-xs font-medium ${

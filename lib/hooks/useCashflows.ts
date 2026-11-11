@@ -82,6 +82,7 @@ export function useCancelCashFlow() {
     mutationFn: cashflowsApi.cancelCashFlow,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cashflows"] });
+      queryClient.invalidateQueries({ queryKey: ["manufacturers"] });
       // Hủy phiếu thu làm thay đổi trạng thái đối soát Sepay và số tiền chưa gắn.
       queryClient.invalidateQueries({ queryKey: ["sepay-transactions"] });
       toast.success("Hủy phiếu thu/chi thành công");

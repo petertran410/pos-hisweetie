@@ -206,13 +206,13 @@ const normalizeShippingFee = (value: unknown): number => {
 
 const getRemainingShippingFee = (
   sourceShippingFee: unknown,
-  invoices: Array<{ shippingFee?: unknown; status?: number }> = [],
+  invoices: Array<{ shippingFee?: unknown; status?: number }> = []
 ): number => {
   const allocated = invoices
     .filter((invoice) => invoice.status !== INVOICE_STATUS.CANCELLED)
     .reduce(
       (sum, invoice) => sum + normalizeShippingFee(invoice.shippingFee),
-      0,
+      0
     );
 
   return Math.max(normalizeShippingFee(sourceShippingFee) - allocated, 0);
@@ -227,7 +227,7 @@ const findUnchosenGift = (cartItems: CartItem[]): CartItem | undefined =>
   cartItems.find(
     (it) =>
       it.isPromoGift &&
-      (it.requiresChoice || (it.cumulative && !Number(it.product?.id))),
+      (it.requiresChoice || (it.cumulative && !Number(it.product?.id)))
   );
 
 /**
@@ -240,7 +240,7 @@ const findUnchosenGift = (cartItems: CartItem[]): CartItem | undefined =>
 const buildAppliedPromotions = (
   cartItems: CartItem[],
   cumulativeGiftSelections?: Record<number, CumulativeGiftSelection[]>,
-  enabledCumulativePromoIds?: number[],
+  enabledCumulativePromoIds?: number[]
 ): AppliedPromotion[] => {
   const applied: AppliedPromotion[] = [];
 
@@ -312,7 +312,7 @@ const buildLineKey = (
   productId: number,
   lineType: "gift" | "discounted_buy" | "normal",
   promotionId: number | null,
-  conditionType: string,
+  conditionType: string
 ): string => {
   if (lineType !== "normal" && promotionId != null) {
     return `${lineType}|promo:${promotionId}`;
@@ -325,7 +325,7 @@ const getOrderLineKey = (item: any): string =>
     Number(item.product?.id ?? item.productId) || 0,
     normalizeLineType(item),
     item.promotionId != null ? Number(item.promotionId) : null,
-    item.conditionType || "normal",
+    item.conditionType || "normal"
   );
 
 const getCartLineKey = (item: CartItem): string =>
@@ -333,7 +333,7 @@ const getCartLineKey = (item: CartItem): string =>
     Number(item.product?.id) || 0,
     normalizeLineType(item),
     item.promotionId != null ? Number(item.promotionId) : null,
-    item.conditionType || "normal",
+    item.conditionType || "normal"
   );
 
 const getQuantityPersistence = (item: CartItem) => {
@@ -343,14 +343,14 @@ const getQuantityPersistence = (item: CartItem) => {
 
   const conversionValueSnapshot = getConversionValue(
     item.product,
-    item.conversionValueSnapshot,
+    item.conversionValueSnapshot
   );
 
   return {
     quantityUnit: normalizeQuantityUnit(
       item.quantityUnit,
       item.product,
-      conversionValueSnapshot,
+      conversionValueSnapshot
     ),
     conversionValueSnapshot,
   };
@@ -378,7 +378,7 @@ export interface MissingOrderLine {
 const findMissingOrderLines = (
   sourceOrder: any,
   cartItems: CartItem[],
-  excludeInvoiceId?: number,
+  excludeInvoiceId?: number
 ): MissingOrderLine[] => {
   if (!sourceOrder) return [];
 
@@ -460,7 +460,7 @@ const buildMissingLinesHtml = (missing: MissingOrderLine[]): string => {
  * - gắn triggerRowId / promotionName cho dòng quà
  */
 const mapDocumentLinesToCartItems = (
-  lines: any[] | undefined | null,
+  lines: any[] | undefined | null
 ): CartItem[] => {
   if (!lines?.length) return [];
 
@@ -480,7 +480,7 @@ const mapDocumentLinesToCartItems = (
         quantityUnit: normalizeQuantityUnit(
           item.quantityUnit,
           item.product,
-          item.conversionValueSnapshot ?? item.product?.conversionValue ?? 1,
+          item.conversionValueSnapshot ?? item.product?.conversionValue ?? 1
         ),
         conversionValueSnapshot:
           Number(item.conversionValueSnapshot) > 0
@@ -518,7 +518,7 @@ const mapDocumentLinesToCartItems = (
       quantityUnit: normalizeQuantityUnit(
         item.quantityUnit,
         item.product,
-        item.conversionValueSnapshot ?? item.product?.conversionValue ?? 1,
+        item.conversionValueSnapshot ?? item.product?.conversionValue ?? 1
       ),
       conversionValueSnapshot:
         Number(item.conversionValueSnapshot) > 0
@@ -550,7 +550,7 @@ const mapDocumentLinesToCartItems = (
         (item) =>
           !item.isPromoGift &&
           gift.promotionId != null &&
-          (item.promoEnabledIds || []).includes(gift.promotionId),
+          (item.promoEnabledIds || []).includes(gift.promotionId)
       );
     if (trigger) {
       gift.triggerRowId = trigger.rowId;
@@ -574,7 +574,7 @@ const mapDocumentLinesToCartItems = (
       }
       const enabled = new Set(item.promoEnabledIds || []);
       item.promoExcludedIds = [...stampedPromoIds].filter(
-        (id) => !enabled.has(id),
+        (id) => !enabled.has(id)
       );
     }
   }
@@ -687,7 +687,7 @@ export default function BanHangPage() {
   const activeTab = tabs.find((tab) => tab.id === activeTabId) || tabs[0];
   useRegisterCustomerInView(
     activeTab?.selectedCustomer,
-    "Bán hàng (tab đang mở)",
+    "Bán hàng (tab đang mở)"
   );
   // Giỏ của tab đang mở → gợi ý "Báo giá" trong menu "/" của chat Zalo
   useRegisterPosInView(
@@ -707,13 +707,13 @@ export default function BanHangPage() {
             isGift: item.isPromoGift && item.promoLineType === "gift",
           })),
         }
-      : null,
+      : null
   );
 
   // ── Cảnh báo lệch giá: so đơn giá hiện tại với giá bán gần nhất (hóa đơn) ──
   const activeProductIds = useMemo(
     () => (activeTab?.cartItems || []).map((item) => Number(item.product?.id)),
-    [activeTab?.cartItems],
+    [activeTab?.cartItems]
   );
 
   const { pricesByProduct, isLoading: isLoadingLatestPrices } =
@@ -721,7 +721,7 @@ export default function BanHangPage() {
       activeTab?.selectedCustomer?.id,
       activeProductIds,
       "invoice",
-      selectedBranch?.id,
+      selectedBranch?.id
     );
 
   // Map rowId → cảnh báo lệch giá (null nếu không lệch). Tự cập nhật khi đổi
@@ -754,7 +754,7 @@ export default function BanHangPage() {
     // Chỉ hàng loại tồn 'normal' mới tham gia KM. Hàng bục rách (damaged) / cận date
     // (near_expiry) KHÔNG tính vào ngưỡng, không sinh quà, không hiện badge KM.
     const normalItems = (activeTab.cartItems || []).filter(
-      (it) => !it.isPromoGift && (it.conditionType || "normal") === "normal",
+      (it) => !it.isPromoGift && (it.conditionType || "normal") === "normal"
     );
 
     // Chữ ký đầu vào để tránh chạy lặp vô hạn (effect tự sửa cartItems)
@@ -795,8 +795,8 @@ export default function BanHangPage() {
           prev.map((t) =>
             t.id === tabId
               ? { ...t, cartItems: t.cartItems.filter((it) => !it.isPromoGift) }
-              : t,
-          ),
+              : t
+          )
         );
       }
       promoSyncRef.current = signature;
@@ -831,15 +831,15 @@ export default function BanHangPage() {
         // Luôn hydrate từ dòng quà cũ để mở được đơn/HĐ historical; tombstone
         // disabledCumulativePromoIds chặn duy nhất trường hợp user đã chủ động bỏ.
         const enabledCumIds = new Set(
-          activeTab.enabledCumulativePromoIds || [],
+          activeTab.enabledCumulativePromoIds || []
         );
         const disabledCumIds = new Set(
-          activeTab.disabledCumulativePromoIds || [],
+          activeTab.disabledCumulativePromoIds || []
         );
         const cumIdSet = new Set(
           discoveryRes.eligiblePromotions
             .filter((p) => isGiftType(p) && p.cumulative)
-            .map((p) => p.promotionId),
+            .map((p) => p.promotionId)
         );
         for (const it of activeTab.cartItems || []) {
           if (
@@ -930,7 +930,7 @@ export default function BanHangPage() {
             // promoNormals: chỉ hàng loại tồn 'normal' — dùng cho mọi tính toán KM
             // (badge, tìm trigger/anchor, giữ quà). Bục rách/cận date KHÔNG hưởng KM.
             const promoNormals = normals.filter(
-              (it) => (it.conditionType || "normal") === "normal",
+              (it) => (it.conditionType || "normal") === "normal"
             );
             const oldGifts = t.cartItems.filter((it) => it.isPromoGift);
 
@@ -947,16 +947,16 @@ export default function BanHangPage() {
               const info = cumulativePromoInfo.get(promoId);
               if (!info || info.perTime <= 0) continue;
               const dbGifts = oldGifts.filter(
-                (g) => g.promotionId === promoId && Number(g.product?.id) > 0,
+                (g) => g.promotionId === promoId && Number(g.product?.id) > 0
               );
               if (dbGifts.length === 0) continue;
               // Lấy conversionValue của từng SP quà từ rewardOptions của CT (carton).
               const promoInfo = [...discoveryGiftPromos, ...giftPromos].find(
-                (pp) => pp.promotionId === promoId,
+                (pp) => pp.promotionId === promoId
               );
               const convOf = (pid: number) => {
                 const opt = promoInfo?.rewardOptions?.find(
-                  (o) => o.productId === pid,
+                  (o) => o.productId === pid
                 );
                 return Number(opt?.conversionValue || 1) || 1;
               };
@@ -966,7 +966,7 @@ export default function BanHangPage() {
                 const goi = Number(g.quantity);
                 const times = isCarton
                   ? Math.round(
-                      goi / info.perTime / convOf(Number(g.product.id)),
+                      goi / info.perTime / convOf(Number(g.product.id))
                     )
                   : Math.round(goi / info.perTime);
                 if (times <= 0) continue;
@@ -992,7 +992,7 @@ export default function BanHangPage() {
             for (const promoId of cumulativePromoIds) {
               if (disabledForTab.has(promoId)) continue;
               const hasDbGift = oldGifts.some(
-                (g) => g.promotionId === promoId && Number(g.product?.id) > 0,
+                (g) => g.promotionId === promoId && Number(g.product?.id) > 0
               );
               if (hasDbGift || reconstructedSel[promoId]?.length) {
                 reconstructedEnabledCum.add(promoId);
@@ -1018,7 +1018,7 @@ export default function BanHangPage() {
               const matched = discoveryGiftPromos.filter((p) =>
                 p.cumulative
                   ? (p.matchedProductIds || []).includes(pid)
-                  : p.triggerProductId === pid,
+                  : p.triggerProductId === pid
               );
               if (matched.length > 0) {
                 eligibleByRow[n.rowId] = matched.map((p) => ({
@@ -1043,8 +1043,8 @@ export default function BanHangPage() {
                 if (!enabledCumIds.has(promo.promotionId)) continue;
                 const anchor = promoNormals.find((n) =>
                   (promo.matchedProductIds || []).includes(
-                    Number(n.product?.id),
-                  ),
+                    Number(n.product?.id)
+                  )
                 );
                 if (!anchor) continue;
 
@@ -1060,7 +1060,7 @@ export default function BanHangPage() {
                     t.cumulativeGiftSelections?.[promo.promotionId] || [];
                   const totalSelectedTimes = selections.reduce(
                     (s, sel) => s + Number(sel.rewardTimes || 0),
-                    0,
+                    0
                   );
                   // Chưa phân bổ đủ suất → 1 dòng quà placeholder cần chọn.
                   if (
@@ -1097,7 +1097,7 @@ export default function BanHangPage() {
                     const times = Number(sel.rewardTimes || 0);
                     if (times <= 0) continue;
                     const opt = promo.rewardOptions?.find(
-                      (o) => o.productId === sel.productId,
+                      (o) => o.productId === sel.productId
                     );
                     if (!opt) continue;
                     let qty = times * perTime; // đơn vị CT (gói hoặc thùng)
@@ -1175,14 +1175,14 @@ export default function BanHangPage() {
               const trigger = promoNormals.find(
                 (n) =>
                   Number(n.product?.id) === promo.triggerProductId &&
-                  (n.promoEnabledIds || []).includes(promo.promotionId),
+                  (n.promoEnabledIds || []).includes(promo.promotionId)
               );
               if (!trigger) continue;
 
               const prevGift = oldGifts.find(
                 (g) =>
                   g.promotionId === promo.promotionId &&
-                  g.triggerRowId === trigger.rowId,
+                  g.triggerRowId === trigger.rowId
               );
 
               const isBuyY = promo.type === "BUY_X_BUY_Y_PRICE";
@@ -1196,7 +1196,7 @@ export default function BanHangPage() {
                   prevGift?.product?.id || promo.rewardOptions?.[0]?.productId;
                 requiresChoice = !prevGift?.product?.id;
                 const opt = promo.rewardOptions?.find(
-                  (o) => o.productId === chosenId,
+                  (o) => o.productId === chosenId
                 );
                 if (opt) {
                   optRemaining = opt.remaining;
@@ -1259,7 +1259,7 @@ export default function BanHangPage() {
             const appliedGiftKeys = new Set(
               newGifts
                 .filter((g) => g.promotionId != null && g.triggerRowId != null)
-                .map((g) => `${g.promotionId}:${g.triggerRowId}`),
+                .map((g) => `${g.promotionId}:${g.triggerRowId}`)
             );
             const preservedGifts: CartItem[] = oldGifts.filter((g) => {
               // Dòng quà cộng dồn luôn được sinh lại từ selections → không giữ bản cũ.
@@ -1284,13 +1284,13 @@ export default function BanHangPage() {
                     (n) =>
                       n.rowId === g.triggerRowId &&
                       (g.promotionId == null ||
-                        (n.promoEnabledIds || []).includes(g.promotionId)),
+                        (n.promoEnabledIds || []).includes(g.promotionId))
                   )
                 : g.promotionId != null && g.triggerProductId != null
                   ? promoNormals.find(
                       (n) =>
                         Number(n.product?.id) === g.triggerProductId &&
-                        (n.promoEnabledIds || []).includes(g.promotionId!),
+                        (n.promoEnabledIds || []).includes(g.promotionId!)
                     )
                   : undefined;
               if (!trigger) return false;
@@ -1306,7 +1306,7 @@ export default function BanHangPage() {
             // → badge hiện đồng nhất trên mọi dòng + BE re-validate đúng khi lưu.
             const merged: CartItem[] = [];
             const allGifts = [...newGifts, ...preservedGifts];
-            for (let i = 0; i < normals.length;) {
+            for (let i = 0; i < normals.length; ) {
               const productId = normals[i].product?.id;
               let runEnd = i + 1;
               while (
@@ -1355,14 +1355,13 @@ export default function BanHangPage() {
                   deductPromoStock: (eligibleByRow[n.rowId] || []).some(
                     (promotion) =>
                       promotion.deductPromoStock === true &&
-                      enabledSet.has(promotion.promotionId),
+                      enabledSet.has(promotion.promotionId)
                   ),
                 });
               }
               allGifts
                 .filter(
-                  (g) =>
-                    g.triggerRowId != null && runRowIds.has(g.triggerRowId),
+                  (g) => g.triggerRowId != null && runRowIds.has(g.triggerRowId)
                 )
                 .forEach((g) => merged.push(g));
               i = runEnd;
@@ -1377,7 +1376,7 @@ export default function BanHangPage() {
               cumulativeGiftSelections: reconstructedSel,
               enabledCumulativePromoIds: [...reconstructedEnabledCum],
             };
-          }),
+          })
         );
 
         // Lưu tiến độ để render khối "Khuyến mãi của đơn hàng".
@@ -1387,7 +1386,7 @@ export default function BanHangPage() {
           (appliedRes.progress || []).map((progress) => [
             progress.promotionId,
             progress,
-          ]),
+          ])
         );
         const displayedProgress = (discoveryRes.progress || []).map(
           (progress) => {
@@ -1398,7 +1397,7 @@ export default function BanHangPage() {
               return progress;
             }
             const appliedProgress = appliedProgressById.get(
-              progress.promotionId,
+              progress.promotionId
             );
             if (appliedProgress) return appliedProgress;
 
@@ -1407,10 +1406,10 @@ export default function BanHangPage() {
                 normalItems
                   .filter((item) =>
                     (cumMatchByRow.get(item.rowId) || []).includes(
-                      progress.promotionId,
-                    ),
+                      progress.promotionId
+                    )
                   )
-                  .map((item) => Number(item.product.id)),
+                  .map((item) => Number(item.product.id))
               ),
             ];
             return {
@@ -1421,7 +1420,7 @@ export default function BanHangPage() {
               remainingToNextReward: progress.requiredQuantity,
               earnedRewardQuantity: 0,
             };
-          },
+          }
         );
         setPromoProgressByTab((prev) => ({
           ...prev,
@@ -1454,7 +1453,7 @@ export default function BanHangPage() {
         c: it.conditionType || "normal",
         g: it.isPromoGift ? it.product?.id : undefined,
         dis: it.promoEnabledIds,
-      })),
+      }))
     ),
     // phân bổ quà cộng dồn + opt-in cấp tab (đổi → sinh lại dòng quà / áp CT)
     JSON.stringify(activeTab?.cumulativeGiftSelections || {}),
@@ -1467,7 +1466,7 @@ export default function BanHangPage() {
    * "Vẫn tạo"). Không chặn người dùng khi chưa lấy được giá gần nhất.
    */
   const confirmPriceMismatch = async (
-    documentLabel: "đơn hàng" | "hóa đơn",
+    documentLabel: "đơn hàng" | "hóa đơn"
   ): Promise<boolean> => {
     // Chưa lấy được giá gần nhất → không chặn người dùng.
     if (isLoadingLatestPrices) return true;
@@ -1476,7 +1475,7 @@ export default function BanHangPage() {
       .map((item) => ({ item, warning: priceWarnings[item.rowId] }))
       .filter(
         (entry): entry is { item: CartItem; warning: PriceWarning } =>
-          !!entry.warning,
+          !!entry.warning
       );
 
     if (mismatched.length === 0) return true;
@@ -1497,8 +1496,8 @@ export default function BanHangPage() {
       .map(
         (m) =>
           `<li style="margin-bottom:2px">${m.item.product?.name ?? ""}: giá gần nhất <strong>${formatCurrency(
-            m.warning.latestPrice,
-          )} VNĐ</strong></li>`,
+            m.warning.latestPrice
+          )} VNĐ</strong></li>`
       )
       .join("");
 
@@ -1531,7 +1530,7 @@ export default function BanHangPage() {
     templateFor: string,
     entityId: number,
     targetUrl: string,
-    options?: { shouldRedirect?: boolean },
+    options?: { shouldRedirect?: boolean }
   ) => {
     const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
     // Nếu là hóa đơn, sau khi in hóa đơn sẽ tự động in phiếu giao hàng
@@ -1719,7 +1718,7 @@ export default function BanHangPage() {
 
   const handlePriceBookSelect = async (
     priceBookId: number | null,
-    priceBookName: string | null,
+    priceBookName: string | null
   ) => {
     const storageKey = getPriceBookStorageKey(user?.id);
     if (priceBookId !== null) {
@@ -1762,7 +1761,7 @@ export default function BanHangPage() {
           ...item,
           price: newPrice,
         };
-      }),
+      })
     );
 
     updateActiveTab({
@@ -1773,11 +1772,11 @@ export default function BanHangPage() {
   };
 
   const { data: existingOrder, isLoading: isLoadingOrder } = useOrder(
-    orderId ? Number(orderId) : 0,
+    orderId ? Number(orderId) : 0
   );
 
   const { data: existingInvoice, isLoading: isLoadingInvoice } = useInvoice(
-    invoiceId ? Number(invoiceId) : 0,
+    invoiceId ? Number(invoiceId) : 0
   );
 
   const { data: existingConsignment, isLoading: isLoadingConsignment } =
@@ -1785,10 +1784,10 @@ export default function BanHangPage() {
 
   // Copy: fetch nguồn để copy nội dung sang tab mới
   const { data: copySourceOrder } = useOrder(
-    copyOrderId ? Number(copyOrderId) : 0,
+    copyOrderId ? Number(copyOrderId) : 0
   );
   const { data: copySourceInvoice } = useInvoice(
-    copyInvoiceId ? Number(copyInvoiceId) : 0,
+    copyInvoiceId ? Number(copyInvoiceId) : 0
   );
 
   const [mobilePosView, setMobilePosView] = useState<"items" | "cart">("items");
@@ -1808,7 +1807,7 @@ export default function BanHangPage() {
             ...parsed.map((tab: Tab) => ({
               ...tab,
               shippingFee: normalizeShippingFee(tab.shippingFee),
-            })),
+            }))
           );
         }
       } catch (error) {
@@ -1820,7 +1819,7 @@ export default function BanHangPage() {
     allTabs.push(...editTabs);
 
     const uniqueTabs = allTabs.filter(
-      (tab, index, self) => self.findIndex((t) => t.id === tab.id) === index,
+      (tab, index, self) => self.findIndex((t) => t.id === tab.id) === index
     );
 
     if (uniqueTabs.length > 0) {
@@ -1853,8 +1852,8 @@ export default function BanHangPage() {
             tab.cartItems.length === 0 &&
             !tab.selectedCustomer
               ? { ...tab, selectedPriceBookId: priceBookId }
-              : tab,
-          ),
+              : tab
+          )
         );
       }
     }
@@ -1876,12 +1875,12 @@ export default function BanHangPage() {
                 .filter(
                   (t: Tab) =>
                     !t.documentId &&
-                    (t.cartItems.length > 0 || t.selectedCustomer),
+                    (t.cartItems.length > 0 || t.selectedCustomer)
                 )
                 .map((tab: Tab) => ({
                   ...tab,
                   shippingFee: normalizeShippingFee(tab.shippingFee),
-                })),
+                }))
             );
           }
         } catch (error) {
@@ -1942,7 +1941,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng đổi chi nhánh sang ${
           existingOrder.branch?.name || "chi nhánh của đơn"
-        } để xem/sửa đơn này`,
+        } để xem/sửa đơn này`
       );
       router.replace("/don-hang/dat-hang");
       return;
@@ -1958,7 +1957,7 @@ export default function BanHangPage() {
       try {
         restoredState = JSON.parse(savedEditState);
         const lastModified = new Date(
-          restoredState.lastModified ?? restoredState.timestamp,
+          restoredState.lastModified ?? restoredState.timestamp
         );
         const orderUpdated = new Date(existingOrder.updatedAt);
 
@@ -1974,7 +1973,7 @@ export default function BanHangPage() {
     }
 
     const hasActiveInvoices = (existingOrder.invoices || []).some(
-      (inv: any) => inv.status !== 2 && inv.status !== 5,
+      (inv: any) => inv.status !== 2 && inv.status !== 5
     );
 
     if (hasActiveInvoices && !restoredState) {
@@ -1991,7 +1990,7 @@ export default function BanHangPage() {
       });
 
       const remainingCartItems: CartItem[] = mapDocumentLinesToCartItems(
-        existingOrder.items || [],
+        existingOrder.items || []
       )
         .map((item) => {
           const invoiced = invoicedQuantities[item.product?.id] || 0;
@@ -2019,7 +2018,7 @@ export default function BanHangPage() {
         discountRatio: 0,
         shippingFee: getRemainingShippingFee(
           existingOrder.shippingFee,
-          existingOrder.invoices,
+          existingOrder.invoices
         ),
         useCOD: false,
         paymentAmount: 0,
@@ -2122,7 +2121,7 @@ export default function BanHangPage() {
           ? restoredState.selectedAddressId
           : (findAddressFromDelivery(
               existingOrder.customer?.addresses,
-              existingOrder.delivery,
+              existingOrder.delivery
             )?.id ?? null),
       documentId: existingOrder.id,
       isEditMode: true,
@@ -2172,7 +2171,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng đổi chi nhánh sang ${
           existingInvoice.branch?.name || "chi nhánh của hóa đơn"
-        } để xem/sửa hóa đơn này`,
+        } để xem/sửa hóa đơn này`
       );
       router.replace("/don-hang/dat-hang");
       return;
@@ -2185,7 +2184,7 @@ export default function BanHangPage() {
         existingInvoice.status === INVOICE_STATUS.COMPLETED)
     ) {
       toast.error(
-        "Bạn không có quyền sửa hóa đơn đã giao thành công / hoàn thành",
+        "Bạn không có quyền sửa hóa đơn đã giao thành công / hoàn thành"
       );
       router.replace("/don-hang/hoa-don");
       return;
@@ -2209,7 +2208,7 @@ export default function BanHangPage() {
       try {
         restoredState = JSON.parse(savedEditState);
         const lastModified = new Date(
-          restoredState.lastModified ?? restoredState.timestamp,
+          restoredState.lastModified ?? restoredState.timestamp
         );
         const invoiceUpdated = new Date(existingInvoice.updatedAt);
 
@@ -2306,7 +2305,7 @@ export default function BanHangPage() {
           ? restoredState.selectedAddressId
           : (findAddressFromDelivery(
               existingInvoice.customer?.addresses,
-              existingInvoice.delivery,
+              existingInvoice.delivery
             )?.id ?? null),
       isEditMode: true,
     };
@@ -2337,7 +2336,7 @@ export default function BanHangPage() {
         return updatedTabs;
       } else {
         const nonEditTabs = prevTabs.filter(
-          (t) => !t.isEditMode || t.id !== editTabId,
+          (t) => !t.isEditMode || t.id !== editTabId
         );
         return [...nonEditTabs, editTab];
       }
@@ -2359,7 +2358,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng đổi chi nhánh sang ${
           existingConsignment.branch?.name || "chi nhánh của phiếu ký gửi"
-        } để xem/sửa phiếu ký gửi này`,
+        } để xem/sửa phiếu ký gửi này`
       );
       router.replace("/don-hang/ky-gui");
       return;
@@ -2383,7 +2382,7 @@ export default function BanHangPage() {
       try {
         restoredState = JSON.parse(savedEditState);
         const lastModified = new Date(
-          restoredState.lastModified ?? restoredState.timestamp,
+          restoredState.lastModified ?? restoredState.timestamp
         );
         const consignmentUpdated = new Date(existingConsignment.updatedAt);
 
@@ -2475,7 +2474,7 @@ export default function BanHangPage() {
           ? restoredState.selectedAddressId
           : (findAddressFromDelivery(
               (existingConsignment.customer as any)?.addresses,
-              existingConsignment.delivery,
+              existingConsignment.delivery
             )?.id ?? null),
       isEditMode: true,
       consignStatus: existingConsignment.consignStatus || "pending",
@@ -2508,7 +2507,7 @@ export default function BanHangPage() {
         return updatedTabs;
       } else {
         const nonEditTabs = prevTabs.filter(
-          (t) => !t.isEditMode || t.id !== editTabId,
+          (t) => !t.isEditMode || t.id !== editTabId
         );
         return [...nonEditTabs, editTab];
       }
@@ -2535,7 +2534,7 @@ export default function BanHangPage() {
         quantityUnit: normalizeQuantityUnit(
           item.quantityUnit,
           item.product,
-          item.conversionValueSnapshot ?? item.product?.conversionValue ?? 1,
+          item.conversionValueSnapshot ?? item.product?.conversionValue ?? 1
         ),
         conversionValueSnapshot:
           Number(item.conversionValueSnapshot) > 0
@@ -2548,7 +2547,7 @@ export default function BanHangPage() {
         soldExpiryDate: item.soldExpiryDate
           ? String(item.soldExpiryDate).slice(0, 10)
           : undefined,
-      }),
+      })
     );
 
     const newTabId = `tab-copy-order-${copySourceOrder.id}-${Date.now()}`;
@@ -2612,7 +2611,7 @@ export default function BanHangPage() {
         quantityUnit: normalizeQuantityUnit(
           item.quantityUnit,
           item.product,
-          item.conversionValueSnapshot ?? item.product?.conversionValue ?? 1,
+          item.conversionValueSnapshot ?? item.product?.conversionValue ?? 1
         ),
         conversionValueSnapshot:
           Number(item.conversionValueSnapshot) > 0
@@ -2625,7 +2624,7 @@ export default function BanHangPage() {
         soldExpiryDate: item.soldExpiryDate
           ? String(item.soldExpiryDate).slice(0, 10)
           : undefined,
-      }),
+      })
     );
 
     const newTabId = `tab-copy-invoice-${copySourceInvoice.id}-${Date.now()}`;
@@ -2687,8 +2686,8 @@ export default function BanHangPage() {
   const updateActiveTab = (updates: Partial<Tab>) => {
     setTabs((prevTabs) =>
       prevTabs.map((tab) =>
-        tab.id === activeTabId ? { ...tab, ...updates } : tab,
-      ),
+        tab.id === activeTabId ? { ...tab, ...updates } : tab
+      )
     );
   };
 
@@ -2701,7 +2700,7 @@ export default function BanHangPage() {
   const togglePromotionCumulative = (
     promotionId: number,
     enabled: boolean,
-    matchedProductIds: number[],
+    matchedProductIds: number[]
   ) => {
     const matchedSet = new Set(matchedProductIds);
     setTabs((prevTabs) =>
@@ -2750,14 +2749,14 @@ export default function BanHangPage() {
           disabledCumulativePromoIds: [...disabled],
           cumulativeGiftSelections: nextSel,
         };
-      }),
+      })
     );
   };
 
   /** Lưu phân bổ quà cộng dồn cho 1 CT (thay đổi → effect tự sinh lại dòng quà). */
   const setCumulativeGiftSelection = (
     promotionId: number,
-    selections: CumulativeGiftSelection[],
+    selections: CumulativeGiftSelection[]
   ) => {
     setTabs((prevTabs) =>
       prevTabs.map((tab) =>
@@ -2769,8 +2768,8 @@ export default function BanHangPage() {
                 [promotionId]: selections,
               },
             }
-          : tab,
-      ),
+          : tab
+      )
     );
   };
 
@@ -2788,16 +2787,16 @@ export default function BanHangPage() {
    */
   const assertOrderNotInvoiced = async (
     orderId: number,
-    options?: { requireInvoiceable?: boolean },
+    options?: { requireInvoiceable?: boolean }
   ): Promise<boolean> => {
     try {
       const fresh = await ordersApi.getOrder(orderId);
       const hasActiveInvoice = (fresh.invoices || []).some(
-        (inv: any) => inv.status !== INVOICE_STATUS.CANCELLED,
+        (inv: any) => inv.status !== INVOICE_STATUS.CANCELLED
       );
       if (hasActiveInvoice) {
         toast.error(
-          "Đơn hàng đã ra hóa đơn, không thể lưu thay đổi. Vui lòng tải lại để xem trạng thái mới nhất.",
+          "Đơn hàng đã ra hóa đơn, không thể lưu thay đổi. Vui lòng tải lại để xem trạng thái mới nhất."
         );
         return false;
       }
@@ -2819,7 +2818,7 @@ export default function BanHangPage() {
       ORDER_STATUS_LABELS[order.status as keyof typeof ORDER_STATUS_LABELS] ||
       "Không xác định";
     toast.warning(
-      `Đơn ${order.code ?? ""} đang ở trạng thái "${label}". Vui lòng chuyển sang "Đã xác nhận" ở trang Đặt hàng trước khi tạo hóa đơn.`,
+      `Đơn ${order.code ?? ""} đang ở trạng thái "${label}". Vui lòng chuyển sang "Đã xác nhận" ở trang Đặt hàng trước khi tạo hóa đơn.`
     );
   };
 
@@ -2834,7 +2833,7 @@ export default function BanHangPage() {
       toast.error(
         unchosenGift.cumulative
           ? `Vui lòng phân bổ đủ số suất quà cho khuyến mãi "${unchosenGift.promotionName}"`
-          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGift.promotionName}"`,
+          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGift.promotionName}"`
       );
       return;
     }
@@ -2893,7 +2892,7 @@ export default function BanHangPage() {
         sum +
         (Number(item.price) - Number(item.discount || 0)) *
           Number(item.quantity),
-      0,
+      0
     );
     const invoiceDiscount =
       sourceDiscountRatio > 0
@@ -2905,7 +2904,7 @@ export default function BanHangPage() {
     const sourceShippingFee = normalizeShippingFee(activeTab.shippingFee);
     const remainingShippingFee = getRemainingShippingFee(
       sourceShippingFee,
-      order.invoices,
+      order.invoices
     );
 
     setTabs(
@@ -2929,8 +2928,8 @@ export default function BanHangPage() {
               shippingFee: remainingShippingFee,
               paymentAmount: 0,
             }
-          : tab,
-      ),
+          : tab
+      )
     );
 
     toast.success("Chuyển sang giao diện tạo hóa đơn");
@@ -2977,7 +2976,7 @@ export default function BanHangPage() {
           fresh.status === ORDER_STATUS.CANCELLED
         ) {
           toast.error(
-            "Đơn hàng đã kết thúc, không thể xuất thêm hóa đơn. Vui lòng tải lại để xem trạng thái mới nhất.",
+            "Đơn hàng đã kết thúc, không thể xuất thêm hóa đơn. Vui lòng tải lại để xem trạng thái mới nhất."
           );
           return;
         }
@@ -3021,7 +3020,7 @@ export default function BanHangPage() {
         });
 
         hasShortfall = Object.keys(orderedQty).some(
-          (pid) => (invoicedQty[Number(pid)] || 0) < orderedQty[Number(pid)],
+          (pid) => (invoicedQty[Number(pid)] || 0) < orderedQty[Number(pid)]
         );
       }
 
@@ -3029,7 +3028,7 @@ export default function BanHangPage() {
       // thường / quà / mua kèm + promotionId + conditionType).
       const missingLines = findMissingOrderLines(
         sourceOrder,
-        activeTab.cartItems,
+        activeTab.cartItems
       );
 
       let forceComplete = false;
@@ -3039,7 +3038,7 @@ export default function BanHangPage() {
         const missingBlock =
           missingLines.length > 0
             ? `<p style="margin-top:8px;color:#b91c1c;font-weight:600">Các dòng bị thiếu hẳn so với đơn hàng:</p>${buildMissingLinesHtml(
-                missingLines,
+                missingLines
               )}`
             : "";
         const choice = await Swal.fire({
@@ -3115,7 +3114,7 @@ export default function BanHangPage() {
           appliedPromotions: buildAppliedPromotions(
             activeTab.cartItems,
             activeTab.cumulativeGiftSelections,
-            activeTab.enabledCumulativePromoIds,
+            activeTab.enabledCumulativePromoIds
           ),
           items: activeTab.cartItems.map((item) => {
             const isGift = item.isPromoGift && item.promoLineType === "gift";
@@ -3291,7 +3290,7 @@ export default function BanHangPage() {
             : `Hóa đơn ${newTabNumber}`,
       });
       toast.success(
-        `Đã chuyển sang ${newType === "order" ? "đơn hàng" : "hóa đơn"}`,
+        `Đã chuyển sang ${newType === "order" ? "đơn hàng" : "hóa đơn"}`
       );
       return;
     }
@@ -3315,7 +3314,7 @@ export default function BanHangPage() {
       toast.success(
         `Đã tạo tab ${
           newType === "order" ? "đơn hàng" : "hóa đơn"
-        } mới. Tab cũ được giữ lại.`,
+        } mới. Tab cũ được giữ lại.`
       );
     } else {
       updateActiveTab({
@@ -3349,7 +3348,7 @@ export default function BanHangPage() {
       });
 
       toast.success(
-        `Đã chuyển sang tab ${newType === "order" ? "đơn hàng" : "hóa đơn"}`,
+        `Đã chuyển sang tab ${newType === "order" ? "đơn hàng" : "hóa đơn"}`
       );
     }
   };
@@ -3391,8 +3390,8 @@ export default function BanHangPage() {
                 weight: totalWeight,
               },
             }
-          : tab,
-      ),
+          : tab
+      )
     );
   }, [activeTab?.cartItems, activeTabId]);
 
@@ -3455,7 +3454,7 @@ export default function BanHangPage() {
     product: any,
     conditionType: string = "normal",
     quantity: number = 1,
-    soldExpiryDate?: string,
+    soldExpiryDate?: string
   ) => {
     const selectedPriceBookId = activeTab.selectedPriceBookId;
 
@@ -3476,7 +3475,7 @@ export default function BanHangPage() {
           // Sản phẩm không có trong bảng giá → fallback basePrice + cảnh báo
           productPrice = Number(product.basePrice);
           toast.warning(
-            `Sản phẩm "${product.name}" không có trong bảng giá đang chọn, dùng giá gốc ${productPrice.toLocaleString()}`,
+            `Sản phẩm "${product.name}" không có trong bảng giá đang chọn, dùng giá gốc ${productPrice.toLocaleString()}`
           );
         }
       } catch (error) {
@@ -3505,8 +3504,8 @@ export default function BanHangPage() {
                 ...tab.cartItems,
               ],
             }
-          : tab,
-      ),
+          : tab
+      )
     );
 
     // Auto-switch to "items" tab on mobile after adding product
@@ -3534,8 +3533,8 @@ export default function BanHangPage() {
       prevTabs.map((tab) =>
         tab.id === activeTabId
           ? { ...tab, cartItems: [...newItems, ...tab.cartItems] }
-          : tab,
-      ),
+          : tab
+      )
     );
     setMobilePosView("items");
     toast.success(`Đã thêm ${lines.length} sản phẩm từ file`);
@@ -3552,7 +3551,7 @@ export default function BanHangPage() {
   const updateCartItem = (rowId: string, updates: Partial<CartItem>) => {
     updateActiveTab({
       cartItems: activeTab.cartItems.map((item) =>
-        item.rowId === rowId ? { ...item, ...updates } : item,
+        item.rowId === rowId ? { ...item, ...updates } : item
       ),
     });
   };
@@ -3592,7 +3591,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng chọn chi nhánh trước khi lưu ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`,
+        }`
       );
       return;
     }
@@ -3601,7 +3600,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng chọn khách hàng trước khi lưu ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`,
+        }`
       );
       return;
     }
@@ -3610,7 +3609,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng thêm sản phẩm vào ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`,
+        }`
       );
       return;
     }
@@ -3620,7 +3619,7 @@ export default function BanHangPage() {
       toast.error(
         unchosenGiftSave.cumulative
           ? `Vui lòng phân bổ đủ số suất quà cho khuyến mãi "${unchosenGiftSave.promotionName}"`
-          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGiftSave.promotionName}"`,
+          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGiftSave.promotionName}"`
       );
       return;
     }
@@ -3629,7 +3628,7 @@ export default function BanHangPage() {
       toast.error(
         `Không tìm thấy thông tin ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`,
+        }`
       );
       return;
     }
@@ -3653,7 +3652,7 @@ export default function BanHangPage() {
         // Ghi log phương thức thanh toán (append-only) sau khi lưu đơn thành công.
         const savePaymentNote = async (
           kind: "order" | "invoice",
-          id: number,
+          id: number
         ) => {
           const payload = {
             paymentType: activeTab.paymentNoteType!,
@@ -3717,7 +3716,7 @@ export default function BanHangPage() {
           appliedPromotions: buildAppliedPromotions(
             activeTab.cartItems,
             activeTab.cumulativeGiftSelections,
-            activeTab.enabledCumulativePromoIds,
+            activeTab.enabledCumulativePromoIds
           ),
           delivery: {
             receiver: activeTab.deliveryInfo.receiver,
@@ -3770,7 +3769,7 @@ export default function BanHangPage() {
             "/don-hang/dat-hang",
             {
               shouldRedirect: true,
-            },
+            }
           );
         } catch (error: any) {
           console.error("Save order error:", error);
@@ -3786,7 +3785,7 @@ export default function BanHangPage() {
   const validatePaymentNoteSelection = (): boolean => {
     if (!activeTab.paymentNoteType) {
       toast.error(
-        "Vui lòng chọn phương thức thanh toán: chuyển khoản hoặc tiền mặt",
+        "Vui lòng chọn phương thức thanh toán: chuyển khoản hoặc tiền mặt"
       );
       return false;
     }
@@ -3812,7 +3811,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng chọn chi nhánh trước khi lưu ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`,
+        }`
       );
       return;
     }
@@ -3821,7 +3820,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng chọn khách hàng trước khi lưu ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`,
+        }`
       );
       return;
     }
@@ -3830,7 +3829,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng thêm sản phẩm vào ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`,
+        }`
       );
       return;
     }
@@ -3840,7 +3839,7 @@ export default function BanHangPage() {
       toast.error(
         unchosenGiftInv.cumulative
           ? `Vui lòng phân bổ đủ số suất quà cho khuyến mãi "${unchosenGiftInv.promotionName}"`
-          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGiftInv.promotionName}"`,
+          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGiftInv.promotionName}"`
       );
       return;
     }
@@ -3849,7 +3848,7 @@ export default function BanHangPage() {
       toast.error(
         `Không tìm thấy thông tin ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`,
+        }`
       );
       return;
     }
@@ -3870,7 +3869,7 @@ export default function BanHangPage() {
       if (existingInvoice.orderId) {
         try {
           const sourceOrder = await ordersApi.getOrder(
-            Number(existingInvoice.orderId),
+            Number(existingInvoice.orderId)
           );
           // Loại chính HĐ đang sửa khỏi phần "đã xuất": phần đóng góp của nó
           // được thay bằng giỏ hiện tại (activeTab.cartItems) để phát hiện dòng
@@ -3878,7 +3877,7 @@ export default function BanHangPage() {
           const missingLines = findMissingOrderLines(
             sourceOrder,
             activeTab.cartItems,
-            activeTab.documentId,
+            activeTab.documentId
           );
           if (missingLines.length > 0) {
             const choice = await Swal.fire({
@@ -3923,7 +3922,7 @@ export default function BanHangPage() {
         appliedPromotions: buildAppliedPromotions(
           activeTab.cartItems,
           activeTab.cumulativeGiftSelections,
-          activeTab.enabledCumulativePromoIds,
+          activeTab.enabledCumulativePromoIds
         ),
         items: activeTab.cartItems.map((item) => {
           const isGift = item.isPromoGift && item.promoLineType === "gift";
@@ -4018,7 +4017,7 @@ export default function BanHangPage() {
           "invoice",
           updatedInvoice?.id ?? activeTab.documentId,
           "/don-hang/hoa-don",
-          { shouldRedirect: true },
+          { shouldRedirect: true }
         );
       } catch (error: any) {
         console.error("Save invoice error:", error);
@@ -4123,7 +4122,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng chọn chi nhánh trước khi tạo ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`,
+        }`
       );
       return;
     }
@@ -4132,7 +4131,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng chọn khách hàng trước khi tạo ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`,
+        }`
       );
       return;
     }
@@ -4141,7 +4140,7 @@ export default function BanHangPage() {
       toast.error(
         `Vui lòng thêm sản phẩm vào ${
           activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
-        }`,
+        }`
       );
       return;
     }
@@ -4152,7 +4151,7 @@ export default function BanHangPage() {
       toast.error(
         unchosenGift.cumulative
           ? `Vui lòng phân bổ đủ số suất quà cho khuyến mãi "${unchosenGift.promotionName}"`
-          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGift.promotionName}"`,
+          : `Vui lòng chọn sản phẩm tặng cho khuyến mãi "${unchosenGift.promotionName}"`
       );
       return;
     }
@@ -4161,7 +4160,7 @@ export default function BanHangPage() {
     setIsSubmitting(true);
 
     const proceed = await confirmPriceMismatch(
-      activeTab.type === "order" ? "đơn hàng" : "hóa đơn",
+      activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
     );
     if (!proceed) {
       isSubmittingRef.current = false;
@@ -4242,7 +4241,7 @@ export default function BanHangPage() {
       const orderAppliedPromotions = buildAppliedPromotions(
         activeTab.cartItems,
         activeTab.cumulativeGiftSelections,
-        activeTab.enabledCumulativePromoIds,
+        activeTab.enabledCumulativePromoIds
       );
       documentData.skipPromotions = false;
       documentData.appliedPromotions = orderAppliedPromotions;
@@ -4356,7 +4355,7 @@ export default function BanHangPage() {
       const appliedPromotions = buildAppliedPromotions(
         activeTab.cartItems,
         activeTab.cumulativeGiftSelections,
-        activeTab.enabledCumulativePromoIds,
+        activeTab.enabledCumulativePromoIds
       );
       documentData.skipPromotions = false;
       documentData.appliedPromotions = appliedPromotions;
@@ -4438,21 +4437,21 @@ export default function BanHangPage() {
                 : "invoice",
             docId,
             targetUrl,
-            { shouldRedirect: !!tabFromPage },
+            { shouldRedirect: !!tabFromPage }
           );
         }
       } catch (error: any) {
         console.error("Create document error:", error);
         toast.error(
           error.message ||
-            `Không thể tạo ${activeTab.type === "order" ? "đơn hàng" : "hóa đơn"}`,
+            `Không thể tạo ${activeTab.type === "order" ? "đơn hàng" : "hóa đơn"}`
         );
       }
     } catch (error: any) {
       console.error("Create document error:", error);
       toast.error(
         error.message ||
-          `Không thể tạo ${activeTab.type === "order" ? "đơn hàng" : "hóa đơn"}`,
+          `Không thể tạo ${activeTab.type === "order" ? "đơn hàng" : "hóa đơn"}`
       );
     } finally {
       isSubmittingRef.current = false;
@@ -4544,7 +4543,7 @@ export default function BanHangPage() {
           DESKTOP HEADER — chỉ hiện lg+, giữ nguyên
       ══════════════════════════════════════════ */}
       <div className="hidden lg:flex px-4 py-3 items-center gap-4 flex-shrink-0">
-        <div className="flex-1 max-w-md flex items-center gap-2">
+        <div className="flex-1 max-w-xl flex items-center gap-2">
           <div className="flex-1 min-w-0">
             <ProductSearchDropdown
               onAddProduct={addToCart}

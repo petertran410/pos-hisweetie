@@ -65,7 +65,7 @@ export function ProductConditionTab({ productId, branchId }: Props) {
   }, [productId, branchId, bucket]);
 
   const { data: summary } = useProductConditionSummary(productId, branchId);
-  const { data, isLoading } = useProductConditionLogs(
+  const { data, isLoading, isError, refetch } = useProductConditionLogs(
     productId,
     bucket,
     branchId,
@@ -81,7 +81,7 @@ export function ProductConditionTab({ productId, branchId }: Props) {
   return (
     <div className="space-y-4">
       {/* Tồn tổng hợp — đối soát: good + damaged + nearExpiry + promo = onHand */}
-      <div className="grid grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {[
           { label: "Tồn tổng", value: summary?.onHand, cls: "text-gray-900" },
           { label: "Hàng tốt", value: summary?.good, cls: "text-green-600" },
@@ -109,7 +109,7 @@ export function ProductConditionTab({ productId, branchId }: Props) {
       </div>
 
       {/* Bucket selector */}
-      <div className="flex gap-1">
+      <div className="flex flex-wrap gap-1">
         {BUCKETS.map((b) => (
           <button
             key={b.key}
@@ -128,13 +128,20 @@ export function ProductConditionTab({ productId, branchId }: Props) {
         <div className="flex justify-center py-12">
           <Loader2 className="w-6 h-6 animate-spin text-brand" />
         </div>
+      ) : isError ? (
+        <div role="alert" className="space-y-3 py-8 text-center text-sm text-gray-500">
+          <p>Không thể tải thẻ kho loại tồn.</p>
+          <button type="button" onClick={() => void refetch()} className="text-brand hover:underline">
+            Thử lại
+          </button>
+        </div>
       ) : total === 0 ? (
         <div className="text-center py-12 text-gray-500">
           Chưa có dữ liệu thẻ kho loại tồn
         </div>
       ) : (
-        <div className="border rounded overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="min-w-0 border rounded overflow-x-auto">
+          <table className="w-full min-w-[600px] text-sm">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left font-medium text-gray-700">

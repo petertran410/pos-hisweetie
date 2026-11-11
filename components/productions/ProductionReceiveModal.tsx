@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { NumericInput } from "@/components/ui/NumericInput";
 import { DatePickerInput } from "@/components/ui/DatePickerInput";
+import { formatNumberInput, parseNumberInput } from "@/lib/utils";
 import {
   useApplyProductionCost,
   useProductionCostPreview,
   useReceiveProduction,
 } from "@/lib/hooks/useProductions";
 import type { Production } from "@/lib/api/productions";
+import { usePermission } from "@/lib/hooks/usePermissions";
 
 const vnd = (v: number) =>
   `${(Math.round(v * 100) / 100).toLocaleString("vi-VN")} đ`;
@@ -38,8 +40,9 @@ const dateWithNow = (value: string) => {
 };
 
 /**
- * Nhận thành phẩm từ nhà máy (Đã gửi → Hoàn thành) kèm bước xác nhận giá
- * vốn; hoặc chỉ áp giá vốn cho phiếu đã hoàn thành mà lúc nhận bỏ qua.
+ * Nhận thành phẩm từ nhà máy = tạo phiếu nhập hàng (giá trị = phí sản xuất),
+ * phiếu chuyển Hoàn thành, kèm bước xác nhận giá vốn; hoặc chỉ áp giá vốn cho
+ * phiếu đã hoàn thành mà lúc nhận bỏ qua.
  */
 export function ProductionReceiveModal({
   production,
@@ -51,27 +54,46 @@ export function ProductionReceiveModal({
   onClose: () => void;
 }) {
   const isReceive = mode === "receive";
+  const canApplyCost = usePermission("productions", "apply_cost");
   const [receivedQuantity, setReceivedQuantity] = useState(
     Number(production.quantity),
   );
   const [debouncedQuantity, setDebouncedQuantity] = useState(receivedQuantity);
   const [completedDate, setCompletedDate] = useState(todayStr());
-  const [applyCost, setApplyCost] = useState(true);
+  const [applyCost, setApplyCost] = useState(false);
   // null = chưa sửa → dùng giá đề xuất.
   const [editedCost, setEditedCost] = useState<number | null>(null);
   const [scope, setScope] = useState<"receiveBranch" | "allBranches">(
     "receiveBranch",
   );
 
+  // Phí chốt lúc nhận = giá trị phiếu nhập. Mặc định = phí ước tính.
+  const isCnyFee = production.feeCurrency === "CNY";
+  const [feeVnd, setFeeVnd] = useState(Number(production.processingFee ?? 0));
+  const [feeForeign, setFeeForeign] = useState(
+    Number(production.feeForeignAmount ?? 0),
+  );
+  const [feeRate, setFeeRate] = useState(
+    Number(production.feeExchangeRate ?? 0),
+  );
+  const processingFee = isCnyFee
+    ? Math.round(feeForeign * feeRate)
+    : Math.round(feeVnd);
+  const [debouncedFee, setDebouncedFee] = useState(processingFee);
+
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuantity(receivedQuantity), 300);
+    const t = setTimeout(() => {
+      setDebouncedQuantity(receivedQuantity);
+      setDebouncedFee(processingFee);
+    }, 300);
     return () => clearTimeout(t);
-  }, [receivedQuantity]);
+  }, [receivedQuantity, processingFee]);
 
   const { data: preview, isLoading } = useProductionCostPreview(
     production.id,
     isReceive ? debouncedQuantity : undefined,
     !isReceive || debouncedQuantity > 0,
+    isReceive ? debouncedFee : undefined,
   );
   const receive = useReceiveProduction();
   const applyCostMutation = useApplyProductionCost();
@@ -81,9 +103,14 @@ export function ProductionReceiveModal({
   const sentDay = production.sentDate?.slice(0, 10);
 
   const handleSubmit = () => {
+    if ((!isReceive || applyCost) && !canApplyCost) return;
     if (isReceive) {
       if (receivedQuantity <= 0) {
         alert("Số lượng nhận phải lớn hơn 0");
+        return;
+      }
+      if (isCnyFee && feeRate <= 0) {
+        alert("Tỷ giá phí CNY phải lớn hơn 0");
         return;
       }
       receive.mutate(
@@ -94,6 +121,10 @@ export function ProductionReceiveModal({
             receivedQuantity,
             newCost: applyCost && newCost > 0 ? newCost : undefined,
             costScope: scope,
+            expectedOldCost: applyCost ? preview?.oldCost : undefined,
+            ...(isCnyFee
+              ? { feeForeignAmount: feeForeign, feeExchangeRate: feeRate }
+              : { processingFee: feeVnd }),
           },
         },
         { onSuccess: onClose },
@@ -126,6 +157,7 @@ export function ProductionReceiveModal({
         </div>
 
         <div className="px-5 py-4 overflow-y-auto flex-1 space-y-4 text-sm">
+          {!isReceive && !canApplyCost && <p role="alert" className="text-red-700">Bạn không có quyền Áp dụng giá vốn gia công.</p>}
           <div className="rounded border bg-gray-50 px-3 py-2">
             <div className="font-medium">{production.productName}</div>
             <div className="text-gray-500">
@@ -163,6 +195,53 @@ export function ProductionReceiveModal({
                   Phiếu: {Number(production.quantity).toLocaleString("vi-VN")}
                 </p>
               </div>
+              <div className="col-span-2">
+                <label className="block font-medium text-gray-700 mb-1">
+                  Phí sản xuất chốt{isCnyFee ? " (CNY)" : ""}
+                </label>
+                {isCnyFee ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <NumericInput
+                      value={feeForeign}
+                      onValueChange={setFeeForeign}
+                      maxFractionDigits={2}
+                      className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-brand"
+                    />
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-500 shrink-0">
+                        Tỷ giá
+                      </span>
+                      <NumericInput
+                        value={feeRate}
+                        onValueChange={setFeeRate}
+                        maxFractionDigits={2}
+                        className="w-full min-w-0 border border-gray-300 rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-brand"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={feeVnd ? formatNumberInput(String(feeVnd)) : ""}
+                    onChange={(e) =>
+                      setFeeVnd(
+                        parseNumberInput(formatNumberInput(e.target.value)),
+                      )
+                    }
+                    placeholder="0"
+                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-brand"
+                  />
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Sẽ tạo phiếu nhập hàng vào kho{" "}
+                  {production.destinationBranchName}, giá trị ={" "}
+                  <span className="font-medium text-gray-700">
+                    {vnd(processingFee)}
+                  </span>{" "}
+                  (cộng vào nợ {production.supplier?.name || "NCC"}).
+                </p>
+              </div>
             </div>
           )}
 
@@ -198,7 +277,7 @@ export function ProductionReceiveModal({
                 </div>
               </div>
 
-              {isReceive && (
+              {isReceive && canApplyCost && (
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -209,7 +288,7 @@ export function ProductionReceiveModal({
                 </label>
               )}
 
-              {(applyCost || !isReceive) && (
+              {canApplyCost && (applyCost || !isReceive) && (
                 <div className="space-y-3">
                   <div className="rounded border divide-y">
                     <Row
@@ -277,12 +356,12 @@ export function ProductionReceiveModal({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={isPending || (!isReceive && (!preview || newCost <= 0))}
+            disabled={isPending || (!isReceive && (!canApplyCost || !preview || newCost <= 0)) || (applyCost && !canApplyCost)}
             className="px-4 py-2 text-sm text-white bg-brand rounded hover:bg-brand-dark disabled:opacity-50">
             {isPending
               ? "Đang lưu..."
               : isReceive
-                ? "Nhận hàng & hoàn thành"
+                ? "Nhận hàng & tạo phiếu nhập"
                 : "Xác nhận áp giá vốn"}
           </button>
         </div>

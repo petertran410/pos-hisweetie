@@ -39,6 +39,7 @@ import {
   parseNumberInput,
 } from "@/lib/utils";
 import { ProductInventoryModal } from "./ProductInventoryModal";
+import { ProductCodeButton } from "./ProductCodeButton";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { ProductInventoryMobileSheet } from "./ProductInventoryMobileSheet";
 import { CodeLink } from "../shared/CodeLink";
@@ -483,9 +484,10 @@ export function InvoiceItemsList({
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2 flex-wrap mb-0.5 lg:mb-1">
-                      <span className="text-xs lg:text-sm font-medium text-gray-500">
-                        {item.product.code}
-                      </span>
+                      <ProductCodeButton
+                        productId={item.product.id}
+                        code={item.product.code}
+                      />
                       <span className="text-sm lg:text-base font-semibold text-gray-900">
                         {item.product.name}
                       </span>

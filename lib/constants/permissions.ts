@@ -211,6 +211,7 @@ export const CATEGORY_ICONS: Record<string, string> = {
 
 // Nhãn quyền riêng theo resource, ưu tiên hơn ACTION_LABELS (dùng chung).
 const RESOURCE_ACTION_LABELS: Record<string, string> = {
+  "productions:apply_cost": "Áp dụng giá vốn gia công",
   "transfers:view_cost_price": "Xem giá",
   "internal-use:view_cost_price": "Xem giá",
   "warehouse_expense:cancel": "Hủy phiếu chi",

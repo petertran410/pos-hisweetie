@@ -38,7 +38,7 @@ interface InvoicesSidebarProps {
    * Chỉ dùng cho trang hóa đơn thường. Mặc định false (giữ hành vi cũ).
    */
   splitTimeFilters?: boolean;
-  /** Hiện toggle "Chỉ HĐ cảnh báo lệch giá" — chỉ dùng cho trang hóa đơn thường */
+  /** Hiện bộ lọc cảnh báo giá/số lượng — chỉ dùng cho trang hóa đơn thường */
   showPriceWarningFilter?: boolean;
   /** Hiện toggle chỉ lọc hóa đơn có sản phẩm hàng lạnh */
   showColdCargoFilter?: boolean;
@@ -544,8 +544,8 @@ export function InvoicesSidebar({
     number[]
   >(saved.current?.selectedBankAccountIds || []);
 
-  const [priceWarning, setPriceWarning] = useState<boolean>(
-    saved.current?.priceWarning || false
+  const [hasWarning, setHasWarning] = useState<boolean>(
+    () => saved.current?.hasWarning ?? saved.current?.priceWarning ?? false
   );
   const [orphanedPacking, setOrphanedPacking] = useState<boolean>(
     saved.current?.orphanedPacking || false
@@ -596,7 +596,7 @@ export function InvoicesSidebar({
       selectedBankAccountIds,
       misaEmployeeCodes,
       taxCodeStatus,
-      priceWarning,
+      hasWarning,
       orphanedPacking,
       hasColdItems,
       hasShippingFee,
@@ -619,7 +619,7 @@ export function InvoicesSidebar({
     selectedBankAccountIds,
     misaEmployeeCodes,
     taxCodeStatus,
-    priceWarning,
+    hasWarning,
     orphanedPacking,
     hasColdItems,
     hasShippingFee,
@@ -704,7 +704,7 @@ export function InvoicesSidebar({
     if (paymentMethod) n++;
     if (showMisaEmployeeFilter && misaEmployeeCodes.length > 0) n++;
     if (showMisaEmployeeFilter && taxCodeStatus) n++;
-    if (showPriceWarningFilter && priceWarning) n++;
+    if (showPriceWarningFilter && hasWarning) n++;
     if (showPriceWarningFilter && orphanedPacking) n++;
     if (showColdCargoFilter && hasColdItems) n++;
     if (showPriceWarningFilter && hasShippingFee) n++;
@@ -730,7 +730,7 @@ export function InvoicesSidebar({
     taxCodeStatus,
     showMisaEmployeeFilter,
     showPriceWarningFilter,
-    priceWarning,
+    hasWarning,
     orphanedPacking,
     showColdCargoFilter,
     hasColdItems,
@@ -738,7 +738,7 @@ export function InvoicesSidebar({
   ]);
 
   const warningFilterCount =
-    (showPriceWarningFilter && priceWarning ? 1 : 0) +
+    (showPriceWarningFilter && hasWarning ? 1 : 0) +
     (showPriceWarningFilter && orphanedPacking ? 1 : 0) +
     (showColdCargoFilter && hasColdItems ? 1 : 0) +
     (showPriceWarningFilter && hasShippingFee ? 1 : 0);
@@ -801,7 +801,7 @@ export function InvoicesSidebar({
       if (showMisaEmployeeFilter && taxCodeStatus)
         f.taxCodeStatus = taxCodeStatus;
 
-      if (showPriceWarningFilter && priceWarning) f.priceWarning = true;
+      if (showPriceWarningFilter && hasWarning) f.hasWarning = true;
       if (showPriceWarningFilter && orphanedPacking) f.orphanedPacking = true;
       if (showColdCargoFilter && hasColdItems) f.hasColdItems = true;
       if (showPriceWarningFilter && hasShippingFee) f.hasShippingFee = true;
@@ -831,7 +831,7 @@ export function InvoicesSidebar({
     taxCodeStatus,
     showMisaEmployeeFilter,
     showPriceWarningFilter,
-    priceWarning,
+    hasWarning,
     orphanedPacking,
     showColdCargoFilter,
     hasColdItems,
@@ -876,7 +876,7 @@ export function InvoicesSidebar({
     setSelectedBankAccountIds([]);
     setMisaEmployeeCodes([]);
     setTaxCodeStatus("");
-    setPriceWarning(false);
+    setHasWarning(false);
     setOrphanedPacking(false);
     setHasColdItems(false);
     setHasShippingFee(false);
@@ -947,15 +947,15 @@ export function InvoicesSidebar({
                       <label className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-gray-50 cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={priceWarning}
+                          checked={hasWarning}
                           onChange={(event) =>
-                            setPriceWarning(event.target.checked)
+                            setHasWarning(event.target.checked)
                           }
                           className="h-4 w-4 rounded border-gray-300 accent-brand"
                         />
                         <AlertTriangle className="h-4 w-4 shrink-0 text-yellow-500" />
                         <span className="text-xs font-medium text-gray-700">
-                          Chỉ HĐ cảnh báo lệch giá
+                          Chỉ HĐ lệch giá hoặc số lượng
                         </span>
                       </label>
                       <label className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-gray-50 cursor-pointer">

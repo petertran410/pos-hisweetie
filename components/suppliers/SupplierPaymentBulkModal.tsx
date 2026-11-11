@@ -176,6 +176,7 @@ export function SupplierPaymentBulkModal({
       queryClient.invalidateQueries({ queryKey: ["cashflows"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["manufacturers"] });
       queryClient.invalidateQueries({ queryKey: ["supplier-debt-timeline"] });
       alert("Trả tiền nhà cung cấp thành công!");
       onClose();
