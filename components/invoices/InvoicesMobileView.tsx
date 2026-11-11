@@ -871,7 +871,7 @@ export function InvoicesMobileView({
               <InvoiceMobileCard
                 key={invoice.id}
                 invoice={invoice}
-                hasWarning={!!invoice.hasPriceBookWarning}
+                hasWarning={!!(invoice.hasPriceBookWarning || invoice.hasQuantityWarning)}
                 onClick={() => setSelectedInvoiceId(invoice.id)}
               />
             ))}
