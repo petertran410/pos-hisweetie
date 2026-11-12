@@ -21,6 +21,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  AlertTriangle,
 } from "lucide-react";
 import { CodeLink } from "../shared/CodeLink";
 import {
@@ -139,14 +140,21 @@ function OrderMobileCard({
   const paid = Number(order.paidAmount);
   const debt = Number(order.debtAmount);
   const total = Number(order.grandTotal);
+  // Lệch giá bảng giá (như thẻ hóa đơn)
+  const hasWarning = !!order.hasPriceBookWarning;
 
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 cursor-pointer active:scale-[0.98] transition-transform select-none">
+      className={`bg-white rounded-2xl shadow-sm p-4 cursor-pointer active:scale-[0.98] transition-transform select-none border ${
+        hasWarning ? "border-2 border-yellow-400" : "border-gray-100"
+      }`}>
       {/* Row 1: code + status */}
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-brand font-bold text-[15px]">
+        <span className="text-brand font-bold text-[15px] flex items-center gap-1.5">
+          {hasWarning && (
+            <AlertTriangle className="w-4 h-4 text-yellow-500 fill-yellow-100 flex-shrink-0" />
+          )}
           <CodeLink entity="order" code={order.code} />
         </span>
         <div className="flex items-center gap-1.5">

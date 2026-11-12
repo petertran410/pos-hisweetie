@@ -66,6 +66,15 @@ function addSerialColumnDefinition(
  * column is added after the backend has rendered the template. This keeps
  * existing saved templates working without changing their stored content.
  */
+/** Chữ của dòng tiêu đề bảng hàng hoá: khớp ≥3 nhóm tên cột quen thuộc (Sản phẩm, SL, Đơn giá…). */
+function isItemTableHeaderText(text: string): boolean {
+  const headerText = normalizePrintText(text);
+  return (
+    ITEM_TABLE_HEADER_GROUPS.filter((group) => group.some((header) => headerText.includes(header)))
+      .length >= 3
+  );
+}
+
 export function addPrintSerialNumberColumn(
   content: string,
   templateFor: string
@@ -91,17 +100,9 @@ export function addPrintSerialNumberColumn(
       (row) => row.closest("table") === table
     ) as HTMLTableRowElement[];
 
-    const headerRow = rows.find((row) => {
-      const cells = getDirectCells(row);
-      if (cells.length < 3) return false;
-
-      const headerText = normalizePrintText(row.textContent || "");
-      const matchedGroups = ITEM_TABLE_HEADER_GROUPS.filter((group) =>
-        group.some((header) => headerText.includes(header))
-      ).length;
-
-      return matchedGroups >= 3;
-    });
+    const headerRow = rows.find(
+      (row) => getDirectCells(row).length >= 3 && isItemTableHeaderText(row.textContent || "")
+    );
 
     if (!headerRow) continue;
 
@@ -513,15 +514,70 @@ async function imageToDataUrl(src: string): Promise<string | null> {
   return null;
 }
 
+type PrintUnit = { el: HTMLElement; top: number; bottom: number; header: boolean; table: Element | null };
+
 /**
- * Chụp bản in (mẫu in mặc định của hoá đơn / đặt hàng) thành ảnh PNG theo khổ giấy
- * của mẫu (A5…): dựng trong iframe ẩn để đo, rồi vẽ qua SVG foreignObject lên canvas.
+ * Khối không cắt ngang khi chia trang: dòng bảng, ảnh, phần tử không chứa khối con
+ * (đoạn chữ, ô thông tin…). Đo vị trí trong iframe đã dựng bản in.
  */
+function printUnits(doc: Document): PrintUnit[] {
+  const win = doc.defaultView!;
+  const atomic = (el: Element) => el.tagName === "TR" || el.tagName === "IMG";
+  const hasBlockInside = (el: Element) =>
+    [...el.querySelectorAll("*")].some(
+      (d) => atomic(d) || (d.tagName !== "COL" && !win.getComputedStyle(d).display.startsWith("inline"))
+    );
+  // Phần tử trong iframe khác realm → so tagName, không dùng instanceof
+  const cells = (tr: Element) => [...tr.children].filter((c) => c.tagName === "TD" || c.tagName === "TH");
+  const units: HTMLElement[] = [];
+  const walk = (el: HTMLElement) => {
+    // Định nghĩa cột cao bằng cả bảng, ẩn đi là mất cột → luôn giữ
+    if (el.tagName === "COLGROUP" || el.tagName === "COL") return;
+    if (atomic(el) || !hasBlockInside(el)) units.push(el);
+    else for (const c of el.children) walk(c as HTMLElement);
+  };
+  for (const c of doc.body.children) walk(c as HTMLElement);
+  return units
+    .map((el) => {
+      const r = el.getBoundingClientRect();
+      const header =
+        el.tagName === "TR" &&
+        (el.parentElement?.tagName === "THEAD" ||
+          (cells(el).length > 0 && cells(el).every((c) => c.tagName === "TH")) ||
+          (cells(el).length >= 3 && isItemTableHeaderText(el.textContent || "")));
+      return { el, top: r.top, bottom: r.bottom, header, table: el.closest("table") };
+    })
+    .filter((u) => u.bottom > u.top);
+}
+
+/**
+ * Chia khối theo trang: trang 1 dùng tối đa `first` px tính từ đầu tài liệu (đã gồm lề trên),
+ * các trang sau tối đa `next` px; bảng bị tách thì lặp lại dòng tiêu đề ở trang sau.
+ */
+function paginate(units: PrintUnit[], first: number, next: number): PrintUnit[][] {
+  const pages: PrintUnit[][] = [];
+  let cur: PrintUnit[] = [];
+  let start = 0;
+  let extra = 0;
+  for (const u of units) {
+    if (!u.header && cur.some((c) => !c.header) && u.bottom - start + extra > (pages.length ? next : first)) {
+      pages.push(cur);
+      const header = units.filter((h) => h.header && u.table && h.table === u.table);
+      cur = [...header];
+      extra = header.reduce((n, h) => n + h.bottom - h.top, 0);
+      start = u.top;
+    }
+    cur.push(u);
+  }
+  pages.push(cur);
+  return pages;
+}
+
 export async function renderPrintImage(
   templateFor: "invoice" | "order",
   entityId: number,
   fileName: string
-): Promise<File> {
+): Promise<File[]> {
   const { template, content } = await renderEntityPrint(templateFor, entityId);
   const [w, h] = PAPER_MM[String(template.paperSize).toUpperCase()] ?? PAPER_MM.A5;
   const [pageW, pageH] = template.orientation === "landscape" ? [h, w] : [w, h];
@@ -560,32 +616,51 @@ export async function renderPrintImage(
     );
     doc.close();
     await loaded;
-    const height = Math.max(
-      Math.round(pageH * PX_PER_MM),
-      doc.documentElement.scrollHeight
-    );
-
-    const xhtml = new XMLSerializer().serializeToString(doc.documentElement);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject width="100%" height="100%">${xhtml}</foreignObject></svg>`;
-    const image = new Image();
-    image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-    await image.decode();
+    const pageHeight = Math.round(pageH * PX_PER_MM);
+    // Lề trên/dưới mỗi trang = padding của body (8mm)
+    const margin = Math.round(8 * PX_PER_MM);
+    const units = printUnits(doc);
+    const pages = paginate(units, pageHeight - margin, pageHeight - 2 * margin);
 
     // x2 cho chữ nét khi khách phóng to trên Zalo
     const scale = 2;
-    const canvas = document.createElement("canvas");
-    canvas.width = width * scale;
-    canvas.height = height * scale;
-    const ctx = canvas.getContext("2d")!;
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.scale(scale, scale);
-    ctx.drawImage(image, 0, 0);
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/png")
-    );
-    if (!blob) throw new Error("Không chụp được bản in");
-    return new File([blob], `${fileName}.png`, { type: "image/png" });
+    const files: File[] = [];
+    for (let i = 0; i < pages.length; i++) {
+      const keep = new Set(pages[i].map((u) => u.el));
+      const saved = units.map((u) => u.el.style.display);
+      units.forEach((u) => {
+        if (!keep.has(u.el)) u.el.style.display = "none";
+      });
+      const xhtml = new XMLSerializer().serializeToString(doc.documentElement);
+      units.forEach((u, k) => (u.el.style.display = saved[k]));
+
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${pageHeight}"><foreignObject width="100%" height="100%">${xhtml}</foreignObject></svg>`;
+      const image = new Image();
+      image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      await image.decode();
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width * scale;
+      canvas.height = pageHeight * scale;
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.scale(scale, scale);
+      ctx.drawImage(image, 0, 0);
+      if (pages.length > 1) {
+        ctx.fillStyle = "#666";
+        ctx.font = "10px sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText(`Trang ${i + 1}/${pages.length}`, width - margin, pageHeight - margin / 2);
+      }
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/png")
+      );
+      if (!blob) throw new Error("Không chụp được bản in");
+      const name = pages.length > 1 ? `${fileName}-${i + 1}.png` : `${fileName}.png`;
+      files.push(new File([blob], name, { type: "image/png" }));
+    }
+    return files;
   } finally {
     iframe.remove();
   }

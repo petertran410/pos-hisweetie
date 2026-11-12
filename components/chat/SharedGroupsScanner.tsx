@@ -103,7 +103,7 @@ export function SharedGroupsScanner({ customerId, pagePid, hasUserContact }: Pro
                 canManage && (
                   <button
                     onClick={() =>
-                      save.mutate({ kind: "group", zaloId: g.zaloId, name: g.name || undefined })
+                      save.mutate({ kind: "group", zaloId: g.zaloId, name: g.name || undefined, pagePid })
                     }
                     disabled={save.isPending}
                     className="shrink-0 px-2 py-1 rounded bg-brand text-white text-xs disabled:opacity-50">

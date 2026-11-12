@@ -26,6 +26,7 @@ import { getDebtRuleTypeLabel } from "@/lib/api/debt-tracking";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { CodeLink } from "../shared/CodeLink";
+import { InvoiceWarningIcon } from "../invoices/InvoiceWarningIcon";
 import { ColumnToggle } from "../shared/ColumnToggle";
 import {
   useColumnVisibility,
@@ -463,7 +464,7 @@ export function OrdersTable({
     }
   }, [filters.status]);
 
-  const colSpan = visibleColumns.length + 2; // checkbox + chevron
+  const colSpan = visibleColumns.length + 3; // checkbox + cảnh báo + chevron
 
   // Map cột → giá trị tổng tương ứng. Chỉ những cột có ý nghĩa cộng tổng
   // mới render số; các cột còn lại để trống (cell vẫn tồn tại để giữ layout).
@@ -608,6 +609,8 @@ export function OrdersTable({
                     className="cursor-pointer"
                   />
                 </th>
+                {/* Cột ngầm cảnh báo lệch giá — luôn giữ chỗ để không thụt mã đơn */}
+                <th className="w-8 px-2 py-2.5" />
                 {visibleColumns.map((col) => (
                   <th
                     key={col.key}
@@ -641,6 +644,7 @@ export function OrdersTable({
               {hasTotalRow && (
                 <tr className="bg-gray-50/60 border-b">
                   <td className="px-4 py-2.5 sticky left-0 bg-gray-50/60" />
+                  <td />
                   {visibleColumns.map((col) => (
                     <td
                       key={col.key}
@@ -695,6 +699,18 @@ export function OrdersTable({
                           checked={selectedIds.includes(order.id)}
                           onChange={() => toggleSelect(order.id)}
                           className="cursor-pointer"
+                        />
+                      </td>
+                      {/* Cột ngầm cảnh báo: lệch giá bảng giá 2/3 */}
+                      <td
+                        className={`w-8 px-2 py-2.5 text-center ${
+                          expandedOrderId === order.id ? "border-t-2 border-brand" : ""
+                        }`}>
+                        <InvoiceWarningIcon
+                          invoiceCode={order.code}
+                          documentLabel="đơn đặt hàng"
+                          warnings={order.warnings}
+                          hasPriceBookWarning={order.hasPriceBookWarning}
                         />
                       </td>
                       {visibleColumns.map((col) => (

@@ -11,13 +11,15 @@ const signed = (n: number) => (n > 0 ? `+${num(n)}` : num(n));
 
 interface Props {
   invoiceCode: string;
+  // Loại chứng từ ở tiêu đề hộp thoại ("hóa đơn", "đơn đặt hàng")
+  documentLabel?: string;
   warnings?: InvoiceListWarnings | null;
   /** Dữ liệu cũ chỉ có cờ, chưa có chi tiết. */
   hasPriceBookWarning?: boolean;
 }
 
 /** Icon ⚠ trên danh sách hóa đơn; bấm mở hộp thoại liệt kê lý do (lệch giá bảng giá, lệch SL so với đơn đặt). */
-export function InvoiceWarningIcon({ invoiceCode, warnings, hasPriceBookWarning }: Props) {
+export function InvoiceWarningIcon({ invoiceCode, documentLabel = "hóa đơn", warnings, hasPriceBookWarning }: Props) {
   const [open, setOpen] = useState(false);
   const price = warnings?.price ?? [];
   const quantity = warnings?.quantity ?? [];
@@ -46,6 +48,7 @@ export function InvoiceWarningIcon({ invoiceCode, warnings, hasPriceBookWarning 
         createPortal(
           <WarningModal
             invoiceCode={invoiceCode}
+            documentLabel={documentLabel}
             warnings={warnings}
             hasPrice={hasPrice}
             onClose={() => setOpen(false)}
@@ -58,11 +61,13 @@ export function InvoiceWarningIcon({ invoiceCode, warnings, hasPriceBookWarning 
 
 function WarningModal({
   invoiceCode,
+  documentLabel,
   warnings,
   hasPrice,
   onClose,
 }: {
   invoiceCode: string;
+  documentLabel: string;
   warnings?: InvoiceListWarnings | null;
   hasPrice: boolean;
   onClose: () => void;
@@ -91,7 +96,7 @@ function WarningModal({
         <div className="flex items-center justify-between gap-3 border-b px-5 py-3">
           <h2 id={titleId} className="flex items-center gap-2 text-base font-semibold text-gray-900">
             <AlertTriangle className="h-5 w-5 text-yellow-500 fill-yellow-100" aria-hidden />
-            Cảnh báo hóa đơn {invoiceCode}
+            Cảnh báo {documentLabel} {invoiceCode}
           </h2>
           <button
             type="button"
