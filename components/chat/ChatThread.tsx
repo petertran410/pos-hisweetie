@@ -164,6 +164,17 @@ export function ChatThread({
   useEffect(() => {
     if (latestSenders) setSenders((cur) => ({ ...cur, ...latestSenders }));
   }, [latestSenders]);
+  // Nhóm Zalo cá nhân: gõ "@" để tag thành viên Smax đã biết (bỏ chính nhóm)
+  const mentionMembers = useMemo(
+    () =>
+      source.kind === "group" && source.platform === "zaloweb"
+        ? Object.entries(senders)
+            .filter(([pid, s]) => /^zlw[1-9]\d*$/.test(pid) && pid !== source.tid && s.name)
+            .map(([pid, s]) => ({ uid: pid.slice(3), name: s.name!.trim(), avatar: s.avatar }))
+            .sort((a, b) => a.name.localeCompare(b.name, "vi"))
+        : undefined,
+    [senders, source.kind, source.platform, source.tid]
+  );
   const threadStickerIds = useMemo(
     () => [...new Set(messages.filter((m) => m.stickerId).map((m) => m.stickerId!).reverse())].slice(0, 24),
     [messages]
@@ -432,6 +443,7 @@ export function ChatThread({
             : undefined,
         stickerId: draft.stickerId,
         replyToPid: draft.replyTo?.pid,
+        mentions: draft.mentions?.length ? draft.mentions : undefined,
         // Đã tắt Meta AI: tin này lấy lại quyền trả lời (thẻ HUMAN_AGENT)
         humanAgent: takeOver || undefined,
         confirmed: confirmBeforeSend || undefined,
@@ -713,6 +725,7 @@ export function ChatThread({
           draftKey={source.key}
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
+          mentionMembers={mentionMembers}
         />
       )}
 
