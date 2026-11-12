@@ -378,7 +378,7 @@ export function RecentChatRow({ c, onClick }: { c: RecentChat; onClick: () => vo
           {c.lastMessage || "…"}
         </span>
         {m?.type === "linked" && (
-          <span className="block truncate text-xs text-brand-deep">{linkedChatLabel(m)}</span>
+          <span className="block truncate text-xs text-brand">{linkedChatLabel(m)}</span>
         )}
         {m?.type !== "linked" && c.lead && (
           <span className="block text-xs text-green-700">Lead · {c.lead.name}</span>
