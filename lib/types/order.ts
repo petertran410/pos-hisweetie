@@ -1,5 +1,5 @@
 import { CustomerAddress } from "./customer";
-import { PaymentNote } from "./invoice";
+import { PaymentNote, type InvoiceListWarnings } from "./invoice";
 import type { DebtRuleType } from "@/lib/api/debt-tracking";
 
 export const ORDER_STATUS = {
@@ -40,6 +40,9 @@ export interface Order {
   saleChannelId?: number;
   priceBookId?: number | null;
   priceBookName?: string | null;
+  // Danh sách: dòng bán thấp hơn giá bảng giá buôn 2/3 (như hóa đơn; quantity luôn rỗng)
+  hasPriceBookWarning?: boolean;
+  warnings?: InvoiceListWarnings | null;
   orderDate: string;
   totalAmount: number;
   discount: number;
