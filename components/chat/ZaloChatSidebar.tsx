@@ -26,7 +26,7 @@ import { useCan } from "@/lib/hooks/useCan";
 import { useIsClient, useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useChatContext, useRecentChats } from "@/lib/hooks/useSmaxChat";
 import { newCount } from "@/lib/chat/seen";
-import { linkedChatLabel, RecentChatRow, UnseenBadge, useOpenRecentChat } from "./RecentChatsList";
+import { RecentChatRow, UnseenBadge, useOpenRecentChat } from "./RecentChatsList";
 import { pickChannel, useActiveChannel, groupsOnChannel } from "@/lib/chat/channels";
 import { customerSource } from "@/lib/chat/threadSource";
 import { platformLabel } from "@/lib/chat/platforms";
@@ -394,8 +394,8 @@ function CollapsedRail({
             const who = c.match
               ? `${c.match.customer.code ?? ""} ${c.match.customer.name}`
               : `${c.name} (chưa gắn khách POS — mở Smax)`;
-            const label =
-              c.match?.type === "linked" ? linkedChatLabel(c.match) : c.name || c.zaloId;
+            // Giữ tên hội thoại trên Smax kể cả đã gắn khách POS (khách POS xem ở tooltip)
+            const label = c.name || c.zaloId;
             return (
               <button
                 key={c.tid}

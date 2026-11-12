@@ -353,7 +353,8 @@ export function RecentChatRow({ c, onClick }: { c: RecentChat; onClick: () => vo
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
           <span className={`truncate text-sm ${bold ? "font-semibold text-gray-900" : "font-medium text-gray-800"}`}>
-            {m?.type === "linked" ? linkedChatLabel(m) : c.name || c.zaloId}
+            {/* Giữ tên hội thoại trên Smax kể cả đã gắn khách POS; khách POS ghi ở dòng dưới */}
+            {c.name || c.zaloId}
           </span>
           {plainUnlinked &&
             (leadFirst ? (
@@ -374,9 +375,11 @@ export function RecentChatRow({ c, onClick }: { c: RecentChat; onClick: () => vo
           className={`block truncate text-xs ${bold ? "text-gray-700" : "text-gray-500"} ${
             showMetaAi && m?.type === "linked" ? "pr-24" : ""
           }`}>
-          {c.isGroup && m?.type === "linked" ? `${c.name}: ` : ""}
           {c.lastMessage || "…"}
         </span>
+        {m?.type === "linked" && (
+          <span className="block truncate text-xs text-brand-deep">{linkedChatLabel(m)}</span>
+        )}
         {m?.type !== "linked" && c.lead && (
           <span className="block text-xs text-green-700">Lead · {c.lead.name}</span>
         )}
