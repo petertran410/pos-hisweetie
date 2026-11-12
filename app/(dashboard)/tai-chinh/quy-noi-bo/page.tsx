@@ -43,6 +43,7 @@ import {
   type DateRange,
 } from "@/lib/internal-finance/time-range";
 import { FundClosingTable } from "@/components/internal-fund/FundClosingTable";
+import { InternalFundExportMenu } from "@/components/internal-fund/InternalFundExportMenu";
 import { useBranches } from "@/lib/hooks/useBranches";
 import {
   useAdjustInternalFundTransaction,
@@ -158,6 +159,7 @@ function FundScreen() {
   const [creatingClosing, setCreatingClosing] = useState(false);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"" | "POSTED" | "CANCELLED">("");
+  const [direction, setDirection] = useState<"" | "RECEIPT" | "EXPENSE">("");
   const [dates, setDates] = useState<DateRange>(() =>
     loadSavedDates(STORAGE_KEY),
   );
@@ -183,6 +185,7 @@ function FundScreen() {
     branchId,
     search: search || undefined,
     status: status || undefined,
+    direction: direction || undefined,
     fromDate: fromDate || undefined,
     toDate: toDate || undefined,
     page,
@@ -255,6 +258,11 @@ function FundScreen() {
   const activeError =
     view === "transactions" ? transactions.error : closings.error;
   const pending = cancelTransaction.isPending || adjust.isPending;
+  const activeFilterCount = [
+    time.active,
+    view === "transactions" ? status : "",
+    view === "transactions" ? direction : "",
+  ].filter(Boolean).length;
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden border-t">
@@ -280,14 +288,12 @@ function FundScreen() {
         <FinanceFilterSidebar
           mobileOpen={showFilters}
           onMobileClose={isMobile ? () => setShowFilters(false) : undefined}
-          activeCount={
-            [time.active, view === "transactions" ? status : ""].filter(Boolean)
-              .length
-          }
+          activeCount={activeFilterCount}
           onClear={() => {
             time.reset();
             setDates({});
             setStatus("");
+            setDirection("");
             resetPages();
           }}>
           <TimeRangeFilter
@@ -318,6 +324,22 @@ function FundScreen() {
           {view === "transactions" && (
             <>
               <FilterDivider />
+              <FilterSection label="Phân loại">
+                <FilterSearchableSelect
+                  options={[
+                    { value: "RECEIPT", label: "Tiền thu" },
+                    { value: "EXPENSE", label: "Tiền chi" },
+                  ]}
+                  value={direction}
+                  onChange={(value) => {
+                    setDirection(value as typeof direction);
+                    setPage(1);
+                  }}
+                  placeholder="Tất cả"
+                  searchable={false}
+                />
+              </FilterSection>
+              <FilterDivider />
               <FilterSection label="Trạng thái">
                 <FilterSearchableSelect
                   options={[{ value: "CANCELLED", label: "Đã hủy" }]}
@@ -346,12 +368,11 @@ function FundScreen() {
                 : undefined
             }
             searchPlaceholder="Tìm mã, mã phiếu, nội dung..."
-            activeFilterCount={
-              [time.active, view === "transactions" ? status : ""].filter(
-                Boolean,
-              ).length
-            }
+            activeFilterCount={activeFilterCount}
             onOpenFilter={() => setShowFilters(true)}
+            actions={view === "transactions" ? (
+              <InternalFundExportMenu filters={query} disabled={!ready} />
+            ) : undefined}
             summary={
               summary.data?.[0] ? (
                 <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs">
@@ -516,10 +537,13 @@ function FundScreen() {
                   </button>
                 )}
                 {view === "transactions" && (
-                  <ColumnToggle
-                    columns={ledgerColumns.columns}
-                    onToggle={ledgerColumns.toggleColumn}
-                  />
+                  <>
+                    <InternalFundExportMenu filters={query} disabled={!ready} />
+                    <ColumnToggle
+                      columns={ledgerColumns.columns}
+                      onToggle={ledgerColumns.toggleColumn}
+                    />
+                  </>
                 )}
               </div>
             </div>
