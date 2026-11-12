@@ -1,61 +1,273 @@
 "use client";
 
-import { PackageOpen, Plus, Trash2 } from "lucide-react";
+import { PackageOpen, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { NumericInput } from "@/components/ui/NumericInput";
 import { ProductPicker } from "./ProductionPickers";
-import { materialTotal, type ManufacturerMaterial } from "@/lib/api/manufacturers";
+import {
+  isLegacyMaterial,
+  materialTotal,
+  type ManufacturerMaterial,
+} from "@/lib/api/manufacturers";
+import {
+  NSX_UNITS,
+  compatiblePriceUnits,
+  currencySymbol,
+  defaultNsxUnits,
+  nsxRawAmount,
+  priceUnitLabel,
+  type NsxUnit,
+} from "@/lib/utils/nsx-pricing";
 
 export const numericClass =
   "w-full min-w-20 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-right text-sm text-gray-900 outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand-soft disabled:cursor-not-allowed disabled:bg-gray-50";
 
-export function ManufacturerMaterialsEditor({ value, onChange, currency, disabled }: {
-  value: ManufacturerMaterial[]; onChange: (value: ManufacturerMaterial[]) => void; currency: string; disabled?: boolean;
+const selectClass =
+  "w-full rounded-lg border border-gray-200 bg-white px-2 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-soft disabled:cursor-not-allowed disabled:bg-gray-50";
+
+const formatAmount = (value: number, digits = 2) =>
+  value.toLocaleString("vi-VN", { maximumFractionDigits: digits });
+
+/**
+ * Bảng nguyên liệu NSX bổ sung — dùng chung cho công thức (định lượng / 1 sp)
+ * và phiếu gửi / nhận hàng (lượng cả lô). Mỗi dòng là một sản phẩm có trên hệ
+ * thống, tính theo lượng × đơn giá với đơn vị g | kg | gói.
+ * Dòng cũ (không mã / "Tổng tiền") chỉ hiển thị, vẫn giữ khi nhận hàng.
+ */
+export function ManufacturerMaterialsEditor({
+  value,
+  onChange,
+  currency,
+  disabled,
+  variant = "slip",
+  outputUnit,
+  title = "Nguyên liệu NSX bổ sung",
+}: {
+  value: ManufacturerMaterial[];
+  onChange: (value: ManufacturerMaterial[]) => void;
+  currency: string;
+  disabled?: boolean;
+  variant?: "slip" | "formula";
+  /** Đơn vị thành phẩm, hiện ở tiêu đề cột "Định lượng / 1 …" (công thức). */
+  outputUnit?: string;
+  title?: string;
 }) {
+  const isFormula = variant === "formula";
   const change = (index: number, patch: Partial<ManufacturerMaterial>) =>
-    onChange(value.map((line, position) => position === index ? { ...line, ...patch } : line));
-  return <section className="min-w-0 space-y-3">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex items-center gap-2">
-        <h3 className="text-sm font-semibold text-gray-800">Phần nhà sản xuất bổ sung</h3>
-        <span className="text-xs text-gray-400">{value.length} dòng</span>
+    onChange(
+      value.map((line, position) =>
+        position === index ? { ...line, ...patch } : line,
+      ),
+    );
+  const changeUnit = (index: number, unit: NsxUnit) => {
+    const line = value[index];
+    const priceUnit = compatiblePriceUnits(unit).includes(
+      line.priceUnit as NsxUnit,
+    )
+      ? line.priceUnit
+      : unit;
+    change(index, { unit, priceUnit });
+  };
+  const add = (product: {
+    id: number;
+    code: string;
+    name: string;
+    unit?: string;
+  }) => {
+    if (value.some((line) => line.productId === product.id)) {
+      toast.error("Nguyên liệu NSX đã có trong bảng");
+      return;
+    }
+    onChange([
+      ...value,
+      {
+        productId: product.id,
+        productCode: product.code,
+        description: product.name,
+        pricingMode: "UNIT_PRICE",
+        quantity: 0,
+        unitPrice: 0,
+        amount: 0,
+        ...defaultNsxUnits(product.unit),
+      },
+    ]);
+  };
+  const lineAmount = (line: ManufacturerMaterial) =>
+    isFormula ? nsxRawAmount(line) : materialTotal(line);
+
+  return (
+    <section className="min-w-0 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
+          <span className="text-xs text-gray-400">{value.length} dòng</span>
+        </div>
+        {!disabled && (
+          <div className="w-full sm:w-80">
+            <ProductPicker label="Thêm nguyên liệu NSX" onChange={add} />
+          </div>
+        )}
       </div>
-      {!disabled && <button type="button" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-600 transition-colors hover:border-gray-300 hover:bg-gray-50"
-        onClick={() => onChange([...value, { description: "Nguyên liệu NSX bổ sung", pricingMode: "TOTAL", quantity: null, unit: null, unitPrice: 0, amount: 0 }])}>
-        <Plus size={15} />Thêm dòng
-      </button>}
-    </div>
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
-      <table className="w-full min-w-[900px] text-sm">
-        <thead className="bg-gray-50 text-left text-xs font-medium text-gray-500"><tr>
-          <th className="w-64 px-3 py-2.5">Nguyên liệu</th><th className="w-36 px-3 py-2.5">Cách tính</th><th className="w-28 px-3 py-2.5">Số lượng</th>
-          <th className="w-24 px-3 py-2.5">Đơn vị</th><th className="w-32 px-3 py-2.5">Đơn giá</th><th className="w-36 px-3 py-2.5 text-right">Thành tiền ({currency})</th><th className="w-12" />
-        </tr></thead>
-        <tbody className="divide-y divide-gray-100">{value.map((line, index) => <tr key={index} className="align-top hover:bg-gray-50/70">
-          <td className="space-y-1.5 px-3 py-2.5">
-            <ProductPicker value={line.productId} disabled={disabled} label={`Mã nguyên liệu NSX ${index + 1}`}
-              onChange={(product) => change(index, { productId: product.id, description: product.name, unit: product.unit || "unit" })} />
-            <input aria-label={`Mô tả phần bổ sung ${index + 1}`} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-soft" value={line.description}
-              disabled={disabled} onChange={(event) => change(index, { description: event.target.value })} />
-            {line.productId && !disabled && <button type="button" className="text-xs text-gray-400 hover:text-gray-700 hover:underline" onClick={() => change(index, { productId: null })}>Bỏ liên kết mã hàng</button>}
-          </td>
-          <td className="px-3 py-2.5"><select aria-label={`Cách tính ${index + 1}`} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 outline-none focus:border-brand focus:ring-2 focus:ring-brand-soft" value={line.pricingMode} disabled={disabled}
-            onChange={(event) => change(index, { pricingMode: event.target.value as ManufacturerMaterial["pricingMode"] })}>
-            <option value="TOTAL">Tổng tiền</option><option value="UNIT_PRICE">Lượng × đơn giá</option>
-          </select></td>
-          <td className="px-3 py-2.5"><NumericInput className={numericClass} value={Number(line.quantity ?? 0)} disabled={disabled}
-            onValueChange={(quantity) => change(index, { quantity })} maxFractionDigits={4} formatWhileTyping /></td>
-          <td className="px-3 py-2.5"><input aria-label={`Đơn vị bổ sung ${index + 1}`} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 outline-none focus:border-brand focus:ring-2 focus:ring-brand-soft" value={line.unit ?? ""} disabled={disabled}
-            onChange={(event) => change(index, { unit: event.target.value })} /></td>
-          <td className="px-3 py-2.5">{line.pricingMode === "UNIT_PRICE" ? <NumericInput className={numericClass} value={Number(line.unitPrice)}
-            disabled={disabled} maxFractionDigits={6} formatWhileTyping onValueChange={(unitPrice) => change(index, { unitPrice })} /> : <span className="text-gray-400">-</span>}</td>
-          <td className="px-3 py-2.5 text-right">{line.pricingMode === "TOTAL" ? <NumericInput className={numericClass} value={Number(line.amount)}
-            maxFractionDigits={2} formatWhileTyping disabled={disabled} onValueChange={(amount) => change(index, { amount })} /> : materialTotal(line).toLocaleString("vi-VN", { maximumFractionDigits: 2 })}</td>
-          <td className="px-2 py-2.5 text-center">{!disabled && <button type="button" title="Xóa phần bổ sung" aria-label={`Xóa phần bổ sung ${index + 1}`} className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-            onClick={() => onChange(value.filter((_, position) => position !== index))}><Trash2 size={16} /></button>}</td>
-        </tr>)}
-        {!value.length && <tr><td colSpan={7} className="px-4 py-10 text-center"><div className="sticky left-0 w-[calc(100vw-2rem)] sm:w-auto"><PackageOpen size={24} className="mx-auto mb-2 text-gray-300" /><p className="text-sm text-gray-400">Không có nguyên liệu nhà sản xuất bổ sung</p></div></td></tr>}
-        </tbody>
-      </table>
-    </div>
-  </section>;
+      <div className="overflow-x-auto rounded-lg border border-gray-200">
+        <table className="w-full min-w-[920px] text-sm">
+          <thead className="bg-gray-50 text-left text-xs font-medium text-gray-500">
+            <tr>
+              <th className="w-28 px-3 py-2.5">Mã hàng</th>
+              <th className="px-3 py-2.5">Tên hàng</th>
+              <th className="w-32 px-3 py-2.5">
+                {isFormula
+                  ? `Định lượng / 1 ${outputUnit || "sp"}`
+                  : "Số lượng"}
+              </th>
+              <th className="w-24 px-3 py-2.5">Đơn vị</th>
+              <th className="w-32 px-3 py-2.5">Đơn giá</th>
+              <th className="w-28 px-3 py-2.5">Theo</th>
+              <th className="w-36 px-3 py-2.5 text-right">
+                {isFormula ? `Tiền / 1 ${outputUnit || "sp"}` : "Thành tiền"} (
+                {currencySymbol(currency)})
+              </th>
+              <th className="w-12" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {value.map((line, index) => {
+              const legacy = !isFormula && isLegacyMaterial(line);
+              const locked = disabled || legacy;
+              return (
+                <tr
+                  key={`${line.productId ?? "legacy"}-${index}`}
+                  className="align-middle hover:bg-gray-50/70">
+                  <td className="px-3 py-2.5 font-mono text-xs text-gray-500">
+                    {line.productCode || "-"}
+                  </td>
+                  <td className="px-3 py-2.5 text-gray-800">
+                    <span>{line.description}</span>
+                    {legacy && (
+                      <span
+                        title="Dòng tạo trước khi bắt buộc chọn sản phẩm / tính theo g, kg, gói — chỉ xem hoặc xóa"
+                        className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[11px] text-gray-500">
+                        Dòng cũ
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    {line.pricingMode === "TOTAL" ? (
+                      <span className="text-gray-400">-</span>
+                    ) : (
+                      <NumericInput
+                        className={numericClass}
+                        value={Number(line.quantity ?? 0)}
+                        disabled={locked}
+                        maxFractionDigits={isFormula ? 6 : 4}
+                        formatWhileTyping
+                        onValueChange={(quantity) =>
+                          change(index, { quantity })
+                        }
+                      />
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    {legacy ? (
+                      <span className="text-gray-600">{line.unit || "-"}</span>
+                    ) : (
+                      <select
+                        aria-label={`Đơn vị nguyên liệu NSX ${index + 1}`}
+                        className={selectClass}
+                        value={line.unit ?? "g"}
+                        disabled={locked}
+                        onChange={(event) =>
+                          changeUnit(index, event.target.value as NsxUnit)
+                        }>
+                        {NSX_UNITS.map((unit) => (
+                          <option key={unit} value={unit}>
+                            {unit}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    {line.pricingMode === "TOTAL" ? (
+                      <span className="text-gray-400">-</span>
+                    ) : (
+                      <NumericInput
+                        className={numericClass}
+                        value={Number(line.unitPrice)}
+                        disabled={locked}
+                        maxFractionDigits={6}
+                        formatWhileTyping
+                        onValueChange={(unitPrice) =>
+                          change(index, { unitPrice })
+                        }
+                      />
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    {legacy ? (
+                      <span className="text-gray-400">
+                        {line.pricingMode === "TOTAL"
+                          ? "Tổng tiền"
+                          : `/${line.unit || "-"}`}
+                      </span>
+                    ) : (
+                      <select
+                        aria-label={`Đơn giá theo ${index + 1}`}
+                        className={selectClass}
+                        value={line.priceUnit ?? line.unit ?? "kg"}
+                        disabled={locked}
+                        onChange={(event) =>
+                          change(index, {
+                            priceUnit: event.target.value as NsxUnit,
+                          })
+                        }>
+                        {compatiblePriceUnits(line.unit).map((unit) => (
+                          <option key={unit} value={unit}>
+                            {priceUnitLabel(currency, unit)}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 text-right font-medium text-gray-800">
+                    {formatAmount(lineAmount(line), isFormula ? 4 : 2)}
+                  </td>
+                  <td className="px-2 py-2.5 text-center">
+                    {!disabled && (
+                      <button
+                        type="button"
+                        title="Xóa nguyên liệu NSX"
+                        aria-label={`Xóa nguyên liệu NSX ${index + 1}`}
+                        className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                        onClick={() =>
+                          onChange(
+                            value.filter((_, position) => position !== index),
+                          )
+                        }>
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            {!value.length && (
+              <tr>
+                <td colSpan={8} className="px-4 py-8 text-center">
+                  <div className="sticky left-0 w-[calc(100vw-2rem)] sm:w-auto">
+                    <PackageOpen
+                      size={24}
+                      className="mx-auto mb-2 text-gray-300"
+                    />
+                    <p className="text-sm text-gray-400">
+                      Không dùng nguyên liệu NSX — chỉ gửi gia công
+                    </p>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
 }

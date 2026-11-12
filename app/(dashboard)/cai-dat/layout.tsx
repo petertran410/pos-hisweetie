@@ -109,7 +109,7 @@ export default function SettingsLayout({
   return (
     <div className="dt-dash flex h-full">
       <div
-        className="w-64 border-r bg-white"
+        className="w-64 shrink-0 border m-4 mr-0 rounded-xl custom-sidebar-scroll bg-white shadow-xl"
         style={{ borderColor: "var(--dt-border)" }}>
         <div
           className="p-4 border-b"
@@ -149,7 +149,11 @@ export default function SettingsLayout({
           })}
         </nav>
       </div>
-      <div className="flex-1 overflow-auto">{children}</div>
+      <div
+        className="flex-1 min-w-0 overflow-auto m-4 border rounded-xl bg-white"
+        style={{ borderColor: "var(--dt-border)" }}>
+        {children}
+      </div>
     </div>
   );
 }

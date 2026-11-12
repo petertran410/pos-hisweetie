@@ -5,7 +5,23 @@ import { useForm } from "react-hook-form";
 import { UnitSelect } from "./UnitSelect";
 import { useUnits } from "@/lib/hooks/useUnits";
 import { CARTON_UNIT_CODE, normalizeUnitKey } from "@/lib/api/units";
-import type { Product, ProductComponent } from "@/lib/api/products";
+import type {
+  Product,
+  ProductComponent,
+  ProductFormula,
+} from "@/lib/api/products";
+import type { ManufacturerMaterial } from "@/lib/api/manufacturers";
+import { ManufacturerMaterialsEditor } from "@/components/manufacturers/ManufacturerMaterialsEditor";
+import { NumericInput } from "@/components/ui/NumericInput";
+import {
+  currencySymbol,
+  isNsxUnit,
+  normalizeNsxUnit,
+  nsxPriceFactor,
+  nsxRawAmount,
+  round6,
+  type NsxUnit,
+} from "@/lib/utils/nsx-pricing";
 import {
   useCreateProduct,
   useUpdateProduct,
@@ -43,6 +59,9 @@ type InputMode = "gram" | "quantity" | "piece" | "carton";
 
 // Một công thức thành phần. Công thức đang mở được sửa qua state
 // components / quantityInputs / inputModes; chuyển tab thì lưu lại vào đây.
+// Công thức gửi đi sản xuất (isExternal): thêm nguyên liệu NSX (định lượng /
+// 1 sp), phí gia công / 1 sp, tiền tệ. Các trường này sửa thẳng trên `formulas`
+// (không qua state của tab đang mở). Không bao giờ là mặc định.
 interface FormulaDraft {
   key: string;
   id?: number;
@@ -51,6 +70,10 @@ interface FormulaDraft {
   components: ManufacturingComponent[];
   quantityInputs: { [key: number]: string };
   inputModes: { [componentProductId: number]: InputMode };
+  isExternal: boolean;
+  processingFeePerUnit: number;
+  currency: "VND" | "CNY";
+  nsxLines: ManufacturerMaterial[];
 }
 
 const emptyFormula = (key: string, name: string, isDefault: boolean) => ({
@@ -60,7 +83,35 @@ const emptyFormula = (key: string, name: string, isDefault: boolean) => ({
   components: [],
   quantityInputs: {},
   inputModes: {},
+  isExternal: false,
+  processingFeePerUnit: 0,
+  currency: "VND" as const,
+  nsxLines: [] as ManufacturerMaterial[],
 });
+
+// Dòng NSX đã lưu trong công thức → dòng của bảng nguyên liệu NSX.
+const nsxLinesFromFormula = (f: ProductFormula): ManufacturerMaterial[] =>
+  (f.nsxLines ?? []).map((l) => ({
+    productId: l.productId,
+    productCode: l.product?.code ?? null,
+    description: l.product?.name ?? `#${l.productId}`,
+    pricingMode: "UNIT_PRICE",
+    quantity: Number(l.quantity),
+    unit: l.unit,
+    unitPrice: Number(l.unitPrice),
+    priceUnit: isNsxUnit(l.priceUnit)
+      ? (normalizeNsxUnit(l.priceUnit) as NsxUnit)
+      : null,
+    amount: 0,
+  }));
+
+// Gram của dòng NSX đơn vị g/kg (để đối chiếu trọng lượng thành phẩm).
+const nsxLineGrams = (line: ManufacturerMaterial) => {
+  const unit = normalizeNsxUnit(line.unit);
+  if (unit === "g") return Number(line.quantity ?? 0);
+  if (unit === "kg") return Number(line.quantity ?? 0) * 1000;
+  return 0;
+};
 
 interface ManufacturingProductFormProps {
   product?: Product;
@@ -360,8 +411,10 @@ export function ManufacturingProductForm({
     // Thiếu quyền giá vốn → calculateTotalPurchasePrice() ra NaN (cost bị strip).
     // Không reset để tránh NaN lan sang logic khác.
     if (!canViewCostPrice) return;
-    if (!costManuallyEdited.current) {
-      purchasePrice.reset(calculateTotalPurchasePrice());
+    // Không có công thức nội bộ mặc định (toàn công thức gửi đi) → không tự tính.
+    const autoCost = calculateTotalPurchasePrice();
+    if (autoCost != null && !costManuallyEdited.current) {
+      purchasePrice.reset(autoCost);
     }
   }, [components, selectedBranch?.id]);
 
@@ -437,8 +490,12 @@ export function ManufacturingProductForm({
             key: `id-${f.id}`,
             id: f.id,
             name: f.name,
-            isDefault: f.isDefault,
+            isDefault: !f.isExternal && f.isDefault,
             ...buildFormulaState(f.components),
+            isExternal: !!f.isExternal,
+            processingFeePerUnit: Number(f.processingFeePerUnit ?? 0),
+            currency: f.currency === "CNY" ? ("CNY" as const) : ("VND" as const),
+            nsxLines: nsxLinesFromFormula(f),
           }))
         : [
             {
@@ -484,6 +541,7 @@ export function ManufacturingProductForm({
     const names = new Set(synced.map((f) => f.name.trim().toLowerCase()));
     let n = synced.length + 1;
     while (names.has(`công thức ${n}`)) n++;
+    const current = synced.find((f) => f.key === activeFormulaKey);
     const draft: FormulaDraft = {
       ...emptyFormula(`new-${formulaKeySeq.current++}`, `Công thức ${n}`, false),
       ...(copyCurrent
@@ -491,6 +549,14 @@ export function ManufacturingProductForm({
             components: components.map((c) => ({ ...c, id: undefined })),
             quantityInputs: { ...quantityInputs },
             inputModes: { ...inputModes },
+            ...(current?.isExternal
+              ? {
+                  isExternal: true,
+                  processingFeePerUnit: current.processingFeePerUnit,
+                  currency: current.currency,
+                  nsxLines: current.nsxLines.map((l) => ({ ...l })),
+                }
+              : {}),
           }
         : {}),
     };
@@ -503,15 +569,64 @@ export function ManufacturingProductForm({
   };
 
   const setDefaultFormula = (key: string) => {
-    setFormulas((prev) => prev.map((f) => ({ ...f, isDefault: f.key === key })));
+    setFormulas((prev) =>
+      prev.map((f) => ({ ...f, isDefault: f.key === key && !f.isExternal }))
+    );
+  };
+
+  // Luôn có đúng 1 mặc định trong số công thức nội bộ (nếu còn công thức nội bộ).
+  const ensureInternalDefault = (list: FormulaDraft[]) => {
+    if (list.some((f) => f.isDefault && !f.isExternal)) return list;
+    const index = list.findIndex((f) => !f.isExternal);
+    return index < 0
+      ? list
+      : list.map((f, i) => (i === index ? { ...f, isDefault: true } : f));
+  };
+
+  const updateFormula = (key: string, patch: Partial<FormulaDraft>) => {
+    setFormulas((prev) =>
+      prev.map((f) => (f.key === key ? { ...f, ...patch } : f))
+    );
+  };
+
+  const toggleExternal = (key: string, on: boolean) => {
+    const target = formulas.find((f) => f.key === key);
+    if (!target) return;
+    if (
+      !on &&
+      target.nsxLines.length > 0 &&
+      !confirm(
+        `Tắt "Dùng cho gửi đi sản xuất" sẽ xóa ${target.nsxLines.length} nguyên liệu NSX và phí gia công của công thức này. Tiếp tục?`
+      )
+    ) {
+      return;
+    }
+    setFormulas((prev) =>
+      ensureInternalDefault(
+        prev.map((f) =>
+          f.key !== key
+            ? f
+            : on
+              ? { ...f, isExternal: true, isDefault: false }
+              : {
+                  ...f,
+                  isExternal: false,
+                  nsxLines: [],
+                  processingFeePerUnit: 0,
+                  currency: "VND",
+                }
+        )
+      )
+    );
   };
 
   const deleteFormula = (key: string) => {
     if (formulas.length <= 1) return;
     const target = formulas.find((f) => f.key === key);
     if (!target || !confirm(`Xóa "${target.name}"?`)) return;
-    const remaining = syncedFormulas().filter((f) => f.key !== key);
-    if (target.isDefault) remaining[0] = { ...remaining[0], isDefault: true };
+    const remaining = ensureInternalDefault(
+      syncedFormulas().filter((f) => f.key !== key)
+    );
     setFormulas(remaining);
     if (key === activeFormulaKey) openFormula(remaining[0]);
   };
@@ -636,11 +751,16 @@ export function ManufacturingProductForm({
       0
     );
 
-  // Giá vốn sản phẩm tính theo công thức mặc định.
-  const calculateTotalPurchasePrice = () => {
-    const synced = syncedFormulas();
-    return calculateFormulaCost(synced.find((f) => f.isDefault) ?? synced[0]);
+  // Giá vốn sản phẩm tính theo công thức mặc định (nội bộ). Toàn công thức gửi
+  // đi → null: giá vốn không tự tính, áp qua "Áp dụng giá vốn gia công".
+  const calculateTotalPurchasePrice = (): number | null => {
+    const def = syncedFormulas().find((f) => f.isDefault && !f.isExternal);
+    return def ? calculateFormulaCost(def) : null;
   };
+
+  // Tiền nguyên liệu NSX / 1 sp (theo tiền tệ của công thức).
+  const nsxCostPerUnit = (draft: FormulaDraft) =>
+    draft.nsxLines.reduce((sum, line) => sum + nsxRawAmount(line), 0);
 
   const onSubmit = async (data: any) => {
     const allFormulas = syncedFormulas();
@@ -650,6 +770,22 @@ export function ManufacturingProductForm({
         description: `"${emptyFormulaDraft.name}" chưa có hàng thành phần.`,
       });
       switchFormula(emptyFormulaDraft.key);
+      return;
+    }
+    const badNsxFormula = allFormulas.find(
+      (f) =>
+        f.isExternal &&
+        f.nsxLines.some(
+          (l) =>
+            !(Number(l.quantity) > 0) ||
+            nsxPriceFactor(l.unit, l.priceUnit) == null
+        )
+    );
+    if (badNsxFormula) {
+      toast.error("Nguyên liệu NSX chưa hợp lệ", {
+        description: `"${badNsxFormula.name}": nhập định lượng lớn hơn 0 và chọn đơn vị giá phù hợp.`,
+      });
+      switchFormula(badNsxFormula.key);
       return;
     }
     const formulaNames = allFormulas.map((f) => f.name.trim().toLowerCase());
@@ -722,12 +858,25 @@ export function ManufacturingProductForm({
         formulas: allFormulas.map((f) => ({
           id: f.id,
           name: f.name.trim(),
-          isDefault: f.isDefault,
+          isDefault: f.isDefault && !f.isExternal,
           components: f.components.map((comp) => ({
             componentProductId: comp.componentProductId,
             quantity: comp.quantity,
             inputMode: f.inputModes[comp.componentProductId] ?? "gram",
           })),
+          isExternal: f.isExternal,
+          processingFeePerUnit: f.isExternal ? round6(f.processingFeePerUnit) : 0,
+          currency: f.isExternal ? f.currency : "VND",
+          // Map tường minh: server bật forbidNonWhitelisted.
+          nsxLines: f.isExternal
+            ? f.nsxLines.map((l) => ({
+                productId: l.productId,
+                quantity: round6(Number(l.quantity)),
+                unit: l.unit,
+                unitPrice: Number(l.unitPrice),
+                priceUnit: l.priceUnit,
+              }))
+            : [],
         })),
       });
 
@@ -768,11 +917,17 @@ export function ManufacturingProductForm({
     currentPage * itemsPerPage
   );
 
-  const totalComponentGrams = components.reduce((sum, comp) => {
-    const mode = inputModes[comp.componentProductId] ?? "gram";
-    if (mode === "piece" || mode === "carton") return sum; // không tính chiếc/thùng vào gram
-    return sum + comp.quantity;
-  }, 0);
+  const activeDraft = formulas.find((f) => f.key === activeFormulaKey);
+  const totalComponentGrams =
+    components.reduce((sum, comp) => {
+      const mode = inputModes[comp.componentProductId] ?? "gram";
+      if (mode === "piece" || mode === "carton") return sum; // không tính chiếc/thùng vào gram
+      return sum + comp.quantity;
+    }, 0) +
+    // Công thức gửi đi: nguyên liệu NSX tính theo g/kg cũng trộn vào thành phẩm.
+    (activeDraft?.isExternal
+      ? activeDraft.nsxLines.reduce((sum, line) => sum + nsxLineGrams(line), 0)
+      : 0);
   const productWeightInGrams =
     weight.value * (watchedWeightUnit === "kg" ? 1000 : 1);
   const isWeightMatch =
@@ -921,6 +1076,11 @@ export function ManufacturingProductForm({
                         Mặc định
                       </span>
                     )}
+                    {f.isExternal && (
+                      <span className="ml-1.5 text-[11px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">
+                        Gửi SX
+                      </span>
+                    )}
                   </button>
                 ))}
                 <button
@@ -950,7 +1110,15 @@ export function ManufacturingProductForm({
                       onChange={(e) => renameFormula(active.key, e.target.value)}
                       className="border rounded px-2 py-1 w-56"
                     />
-                    {!active.isDefault && (
+                    <label className="inline-flex items-center gap-1.5 text-gray-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={active.isExternal}
+                        onChange={(e) => toggleExternal(active.key, e.target.checked)}
+                      />
+                      Dùng cho gửi đi sản xuất
+                    </label>
+                    {!active.isDefault && !active.isExternal && (
                       <button
                         type="button"
                         onClick={() => setDefaultFormula(active.key)}
@@ -966,7 +1134,7 @@ export function ManufacturingProductForm({
                         Xóa công thức
                       </button>
                     )}
-                    {canViewCostPrice && !active.isDefault && (
+                    {canViewCostPrice && !active.isDefault && !active.isExternal && (
                       <span className="text-gray-500">
                         Giá vốn theo công thức này:{" "}
                         {calculateFormulaCost({
@@ -1280,6 +1448,96 @@ export function ManufacturingProductForm({
                   )}
                 </div>
               )}
+
+              {(() => {
+                const active = formulas.find((f) => f.key === activeFormulaKey);
+                if (!active?.isExternal) return null;
+                const outputUnit = watchedUnit || "sp";
+                const ownCost = calculateFormulaCost({
+                  ...active,
+                  components,
+                  inputModes,
+                });
+                const nsxCost = nsxCostPerUnit(active);
+                const sym = currencySymbol(active.currency);
+                return (
+                  <div className="mt-5 space-y-4 rounded-lg border border-amber-200 bg-amber-50/40 p-4">
+                    <div className="flex flex-wrap items-end gap-4">
+                      <div>
+                        <span className="block text-xs font-medium text-gray-600 mb-1">
+                          Tiền tệ giá NSX
+                        </span>
+                        <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
+                          {(["VND", "CNY"] as const).map((c) => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => updateFormula(active.key, { currency: c })}
+                              className={`px-3 py-1.5 rounded-md text-sm ${
+                                active.currency === c
+                                  ? "bg-brand text-white"
+                                  : "text-gray-600 hover:bg-gray-50"
+                              }`}>
+                              {c}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <label className="block">
+                        <span className="block text-xs font-medium text-gray-600 mb-1">
+                          Phí gia công / 1 {outputUnit} ({sym})
+                        </span>
+                        <NumericInput
+                          className="w-44 rounded-lg border border-gray-200 bg-white px-3 py-2 text-right text-sm outline-none focus:border-brand"
+                          value={active.processingFeePerUnit}
+                          maxFractionDigits={6}
+                          formatWhileTyping
+                          onValueChange={(fee) =>
+                            updateFormula(active.key, { processingFeePerUnit: fee })
+                          }
+                        />
+                      </label>
+                      <p className="text-xs text-gray-500 pb-2">
+                        Công thức này chỉ dùng khi tạo phiếu gửi đi sản xuất; không dùng cho sản xuất nội bộ.
+                      </p>
+                    </div>
+                    <ManufacturerMaterialsEditor
+                      variant="formula"
+                      value={active.nsxLines}
+                      currency={active.currency}
+                      outputUnit={outputUnit}
+                      onChange={(nsxLines) => updateFormula(active.key, { nsxLines })}
+                    />
+                    <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 text-sm text-gray-600">
+                      {canViewCostPrice && (
+                        <span>
+                          Hàng mình / 1 {outputUnit}:{" "}
+                          <b className="text-gray-800">
+                            {ownCost.toLocaleString("vi-VN", { maximumFractionDigits: 2 })} đ
+                          </b>
+                        </span>
+                      )}
+                      <span>
+                        Nguyên liệu NSX / 1 {outputUnit}:{" "}
+                        <b className="text-gray-800">
+                          {nsxCost.toLocaleString("vi-VN", { maximumFractionDigits: 4 })} {sym}
+                        </b>
+                      </span>
+                      <span>
+                        Phí gia công / 1 {outputUnit}:{" "}
+                        <b className="text-gray-800">
+                          {active.processingFeePerUnit.toLocaleString("vi-VN", { maximumFractionDigits: 6 })} {sym}
+                        </b>
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+              {formulas.length > 0 && formulas.every((f) => f.isExternal) && (
+                <p className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                  Sản phẩm chỉ có công thức gửi đi sản xuất: không sản xuất nội bộ được và giá vốn không tự tính theo công thức.
+                </p>
+              )}
             </div>
 
             {(canViewCostPrice || canViewSalePrice) && (
@@ -1301,8 +1559,12 @@ export function ManufacturingProductForm({
                       placeholder="0"
                     />
                     <p className="text-xs text-gray-400 mt-1">
-                      Tự động tính (công thức mặc định):{" "}
-                      {calculateTotalPurchasePrice().toLocaleString("vi-VN")} đ
+                      {(() => {
+                        const autoCost = calculateTotalPurchasePrice();
+                        return autoCost == null
+                          ? "Chưa có công thức nội bộ mặc định — giá vốn không tự tính"
+                          : `Tự động tính (công thức mặc định): ${autoCost.toLocaleString("vi-VN")} đ`;
+                      })()}
                     </p>
                   </div>
                 )}

@@ -397,7 +397,12 @@ export function ProductionForm({
       p.code.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const formulas = selectedProduct?.formulas ?? [];
+  // Công thức gửi đi sản xuất (isExternal) không dùng cho sản xuất nội bộ.
+  const formulas = (selectedProduct?.formulas ?? []).filter(
+    (f) => !f.isExternal
+  );
+  const onlyExternalFormulas =
+    (selectedProduct?.formulas?.length ?? 0) > 0 && formulas.length === 0;
   const selectedFormula =
     formulas.find((f) => f.id === selectedFormulaId) ??
     formulas.find((f) => f.isDefault) ??
@@ -609,6 +614,12 @@ export function ProductionForm({
     afterSave?: (saved: Production) => void,
   ) => {
     if (!validateForm()) return;
+    if (onlyExternalFormulas) {
+      alert(
+        "Sản phẩm chỉ có công thức gửi đi sản xuất. Hãy tạo công thức sản xuất nội bộ hoặc dùng phiếu gửi sản xuất."
+      );
+      return;
+    }
 
     const hasInsufficientStock = componentRequirements.some(
       (c) => c.isInsufficient
@@ -883,6 +894,11 @@ export function ProductionForm({
                 {selectedProduct && formulas.length === 1 && (
                   <div className="mt-1 text-xs text-gray-500">
                     Công thức: {formulas[0].name}
+                  </div>
+                )}
+                {selectedProduct && onlyExternalFormulas && (
+                  <div className="mt-1 text-xs text-red-600">
+                    Sản phẩm chỉ có công thức gửi đi sản xuất — không sản xuất nội bộ được.
                   </div>
                 )}
               </div>

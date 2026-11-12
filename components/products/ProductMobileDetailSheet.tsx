@@ -18,6 +18,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { ProductSupplierOrdersModal } from "./ProductSupplierOrdersModal";
+import { FormulaNsxSummary } from "./FormulaNsxSummary";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -146,6 +147,7 @@ export function ProductMobileDetailSheet({
   const selectedFormula =
     formulas.find((f) => f.id === selectedFormulaId) ??
     formulas.find((f) => f.isDefault) ??
+    formulas.find((f) => !f.isExternal) ??
     formulas[0];
   const components = selectedFormula
     ? selectedFormula.components
@@ -353,6 +355,7 @@ export function ProductMobileDetailSheet({
                                 }`}>
                                 {f.name}
                                 {f.isDefault && " (mặc định)"}
+                                {f.isExternal && " (gửi SX)"}
                               </button>
                             ))}
                           </div>
@@ -397,6 +400,12 @@ export function ProductMobileDetailSheet({
                         </div>
                       </div>
                     )}
+                  {selectedFormula && (
+                    <FormulaNsxSummary
+                      formula={selectedFormula}
+                      outputUnit={product?.unit}
+                    />
+                  )}
                 </div>
               )}
 

@@ -6,11 +6,50 @@ html {
   zoom: 0.85;
 }
 
+/* ---------- Diệp Trà brand tokens dùng chung mọi bảng màu (nguồn: dieptra-theme/tokens.css) ---------- */
+:root {
+  --foreground: #171717;
+  --dt-color-gold: #c9a84c;
+  --dt-color-gold-light: #e8c96a;
+  --dt-color-sale: #c0392b;
+  --dt-color-instock: #2e8b8f;
+  --dt-color-outofstock: #c0392b;
+  --dt-color-rating: #c9a84c;
+  --dt-color-gold-soft: rgba(201, 168, 76, 0.12);
+  --dt-color-overlay-dark: rgba(13, 59, 66, 0.4);
+  --dt-radius-sm: 8px;
+  --dt-radius-control: 12px;
+  --dt-radius-card: 16px;
+  --dt-shadow-nav: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --dt-shadow-card: 0 12px 32px rgba(0, 183, 204, 0.12);
+}
+
+/* ---------- Bảng màu giao diện (chọn ở components/layout/PaletteSwitcher) ----------
+   data-palette trên <html> do script trong app/layout.tsx set trước khi vẽ trang.
+   Không có attribute = Gốc (mặc định); A/B/C do người dùng tự chọn. Thang gray của Tailwind, bg-white, màu brand,
+   dải menu, nền trang và header bảng đều lấy từ các biến dưới đây
+   (tailwind.config.ts + app/dashboard.css), nên đổi bảng màu không phải sửa component.
+   --g-* / --gt-* / --surface là kênh RGB để Tailwind dùng được độ mờ (bg-gray-50/60).
+   --gt-400/500: màu CHỮ text-gray-400/500 (đậm hơn nền/viền cùng bậc để đạt 4.5:1). */
+
+/* Gốc (mặc định) · giao diện trước khi đổi màu: Tailwind gray mặc định, teal #00b7cc,
+   menu trắng. Trang công khai (/cong-thuc, /f/) luôn dùng bảng này. */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
-
-  /* ---------- Diệp Trà brand tokens (nguồn: dieptra-theme/tokens.css) ---------- */
+  --surface: 255 255 255;
+  --g-50: 249 250 251;
+  --g-100: 243 244 246;
+  --g-200: 229 231 235;
+  --g-300: 209 213 219;
+  --g-400: 156 163 175;
+  --g-500: 107 114 128;
+  --g-600: 75 85 99;
+  --g-700: 55 65 81;
+  --g-800: 31 41 55;
+  --g-900: 17 24 39;
+  --g-950: 3 7 18;
+  --gt-400: 156 163 175;
+  --gt-500: 107 114 128;
   --dt-color-primary: #00b7cc;
   --dt-color-primary-bright: #00a5b5;
   --dt-color-primary-mid: #2e8b8f;
@@ -19,24 +58,159 @@ html {
   --dt-color-cyan-soft: #a8d8e0;
   --dt-color-cyan-pale: #c5e4e8;
   --dt-color-cyan-bg: #e8f4f5;
-  --dt-color-gold: #c9a84c;
-  --dt-color-gold-light: #e8c96a;
   --dt-color-border: #d0e5e8;
   --dt-color-border-strong: #7aa5a8;
   --dt-color-price: #0d3b42;
-  --dt-color-sale: #c0392b;
-  --dt-color-instock: #2e8b8f;
-  --dt-color-outofstock: #c0392b;
-  --dt-color-rating: #c9a84c;
   --dt-color-primary-soft: rgba(0, 183, 204, 0.08);
   --dt-color-primary-ring: rgba(0, 183, 204, 0.1);
-  --dt-color-gold-soft: rgba(201, 168, 76, 0.12);
-  --dt-color-overlay-dark: rgba(13, 59, 66, 0.4);
-  --dt-radius-sm: 8px;
-  --dt-radius-control: 12px;
-  --dt-radius-card: 16px;
-  --dt-shadow-nav: 0 1px 4px rgba(0, 0, 0, 0.06);
-  --dt-shadow-card: 0 12px 32px rgba(0, 183, 204, 0.12);
+  --dt-color-text: #0d3b42;
+  --dt-color-text-secondary: #3a6b74;
+  --dt-color-text-muted: #5a8a92;
+  --dt-color-bg-soft: #f5fafb;
+  --dt-color-canvas: #f5fafb;
+  --dt-color-table-head: #f9fafb;
+  --dt-color-header: #ffffff;
+  --dt-color-header-fg: #374151;
+  --dt-color-header-hover: #9ca3af;
+  --dt-color-header-pill: #00b7cc;
+}
+
+/* A · Teal Diệp Trà */
+:root[data-palette="a"] {
+  --background: #ffffff;
+  --surface: 255 255 255;
+  --g-50: 247 251 251;
+  --g-100: 239 245 246;
+  --g-200: 223 233 234;
+  --g-300: 203 215 216;
+  --g-400: 150 166 167;
+  --g-500: 99 117 119;
+  --g-600: 68 88 90;
+  --g-700: 47 68 70;
+  --g-800: 24 44 46;
+  --g-900: 9 27 29;
+  --g-950: 1 9 10;
+  --gt-400: 104 120 122;
+  --gt-500: 84 102 104;
+  --dt-color-primary: #00818f;
+  --dt-color-primary-bright: #006e7a;
+  --dt-color-primary-mid: #2e8b8f;
+  --dt-color-primary-deep: #1a5f6a;
+  --dt-color-primary-dark: #0d3b42;
+  --dt-color-cyan-soft: #a8d8e0;
+  --dt-color-cyan-pale: #c5e4e8;
+  --dt-color-cyan-bg: #e0f2f4;
+  --dt-color-border: #d3e2e5;
+  --dt-color-border-strong: #7d979c;
+  --dt-color-price: #0d3b42;
+  --dt-color-primary-soft: rgba(0, 129, 143, 0.1);
+  --dt-color-primary-ring: rgba(0, 129, 143, 0.15);
+  --dt-color-text: #12292d;
+  --dt-color-text-secondary: #475f64;
+  --dt-color-text-muted: #526c71;
+  --dt-color-bg-soft: #f5f9fa;
+  --dt-color-canvas: #eef3f4;
+  --dt-color-table-head: #e1f0f2;
+  --dt-color-header: #00818f;
+  --dt-color-header-fg: #ffffff;
+  --dt-color-header-hover: rgb(255 255 255 / 0.15);
+  --dt-color-header-pill: #00818f;
+}
+
+/* B · Xanh dương doanh nghiệp (thang gray = Tailwind slate) */
+:root[data-palette="b"] {
+  --background: #ffffff;
+  --surface: 255 255 255;
+  --g-50: 248 250 252;
+  --g-100: 241 245 249;
+  --g-200: 226 232 240;
+  --g-300: 203 213 225;
+  --g-400: 148 163 184;
+  --g-500: 100 116 139;
+  --g-600: 71 85 105;
+  --g-700: 51 65 85;
+  --g-800: 30 41 59;
+  --g-900: 15 23 42;
+  --g-950: 2 6 23;
+  --gt-400: 106 118 135;
+  --gt-500: 88 100 117;
+  --dt-color-primary: #0b63ce;
+  --dt-color-primary-bright: #0a54af;
+  --dt-color-primary-mid: #2f6fd0;
+  --dt-color-primary-deep: #0a4fa6;
+  --dt-color-primary-dark: #0b2b5a;
+  --dt-color-cyan-soft: #b9d2f5;
+  --dt-color-cyan-pale: #cfe0f8;
+  --dt-color-cyan-bg: #e5effc;
+  --dt-color-border: #d9e0ea;
+  --dt-color-border-strong: #8492a6;
+  --dt-color-price: #0b2b5a;
+  --dt-color-primary-soft: rgba(11, 99, 206, 0.08);
+  --dt-color-primary-ring: rgba(11, 99, 206, 0.12);
+  --dt-color-text: #172033;
+  --dt-color-text-secondary: #4a5568;
+  --dt-color-text-muted: #5c687b;
+  --dt-color-bg-soft: #f6f8fb;
+  --dt-color-canvas: #f0f3f8;
+  --dt-color-table-head: #e3edfc;
+  --dt-color-header: #0b63ce;
+  --dt-color-header-fg: #ffffff;
+  --dt-color-header-hover: rgb(255 255 255 / 0.15);
+  --dt-color-header-pill: #0b63ce;
+}
+
+/* C · Graphite ấm (trung tính ngả ấm, thẻ kem nhạt) */
+:root[data-palette="c"] {
+  --background: #fffdf9;
+  --surface: 255 253 249;
+  --g-50: 252 250 247;
+  --g-100: 247 243 238;
+  --g-200: 236 230 223;
+  --g-300: 219 212 202;
+  --g-400: 171 161 149;
+  --g-500: 123 112 98;
+  --g-600: 94 83 68;
+  --g-700: 74 63 47;
+  --g-800: 49 39 24;
+  --g-900: 32 23 9;
+  --g-950: 12 6 1;
+  --gt-400: 126 116 103;
+  --gt-500: 108 98 84;
+  --dt-color-primary: #00818f;
+  --dt-color-primary-bright: #006e7a;
+  --dt-color-primary-mid: #2e8b8f;
+  --dt-color-primary-deep: #1a5f6a;
+  --dt-color-primary-dark: #0d3b42;
+  --dt-color-cyan-soft: #cfe3e2;
+  --dt-color-cyan-pale: #d9eae9;
+  --dt-color-cyan-bg: #e3f1f1;
+  --dt-color-border: #e2dcd2;
+  --dt-color-border-strong: #9a8f82;
+  --dt-color-price: #0d3b42;
+  --dt-color-primary-soft: rgba(0, 129, 143, 0.1);
+  --dt-color-primary-ring: rgba(0, 129, 143, 0.15);
+  --dt-color-text: #2a2520;
+  --dt-color-text-secondary: #5a5249;
+  --dt-color-text-muted: #6a6156;
+  --dt-color-bg-soft: #f8f5f0;
+  --dt-color-canvas: #f2f0ec;
+  --dt-color-table-head: #eae5dc;
+  --dt-color-header: #26313a;
+  --dt-color-header-fg: #ffffff;
+  --dt-color-header-hover: rgb(255 255 255 / 0.12);
+  --dt-color-header-pill: #26313a;
+}
+
+
+/* Header bảng tô màu (kiểu KiotViet) cho mọi thead dùng bg-gray-50/100 — specificity
+   cao hơn .bg-gray-50 nên không phải sửa từng bảng. Bảng "Gốc" giữ header xám như cũ. */
+:root[data-palette]:not([data-palette="orig"]) thead.bg-gray-50,
+:root[data-palette]:not([data-palette="orig"]) thead.bg-gray-100,
+:root[data-palette]:not([data-palette="orig"]) thead > tr.bg-gray-50,
+:root[data-palette]:not([data-palette="orig"]) thead > tr.bg-gray-100,
+:root[data-palette]:not([data-palette="orig"]) thead th.bg-gray-50,
+:root[data-palette]:not([data-palette="orig"]) thead th.bg-gray-100 {
+  background-color: var(--dt-color-table-head);
 }
 
 /* Side chat (components/chat): viền focus bàn phím thống nhất màu brand */

@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { BranchSelector } from "./BranchSelector";
 import { SepayNotificationBell } from "../sepay/SepayNotificationBell";
 import { ChatSidebarToggle } from "../chat/ZaloChatSidebar";
+import { PaletteSwitcher } from "./PaletteSwitcher";
 import {
   useFilteredPosActions,
   useFilteredSections,
@@ -199,7 +200,7 @@ export function DashboardHeader() {
   }, [showMobileMenu]);
 
   return (
-    <header className=" text-gray-700">
+    <header className="bg-brand-header text-brand-header-fg">
       <div className="flex items-center h-14">
         {/* ═══════════════════════════════════════════════
             DESKTOP LAYOUT — hidden dưới lg
@@ -213,7 +214,7 @@ export function DashboardHeader() {
             <nav className="flex items-center gap-1">
               <Link
                 href="/"
-                className="px-4 py-2 hover:bg-gray-400 rounded transition-colors">
+                className="px-4 py-2 hover:bg-brand-header-hover rounded transition-colors">
                 Tổng quan
               </Link>
 
@@ -222,7 +223,7 @@ export function DashboardHeader() {
                   className="relative"
                   onMouseEnter={() => setHoveredMenu("products")}
                   onMouseLeave={() => setHoveredMenu(null)}>
-                  <button className="px-4 py-2 hover:bg-gray-400 rounded transition-colors">
+                  <button className="px-4 py-2 hover:bg-brand-header-hover rounded transition-colors">
                     Hàng hóa
                   </button>
                   {hoveredMenu === "products" && (
@@ -257,7 +258,7 @@ export function DashboardHeader() {
                   className="relative"
                   onMouseEnter={() => setHoveredMenu("orders")}
                   onMouseLeave={() => setHoveredMenu(null)}>
-                  <button className="px-4 py-2 hover:bg-gray-400 rounded transition-colors">
+                  <button className="px-4 py-2 hover:bg-brand-header-hover rounded transition-colors">
                     Đơn hàng
                   </button>
                   {hoveredMenu === "orders" && (
@@ -283,7 +284,7 @@ export function DashboardHeader() {
                   className="relative"
                   onMouseEnter={() => setHoveredMenu("customers")}
                   onMouseLeave={() => setHoveredMenu(null)}>
-                  <button className="px-4 py-2 hover:bg-gray-400 rounded transition-colors">
+                  <button className="px-4 py-2 hover:bg-brand-header-hover rounded transition-colors">
                     Khách hàng
                   </button>
                   {hoveredMenu === "customers" && (
@@ -309,7 +310,7 @@ export function DashboardHeader() {
                   className="relative"
                   onMouseEnter={() => setHoveredMenu("finance")}
                   onMouseLeave={() => setHoveredMenu(null)}>
-                  <button className="px-4 py-2 hover:bg-gray-400 rounded transition-colors">
+                  <button className="px-4 py-2 hover:bg-brand-header-hover rounded transition-colors">
                     Tài chính
                   </button>
                   {hoveredMenu === "finance" && (
@@ -333,7 +334,7 @@ export function DashboardHeader() {
               {anyReport && (
                 <Link
                   href="/bao-cao"
-                  className="px-4 py-2 hover:bg-gray-400 rounded transition-colors">
+                  className="px-4 py-2 hover:bg-brand-header-hover rounded transition-colors">
                   Báo cáo
                 </Link>
               )}
@@ -341,12 +342,14 @@ export function DashboardHeader() {
           </div>
 
           <div className="ml-auto px-4 flex items-center gap-4">
+            <PaletteSwitcher />
+
             {posActions.length > 0 && (
               <div
                 className="relative"
                 onMouseEnter={() => setHoveredMenu("pos")}
                 onMouseLeave={() => setHoveredMenu(null)}>
-                <button className="px-4 py-2 bg-white text-brand rounded hover:bg-gray-400 transition-colors font-medium">
+                <button className="px-4 py-2 bg-white text-brand-header-pill rounded-lg hover:bg-cyan-bg transition-colors font-semibold">
                   🛒 Bán hàng
                 </button>
                 {hoveredMenu === "pos" && (
@@ -374,8 +377,8 @@ export function DashboardHeader() {
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-400 rounded transition-colors">
-                <div className="w-8 h-8 bg-brand rounded-full flex items-center justify-center">
+                className="flex items-center gap-2 px-3 py-2 hover:bg-brand-header-hover rounded transition-colors">
+                <div className="w-8 h-8 bg-brand rounded-full flex items-center justify-center ring-2 ring-white/70">
                   {user?.avatar ? (
                     <img
                       src={user.avatar}
@@ -392,7 +395,7 @@ export function DashboardHeader() {
               </button>
 
               {showUserMenu && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white text-gray-800 rounded-lg shadow-lg py-2 z-50">
                   <div className="px-4 py-2 border-b">
                     <p className="text-sm font-medium text-gray-900">
                       {user?.name}
@@ -432,17 +435,18 @@ export function DashboardHeader() {
           <div className="flex items-center gap-1">
             <SepayNotificationBell />
             <ChatSidebarToggle />
+            <PaletteSwitcher />
             {posActions.length > 0 && (
               <Link
                 href={posActions[0]?.href ?? "/ban-hang"}
-                className="p-2 hover:bg-brand-dark rounded transition-colors"
+                className="p-2 hover:bg-brand-header-hover rounded transition-colors"
                 aria-label="Bán hàng">
                 <ShoppingCart className="w-5 h-5" />
               </Link>
             )}
             <button
               onClick={() => setShowMobileMenu(true)}
-              className="p-2 hover:bg-gray-200 rounded transition-colors"
+              className="p-2 hover:bg-brand-header-hover rounded transition-colors"
               aria-label="Mở menu">
               <Menu className="w-5 h-5" />
             </button>

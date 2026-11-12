@@ -253,7 +253,7 @@ export function ProductionCostHistoryPanel({
                   {[
                     "Phiếu / Ngày hoàn thành",
                     "Nhà sản xuất",
-                    "Mẫu phối trộn",
+                    "Công thức / mẫu",
                     "Lượng nhận / Quy cách",
                     "Hàng mình (đ)",
                     "NSX bổ sung (đ)",
@@ -289,7 +289,7 @@ export function ProductionCostHistoryPanel({
                     <td
                       className={`${td} max-w-48 whitespace-normal break-words text-left`}
                     >
-                      {row.externalTemplateName || "-"}
+                      {row.formulaName || row.externalTemplateName || "-"}
                     </td>
                     <td className={`${td} text-left`}>
                       {money(row.receivedQuantity)}

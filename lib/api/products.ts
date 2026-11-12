@@ -10,7 +10,23 @@ export interface ProductComponent {
   componentProduct: Product;
 }
 
-/** Công thức thành phần của hàng sản xuất (type 4). */
+/** Nguyên liệu NSX bổ sung của công thức gửi đi — định lượng cho 1 thành phẩm. */
+export interface ProductFormulaNsxLine {
+  id?: number;
+  productId: number;
+  quantity: number | string;
+  unit: string;
+  unitPrice: number | string;
+  priceUnit: string;
+  sortOrder?: number;
+  product?: { id: number; code: string; name: string; unit?: string | null };
+}
+
+/**
+ * Công thức thành phần của hàng sản xuất (type 4).
+ * isExternal = công thức gửi đi sản xuất: có nguyên liệu NSX, phí gia công / 1 sp,
+ * tiền tệ; không bao giờ là mặc định, không dùng cho sản xuất nội bộ.
+ */
 export interface ProductFormula {
   id: number;
   productId: number;
@@ -18,6 +34,10 @@ export interface ProductFormula {
   isDefault: boolean;
   sortOrder: number;
   components: ProductComponent[];
+  isExternal?: boolean;
+  processingFeePerUnit?: number | string;
+  currency?: "VND" | "CNY";
+  nsxLines?: ProductFormulaNsxLine[];
 }
 
 export interface ProductQueryParams {

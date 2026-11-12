@@ -142,7 +142,6 @@ export interface ProductionQueryParams {
 
 export interface CreateProductionData {
   manufacturerId?: number;
-  externalTemplateId?: number | null;
   ownMaterials?: OwnMaterial[];
   manufacturerMaterials?: ManufacturerMaterial[];
   code?: string;
@@ -155,7 +154,8 @@ export interface CreateProductionData {
   manufacturedDate?: string;
   autoDeductComponents?: boolean;
   components?: ProductionComponentData[];
-  formulaId?: number;
+  // Phiếu gửi NSX: công thức gửi đi đã nạp (null = nhập tay).
+  formulaId?: number | null;
   // Gửi sản xuất ở nhà máy ngoài
   isExternal?: boolean;
   factoryId?: number | null;
@@ -186,6 +186,7 @@ export interface ProductionCostHistoryRow {
   manufacturerName: string;
   completedDate: string;
   externalTemplateName: string | null;
+  formulaName?: string | null;
   receivedQuantity: number;
   materialValue: number;
   manufacturerMaterialCost: number;

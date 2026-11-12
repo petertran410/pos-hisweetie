@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "./providers";
 import { PageTitle } from "@/components/layout/PageTitle";
+import { PALETTE_INIT_SCRIPT } from "@/lib/constants/palette";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -51,7 +52,12 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      className={`${montserrat.variable} ${beVietnam.variable} ${jetbrainsMono.variable}`}>
+      className={`${montserrat.variable} ${beVietnam.variable} ${jetbrainsMono.variable}`}
+      suppressHydrationWarning>
+      <head>
+        {/* Set bảng màu trước khi vẽ trang — tránh nháy màu khi tải. */}
+        <script dangerouslySetInnerHTML={{ __html: PALETTE_INIT_SCRIPT }} />
+      </head>
       <body>
         <Providers>
           <PageTitle />

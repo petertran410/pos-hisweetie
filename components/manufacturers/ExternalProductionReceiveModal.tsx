@@ -9,6 +9,8 @@ import { DatePickerInput } from "@/components/ui/DatePickerInput";
 import { NumericInput } from "@/components/ui/NumericInput";
 import { productionsApi, type Production } from "@/lib/api/productions";
 import {
+  materialFromRow,
+  materialPayload,
   materialTotal,
   type ManufacturerMaterial,
 } from "@/lib/api/manufacturers";
@@ -34,15 +36,7 @@ export function ExternalProductionReceiveModal({
   const queryClient = useQueryClient();
   const [quantity, setQuantity] = useState(Number(production.quantity));
   const [supplied, setSupplied] = useState<ManufacturerMaterial[]>(
-    (production.manufacturerMaterials ?? []).map((line) => ({
-      productId: line.productId,
-      description: line.description,
-      pricingMode: line.pricingMode,
-      quantity: line.quantity == null ? null : Number(line.quantity),
-      unit: line.unit,
-      unitPrice: Number(line.unitPrice),
-      amount: Number(line.amount),
-    }))
+    (production.manufacturerMaterials ?? []).map(materialFromRow)
   );
   const cny = production.feeCurrency === "CNY";
   const [fee, setFee] = useState(
@@ -69,7 +63,7 @@ export function ExternalProductionReceiveModal({
       return productionsApi.receive(production.id, {
         completedDate: completed.toISOString(),
         receivedQuantity: quantity,
-        manufacturerMaterials: supplied,
+        manufacturerMaterials: supplied.map(materialPayload),
         processingFee: cny ? undefined : fee,
         feeForeignAmount: cny ? fee : undefined,
         feeExchangeRate: cny ? rate : undefined,

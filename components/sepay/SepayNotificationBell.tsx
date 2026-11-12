@@ -136,10 +136,10 @@ export function SepayNotificationBell() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="relative p-2 hover:bg-gray-400 rounded transition-colors"
+        className="relative p-2 hover:bg-brand-header-hover rounded transition-colors"
         aria-label={muted ? "Thông báo (đang tắt popup)" : "Thông báo"}>
         {muted ? (
-          <BellOff className="w-5 h-5 text-gray-400" />
+          <BellOff className="w-5 h-5 opacity-60" />
         ) : (
           <Bell className="w-5 h-5" />
         )}
