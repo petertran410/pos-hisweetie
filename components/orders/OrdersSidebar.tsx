@@ -6,7 +6,16 @@ import { useBranches } from "@/lib/hooks/useBranches";
 import { useCustomers } from "@/lib/hooks/useCustomers";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useSaleChannels } from "@/lib/hooks/useSaleChannels";
-import { ChevronDown, X, Check, ChevronRight, Calendar } from "lucide-react";
+import {
+  ChevronDown,
+  X,
+  Check,
+  ChevronRight,
+  Calendar,
+  AlertTriangle,
+  Truck,
+  Snowflake,
+} from "lucide-react";
 import { createPortal } from "react-dom";
 import { normalizeRectForFixed } from "@/lib/utils/zoom";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
@@ -638,6 +647,18 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
   const [saleChannelId, setSaleChannelId] = useState(
     saved.current?.saleChannelId || ""
   );
+  // Nhóm "Cảnh báo đơn hàng": chọn nhiều ô → đơn thỏa ít nhất 1 ô (OR, backend)
+  const [priceWarning, setPriceWarning] = useState<boolean>(
+    () => saved.current?.priceWarning ?? false
+  );
+  const [hasShippingFee, setHasShippingFee] = useState<boolean>(
+    () => saved.current?.hasShippingFee ?? false
+  );
+  const [hasColdItems, setHasColdItems] = useState<boolean>(
+    () => saved.current?.hasColdItems ?? false
+  );
+  const [showWarningFilters, setShowWarningFilters] = useState(false);
+  const warningFiltersRef = useRef<HTMLDivElement>(null);
   const [showPresetPanel, setShowPresetPanel] = useState(false);
   const [panelAnchorRect, setPanelAnchorRect] = useState<DOMRect | null>(null);
   const [openCal, setOpenCal] = useState<"from" | "to" | null>(null);
@@ -663,6 +684,9 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
       saleChannelId,
       paymentMethod,
       selectedBankAccountIds,
+      priceWarning,
+      hasShippingFee,
+      hasColdItems,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [
@@ -680,6 +704,9 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     saleChannelId,
     paymentMethod,
     selectedBankAccountIds,
+    priceWarning,
+    hasShippingFee,
+    hasColdItems,
   ]);
 
   const customers = useMemo(() => customersData?.data || [], [customersData]);
@@ -714,6 +741,9 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     if (soldByIds.length > 0) n++;
     if (saleChannelId) n++;
     if (paymentMethod) n++;
+    if (priceWarning) n++;
+    if (hasShippingFee) n++;
+    if (hasColdItems) n++;
     return n;
   }, [
     selectedBranchIds,
@@ -724,7 +754,29 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     creatorIds,
     soldByIds,
     saleChannelId,
+    priceWarning,
+    hasShippingFee,
+    hasColdItems,
   ]);
+
+  const warningFilterCount =
+    (priceWarning ? 1 : 0) + (hasShippingFee ? 1 : 0) + (hasColdItems ? 1 : 0);
+
+  useEffect(() => {
+    if (!showWarningFilters) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        warningFiltersRef.current &&
+        !warningFiltersRef.current.contains(event.target as Node)
+      ) {
+        setShowWarningFilters(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showWarningFilters]);
 
   useEffect(() => {
     if (!openCal) return;
@@ -766,6 +818,9 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
       if (paymentMethod) f.paymentMethod = paymentMethod;
       if (paymentMethod === "transfer" && selectedBankAccountIds.length > 0)
         f.bankAccountIds = selectedBankAccountIds;
+      if (priceWarning) f.priceWarning = true;
+      if (hasShippingFee) f.hasShippingFee = true;
+      if (hasColdItems) f.hasColdItems = true;
 
       onFiltersChange(f);
     }, 300);
@@ -785,6 +840,9 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     saleChannelId,
     paymentMethod,
     selectedBankAccountIds,
+    priceWarning,
+    hasShippingFee,
+    hasColdItems,
   ]);
 
   const clearAll = () => {
@@ -804,6 +862,9 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
     onFiltersChange({});
     setPaymentMethod("");
     setSelectedBankAccountIds([]);
+    setPriceWarning(false);
+    setHasShippingFee(false);
+    setHasColdItems(false);
     localStorage.removeItem(STORAGE_KEY);
   };
 
@@ -848,6 +909,90 @@ export function OrdersSidebar({ onFiltersChange }: OrdersSidebarProps) {
       </div>
 
       <div className="p-4 space-y-3">
+        {/* ── Nhóm cảnh báo đơn hàng ── */}
+        <div
+          ref={warningFiltersRef}
+          className="rounded-lg border border-gray-200 overflow-hidden">
+          <button
+            type="button"
+            aria-expanded={showWarningFilters}
+            onClick={() => setShowWarningFilters((current) => !current)}
+            className={`w-full flex items-center justify-between gap-1.5 px-2.5 py-2.5 text-sm transition-colors ${
+              showWarningFilters || warningFilterCount > 0
+                ? "bg-red-50/60"
+                : "bg-white hover:bg-gray-50"
+            }`}>
+            <span className="flex items-center gap-1.5 min-w-0">
+              <AlertTriangle
+                className={`w-4 h-4 flex-shrink-0 ${
+                  warningFilterCount > 0 ? "text-red-500" : "text-gray-400"
+                }`}
+              />
+              <span className="font-medium text-gray-700 whitespace-nowrap">
+                Cảnh báo đơn hàng
+              </span>
+              {warningFilterCount > 0 && (
+                <span className="shrink-0 rounded-full bg-red-100 px-1.5 py-0.5 text-[11px] font-semibold text-red-700">
+                  {warningFilterCount}
+                </span>
+              )}
+            </span>
+            <ChevronDown
+              className={`w-4 h-4 shrink-0 text-gray-400 transition-transform ${
+                showWarningFilters ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+
+          {showWarningFilters && (
+            <div className="border-t border-gray-100 bg-white p-2">
+                  <label className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={priceWarning}
+                      onChange={(event) =>
+                        setPriceWarning(event.target.checked)
+                      }
+                      className="h-4 w-4 rounded border-gray-300 accent-brand"
+                    />
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-yellow-500" />
+                    <span className="text-xs font-medium text-gray-700">
+                      Chỉ ĐH lệch giá bán với bảng giá
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={hasShippingFee}
+                      onChange={(event) =>
+                        setHasShippingFee(event.target.checked)
+                      }
+                      className="h-4 w-4 rounded border-gray-300 accent-brand"
+                    />
+                    <Truck className="h-4 w-4 shrink-0 text-red-500" />
+                    <span className="text-xs font-medium text-gray-700">
+                      Chỉ ĐH có phí ship
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={hasColdItems}
+                      onChange={(event) =>
+                        setHasColdItems(event.target.checked)
+                      }
+                      className="h-4 w-4 rounded border-gray-300 accent-brand"
+                    />
+                    <Snowflake className="h-4 w-4 shrink-0 text-red-500" />
+                    <span className="text-xs font-medium text-gray-700">
+                      Chỉ ĐH hàng lạnh
+                    </span>
+                  </label>
+            </div>
+          )}
+        </div>
+        <div className="border-t border-gray-100" />
+
         {/* ── Thời gian ── */}
         <div>
           <div className="flex items-center justify-between mb-2">
