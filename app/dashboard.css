@@ -44,7 +44,7 @@
 
 /* KPI card */
 .dt-kpi {
-  background: #fff;
+  background: rgb(var(--surface));
   border: 1px solid var(--dt-border);
   border-radius: var(--dt-r);
   box-shadow: var(--dt-sh-card);
@@ -59,7 +59,7 @@
 
 /* Panel */
 .dt-panel {
-  background: #fff;
+  background: rgb(var(--surface));
   border: 1px solid var(--dt-border);
   border-radius: var(--dt-r);
   box-shadow: var(--dt-sh-card);
@@ -103,7 +103,7 @@
   border: 1.5px solid var(--dt-border);
   border-radius: var(--dt-r-sm);
   overflow: hidden;
-  background: #fff;
+  background: rgb(var(--surface));
 }
 .dt-seg button {
   padding: 8px 14px;
@@ -130,7 +130,7 @@
 .dt-select {
   border: 1.5px solid var(--dt-border);
   border-radius: var(--dt-r-sm);
-  background: #fff;
+  background: rgb(var(--surface));
   padding: 8px 30px 8px 12px;
   font-size: 13.5px;
   font-weight: 500;
@@ -158,7 +158,7 @@
 .dt-input {
   border: 1.5px solid var(--dt-border);
   border-radius: var(--dt-r-sm);
-  background: #fff;
+  background: rgb(var(--surface));
   padding: 8px 12px;
   font-size: 13.5px;
   color: var(--dt-text);
@@ -196,7 +196,7 @@
   background: var(--dt-cyan-bg);
 }
 .dt-row-sticky {
-  background: #fff;
+  background: rgb(var(--surface));
 }
 .dt-row:hover .dt-row-sticky {
   background: var(--dt-bg-soft);
@@ -274,7 +274,7 @@
 
 /* Nút phụ viền (Chỉnh sửa, In...) */
 .dt-btn-ghost {
-  background: #fff;
+  background: rgb(var(--surface));
   border: 1px solid var(--dt-border);
   color: var(--dt-text-secondary);
   transition: background 0.15s;
@@ -361,7 +361,7 @@
   gap: 6px;
   padding: 8px 14px;
   border-radius: 22px;
-  background: #fff;
+  background: rgb(var(--surface));
   border: 1.5px solid var(--dt-border);
   font-size: 13px;
   font-weight: 600;
@@ -482,7 +482,7 @@
 .dt-m-kpi {
   flex: 0 0 46%;
   scroll-snap-align: start;
-  background: #fff;
+  background: rgb(var(--surface));
   border: 1px solid var(--dt-border);
   border-radius: 11px;
   padding: 14px;
@@ -535,7 +535,7 @@
 
 /* Card */
 .dt-m-card {
-  background: #fff;
+  background: rgb(var(--surface));
   border: 1px solid var(--dt-border);
   border-radius: 16px;
   box-shadow: var(--dt-sh-card);
@@ -577,7 +577,7 @@
   white-space: nowrap;
 }
 .dt-m-miniseg button[data-on="true"] {
-  background: #fff;
+  background: rgb(var(--surface));
   color: var(--dt-primary);
   box-shadow: var(--dt-sh-card);
 }
@@ -654,7 +654,7 @@
   align-items: center;
   gap: 7px;
   padding: 14px 4px;
-  background: #fff;
+  background: rgb(var(--surface));
   border: 1px solid var(--dt-border);
   border-radius: 11px;
   font-size: 11.5px;
@@ -694,7 +694,7 @@
   gap: 7px;
   padding: 8px 13px;
   border-radius: 20px;
-  background: #fff;
+  background: rgb(var(--surface));
   border: 1.5px solid var(--dt-border);
   font-size: 12.5px;
   font-weight: 600;
@@ -724,7 +724,7 @@
 .dt-m-titem {
   width: 100%;
   text-align: left;
-  background: #fff;
+  background: rgb(var(--surface));
   border: 1px solid var(--dt-border);
   border-radius: 11px;
   padding: 13px 14px;
@@ -808,8 +808,8 @@
   place-items: center;
   flex: none;
   z-index: 1;
-  background: #fff;
-  box-shadow: 0 0 0 4px #fff;
+  background: rgb(var(--surface));
+  box-shadow: 0 0 0 4px rgb(var(--surface));
   color: var(--dt-primary);
 }
 .dt-m-ait .ab {
@@ -871,7 +871,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: #fff;
+  background: rgb(var(--surface));
   border-radius: 22px 22px 0 0;
   z-index: 41;
   transform: translateY(100%);
@@ -1020,4 +1020,10 @@
   .fin-sheet select.dt-select {
     min-height: 44px;
   }
+}
+
+/* ---------- Bảng màu Tối (app/globals.css): ghi đè các chỗ màu viết cứng ----------
+   :not(.palette-orig *) → vùng giữ sáng bên trong bảng Tối vẫn dùng màu sáng như cũ. */
+:root[data-palette="dark"] :is(.dt-sk, .dt-m-sk):not(.palette-orig *) {
+  background-image: linear-gradient(90deg, #1c282b 25%, #2a393d 37%, #1c282b 63%);
 }

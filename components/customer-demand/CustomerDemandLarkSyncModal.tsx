@@ -212,10 +212,10 @@ export function CustomerDemandLarkSyncModal({
           <div className="grid min-h-72 place-items-center text-center">
             <div>
               <AlertTriangle
-                className="mx-auto h-7 w-7 text-[#9b2c2c]"
+                className="mx-auto h-7 w-7 text-[#9b2c2c] dark:text-[#f08a7e]"
                 strokeWidth={1.5}
               />
-              <p className="mt-3 text-sm font-medium text-[#9b2c2c]">
+              <p className="mt-3 text-sm font-medium text-[#9b2c2c] dark:text-[#f08a7e]">
                 Không đọc được dữ liệu LarkBase
               </p>
               <p className="cd-subtitle mt-1 max-w-lg">
@@ -382,7 +382,7 @@ export function CustomerDemandLarkSyncModal({
                       </span>
                     </div>
                     {voucherSplitPreview.issues.length > 0 && (
-                      <div className="space-y-1 text-xs text-[#8a6a1f]">
+                      <div className="space-y-1 text-xs text-[#8a6a1f] dark:text-[#e2c46a]">
                         {voucherSplitPreview.issues.slice(0, 5).map((issue) => (
                           <p key={issue.demandId}>
                             Phiếu #{issue.demandId}: {issue.message}
@@ -425,7 +425,7 @@ export function CustomerDemandLarkSyncModal({
 
             {issueRows.length > 0 && (
               <div className="overflow-hidden rounded-[16px] shadow-[inset_0_0_0_1px_var(--cd-hairline)]">
-                <div className="flex items-center justify-between gap-3 bg-[#eef7f8] px-3 py-2">
+                <div className="flex items-center justify-between gap-3 bg-[#eef7f8] dark:bg-[var(--dt-color-table-head)] px-3 py-2">
                   <div>
                     <p className="text-xs font-semibold text-[var(--cd-secondary)]">
                       Record cần xử lý
@@ -484,8 +484,8 @@ export function CustomerDemandLarkSyncModal({
                             <span
                               className={
                                 issue.code === "LINE_CONFLICT"
-                                  ? "text-xs text-[#9b2c2c]"
-                                  : "text-xs text-[#8a6a1f]"
+                                  ? "text-xs text-[#9b2c2c] dark:text-[#f08a7e]"
+                                  : "text-xs text-[#8a6a1f] dark:text-[#e2c46a]"
                               }>
                               {issue.message}
                             </span>
