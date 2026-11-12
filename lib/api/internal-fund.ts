@@ -110,6 +110,7 @@ export interface InternalFundTransfer {
 export interface InternalFundQuery {
   branchId?: number;
   transactionType?: InternalFundTransactionType | "";
+  direction?: "RECEIPT" | "EXPENSE";
   status?: string;
   fromDate?: string;
   toDate?: string;
