@@ -313,7 +313,8 @@ export function ProductionDetailRow({
                         <InfoItem label="Phải trả NSX:">{vnd(production.totalPayable)}</InfoItem>
                         <InfoItem label="Đã thanh toán:">{vnd(production.paidAmount)}</InfoItem>
                         <InfoItem label="Còn nợ:">{vnd(production.debtAmount)}</InfoItem>
-                        <InfoItem label="Mẫu phối trộn:">{production.externalTemplateName || "-"}</InfoItem>
+                        <InfoItem label="Công thức:">{production.formulaName || "Nhập tay"}</InfoItem>
+                        {production.externalTemplateName && <InfoItem label="Mẫu phối trộn (cũ):">{production.externalTemplateName}</InfoItem>}
                       </>}
                       <InfoItem
                         label={

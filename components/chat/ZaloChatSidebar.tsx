@@ -669,7 +669,7 @@ export function ChatSidebarToggle() {
   return (
     <button
       onClick={() => setOpen(true)}
-      className="p-2 hover:bg-gray-200 rounded transition-colors"
+      className="p-2 hover:bg-brand-header-hover rounded transition-colors"
       aria-label="Chat Zalo"
     >
       <MessageCircle className="w-5 h-5" />

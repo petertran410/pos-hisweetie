@@ -7,7 +7,6 @@ import {
   Loader2,
   Pencil,
   RefreshCw,
-  Trash2,
   Wallet,
   X,
 } from "lucide-react";
@@ -68,7 +67,6 @@ export function ManufacturerDetailPanel({
 }) {
   const queryClient = useQueryClient();
   const canUpdate = usePermission("productions", "update");
-  const canDelete = usePermission("productions", "delete");
   const canPay = usePermission("cash_flows", "create");
   const canCancelPayment = usePermission("cash_flows", "delete");
   const [paying, setPaying] = useState<{ type: "S" | "M"; id: number } | null>(
@@ -78,11 +76,6 @@ export function ManufacturerDetailPanel({
     queryKey: ["manufacturer-accounts", id],
     queryFn: () =>
       apiClient.get<AccountsResponse>(`/manufacturers/${id}/accounts`),
-  });
-  const templates = useQuery({
-    queryKey: ["manufacturer-templates", id],
-    queryFn: () => manufacturersApi.templates(id),
-    enabled: view === "templates",
   });
   const cancel = useMutation({
     mutationFn: manufacturersApi.cancelPayment,
@@ -103,14 +96,6 @@ export function ManufacturerDetailPanel({
     },
     onError: (error: Error) => toast.error(error.message),
   });
-  const removeTemplate = useMutation({
-    mutationFn: manufacturersApi.removeTemplate,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["manufacturer-templates"] });
-      toast.success("Đã ngừng dùng mẫu");
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
   const data = accounts.data;
   const totalDebt =
     data?.groups.reduce(
@@ -124,11 +109,9 @@ export function ManufacturerDetailPanel({
     ) ?? 0;
   const completed = data?.productions.filter((row) => row.status === 2) ?? [];
   const title = MANUFACTURER_VIEWS.find((item) => item.value === view)!.label;
-  const refreshing =
-    accounts.isFetching || (view === "templates" && templates.isFetching);
+  const refreshing = accounts.isFetching;
   const refresh = () => {
     void accounts.refetch();
-    if (view === "templates") void templates.refetch();
   };
 
   return (
@@ -603,80 +586,6 @@ export function ManufacturerDetailPanel({
                   </table>
                 </div>
               )}
-              {view === "templates" &&
-                (templates.isLoading ? (
-                  <PanelState loading />
-                ) : templates.isError ? (
-                  <PanelState onRetry={() => templates.refetch()}>
-                    Không tải được mẫu phối trộn
-                  </PanelState>
-                ) : (
-                  <div className="overflow-x-auto rounded-lg border border-gray-200">
-                    <table className="w-full min-w-[600px] text-sm">
-                      <thead className="sticky top-0 z-10 border-b border-gray-200 bg-gray-100">
-                        <tr>
-                          <th className={th}>Tên mẫu</th>
-                          <th className={`${th} text-right`}>
-                            Sản lượng cơ sở
-                          </th>
-                          <th className={th}>Tiền tệ</th>
-                          <th className={`${th} text-right`}>
-                            Phí gia công tham khảo
-                          </th>
-                          <th className="w-12" />
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200 bg-white">
-                        {templates.data?.map((row) => (
-                          <tr key={row.id} className="hover:bg-gray-50">
-                            <td
-                              className={`${td} max-w-80 break-words font-medium text-gray-900`}>
-                              {row.name}
-                            </td>
-                            <td className={`${td} text-right tabular-nums`}>
-                              {Number(row.baseQuantity).toLocaleString("vi-VN")}
-                            </td>
-                            <td className={`${td} text-gray-500`}>
-                              {row.currency}
-                            </td>
-                            <td className={`${td} text-right tabular-nums`}>
-                              {Number(row.processingFee).toLocaleString(
-                                "vi-VN",
-                                { maximumFractionDigits: 2 }
-                              )}{" "}
-                              {row.currency === "VND" ? "đ" : "CNY"}
-                            </td>
-                            <td className={td}>
-                              {canDelete && (
-                                <button
-                                  type="button"
-                                  title="Ngừng dùng mẫu"
-                                  aria-label={`Ngừng dùng mẫu ${row.name}`}
-                                  disabled={removeTemplate.isPending}
-                                  className="rounded p-1 text-red-600 hover:bg-red-50 disabled:opacity-50"
-                                  onClick={() => {
-                                    if (
-                                      confirm("Ngừng dùng mẫu phối trộn này?")
-                                    )
-                                      removeTemplate.mutate(row.id);
-                                  }}>
-                                  <Trash2 size={15} />
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                        {!templates.data?.length && (
-                          <tr>
-                            <td colSpan={5}>
-                              <PanelState>Chưa có mẫu phối trộn</PanelState>
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                ))}
             </>
           )
         )}

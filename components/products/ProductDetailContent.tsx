@@ -10,6 +10,7 @@ import Swal from "sweetalert2";
 import { ProductForm } from "./ProductForm";
 import { ComboProductForm } from "./ComboProductForm";
 import { ManufacturingProductForm } from "./ManufacturingProductForm";
+import { FormulaNsxSummary } from "./FormulaNsxSummary";
 import { ProductInventoryLogTab } from "./ProductInventoryLogTab";
 import { ProductConditionTab } from "./ProductConditionTab";
 import { ProductSupplierOrdersModal } from "./ProductSupplierOrdersModal";
@@ -235,6 +236,7 @@ export function ProductDetailContent({
   const selectedFormula =
     formulas.find((f) => f.id === selectedFormulaId) ??
     formulas.find((f) => f.isDefault) ??
+    formulas.find((f) => !f.isExternal) ??
     formulas[0];
   const components = selectedFormula
     ? selectedFormula.components
@@ -513,6 +515,7 @@ export function ProductDetailContent({
                           }`}>
                           {f.name}
                           {f.isDefault && " (mặc định)"}
+                          {f.isExternal && " (gửi SX)"}
                         </button>
                       ))}
                     </div>
@@ -650,6 +653,12 @@ export function ProductDetailContent({
                         </button>
                       </div>
                     </div>
+                  )}
+                  {selectedFormula && (
+                    <FormulaNsxSummary
+                      formula={selectedFormula}
+                      outputUnit={product.unit}
+                    />
                   )}
                 </div>
               )}

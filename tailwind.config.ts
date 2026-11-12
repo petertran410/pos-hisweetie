@@ -20,7 +20,19 @@ const config: Config = {
           dark: "var(--dt-color-primary-dark)",
           soft: "var(--dt-color-primary-soft)",
           overlay: "var(--dt-color-overlay-dark)",
+          header: "var(--dt-color-header)",
+          "header-fg": "var(--dt-color-header-fg)",
+          "header-hover": "var(--dt-color-header-hover)",
+          "header-pill": "var(--dt-color-header-pill)",
         },
+        // Thang xám theo bảng màu đang chọn (biến --g-* ở app/globals.css):
+        // A ngả teal, B slate, C ngả ấm, Gốc = gray mặc định của Tailwind.
+        gray: Object.fromEntries(
+          [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((s) => [
+            s,
+            `rgb(var(--g-${s}) / <alpha-value>)`,
+          ])
+        ),
         cyan: {
           soft: "var(--dt-color-cyan-soft)",
           pale: "var(--dt-color-cyan-pale)",
@@ -40,6 +52,17 @@ const config: Config = {
         instock: "var(--dt-color-instock)",
         outofstock: "var(--dt-color-outofstock)",
         rating: "var(--dt-color-rating)",
+      },
+      // Chữ xám nhạt đậm hơn nền/viền cùng bậc để đạt 4.5:1 (trừ bảng "Gốc").
+      textColor: {
+        gray: {
+          400: "rgb(var(--gt-400) / <alpha-value>)",
+          500: "rgb(var(--gt-500) / <alpha-value>)",
+        },
+      },
+      // bg-white = màu thẻ của bảng màu (C hơi ngả kem); text-white vẫn trắng.
+      backgroundColor: {
+        white: "rgb(var(--surface) / <alpha-value>)",
       },
       fontSize: {
         md: ["1rem", { lineHeight: "1.5rem" }],

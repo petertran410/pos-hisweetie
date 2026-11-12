@@ -1,19 +1,20 @@
-/* Theme Diệp Trà — chỉ áp dụng trong phạm vi .dt-dash để không ảnh hưởng phần còn lại của app. */
+/* Theme Diệp Trà — chỉ áp dụng trong phạm vi .dt-dash để không ảnh hưởng phần còn lại của app.
+   Màu lấy từ bảng màu đang chọn (biến --dt-color-* ở app/globals.css). */
 .dt-dash {
-  --dt-primary: #00b7cc;
-  --dt-primary-bright: #00a5b5;
-  --dt-primary-mid: #2e8b8f;
-  --dt-primary-deep: #1a5f6a;
-  --dt-primary-dark: #0d3b42;
-  --dt-cyan-soft: #a8d8e0;
-  --dt-cyan-bg: #e8f4f5;
+  --dt-primary: var(--dt-color-primary);
+  --dt-primary-bright: var(--dt-color-primary-bright);
+  --dt-primary-mid: var(--dt-color-primary-mid);
+  --dt-primary-deep: var(--dt-color-primary-deep);
+  --dt-primary-dark: var(--dt-color-primary-dark);
+  --dt-cyan-soft: var(--dt-color-cyan-soft);
+  --dt-cyan-bg: var(--dt-color-cyan-bg);
   --dt-gold: #c9a84c;
   --dt-gold-dark: #9a7a2a;
-  --dt-text: #0d3b42;
-  --dt-text-secondary: #3a6b74;
-  --dt-text-muted: #5a8a92;
-  --dt-bg-soft: #f5fafb;
-  --dt-border: #d0e5e8;
+  --dt-text: var(--dt-color-text);
+  --dt-text-secondary: var(--dt-color-text-secondary);
+  --dt-text-muted: var(--dt-color-text-muted);
+  --dt-bg-soft: var(--dt-color-bg-soft);
+  --dt-border: var(--dt-color-border);
   --dt-success: #2e8b8f;
   --dt-warning: #c9a84c;
   --dt-error: #c0392b;
@@ -23,7 +24,7 @@
   --dt-sh-hover: 0 12px 32px rgba(0, 183, 204, 0.12);
   --dt-ease: cubic-bezier(0.4, 0, 0.2, 1);
 
-  background: var(--dt-bg-soft);
+  background: var(--dt-color-canvas);
   color: var(--dt-text);
   font-family: var(--font-be-vietnam), "Inter", -apple-system, "Segoe UI",
     sans-serif;

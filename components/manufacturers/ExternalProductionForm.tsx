@@ -22,16 +22,28 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { productsApi, type Product } from "@/lib/api/products";
+import {
+  productsApi,
+  type Product,
+  type ProductFormula,
+} from "@/lib/api/products";
 import { productionsApi, type Production } from "@/lib/api/productions";
 import {
   manufacturersApi,
+  materialFromRow,
+  materialPayload,
   materialTotal,
   type ManufacturerMaterial,
   type OwnMaterial,
 } from "@/lib/api/manufacturers";
 import { useBranches } from "@/lib/hooks/useBranches";
-import { usePermission } from "@/lib/hooks/usePermissions";
+import {
+  normalizeNsxUnit,
+  round2,
+  round4,
+  scaleNsxQuantity,
+  type NsxUnit,
+} from "@/lib/utils/nsx-pricing";
 import { NumericInput } from "@/components/ui/NumericInput";
 import { PartnerPicker, ProductPicker } from "./ProductionPickers";
 import {
@@ -122,8 +134,6 @@ function ExternalProductionFormContent({
 }: ExternalFormProps) {
   const titleId = useId();
   const queryClient = useQueryClient();
-  const canCreateTemplate = usePermission("productions", "create");
-  const canUpdateTemplate = usePermission("productions", "update");
   const [draftId, setDraftId] = useState(production?.id);
   const [manufacturerId, setManufacturerId] = useState<number | null>(
     production?.manufacturerId ?? null,
@@ -144,15 +154,7 @@ function ExternalProductionFormContent({
     })),
   );
   const [supplied, setSupplied] = useState<ManufacturerMaterial[]>(() =>
-    (production?.manufacturerMaterials ?? []).map((line) => ({
-      productId: line.productId,
-      description: line.description,
-      pricingMode: line.pricingMode,
-      quantity: line.quantity == null ? null : Number(line.quantity),
-      unit: line.unit,
-      unitPrice: Number(line.unitPrice),
-      amount: Number(line.amount),
-    })),
+    (production?.manufacturerMaterials ?? []).map(materialFromRow),
   );
   const [currency, setCurrency] = useState<"VND" | "CNY">(
     production?.feeCurrency ?? "VND",
@@ -169,23 +171,17 @@ function ExternalProductionFormContent({
   );
   const [note, setNote] = useState(production?.note ?? "");
   const [code, setCode] = useState(production?.code ?? "");
-  const [templateId, setTemplateId] = useState<number | null>(
-    production?.externalTemplateId ?? null,
+  // Công thức gửi đi đã nạp (null = nhập tay). Phí / 1 sp chỉ biết khi vừa nạp
+  // công thức trong phiên này — dùng để tính lại phí khi đổi sản lượng.
+  const [formulaId, setFormulaId] = useState<number | null>(
+    production?.formulaId ?? null,
   );
-  const [templateName, setTemplateName] = useState(
-    production?.externalTemplateName ?? "",
-  );
-  const [formulaId, setFormulaId] = useState("");
+  const [feePerUnit, setFeePerUnit] = useState<number | null>(null);
 
   const product = useQuery({
     queryKey: ["products", productId],
     queryFn: () => productsApi.getProduct(productId!),
     enabled: !!productId,
-  });
-  const templates = useQuery({
-    queryKey: ["manufacturer-templates", manufacturerId, productId],
-    queryFn: () => manufacturersApi.templates(manufacturerId!, productId!),
-    enabled: !!manufacturerId && !!productId,
   });
   const manufacturer = useQuery({
     queryKey: ["manufacturer", manufacturerId],
@@ -196,24 +192,27 @@ function ExternalProductionFormContent({
   const activeBranches = branches?.filter((branch) => branch.isActive) ?? [];
   const locked = !!production && production.status !== 1;
 
+  // Phiếu theo công thức (hoặc phiếu cũ từ mẫu phối trộn): đổi sản lượng thì co
+  // giãn hàng mình, nguyên liệu NSX theo lượng và phí gia công (nếu biết phí/sp).
   const changeQuantity = (next: number) => {
-    if (templateId && quantity > 0) {
+    if ((formulaId || production?.externalTemplateId) && quantity > 0 && next > 0) {
       const scale = next / quantity;
       setOwn(
         own.map((line) => ({
           ...line,
-          quantity: Math.round(line.quantity * scale * 10000) / 10000,
+          quantity: round4(line.quantity * scale),
         })),
       );
       setSupplied(
         supplied.map((line) => ({
           ...line,
           quantity:
-            line.quantity == null
-              ? null
-              : Math.round(Number(line.quantity) * scale * 10000) / 10000,
+            line.quantity == null || line.pricingMode === "TOTAL"
+              ? line.quantity
+              : round4(Number(line.quantity) * scale),
         })),
       );
+      if (formulaId && feePerUnit != null) setFee(round2(feePerUnit * next));
     }
     setQuantity(next);
   };
@@ -231,13 +230,14 @@ function ExternalProductionFormContent({
       quantity,
       unit,
     })),
-    manufacturerMaterials: supplied,
+    // Map tường minh: server bật forbidNonWhitelisted.
+    manufacturerMaterials: supplied.map(materialPayload),
     feeCurrency: currency,
     note,
     processingFee: currency === "VND" ? fee : undefined,
     feeForeignAmount: currency === "CNY" ? fee : undefined,
     feeExchangeRate: currency === "CNY" ? rate : undefined,
-    externalTemplateId: templateId,
+    formulaId: formulaId ?? null,
   });
 
   const save = useMutation({
@@ -275,107 +275,55 @@ function ExternalProductionFormContent({
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const templateSave = useMutation({
-    mutationFn: async (update: boolean) => {
-      if (
-        !manufacturerId ||
-        !productId ||
-        !templateName.trim() ||
-        !(quantity > 0)
-      ) {
-        throw new Error(
-          "Nhập tên mẫu, nhà sản xuất, thành phẩm và sản lượng cơ sở",
-        );
-      }
-      const data = payload();
-      return manufacturersApi.saveTemplate(
-        {
-          name: templateName,
-          manufacturerId,
-          productId,
-          baseQuantity: quantity,
-          currency,
-          processingFee: fee,
-          exchangeRate: rate,
-          ownMaterials: data.ownMaterials,
-          manufacturerMaterials: supplied,
-        },
-        update ? (templateId ?? undefined) : undefined,
-      );
-    },
-    onSuccess: (saved) => {
-      setTemplateId(saved.id);
-      queryClient.invalidateQueries({
-        queryKey: ["manufacturer-templates"],
-      });
-      toast.success("Đã lưu mẫu");
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
-
-  const loadTemplate = async (id: string) => {
-    const template = templates.data?.find((item) => item.id === Number(id));
-    if (!template) {
-      setTemplateId(null);
+  // Nạp công thức gửi đi: hàng mình, nguyên liệu NSX (× sản lượng), phí gia
+  // công (phí/sp × sản lượng) và tiền tệ của công thức.
+  const applyFormula = (formula: ProductFormula) => {
+    if (
+      (own.length || supplied.length) &&
+      !confirm(
+        `Nạp "${formula.name}" sẽ thay hàng mình gửi, nguyên liệu NSX và phí gia công hiện tại. Tiếp tục?`,
+      )
+    ) {
       return;
     }
-    const scale = quantity / Number(template.baseQuantity);
-    const rows = await Promise.all(
-      template.lines
-        .filter((line) => line.source === "OWN")
-        .map(async (line) => {
-          const item = await productsApi.getProduct(line.productId!);
-          return {
-            productId: item.id,
-            code: item.code,
-            name: item.name,
-            product: item,
-            unit: line.unit || item.unit || "unit",
-            quantity: Number(line.quantity) * scale,
-          };
-        }),
-    );
-    setOwn(rows);
-    setSupplied(
-      template.lines
-        .filter((line) => line.source === "MANUFACTURER")
-        .map((line) => ({
-          productId: line.productId,
-          description: line.description,
-          pricingMode: line.pricingMode,
-          quantity:
-            line.quantity == null ? null : Number(line.quantity) * scale,
-          unit: line.unit,
-          unitPrice: Number(line.unitPrice),
-          amount: Number(line.amount),
-        })),
-    );
-    setTemplateId(template.id);
-    setTemplateName(template.name);
-    setCurrency(template.currency);
-    setRate(Number(template.exchangeRate));
-    setFee(Number(template.processingFee));
-  };
-
-  const loadFormula = () => {
-    const formula =
-      product.data?.formulas?.find(
-        (item) => String(item.id) === formulaId,
-      ) ?? product.data?.formulas?.find((item) => item.isDefault);
-    const lines = formula?.components ?? product.data?.comboComponents ?? [];
     setOwn(
-      lines.map((line) => ({
-        productId: line.componentProductId,
-        code: line.componentProduct.code,
-        name: line.componentProduct.name,
-        product: line.componentProduct,
-        quantity: Number(line.quantity) * quantity,
-        unit:
-          line.inputMode === "piece" || line.inputMode === "carton"
-            ? line.componentProduct.unit || "unit"
-            : "g",
-      })),
+      formula.components.map((line) => {
+        const item = line.componentProduct;
+        const piece = line.inputMode === "piece" || line.inputMode === "carton";
+        // Cùng quy tắc với ownConversion ở backend: thiếu weightUnit coi là gram.
+        const grams =
+          Number(item.weight ?? 0) * (item.weightUnit === "kg" ? 1000 : 1);
+        return {
+          productId: line.componentProductId,
+          code: item.code,
+          name: item.name,
+          product: item,
+          quantity: round4(Number(line.quantity) * quantity),
+          unit: piece || !(grams > 0) ? item.unit || "unit" : "g",
+        };
+      }),
     );
+    setSupplied(
+      (formula.nsxLines ?? []).map((line) => {
+        const scaled = scaleNsxQuantity(Number(line.quantity), line.unit, quantity);
+        return {
+          productId: line.productId,
+          productCode: line.product?.code ?? null,
+          description: line.product?.name ?? `#${line.productId}`,
+          pricingMode: "UNIT_PRICE" as const,
+          quantity: scaled.quantity,
+          unit: scaled.unit,
+          unitPrice: Number(line.unitPrice),
+          priceUnit: normalizeNsxUnit(line.priceUnit) as NsxUnit,
+          amount: 0,
+        };
+      }),
+    );
+    const perUnit = Number(formula.processingFeePerUnit ?? 0);
+    setFeePerUnit(perUnit);
+    setFee(round2(perUnit * quantity));
+    setCurrency(formula.currency === "CNY" ? "CNY" : "VND");
+    setFormulaId(formula.id);
   };
 
   const suppliedTotal = supplied.reduce(
@@ -386,10 +334,10 @@ function ExternalProductionFormContent({
     currency === "CNY"
       ? Math.round((suppliedTotal + fee) * rate)
       : suppliedTotal + fee;
-  const hasProductFormula =
-    !!product.data &&
-    (!!product.data.formulas?.length ||
-      !!product.data.comboComponents?.length);
+  const externalFormulas =
+    product.data?.formulas?.filter((item) => item.isExternal) ?? [];
+  const missingFormula =
+    !!formulaId && !externalFormulas.some((item) => item.id === formulaId);
   const supplierLabel = manufacturer.data?.supplier?.name
     ? manufacturer.data.supplier.name
     : "Thanh toán riêng tại nhà sản xuất";
@@ -440,7 +388,7 @@ function ExternalProductionFormContent({
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           <fieldset
-            disabled={locked || save.isPending || templateSave.isPending}
+            disabled={locked || save.isPending}
             className="min-w-0 px-4 py-5 disabled:opacity-75 sm:px-6"
           >
             <section aria-labelledby={`${titleId}-general`}>
@@ -464,8 +412,8 @@ function ExternalProductionFormContent({
                     value={manufacturerId}
                     onChange={(id) => {
                       setManufacturerId(id);
-                      setTemplateId(null);
-                      if (id) {
+                      // Đã nạp công thức thì giữ tiền tệ của công thức.
+                      if (id && !formulaId) {
                         manufacturersApi
                           .get(id)
                           .then((row) => setCurrency(row.currency))
@@ -485,8 +433,11 @@ function ExternalProductionFormContent({
                     value={productId}
                     label="Chọn thành phẩm nhận về"
                     onChange={(value) => {
+                      if (value.id !== productId) {
+                        setFormulaId(null);
+                        setFeePerUnit(null);
+                      }
                       setProductId(value.id);
-                      setTemplateId(null);
                     }}
                   />
                 </label>
@@ -570,88 +521,65 @@ function ExternalProductionFormContent({
                   id={`${titleId}-recipe`}
                   className="text-sm font-semibold text-gray-800"
                 >
-                  Mẫu & công thức
+                  Công thức gửi sản xuất
                 </h3>
               </div>
-              <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-12">
-                <label className={`${labelClass} xl:col-span-3`}>
-                  <span className="mb-1.5 block">Mẫu phối trộn</span>
+              <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-[minmax(0,24rem)_auto_minmax(0,1fr)] md:items-end">
+                <label className={labelClass}>
+                  <span className="mb-1.5 block">Công thức</span>
                   <select
+                    aria-label="Công thức gửi sản xuất"
                     className={fieldClass}
-                    value={templateId ?? ""}
+                    value={formulaId ?? ""}
+                    disabled={!productId}
                     onChange={(event) => {
-                      loadTemplate(event.target.value).catch((error: Error) =>
-                        toast.error(error.message),
-                      );
+                      const id = Number(event.target.value);
+                      if (!id) {
+                        setFormulaId(null);
+                        setFeePerUnit(null);
+                        return;
+                      }
+                      const formula = externalFormulas.find((item) => item.id === id);
+                      if (formula) applyFormula(formula);
                     }}
                   >
-                    <option value="">Không chọn mẫu</option>
-                    {templates.data?.map((item) => (
+                    <option value="">Nhập tay</option>
+                    {missingFormula && (
+                      <option value={formulaId!}>
+                        {production?.formulaName ?? "Công thức"} (không còn dùng)
+                      </option>
+                    )}
+                    {externalFormulas.map((item) => (
                       <option key={item.id} value={item.id}>
                         {item.name}
                       </option>
                     ))}
                   </select>
                 </label>
-                <label className={`${labelClass} xl:col-span-3`}>
-                  <span className="mb-1.5 block">Tên mẫu</span>
-                  <input
-                    className={fieldClass}
-                    value={templateName}
-                    onChange={(event) => setTemplateName(event.target.value)}
-                    placeholder="Nhập tên khi cần lưu mẫu"
-                  />
-                </label>
-                <div className="flex flex-wrap items-end gap-2 xl:col-span-3">
-                  {canCreateTemplate && (
-                    <button
-                      type="button"
-                      className={secondaryButtonClass}
-                      onClick={() => templateSave.mutate(false)}
-                    >
-                      <Save size={15} />
-                      Lưu mẫu mới
-                    </button>
+                <button
+                  type="button"
+                  className={secondaryButtonClass}
+                  disabled={!formulaId || missingFormula}
+                  onClick={() => {
+                    const formula = externalFormulas.find((item) => item.id === formulaId);
+                    if (formula) applyFormula(formula);
+                  }}
+                >
+                  <FileDown size={15} />
+                  Nạp lại
+                </button>
+                <p className="text-xs text-gray-500 md:pb-3">
+                  {!productId
+                    ? "Chọn thành phẩm để chọn công thức."
+                    : product.data && !externalFormulas.length
+                      ? "Thành phẩm chưa có công thức gửi đi — bật \"Dùng cho gửi đi sản xuất\" trong Sửa sản phẩm → Công thức, hoặc nhập tay bên dưới."
+                      : "Chọn công thức để nạp hàng mình gửi, nguyên liệu NSX, phí gia công và tiền tệ theo sản lượng."}
+                  {production?.externalTemplateName && (
+                    <span className="mt-1 block text-gray-400">
+                      Mẫu phối trộn (cũ): {production.externalTemplateName}
+                    </span>
                   )}
-                  {!!templateId && canUpdateTemplate && (
-                    <button
-                      type="button"
-                      className={secondaryButtonClass}
-                      onClick={() => templateSave.mutate(true)}
-                    >
-                      <Save size={15} />
-                      Cập nhật mẫu
-                    </button>
-                  )}
-                </div>
-                {hasProductFormula && (
-                  <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 md:col-span-2 xl:col-span-3">
-                    <label className={labelClass}>
-                      <span className="mb-1.5 block">Công thức sản phẩm</span>
-                      <select
-                        aria-label="Công thức sản phẩm"
-                        className={fieldClass}
-                        value={formulaId}
-                        onChange={(event) => setFormulaId(event.target.value)}
-                      >
-                        <option value="">Công thức mặc định</option>
-                        {product.data?.formulas?.map((item) => (
-                          <option key={item.id} value={item.id}>
-                            {item.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <button
-                      type="button"
-                      className={secondaryButtonClass}
-                      onClick={loadFormula}
-                    >
-                      <FileDown size={15} />
-                      Nạp
-                    </button>
-                  </div>
-                )}
+                </p>
               </div>
             </section>
 
@@ -868,6 +796,7 @@ function ExternalProductionFormContent({
                             name={`${titleId}-currency`}
                             className="sr-only"
                             checked={currency === option}
+                            disabled={!!formulaId}
                             onChange={() => setCurrency(option)}
                           />
                           {option}
@@ -876,15 +805,28 @@ function ExternalProductionFormContent({
                     </div>
                   </fieldset>
 
+                  {!!formulaId && (
+                    <p className="mt-1.5 text-xs text-gray-400">
+                      Tiền tệ theo công thức. Chọn &quot;Nhập tay&quot; để đổi.
+                    </p>
+                  )}
                   <label className={`${labelClass} mt-4`}>
                     <span className="mb-1.5 block">Phí gia công cả lô</span>
                     <NumericInput
                       className={numericClass}
                       value={fee}
-                      onValueChange={setFee}
+                      onValueChange={(value) => {
+                        setFee(value);
+                        setFeePerUnit(null);
+                      }}
                       maxFractionDigits={2}
                       formatWhileTyping
                     />
+                    {feePerUnit != null && (
+                      <span className="mt-1 block text-xs font-normal text-gray-400">
+                        = {feePerUnit.toLocaleString("vi-VN", { maximumFractionDigits: 6 })} {currency} / sp × {quantity.toLocaleString("vi-VN")}
+                      </span>
+                    )}
                   </label>
                   {currency === "CNY" && (
                     <label className={`${labelClass} mt-4`}>

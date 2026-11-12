@@ -3,7 +3,6 @@
 import {
   BookOpen,
   ClipboardList,
-  FlaskConical,
   History,
   X,
 } from "lucide-react";
@@ -12,7 +11,6 @@ export type ManufacturerView =
   | "info"
   | "debt"
   | "productions"
-  | "templates"
   | "costHistory";
 export type ManufacturerStatus = "all" | "active" | "inactive";
 export type ManufacturerBooleanFilter = "all" | "yes" | "no";
@@ -21,7 +19,6 @@ export const MANUFACTURER_VIEWS = [
   { value: "info", label: "Thông tin nhà sản xuất", icon: BookOpen },
   { value: "debt", label: "Công nợ nhà sản xuất", icon: ClipboardList },
   { value: "productions", label: "Phiếu gửi sản xuất", icon: ClipboardList },
-  { value: "templates", label: "Mẫu phối trộn", icon: FlaskConical },
   { value: "costHistory", label: "Lịch sử giá thành", icon: History },
 ] as const;
 

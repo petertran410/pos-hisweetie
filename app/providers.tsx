@@ -9,6 +9,7 @@ import { Toaster, toast } from "sonner";
 import { useEffect, useState } from "react";
 import { initBranchCrossTabSync } from "@/lib/store/branch";
 import { initNotificationPrefsCrossTabSync } from "@/lib/store/notificationPrefs";
+import { initPaletteCrossTabSync } from "@/lib/store/palette";
 import { LeadExtensionBridge } from "@/components/leads/LeadExtensionBridge";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -66,6 +67,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   // Đồng bộ trạng thái "tắt thông báo" (mute chuông) giữa các tab.
   useEffect(() => initNotificationPrefsCrossTabSync(), []);
+  useEffect(() => initPaletteCrossTabSync(), []);
 
   return (
     <QueryClientProvider client={queryClient}>
