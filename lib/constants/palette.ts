@@ -1,11 +1,11 @@
 /**
- * Bảng màu giao diện (Gốc / A / B / C). Màu thực tế khai báo ở `app/globals.css`
+ * Bảng màu giao diện (Gốc / A / B / C / Tối). Màu thực tế khai báo ở `app/globals.css`
  * (khối `:root[data-palette=…]`), chọn qua attribute `data-palette` trên `<html>`.
  * `"orig"` (Gốc) là mặc định nên không cần attribute; A/B/C do người dùng tự chọn.
  *
  * File này không phụ thuộc client để `app/layout.tsx` (server) dùng được.
  */
-export type Palette = "a" | "b" | "c" | "orig";
+export type Palette = "a" | "b" | "c" | "dark" | "orig";
 
 export const DEFAULT_PALETTE: Palette = "orig";
 
@@ -39,8 +39,14 @@ export const PALETTES: {
   {
     value: "c",
     label: "Graphite ấm",
-    hint: "Dịu mắt, ít ánh xanh",
-    swatch: ["#26313A", "#F2F0EC"],
+    hint: "Giấy kem, giảm ~22% ánh xanh",
+    swatch: ["#3A302A", "#FAF2E4"],
+  },
+  {
+    value: "dark",
+    label: "Tối",
+    hint: "Nền than, dịu khi làm đêm",
+    swatch: ["#102428", "#0B1416"],
   },
 ];
 

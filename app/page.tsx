@@ -286,7 +286,8 @@ function HomeContent() {
       </div>
 
       {/* ── Desktop (từ md) ── */}
-      <div className="hidden md:block dt-dash min-h-[calc(100vh-56px)] overflow-auto">
+      {/* palette-orig: giữ sáng trong bảng Tối cho tới khi biểu đồ chuyển sang biến màu (đợt 2). */}
+      <div className="hidden md:block dt-dash palette-orig min-h-[calc(100vh-56px)] overflow-auto">
         {/* Subbar */}
         <div className="flex items-center gap-[14px] flex-wrap px-7 pt-4 pb-[14px]">
           <div className="mr-auto">

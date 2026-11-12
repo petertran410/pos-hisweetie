@@ -8,12 +8,8 @@ html {
 
 /* ---------- Diệp Trà brand tokens dùng chung mọi bảng màu (nguồn: dieptra-theme/tokens.css) ---------- */
 :root {
-  --foreground: #171717;
   --dt-color-gold: #c9a84c;
   --dt-color-gold-light: #e8c96a;
-  --dt-color-sale: #c0392b;
-  --dt-color-instock: #2e8b8f;
-  --dt-color-outofstock: #c0392b;
   --dt-color-rating: #c9a84c;
   --dt-color-gold-soft: rgba(201, 168, 76, 0.12);
   --dt-color-overlay-dark: rgba(13, 59, 66, 0.4);
@@ -26,15 +22,35 @@ html {
 
 /* ---------- Bảng màu giao diện (chọn ở components/layout/PaletteSwitcher) ----------
    data-palette trên <html> do script trong app/layout.tsx set trước khi vẽ trang.
-   Không có attribute = Gốc (mặc định); A/B/C do người dùng tự chọn. Thang gray của Tailwind, bg-white, màu brand,
+   Không có attribute = Gốc (mặc định); A/B/C/Tối do người dùng tự chọn. Thang gray của Tailwind, bg-white, màu brand,
    dải menu, nền trang và header bảng đều lấy từ các biến dưới đây
    (tailwind.config.ts + app/dashboard.css), nên đổi bảng màu không phải sửa component.
    --g-* / --gt-* / --surface là kênh RGB để Tailwind dùng được độ mờ (bg-gray-50/60).
-   --gt-400/500: màu CHỮ text-gray-400/500 (đậm hơn nền/viền cùng bậc để đạt 4.5:1). */
+   --gt-400/500: màu CHỮ text-gray-400/500 (đậm hơn nền/viền cùng bậc để đạt 4.5:1).
+   --gb-600..950: NỀN bg-gray-600..950 (tooltip tối) — ở bảng Tối không bị đảo thành sáng.
+   --dt-text-brand…, --dt-text-black: màu CHỮ của text-brand… và text-black, tách khỏi màu nền nút để bảng Tối dùng teal sáng.
+   Màu badge (bg-red-100, text-green-700…) do plugin trong tailwind.config.ts sinh biến --c-*. */
 
 /* Gốc (mặc định) · giao diện trước khi đổi màu: Tailwind gray mặc định, teal #00b7cc,
-   menu trắng. Trang công khai (/cong-thuc, /f/) luôn dùng bảng này. */
-:root {
+   menu trắng. Trang công khai (/cong-thuc, /f/) luôn dùng bảng này.
+   .palette-orig: vùng con luôn hiển thị sáng (vd. báo cáo chưa chuyển sang Tối, trình sửa mẫu in). */
+:root,
+.palette-orig {
+  --foreground: #171717;
+  --dt-text-brand: var(--dt-color-primary);
+  --dt-text-brand-bright: var(--dt-color-primary-bright);
+  --dt-text-brand-mid: var(--dt-color-primary-mid);
+  --dt-text-brand-deep: var(--dt-color-primary-deep);
+  --dt-text-brand-dark: var(--dt-color-primary-dark);
+  --dt-text-black: 0 0 0;
+  --gb-600: var(--g-600);
+  --gb-700: var(--g-700);
+  --gb-800: var(--g-800);
+  --gb-900: var(--g-900);
+  --gb-950: var(--g-950);
+  --dt-color-sale: #c0392b;
+  --dt-color-instock: #2e8b8f;
+  --dt-color-outofstock: #c0392b;
   --background: #ffffff;
   --surface: 255 255 255;
   --g-50: 249 250 251;
@@ -159,48 +175,138 @@ html {
   --dt-color-header-pill: #0b63ce;
 }
 
-/* C · Graphite ấm (trung tính ngả ấm, thẻ kem nhạt) */
+/* C · Graphite ấm: thẻ giấy kem #faf2e4 (≈ −22% ánh xanh, 5757K), menu nâu graphite.
+   Thang --g-* tính theo thẻ kem để gray-50 luôn hơi tối hơn thẻ (không thành mảng sáng). */
 :root[data-palette="c"] {
-  --background: #fffdf9;
-  --surface: 255 253 249;
-  --g-50: 252 250 247;
-  --g-100: 247 243 238;
-  --g-200: 236 230 223;
-  --g-300: 219 212 202;
-  --g-400: 171 161 149;
-  --g-500: 123 112 98;
-  --g-600: 94 83 68;
-  --g-700: 74 63 47;
-  --g-800: 49 39 24;
-  --g-900: 32 23 9;
-  --g-950: 12 6 1;
-  --gt-400: 126 116 103;
-  --gt-500: 108 98 84;
+  --background: #faf2e4;
+  --surface: 250 242 228;
+  --g-50: 245 237 227;
+  --g-100: 241 231 218;
+  --g-200: 230 218 203;
+  --g-300: 213 200 184;
+  --g-400: 173 161 145;
+  --g-500: 123 112 97;
+  --g-600: 93 83 69;
+  --g-700: 73 63 49;
+  --g-800: 48 39 27;
+  --g-900: 30 23 13;
+  --g-950: 11 6 2;
+  --gt-400: 119 108 93;
+  --gt-500: 102 92 78;
   --dt-color-primary: #00818f;
   --dt-color-primary-bright: #006e7a;
   --dt-color-primary-mid: #2e8b8f;
   --dt-color-primary-deep: #1a5f6a;
   --dt-color-primary-dark: #0d3b42;
-  --dt-color-cyan-soft: #cfe3e2;
-  --dt-color-cyan-pale: #d9eae9;
-  --dt-color-cyan-bg: #e3f1f1;
-  --dt-color-border: #e2dcd2;
-  --dt-color-border-strong: #9a8f82;
+  --dt-color-cyan-soft: #cbe0da;
+  --dt-color-cyan-pale: #d7e8e3;
+  --dt-color-cyan-bg: #e2eeea;
+  --dt-color-border: #e3d7c4;
+  --dt-color-border-strong: #978a76;
   --dt-color-price: #0d3b42;
   --dt-color-primary-soft: rgba(0, 129, 143, 0.1);
   --dt-color-primary-ring: rgba(0, 129, 143, 0.15);
   --dt-color-text: #2a2520;
   --dt-color-text-secondary: #5a5249;
   --dt-color-text-muted: #6a6156;
-  --dt-color-bg-soft: #f8f5f0;
-  --dt-color-canvas: #f2f0ec;
-  --dt-color-table-head: #eae5dc;
-  --dt-color-header: #26313a;
+  --dt-color-bg-soft: #f5ede3;
+  --dt-color-canvas: #f1e9db;
+  --dt-color-table-head: #e9decb;
+  --dt-color-header: #3a302a;
   --dt-color-header-fg: #ffffff;
   --dt-color-header-hover: rgb(255 255 255 / 0.12);
-  --dt-color-header-pill: #26313a;
+  --dt-color-header-pill: #3a302a;
 }
 
+
+/* Tối · nền than ngả teal, chữ sáng. Nút chính teal đậm (chữ trắng 4.7:1); chữ brand
+   dùng teal sáng #4cc3d0 (7.9:1 trên thẻ). Thang --g-* đảo ngược: 50 = nền phụ, 900 = chữ. */
+:root[data-palette="dark"] {
+  color-scheme: dark;
+  --foreground: #e3ecee;
+  --background: #0d1719; /* = nền trang, để vùng ngoài khung không lộ dải sáng hơn */
+  --surface: 21 32 35;
+  --g-50: 28 40 43;
+  --g-100: 35 49 53;
+  --g-200: 47 63 67;
+  --g-300: 66 84 88;
+  --g-400: 108 128 132;
+  --g-500: 140 160 164;
+  --g-600: 170 187 190;
+  --g-700: 196 210 212;
+  --g-800: 216 226 228;
+  --g-900: 232 239 240;
+  --g-950: 244 248 248;
+  --gt-400: 138 158 162;
+  --gt-500: 163 181 184;
+  --gb-600: 74 92 96;
+  --gb-700: 58 74 78;
+  --gb-800: 47 61 65;
+  --gb-900: 40 58 62;
+  --gb-950: 30 42 46;
+  --dt-text-brand: #4cc3d0;
+  --dt-text-brand-bright: #5fd0dc;
+  --dt-text-brand-mid: #6bc4ca;
+  --dt-text-brand-deep: #7fd3da;
+  --dt-text-brand-dark: #cfe8eb;
+  --dt-text-black: 232 239 240;
+  --dt-color-sale: #f08a7e;
+  --dt-color-instock: #5bc0be;
+  --dt-color-outofstock: #f08a7e;
+  --dt-color-primary: #0b7f8c;
+  --dt-color-primary-bright: #0e95a3;
+  --dt-color-primary-mid: #3fa7ae;
+  --dt-color-primary-deep: #1f7d86;
+  --dt-color-primary-dark: #0a5c66;
+  --dt-color-cyan-soft: #1e4c53;
+  --dt-color-cyan-pale: #1a424a;
+  --dt-color-cyan-bg: #173a40;
+  --dt-color-border: #2e3d41;
+  --dt-color-border-strong: #71878b;
+  --dt-color-price: #cfe8eb;
+  --dt-color-primary-soft: rgba(76, 195, 208, 0.14);
+  --dt-color-primary-ring: rgba(76, 195, 208, 0.25);
+  --dt-color-text: #e3ecee;
+  --dt-color-text-secondary: #b3c5c8;
+  --dt-color-text-muted: #93a9ad;
+  --dt-color-bg-soft: #1c282b;
+  --dt-color-canvas: #0d1719;
+  --dt-color-table-head: #1e3236;
+  --dt-color-header: #0f2427;
+  --dt-color-header-fg: #e3ecee;
+  --dt-color-header-hover: rgb(255 255 255 / 0.08);
+  --dt-color-header-pill: #4cc3d0;
+}
+
+/* Vùng giữ sáng bên trong bảng Tối: chữ mặc định và control native về lại kiểu sáng. */
+.palette-orig {
+  color: var(--foreground);
+  color-scheme: light;
+}
+
+
+/* Ô nhập và popup xác nhận cùng màu thẻ của bảng màu (Gốc/A/B: trắng như cũ).
+   :where() → specificity 0: mọi class bg-* có sẵn vẫn thắng. */
+@layer base {
+  :where(
+      input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"]),
+      select,
+      textarea
+    ) {
+    background-color: rgb(var(--surface));
+  }
+}
+.swal2-popup {
+  background: rgb(var(--surface));
+}
+:root[data-palette="dark"] .swal2-popup {
+  color: var(--foreground);
+}
+:root[data-palette="dark"] :is(.swal2-input, .swal2-textarea, .swal2-select, .swal2-file) {
+  background: rgb(var(--g-50));
+  color: var(--foreground);
+  border-color: rgb(var(--g-300));
+}
 
 /* Header bảng tô màu (kiểu KiotViet) cho mọi thead dùng bg-gray-50/100 — specificity
    cao hơn .bg-gray-50 nên không phải sửa từng bảng. Bảng "Gốc" giữ header xám như cũ. */
@@ -289,7 +395,7 @@ body {
 /* Sidebar scrollbar — thin, always visible, no layout jump */
 .custom-sidebar-scroll {
   scrollbar-width: thin; /* Firefox */
-  scrollbar-color: #e2e8f0 transparent; /* Firefox */
+  scrollbar-color: rgb(var(--g-200)) transparent; /* Firefox */
   overflow-y: scroll; /* luôn reserve space */
 }
 
@@ -302,12 +408,12 @@ body {
 }
 
 .custom-sidebar-scroll::-webkit-scrollbar-thumb {
-  background-color: #e2e8f0;
+  background-color: rgb(var(--g-200));
   border-radius: 9999px;
 }
 
 .custom-sidebar-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: #cbd5e1;
+  background-color: rgb(var(--g-300));
 }
 
 .custom-sidebar-scroll:hover {

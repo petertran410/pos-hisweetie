@@ -233,7 +233,7 @@ export function CustomerDemandImportModal({
                   ))}
                 </div>
                 {preview.invalid > 0 && (
-                  <div className="flex gap-2 rounded-[14px] bg-[rgba(192,57,43,0.06)] px-3 py-2 text-sm text-[#9b2c2c] shadow-[inset_0_0_0_1px_rgba(192,57,43,0.16)]">
+                  <div className="flex gap-2 rounded-[14px] bg-[rgba(192,57,43,0.06)] px-3 py-2 text-sm text-[#9b2c2c] dark:text-[#f08a7e] shadow-[inset_0_0_0_1px_rgba(192,57,43,0.16)]">
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.5} />
                     Còn {preview.invalid} dòng lỗi. Sửa file rồi tải lại; hệ
                     thống không ghi dữ liệu khi còn lỗi.
@@ -286,7 +286,7 @@ export function CustomerDemandImportModal({
                           </td>
                           <td>
                             {row.errors.length ? (
-                              <span className="text-xs text-[#9b2c2c]">
+                              <span className="text-xs text-[#9b2c2c] dark:text-[#f08a7e]">
                                 {row.errors.join("; ")}
                               </span>
                             ) : (row.voucherIndex ?? 1) > 1 ? (

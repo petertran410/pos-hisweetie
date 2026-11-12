@@ -79,7 +79,8 @@ export function PrintTemplateEditorModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white w-full h-full flex flex-col">
+      {/* palette-orig: trình sửa mẫu in là "giấy", luôn hiển thị sáng. */}
+      <div className="palette-orig bg-white w-full h-full flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-3 border-b">
           <div className="flex items-center gap-2">
