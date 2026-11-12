@@ -120,6 +120,10 @@ const UI_ONLY_FILTER_KEYS = [
   "_updatedDateMode",
   "_updatedFromDate",
   "_updatedToDate",
+  "_misaSyncedPreset",
+  "_misaSyncedDateMode",
+  "_misaSyncedFromDate",
+  "_misaSyncedToDate",
   "_customerLabel",
 ];
 
@@ -146,6 +150,7 @@ const countActiveFilters = (f: any): number => {
   if (f.paymentMethod) n++;
   if (f._preset || f.fromCreatedDate || f.toCreatedDate) n++;
   if (f._updatedPreset || f.fromUpdatedDate || f.toUpdatedDate) n++;
+  if (f._misaSyncedPreset || f.fromMisaSyncedDate || f.toMisaSyncedDate) n++;
   return n;
 };
 
@@ -323,6 +328,20 @@ function HoaDonVatMobileFilterSheet({
     filters._updatedToDate || isoToDateInput(filters.toUpdatedDate)
   );
 
+  // Thời gian đẩy Misa (misaSyncedAt)
+  const [misaSyncedDateMode, setMisaSyncedDateMode] = useState<
+    "preset" | "custom"
+  >(filters._misaSyncedDateMode || "preset");
+  const [misaSyncedPreset, setMisaSyncedPreset] = useState<string>(
+    filters._misaSyncedPreset || "all_time"
+  );
+  const [misaSyncedFromDate, setMisaSyncedFromDate] = useState<string>(
+    filters._misaSyncedFromDate || isoToDateInput(filters.fromMisaSyncedDate)
+  );
+  const [misaSyncedToDate, setMisaSyncedToDate] = useState<string>(
+    filters._misaSyncedToDate || isoToDateInput(filters.toMisaSyncedDate)
+  );
+
   const handleApply = () => {
     const f: any = {
       pageSize: 15,
@@ -382,6 +401,28 @@ function HoaDonVatMobileFilterSheet({
       if (updatedToDate) f.toUpdatedDate = dateInputToIsoEnd(updatedToDate);
     }
 
+    if (
+      misaSyncedDateMode === "preset" &&
+      misaSyncedPreset &&
+      misaSyncedPreset !== "all_time"
+    ) {
+      const range = getDateRangeFromPreset(misaSyncedPreset);
+      f._misaSyncedPreset = misaSyncedPreset;
+      f.fromMisaSyncedDate = range.from.toISOString();
+      f.toMisaSyncedDate = range.to.toISOString();
+    } else if (
+      misaSyncedDateMode === "custom" &&
+      (misaSyncedFromDate || misaSyncedToDate)
+    ) {
+      f._misaSyncedDateMode = "custom";
+      f._misaSyncedFromDate = misaSyncedFromDate;
+      f._misaSyncedToDate = misaSyncedToDate;
+      if (misaSyncedFromDate)
+        f.fromMisaSyncedDate = dateInputToIsoStart(misaSyncedFromDate);
+      if (misaSyncedToDate)
+        f.toMisaSyncedDate = dateInputToIsoEnd(misaSyncedToDate);
+    }
+
     onApply(f);
   };
 
@@ -406,6 +447,10 @@ function HoaDonVatMobileFilterSheet({
     setUpdatedPreset("all_time");
     setUpdatedFromDate("");
     setUpdatedToDate("");
+    setMisaSyncedDateMode("preset");
+    setMisaSyncedPreset("all_time");
+    setMisaSyncedFromDate("");
+    setMisaSyncedToDate("");
   };
 
   const dateSummary =
@@ -420,6 +465,13 @@ function HoaDonVatMobileFilterSheet({
       ? `${updatedFromDate || "…"} → ${updatedToDate || "…"}`
       : updatedPreset !== "all_time"
         ? DATE_PRESETS.find((p) => p.value === updatedPreset)?.label
+        : undefined;
+
+  const misaSyncedDateSummary =
+    misaSyncedDateMode === "custom" && (misaSyncedFromDate || misaSyncedToDate)
+      ? `${misaSyncedFromDate || "…"} → ${misaSyncedToDate || "…"}`
+      : misaSyncedPreset !== "all_time"
+        ? DATE_PRESETS.find((p) => p.value === misaSyncedPreset)?.label
         : undefined;
 
   const userOptions: ChipOption[] = (users ?? []).map((u: any) => ({
@@ -449,6 +501,9 @@ function HoaDonVatMobileFilterSheet({
     updatedDateMode === "custom"
       ? !!(updatedFromDate || updatedToDate)
       : updatedPreset !== "all_time",
+    misaSyncedDateMode === "custom"
+      ? !!(misaSyncedFromDate || misaSyncedToDate)
+      : misaSyncedPreset !== "all_time",
   ].filter(Boolean).length;
 
   return (
@@ -504,6 +559,23 @@ function HoaDonVatMobileFilterSheet({
             setUpdatedPreset(next.preset);
             setUpdatedFromDate(next.fromDate);
             setUpdatedToDate(next.toDate);
+          }}
+        />
+      </FilterSection>
+
+      {/* Thời gian đẩy Misa */}
+      <FilterSection label="Thời gian đẩy Misa" summary={misaSyncedDateSummary}>
+        <DateRangeFilter
+          presets={DATE_PRESETS}
+          mode={misaSyncedDateMode}
+          preset={misaSyncedPreset}
+          fromDate={misaSyncedFromDate}
+          toDate={misaSyncedToDate}
+          onChange={(next) => {
+            setMisaSyncedDateMode(next.mode);
+            setMisaSyncedPreset(next.preset);
+            setMisaSyncedFromDate(next.fromDate);
+            setMisaSyncedToDate(next.toDate);
           }}
         />
       </FilterSection>

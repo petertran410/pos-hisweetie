@@ -1,9 +1,9 @@
 import {
   keepPreviousData,
   useMutation,
-  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { useAnalyticsQuery } from "@/lib/hooks/analyticsQuery";
 import { toast } from "sonner";
 import {
   kpiSaleApi,
@@ -26,7 +26,7 @@ function useReady() {
 
 export function useKpiSaleOptions() {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "options"],
     queryFn: () => kpiSaleApi.options(),
     enabled: ready,
@@ -36,7 +36,7 @@ export function useKpiSaleOptions() {
 
 export function useKpiSaleIncome(f: KpiSaleFilters) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "sale-income", f],
     queryFn: () => kpiSaleApi.saleIncome(f),
     enabled: ready,
@@ -47,7 +47,7 @@ export function useKpiSaleIncome(f: KpiSaleFilters) {
 
 export function useKpiSaleDaily(f: KpiSaleDailyFilters) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "theo-ngay", f],
     queryFn: () => kpiSaleApi.daily(f),
     enabled: ready,
@@ -58,7 +58,7 @@ export function useKpiSaleDaily(f: KpiSaleDailyFilters) {
 
 export function useKpiSaleOrder(f: KpiSaleOrderFilters) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "len-don-ho", f],
     queryFn: () => kpiSaleApi.orderOnBehalf(f),
     enabled: ready,
@@ -69,7 +69,7 @@ export function useKpiSaleOrder(f: KpiSaleOrderFilters) {
 
 export function useKpiSaleLogic(f: KpiSaleFilters) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "logic", f],
     queryFn: () => kpiSaleApi.logic(f),
     enabled: ready,
@@ -83,7 +83,7 @@ const CFG_KEY = [...KEY, "config"] as const;
 
 export function useKpiConfigOptions() {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...CFG_KEY, "options"],
     queryFn: () => kpiSaleApi.configOptions(),
     enabled: ready,
@@ -97,7 +97,7 @@ export function useKpiConfigList<T>(
   extraKey: unknown = null,
 ) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...CFG_KEY, table, extraKey],
     queryFn: fetcher,
     enabled: ready,

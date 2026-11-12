@@ -1,4 +1,5 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
+import { useAnalyticsQuery } from "@/lib/hooks/analyticsQuery";
 import {
   analyticsKdApi,
   CustomerSection,
@@ -18,7 +19,22 @@ function useReady() {
 
 const KEY = ["reports", "analytics", "kinh-doanh"] as const;
 
-/** Bỏ chỉ số (metric) khỏi khoá cache khi trang không dùng tới — chỉ đổi cách hiển thị. */
+/** Backend Kinh Doanh không dùng metric (chỉ đổi cách hiển thị) → bỏ khỏi khoá cache. */
+function withoutMetric(params: unknown): unknown {
+  if (!params || typeof params !== "object" || Array.isArray(params))
+    return params;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(params as Record<string, unknown>)) {
+    if (k === "metric") continue;
+    out[k] =
+      v && typeof v === "object" && !Array.isArray(v) && "metric" in v
+        ? withoutMetric(v)
+        : v;
+  }
+  return out;
+}
+
+/** Query dùng chung của Kinh Doanh. */
 function useKdQuery<T>(
   name: string,
   params: unknown,
@@ -26,8 +42,8 @@ function useKdQuery<T>(
   enabled = true,
 ) {
   const ready = useReady();
-  return useQuery({
-    queryKey: [...KEY, name, params],
+  return useAnalyticsQuery({
+    queryKey: [...KEY, name, withoutMetric(params)],
     queryFn: fn,
     enabled: ready && enabled,
     placeholderData: keepPreviousData,
@@ -37,7 +53,7 @@ function useKdQuery<T>(
 
 export function useKdOptions() {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "options"],
     queryFn: () => analyticsKdApi.options(),
     enabled: ready,

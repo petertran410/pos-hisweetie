@@ -40,6 +40,7 @@ export default function HoaDonVatPage() {
           onFiltersChange={handleFiltersChange}
           showMisaEmployeeFilter
           showUpdatedTimeFilter
+          showMisaSyncedTimeFilter
         />
         <HoaDonVatTable filters={filters} />
       </div>

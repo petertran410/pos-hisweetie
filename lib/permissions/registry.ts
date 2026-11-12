@@ -52,6 +52,7 @@ export const ROUTE_PERMISSIONS: Record<
     action: "view",
   },
   "/san-pham/san-xuat": { resource: "productions", action: "view" },
+  "/san-pham/nha-san-xuat": { resource: "productions", action: "view" },
   "/san-pham/pha-che": { resource: "recipes", action: "view" },
   "/san-pham/xuat-huy": { resource: "destructions", action: "view" },
   "/san-pham/xuat-dung-noi-bo": { resource: "internal-use", action: "view" },
@@ -205,6 +206,12 @@ export const NAV_CONFIG: NavSection[] = [
         label: "Nhà máy",
         href: "/san-pham/nha-may",
         permission: { resource: "factories", action: "view" },
+      },
+      {
+        key: "manufacturers",
+        label: "Nhà sản xuất",
+        href: "/san-pham/nha-san-xuat",
+        permission: { resource: "productions", action: "view" },
       },
       {
         key: "factory-price-trend",

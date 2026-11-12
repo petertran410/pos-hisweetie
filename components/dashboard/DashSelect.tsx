@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Calendar, Check, ChevronLeft } from "lucide-react";
 import { MiniCalendar } from "@/components/shared/TimeRangeFilter";
 import type { CustomDates } from "@/lib/api/dashboard";
@@ -157,7 +163,37 @@ function CustomPanel({
 }
 
 const POPOVER =
-  "absolute right-0 top-full mt-1 z-50 bg-white border rounded-lg shadow-lg";
+  "absolute top-full mt-1 z-50 bg-white border rounded-lg shadow-lg";
+
+/**
+ * Popover mặc định canh mép phải nút. Nếu canh phải làm nó tràn qua mép trái của
+ * khung cuộn / màn hình (vd. nút đứng đầu thanh lọc bên trái → chữ bị cắt) thì canh trái.
+ */
+function usePopoverAlignLeft(
+  anchorRef: React.RefObject<HTMLElement | null>,
+  popRef: React.RefObject<HTMLElement | null>,
+  open: boolean,
+  view: string,
+) {
+  const [alignLeft, setAlignLeft] = useState(false);
+  useLayoutEffect(() => {
+    const anchor = anchorRef.current;
+    const pop = popRef.current;
+    if (!open || !anchor || !pop) return;
+    let minLeft = 0;
+    for (let el = anchor.parentElement; el; el = el.parentElement) {
+      const s = getComputedStyle(el);
+      if (s.overflowX !== "visible") {
+        minLeft = el.getBoundingClientRect().left;
+        break;
+      }
+    }
+    const rightAlignedLeft =
+      anchor.getBoundingClientRect().right - pop.offsetWidth;
+    setAlignLeft(rightAlignedLeft < minLeft + 4);
+  }, [anchorRef, popRef, open, view]);
+  return alignLeft;
+}
 
 /**
  * Dropdown kiểu dt-select (có dấu ✓ ở mục đang chọn). Bật `allowCustom` để có
@@ -186,6 +222,8 @@ export function DashSelect<K extends string>({
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"list" | "custom">("list");
   const ref = useRef<HTMLDivElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const alignLeft = usePopoverAlignLeft(ref, popRef, open, view);
   const close = () => {
     setOpen(false);
     setView("list");
@@ -209,7 +247,10 @@ export function DashSelect<K extends string>({
         {label}
       </button>
       {open && (
-        <div className={POPOVER} style={{ borderColor: "var(--dt-border)" }}>
+        <div
+          ref={popRef}
+          className={`${POPOVER} ${alignLeft ? "left-0" : "right-0"}`}
+          style={{ borderColor: "var(--dt-border)" }}>
           {view === "list" ? (
             <div className="py-1 min-w-[190px]">
               {options.map((o) => {

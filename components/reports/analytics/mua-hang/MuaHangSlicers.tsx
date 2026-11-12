@@ -2,13 +2,13 @@
 
 import type { ReactNode } from "react";
 import { RotateCcw } from "lucide-react";
-import { DashSelect } from "@/components/dashboard/DashSelect";
 import { FilterMultiSelect } from "@/components/ui/filters";
 import type {
   MuaHangDemandFilters,
   MuaHangFilterOptions,
 } from "@/lib/api/analytics-mua-hang";
 import { optionLabel } from "./muaHangFormat";
+import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
 
 const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
   value: String(i + 1),
@@ -65,7 +65,6 @@ export function MuaHangSlicers<F extends Filters>({
     key: ArrKey,
     list: { value: string; label: string }[],
     placeholder: string,
-    searchable = true,
   ) => (
     <FilterMultiSelect
       key={key}
@@ -75,7 +74,6 @@ export function MuaHangSlicers<F extends Filters>({
         set({ [key]: vals.length ? vals : undefined } as Partial<F>)
       }
       placeholder={placeholder}
-      searchable={searchable}
       multiLabel={(n) => `${placeholder.split(":")[0]}: ${n} mục`}
     />
   );
@@ -103,7 +101,6 @@ export function MuaHangSlicers<F extends Filters>({
             : options?.branches,
         ),
         "Kho: Tất cả",
-        false,
       ),
     );
   if (show.productTypes)
@@ -124,7 +121,6 @@ export function MuaHangSlicers<F extends Filters>({
         "visualGroups",
         strOpts(options?.visualGroups),
         "Nhóm hàng: Tất cả",
-        false,
       ),
     );
   if (show.groups2026)
@@ -133,7 +129,6 @@ export function MuaHangSlicers<F extends Filters>({
         "groups2026",
         strOpts(options?.groups2026),
         "Nhóm hàng 2026: Tất cả",
-        false,
       ),
     );
   if (show.categories)
@@ -176,8 +171,7 @@ export function MuaHangSlicers<F extends Filters>({
         <div className="flex flex-wrap items-center gap-2.5">
           {show.period && (
             <>
-              <DashSelect
-                ariaLabel="Năm"
+              <AnalyticsSelect
                 options={yearOptions}
                 value={filters.year ? String(filters.year) : "all"}
                 onChange={(k) =>
@@ -185,7 +179,7 @@ export function MuaHangSlicers<F extends Filters>({
                     year: k === "all" ? undefined : Number(k),
                   } as Partial<F>)
                 }
-                size="md"
+                className="w-36"
               />
               <div className="w-44">
                 <FilterMultiSelect
@@ -199,7 +193,6 @@ export function MuaHangSlicers<F extends Filters>({
                     } as Partial<F>)
                   }
                   placeholder="Cả năm"
-                  searchable={false}
                   multiLabel={(n) => `${n} tháng`}
                 />
               </div>

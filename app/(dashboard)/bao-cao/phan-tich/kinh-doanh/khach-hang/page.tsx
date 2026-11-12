@@ -30,6 +30,7 @@ import type {
   KdFilters,
 } from "@/lib/api/analytics-kinh-doanh";
 import { useKdCustomer, useKdOptions } from "@/lib/hooks/useAnalyticsKinhDoanh";
+import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
 
 // Nút "Navigator - Khách" của Power BI (bookmark) → các phần của trang.
 const SECTIONS: { key: CustomerSection; label: string }[] = [
@@ -122,17 +123,16 @@ export default function Page() {
               </button>
             ))}
           </div>
-          <select
-            className="text-[13px] border rounded-lg px-2.5 py-1.5"
+          <AnalyticsSelect
+            options={(options?.demandCustomers ?? []).map((c) => ({
+              value: c.code,
+              label: c.name,
+            }))}
             value={demandCustomer}
-            onChange={(e) => setDemandCustomer(e.target.value)}>
-            <option value="">Tên Chuỗi: Tất cả</option>
-            {(options?.demandCustomers ?? []).map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+            onChange={setDemandCustomer}
+            clearLabel="Tên Chuỗi: Tất cả"
+            className="w-72"
+          />
         </div>
       )}
 

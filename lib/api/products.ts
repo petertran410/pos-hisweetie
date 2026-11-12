@@ -344,7 +344,7 @@ export interface StockConditionLog {
   refId: number;
   quantity: number;
   expiryDate?: string | null;
-  costPrice: number;
+  costPrice?: number;
   note?: string | null;
   transactionDate?: string;
   createdAt: string;
@@ -385,7 +385,7 @@ export interface InventoryLog {
   refType: string;
   refId: number;
   quantity: number;
-  costPrice: number;
+  costPrice?: number;
   transactionPrice?: number | null;
   partnerId?: number | null;
   partnerName?: string | null;

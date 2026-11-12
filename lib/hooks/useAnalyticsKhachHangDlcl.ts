@@ -1,8 +1,5 @@
-import {
-  keepPreviousData,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
+import { useAnalyticsQuery } from "@/lib/hooks/analyticsQuery";
 import { useCallback } from "react";
 import {
   analyticsDlclApi,
@@ -24,7 +21,7 @@ function useReady() {
 
 export function useDlclOptions() {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "options"],
     queryFn: () => analyticsDlclApi.getOptions(),
     enabled: ready,
@@ -35,7 +32,7 @@ export function useDlclOptions() {
 /** Số liệu 1 trang (T = kiểu dữ liệu trả về của trang). */
 export function useDlclReport<T>(page: DlclPage, filters: DlclFilters) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, page, filters],
     queryFn: () => analyticsDlclApi.get<T>(page, filters),
     enabled: ready,
@@ -66,7 +63,7 @@ const CFG_KEY = ["reports", "analytics", "config", "khach-hang-dlcl"] as const;
 
 export function useStrategicPrograms() {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...CFG_KEY, "programs"],
     queryFn: () => analyticsDlclApi.listPrograms(),
     enabled: ready,
@@ -75,7 +72,7 @@ export function useStrategicPrograms() {
 
 export function useStrategicDistributors(program: string) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...CFG_KEY, "distributors", program],
     queryFn: () => analyticsDlclApi.listDistributors(program),
     enabled: ready && !!program,

@@ -55,7 +55,6 @@ export default function Page() {
             values={filters.salePics ?? []}
             onChange={(v) => change({ salePics: v })}
             placeholder="Sale PIC: Tất cả"
-            searchable={false}
             multiLabel={(n) => `Sale PIC: ${n}`}
           />
         }

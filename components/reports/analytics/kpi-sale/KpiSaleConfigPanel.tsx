@@ -20,6 +20,7 @@ import {
   useKpiConfigOptions,
 } from "@/lib/hooks/useAnalyticsKpiSale";
 import { fmtDate, num } from "./kpiFormat";
+import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
 
 // Cấu hình Phân tích › KPI Sale (quyền reports:analytics_config): chỉ tiêu
 // doanh số / nhóm hàng, người đại diện của khách, điều kiện tính thu nhập,
@@ -36,7 +37,7 @@ const TABS: { key: Tab; label: string; hint: string }[] = [
   {
     key: "product-targets",
     label: "Chỉ tiêu nhóm hàng",
-    hint: "KPI theo nhóm hàng 2026 (kpi_sale_by_product) — dùng cho Bảng Cơ Cấu Sản Phẩm và % Hiệu Quả của Bảng Thu Nhập.",
+    hint: "KPI theo nhóm hàng 2026 (kpi_sale_by_product) — dùng cho Bảng Cơ Cấu Sản Phẩm. % Hiệu Quả của Bảng Thu Nhập dùng KPI tháng.",
   },
   {
     key: "rep-rules",
@@ -155,17 +156,13 @@ function FieldInput({
     );
   if (f.kind === "select")
     return (
-      <select
-        className={inputCls}
+      <AnalyticsSelect
+        options={f.options ?? []}
         value={(value as string) ?? ""}
-        onChange={(e) => onChange(e.target.value || null)}>
-        <option value="">{f.emptyLabel ?? "— Chọn —"}</option>
-        {(f.options ?? []).map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+        onChange={(v) => onChange(v || null)}
+        clearLabel={f.emptyLabel ?? "— Chọn —"}
+        className="w-full min-w-[120px]"
+      />
     );
   if (f.kind === "multi")
     return (
@@ -174,7 +171,7 @@ function FieldInput({
         values={(value as string[]) ?? []}
         onChange={onChange}
         placeholder="— Chọn —"
-        searchable={(f.options?.length ?? 0) > 8}
+        searchable
         multiLabel={(n) => `${n} mục`}
       />
     );
@@ -289,7 +286,9 @@ function ConfigTable<T extends { id: number }>({
           <thead className="bg-gray-50 text-left text-[12px] text-gray-500 sticky top-0 z-10">
             <tr>
               {fields.map((f) => (
-                <th key={f.key} className="p-2 whitespace-nowrap">
+                <th
+                  key={f.key}
+                  className={`p-2 whitespace-nowrap ${f.kind === "money" ? "text-right" : ""}`}>
                   {f.label}
                   {f.required && <span className="text-red-400"> *</span>}
                 </th>
@@ -414,16 +413,15 @@ function YearPicker({
 }) {
   const now = new Date().getFullYear();
   return (
-    <select
-      className={`${inputCls} w-32`}
+    <AnalyticsSelect
+      options={[now + 1, now, now - 1, now - 2].map((y) => ({
+        value: y,
+        label: `Năm ${y}`,
+      }))}
       value={year}
-      onChange={(e) => onChange(Number(e.target.value))}>
-      {[now + 1, now, now - 1, now - 2].map((y) => (
-        <option key={y} value={y}>
-          Năm {y}
-        </option>
-      ))}
-    </select>
+      onChange={(v) => onChange(Number(v))}
+      className="w-36"
+    />
   );
 }
 
@@ -448,17 +446,13 @@ function SaleCodeFilter({
   users: { value: string; label: string }[];
 }) {
   return (
-    <select
-      className={`${inputCls} w-56`}
+    <AnalyticsSelect
+      options={users}
       value={value}
-      onChange={(e) => onChange(e.target.value)}>
-      <option value="">Tất cả nhân viên</option>
-      {users.map((u) => (
-        <option key={u.value} value={u.value}>
-          {u.label}
-        </option>
-      ))}
-    </select>
+      onChange={onChange}
+      clearLabel="Tất cả nhân viên"
+      className="w-56"
+    />
   );
 }
 

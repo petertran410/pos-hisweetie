@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { useProductInventoryLogs } from "@/lib/hooks/useProducts";
+import { usePermission } from "@/lib/hooks/usePermissions";
+import { canViewInventoryTransactionPrice } from "@/lib/utils/product-inventory-price";
 import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { CodeLink, type CodeEntity } from "../shared/CodeLink";
 
@@ -79,7 +80,7 @@ function getPageNumbers(currentPage: number, totalPages: number): number[] {
   const maxVisible = 5;
   const half = Math.floor(maxVisible / 2);
   let start = Math.max(1, currentPage - half);
-  let end = Math.min(totalPages, start + maxVisible - 1);
+  const end = Math.min(totalPages, start + maxVisible - 1);
   if (end - start < maxVisible - 1) {
     start = Math.max(1, end - maxVisible + 1);
   }
@@ -88,13 +89,16 @@ function getPageNumbers(currentPage: number, totalPages: number): number[] {
 
 export function ProductInventoryLogTab({ productId, branchId }: Props) {
   const [currentPage, setCurrentPage] = useState(1);
+  const canViewCostPrice = usePermission("products", "view_cost_price");
+  const canViewSalePrice = usePermission("products", "view_sale_price");
+  const showTransactionPrice = canViewCostPrice || canViewSalePrice;
 
   // Reset về trang 1 khi đổi sản phẩm hoặc chi nhánh
   useEffect(() => {
     setCurrentPage(1);
   }, [productId, branchId]);
 
-  const { data, isLoading } = useProductInventoryLogs(
+  const { data, isLoading, isError, refetch } = useProductInventoryLogs(
     productId,
     branchId,
     currentPage,
@@ -105,6 +109,17 @@ export function ProductInventoryLogTab({ productId, branchId }: Props) {
     return (
       <div className="flex justify-center py-12">
         <Loader2 className="w-6 h-6 animate-spin text-brand" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div role="alert" className="space-y-3 py-8 text-center text-sm text-gray-500">
+        <p>Không thể tải thẻ kho.</p>
+        <button type="button" onClick={() => void refetch()} className="text-brand hover:underline">
+          Thử lại
+        </button>
       </div>
     );
   }
@@ -126,8 +141,8 @@ export function ProductInventoryLogTab({ productId, branchId }: Props) {
   const endRow = Math.min(currentPage * PAGE_SIZE, total);
 
   return (
-    <div className="border rounded overflow-hidden">
-      <table className="w-full text-sm">
+    <div className="min-w-0 border rounded overflow-x-auto">
+      <table className="w-full min-w-[640px] text-sm">
         <thead className="bg-gray-50">
           <tr>
             <th className="px-4 py-3 text-left font-medium text-gray-700">
@@ -142,9 +157,11 @@ export function ProductInventoryLogTab({ productId, branchId }: Props) {
             <th className="px-4 py-3 text-left font-medium text-gray-700">
               Đối tác
             </th>
-            <th className="px-4 py-3 text-right font-medium text-gray-700">
-              Giá GD
-            </th>
+            {showTransactionPrice && (
+              <th className="px-4 py-3 text-right font-medium text-gray-700">
+                Giá GD
+              </th>
+            )}
             <th className="px-4 py-3 text-right font-medium text-gray-700">
               Số lượng
             </th>
@@ -178,11 +195,17 @@ export function ProductInventoryLogTab({ productId, branchId }: Props) {
               <td className="px-4 py-3 text-gray-600">
                 {log.partnerName || "-"}
               </td>
-              <td className="px-4 py-3 text-right">
-                {log.transactionPrice != null
-                  ? formatMoney(log.transactionPrice)
-                  : "-"}
-              </td>
+              {showTransactionPrice && (
+                <td className="px-4 py-3 text-right">
+                  {canViewInventoryTransactionPrice(
+                    log,
+                    canViewCostPrice,
+                    canViewSalePrice
+                  ) && log.transactionPrice != null
+                    ? formatMoney(log.transactionPrice)
+                    : "-"}
+                </td>
+              )}
               <td className="px-4 py-3 text-right font-medium">
                 {log.quantity > 0 ? `+${log.quantity}` : log.quantity}
               </td>

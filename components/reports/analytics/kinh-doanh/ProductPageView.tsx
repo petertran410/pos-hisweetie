@@ -13,6 +13,7 @@ import { MultiLineChart, WaterfallChart } from "./KdCharts";
 import { KdPivot } from "./KdPivot";
 import { Unavailable, ViewTabs } from "./KdUi";
 import { full } from "./kdFormat";
+import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
 
 const TOP_SERIES = 8;
 
@@ -180,17 +181,13 @@ function InventoryPanel({ filters }: { filters: KdFilters }) {
       title="Báo Cáo Tồn Kho Chi Tiết"
       subtitle="Theo tồn kho hiện tại (không phụ thuộc kỳ)"
       right={
-        <select
-          className="text-[12.5px] border rounded-md px-2 py-1"
+        <AnalyticsSelect
+          options={data.branches.map((b) => ({ value: b, label: b }))}
           value={branch}
-          onChange={(e) => setBranch(e.target.value)}>
-          <option value="">Tất cả chi nhánh</option>
-          {data.branches.map((b) => (
-            <option key={b} value={b}>
-              {b}
-            </option>
-          ))}
-        </select>
+          onChange={setBranch}
+          clearLabel="Tất cả chi nhánh"
+          className="w-56"
+        />
       }>
       <div
         className="border rounded-lg overflow-auto max-h-[560px]"

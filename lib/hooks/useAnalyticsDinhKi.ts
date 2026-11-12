@@ -1,4 +1,5 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
+import { useAnalyticsQuery } from "@/lib/hooks/analyticsQuery";
 import type { AnalyticsBusinessFilters } from "@/lib/api/analytics-reports";
 import {
   dinhKiApi,
@@ -22,7 +23,7 @@ const KEY = ["reports", "analytics", "dinh-ki"] as const;
 
 function useReport<T>(key: unknown[], fn: () => Promise<T>) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, ...key],
     queryFn: fn,
     enabled: ready,
@@ -33,7 +34,7 @@ function useReport<T>(key: unknown[], fn: () => Promise<T>) {
 
 export function useDinhKiFilterOptions() {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "filter-options"],
     queryFn: () => dinhKiApi.getFilterOptions(),
     enabled: ready,
@@ -76,7 +77,7 @@ export function useHangTuan(p: HangTuanFilters) {
 // ── Cấu hình ────────────────────────────────────────────────────────────────
 export function useDkGroupTargets(p: { kind?: DkTargetKind; year?: number }) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "config", "group-targets", p],
     queryFn: () => dinhKiApi.listGroupTargets(p),
     enabled: ready,
@@ -85,7 +86,7 @@ export function useDkGroupTargets(p: { kind?: DkTargetKind; year?: number }) {
 
 export function useDkJamFlavors(search?: string) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "config", "jam-flavors", search ?? ""],
     queryFn: () => dinhKiApi.listJamFlavors(search),
     enabled: ready,
@@ -95,7 +96,7 @@ export function useDkJamFlavors(search?: string) {
 
 export function useDkWeeklySellers() {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "config", "weekly-sellers"],
     queryFn: () => dinhKiApi.listWeeklySellers(),
     enabled: ready,

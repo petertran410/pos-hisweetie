@@ -1,12 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { formatNumberInput, parseNumberInput } from "@/lib/utils";
 
-// Định dạng số có ngăn cách hàng nghìn, tối đa `maxFractionDigits` số thập
-// phân (mặc định 3). Không ép số thập phân tối thiểu nên 1000 vẫn hiển thị
-// "1,000", còn 1001.67 hiển thị "1,001.67".
-function formatNumber(value: number, maxFractionDigits = 3): string {
-  if (!isFinite(value)) return "0";
+function formatNumber(value: number, maxFractionDigits: number): string {
+  if (!Number.isFinite(value)) return "0";
   return new Intl.NumberFormat("en-US", {
     maximumFractionDigits: maxFractionDigits,
   }).format(value);
@@ -17,6 +15,7 @@ function formatNumber(value: number, maxFractionDigits = 3): string {
  * cuối trong lúc gõ). Khi blur sẽ format lại theo locale.
  * - `maxFractionDigits`: số chữ số thập phân tối đa được phép gõ.
  * - `onValueChange`: trả về number đã parse.
+ * - `formatWhileTyping`: thêm dấu phẩy phân cách hàng nghìn ngay khi gõ.
  *
  * Giữ raw string trong lúc focus để không bị mất dấu "." khi đang gõ "1." —
  * đây là lý do input controlled thuần (value=formatNumber) không gõ được
@@ -27,12 +26,14 @@ export function NumericInput({
   value,
   onValueChange,
   maxFractionDigits = 3,
+  formatWhileTyping = false,
   disabled,
   className,
 }: {
   value: number;
   onValueChange: (next: number) => void;
   maxFractionDigits?: number;
+  formatWhileTyping?: boolean;
   disabled?: boolean;
   className?: string;
 }) {
@@ -59,16 +60,24 @@ export function NumericInput({
       className={className}
       onFocus={(e) => {
         setFocused(true);
-        // Bắt đầu gõ từ giá trị số thuần (bỏ dấu phẩy ngăn cách).
-        setRaw(value ? String(value) : "");
+        const nextRaw = value ? String(value) : "";
+        setRaw(
+          formatWhileTyping
+            ? formatNumberInput(nextRaw, maxFractionDigits)
+            : nextRaw
+        );
         e.target.select();
       }}
       onChange={(e) => {
         // Bỏ dấu phẩy ngăn cách, chỉ nhận số + tối đa N chữ số thập phân.
         const cleaned = e.target.value.replace(/,/g, "");
         if (cleaned === "" || decimalPattern.test(cleaned)) {
-          setRaw(cleaned);
-          onValueChange(cleaned === "" ? 0 : parseFloat(cleaned) || 0);
+          setRaw(
+            formatWhileTyping
+              ? formatNumberInput(cleaned, maxFractionDigits)
+              : cleaned
+          );
+          onValueChange(cleaned === "" ? 0 : parseNumberInput(cleaned));
         }
       }}
       onBlur={() => setFocused(false)}

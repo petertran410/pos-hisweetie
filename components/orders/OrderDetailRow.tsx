@@ -68,7 +68,6 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   useRegisterPosInView(
     order ? { type: "order", id: order.id, code: order.code } : null
   );
-  console.log(order);
   const updateOrder = useUpdateOrder();
   const [selectedStatus, setSelectedStatus] = useState<number>(
     ORDER_STATUS.PENDING

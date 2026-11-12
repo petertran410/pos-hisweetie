@@ -2,6 +2,9 @@ export interface PurchaseOrder {
   id: number;
   code: string;
   orderSupplierId?: number;
+  /** PN nhận thành phẩm từ phiếu Gửi sản xuất. */
+  productionId?: number | null;
+  production?: { id: number; code: string } | null;
   supplierId: number;
   branchId?: number;
   purchaseDate: string;

@@ -10,6 +10,16 @@ import {
 import { useAnalyticsConfigMutation } from "@/lib/hooks/useAnalyticsReports";
 import { VISUAL_GROUPS } from "./kdConstants";
 import { ViewTabs } from "./KdUi";
+import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
+
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
+  value: i + 1,
+  label: `Tháng ${i + 1}`,
+}));
+const JAM_BRAND_OPTIONS = [
+  { value: "Lermao", label: "Lermao" },
+  { value: "Boduo", label: "Boduo" },
+];
 
 // Cấu hình cho Phân tích › Kinh Doanh (thay các bảng "Enter data" / Excel của Power BI):
 //  - Chỉ tiêu tháng theo nhóm hàng hiển thị (kpi_product_group_2025)
@@ -117,24 +127,18 @@ function TargetsTab() {
           onChange={(e) => setYear(Number(e.target.value))}
         />
         <span className="text-[12px] text-gray-500">Thêm / sửa:</span>
-        <select
-          className={inputCls}
+        <AnalyticsSelect
+          options={VISUAL_GROUPS.map((g) => ({ value: g, label: g }))}
           value={f.visualProductGroup}
-          onChange={(e) => setF({ ...f, visualProductGroup: e.target.value })}>
-          {VISUAL_GROUPS.map((g) => (
-            <option key={g}>{g}</option>
-          ))}
-        </select>
-        <select
-          className={inputCls}
+          onChange={(v) => setF({ ...f, visualProductGroup: v })}
+          className="w-48"
+        />
+        <AnalyticsSelect
+          options={MONTH_OPTIONS}
           value={f.month}
-          onChange={(e) => setF({ ...f, month: Number(e.target.value) })}>
-          {Array.from({ length: 12 }, (_, i) => (
-            <option key={i + 1} value={i + 1}>
-              Tháng {i + 1}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => setF({ ...f, month: Number(v) })}
+          className="w-32"
+        />
         <input
           className={`${inputCls} w-40`}
           placeholder="Chỉ tiêu (VNĐ)"
@@ -389,13 +393,12 @@ function JamTab() {
           value={f.productCode}
           onChange={(e) => setF({ ...f, productCode: e.target.value })}
         />
-        <select
-          className={inputCls}
+        <AnalyticsSelect
+          options={JAM_BRAND_OPTIONS}
           value={f.brand}
-          onChange={(e) => setF({ ...f, brand: e.target.value })}>
-          <option>Lermao</option>
-          <option>Boduo</option>
-        </select>
+          onChange={(v) => setF({ ...f, brand: v })}
+          className="w-32"
+        />
         <input
           className={`${inputCls} w-44`}
           placeholder="Vị mứt"
@@ -425,15 +428,12 @@ function JamTab() {
               {j.productName ?? <i className="text-gray-400">không tìm thấy</i>}
             </td>
             <td className="px-2.5 py-1">
-              <select
-                className={inputCls}
-                defaultValue={j.brand}
-                onChange={(e) =>
-                  upd.mutate({ id: j.id, d: { brand: e.target.value } })
-                }>
-                <option>Lermao</option>
-                <option>Boduo</option>
-              </select>
+              <AnalyticsSelect
+                options={JAM_BRAND_OPTIONS}
+                value={j.brand}
+                onChange={(v) => upd.mutate({ id: j.id, d: { brand: v } })}
+                className="w-32"
+              />
             </td>
             <td className="px-2.5 py-1">
               <input

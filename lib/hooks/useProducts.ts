@@ -20,11 +20,24 @@ export function useProducts(
   });
 }
 
-export const useProduct = (id: number) => {
+export const useProduct = (
+  id: number,
+  options?: {
+    cacheScope?: string;
+    retry?: boolean;
+    refetchOnMount?: boolean | "always";
+  }
+) => {
   return useQuery({
-    queryKey: ["product", id],
+    queryKey: options?.cacheScope
+      ? ["product", id, options.cacheScope]
+      : ["product", id],
     queryFn: () => productsApi.getProduct(id),
     enabled: !!id,
+    ...(options?.retry !== undefined ? { retry: options.retry } : {}),
+    ...(options?.refetchOnMount !== undefined
+      ? { refetchOnMount: options.refetchOnMount }
+      : {}),
   });
 };
 
@@ -112,8 +125,14 @@ export function useProductInventoryLogs(
   page = 1,
   limit = 5
 ) {
+  const user = useAuthStore((state) => state.user);
+  const permissionScope = JSON.stringify([
+    user?.id,
+    [...(user?.permissions ?? [])].sort(),
+    [...(user?.roles ?? [])].sort(),
+  ]);
   return useQuery({
-    queryKey: ["product-inventory-logs", productId, branchId, page, limit],
+    queryKey: ["product-inventory-logs", productId, branchId, page, limit, permissionScope],
     queryFn: () =>
       productsApi.getInventoryLogs(productId, branchId, page, limit),
     enabled: !!productId,

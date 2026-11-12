@@ -1,9 +1,9 @@
 import {
   keepPreviousData,
   useMutation,
-  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { useAnalyticsQuery } from "@/lib/hooks/analyticsQuery";
 import { toast } from "sonner";
 import {
   analyticsMuaHangApi,
@@ -30,7 +30,7 @@ function useReport<P, T>(
   enabled = true,
 ) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, name, params],
     queryFn: () => fn(params),
     enabled: ready && enabled,
@@ -41,7 +41,7 @@ function useReport<P, T>(
 
 export function useMuaHangFilterOptions() {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "filter-options"],
     queryFn: () => analyticsMuaHangApi.getFilterOptions(),
     enabled: ready,
@@ -67,7 +67,7 @@ const CFG_KEY = [...KEY, "config"] as const;
 
 export function useCodeMerges(search?: string) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...CFG_KEY, "code-merges", search ?? ""],
     queryFn: () => analyticsMuaHangApi.listCodeMerges(search),
     enabled: ready,
@@ -76,7 +76,7 @@ export function useCodeMerges(search?: string) {
 
 export function useExcludedSellers() {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...CFG_KEY, "excluded-sellers"],
     queryFn: () => analyticsMuaHangApi.listExcludedSellers(),
     enabled: ready,
@@ -89,7 +89,7 @@ export function usePurchaseProducts(p: {
   limit?: number;
 }) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...CFG_KEY, "purchase-products", p],
     queryFn: () => analyticsMuaHangApi.listPurchaseProducts(p),
     enabled: ready,
@@ -99,7 +99,7 @@ export function usePurchaseProducts(p: {
 
 export function useRebates(search?: string) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...CFG_KEY, "rebates", search ?? ""],
     queryFn: () => analyticsMuaHangApi.listRebates(search),
     enabled: ready,

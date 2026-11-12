@@ -1,4 +1,5 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
+import { useAnalyticsQuery } from "@/lib/hooks/analyticsQuery";
 import {
   analyticsKeToanApi,
   CashFilters,
@@ -19,7 +20,7 @@ const KEY = ["reports", "analytics", "ke-toan"] as const;
 
 export function useMappingMisa(filters: MisaFilters) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "mapping-misa", filters],
     queryFn: () => analyticsKeToanApi.getMappingMisa(filters),
     enabled: ready,
@@ -30,7 +31,7 @@ export function useMappingMisa(filters: MisaFilters) {
 
 export function useTienMatKho(filters: CashFilters) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "tien-mat-kho", filters],
     queryFn: () => analyticsKeToanApi.getTienMatKho(filters),
     enabled: ready,
@@ -41,7 +42,7 @@ export function useTienMatKho(filters: CashFilters) {
 
 export function useDoiSoat(filters: CashFilters) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "doi-soat", filters],
     queryFn: () => analyticsKeToanApi.getDoiSoat(filters),
     enabled: ready,
@@ -52,7 +53,7 @@ export function useDoiSoat(filters: CashFilters) {
 
 export function useChuyenHang(filters: TransferFilters) {
   const ready = useReady();
-  return useQuery({
+  return useAnalyticsQuery({
     queryKey: [...KEY, "chuyen-hang", filters],
     queryFn: () => analyticsKeToanApi.getChuyenHang(filters),
     enabled: ready,
