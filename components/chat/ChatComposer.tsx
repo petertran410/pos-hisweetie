@@ -367,7 +367,8 @@ export function ChatComposer({
       const print = result.printImage;
       if (print) {
         try {
-          addFiles([await renderPrintImage(print.templateFor, print.id, print.name)]);
+          // Bản in dài → nhiều ảnh, mỗi ảnh 1 trang giấy
+          addFiles(await renderPrintImage(print.templateFor, print.id, print.name));
         } catch (e) {
           toast.warning(`Không chụp được bản in ${print.name}: ${(e as Error).message}`);
         }
