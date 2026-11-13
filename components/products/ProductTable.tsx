@@ -675,7 +675,7 @@ export function ProductsTable({
           <input
             type="text"
             placeholder="Theo mã, tên hàng"
-            className="border rounded-lg px-3 py-2 w-64 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+            className="border rounded-lg px-3 py-2 w-80 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
