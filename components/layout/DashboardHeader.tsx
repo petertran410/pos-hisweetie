@@ -163,6 +163,7 @@ export function DashboardHeader() {
         href: "/khach-hang/demand-oem",
       },
       { label: "Hợp đồng", href: "/khach-hang/hop-dong" },
+      { label: "Báo giá", href: "/khach-hang/bao-gia" },
       { label: "Theo dõi công nợ", href: "/khach-hang/theo-doi-cong-no" },
     ],
     [],

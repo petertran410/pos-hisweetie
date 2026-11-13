@@ -53,6 +53,7 @@ const TITLE_MAP: Array<{ prefix: string; title: string }> = [
   { prefix: "/khach-hang/khuyen-mai", title: "Khuyến mãi" },
   { prefix: "/khach-hang/demand-oem", title: "Demand khách hàng" },
   { prefix: "/khach-hang/hop-dong", title: "Hợp đồng" },
+  { prefix: "/khach-hang/bao-gia", title: "Báo giá" },
   { prefix: "/khach-hang/theo-doi-cong-no", title: "Theo dõi công nợ" },
   { prefix: "/khach-hang", title: "Khách hàng" },
 
@@ -77,6 +78,7 @@ const TITLE_MAP: Array<{ prefix: string; title: string }> = [
   { prefix: "/cai-dat/dong-bo", title: "Đồng bộ" },
   { prefix: "/cai-dat/in-an", title: "In ấn" },
   { prefix: "/cai-dat/lich-su", title: "Lịch sử" },
+  { prefix: "/cai-dat/mau-bao-gia", title: "Mẫu báo giá" },
   { prefix: "/cai-dat/nguoi-dung", title: "Người dùng" },
   { prefix: "/cai-dat/so-quy", title: "Sổ quỹ" },
   { prefix: "/cai-dat/tk-ngan-hang-sale", title: "TK ngân hàng sale" },

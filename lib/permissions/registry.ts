@@ -84,6 +84,8 @@ export const ROUTE_PERMISSIONS: Record<
   "/khach-hang/khuyen-mai": { resource: "promotions", action: "view" },
   "/khach-hang/demand-oem": { resource: "customer_demand", action: "view" },
   "/khach-hang/hop-dong": { resource: "contracts", action: "view" },
+  "/khach-hang/bao-gia/new": { resource: "quotes", action: "create" },
+  "/khach-hang/bao-gia": { resource: "quotes", action: "view" },
   "/khach-hang/theo-doi-cong-no": { resource: "debt_tracking", action: "view" },
   "/khach-hang/lead/form": { resource: "leads", action: "update" },
   "/khach-hang/lead": { resource: "leads", action: "view" },
@@ -126,6 +128,7 @@ export const ROUTE_PERMISSIONS: Record<
   "/cai-dat/smax": { resource: "settings", action: "update" },
   "/san-pham/kiem-kho": { resource: "stock_audits", action: "view" },
   "/cai-dat/in-an": { resource: "print_templates", action: "view" },
+  "/cai-dat/mau-bao-gia": { resource: "quote_templates", action: "view" },
 };
 
 export const NAV_CONFIG: NavSection[] = [
@@ -332,6 +335,12 @@ export const NAV_CONFIG: NavSection[] = [
         label: "Hợp đồng",
         href: "/khach-hang/hop-dong",
         permission: { resource: "contracts", action: "view" },
+      },
+      {
+        key: "quotes",
+        label: "Báo giá",
+        href: "/khach-hang/bao-gia",
+        permission: { resource: "quotes", action: "view" },
       },
       {
         key: "debt-tracking",

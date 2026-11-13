@@ -15,6 +15,7 @@ import {
   KeyRound,
   MonitorSmartphone,
   MessageCircle,
+  FileSpreadsheet,
 } from "lucide-react";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import "@/app/dashboard.css";
@@ -56,6 +57,12 @@ export default function SettingsLayout({
       label: "Mẫu in",
       icon: Printer,
       permission: { resource: "print_templates", action: "view" },
+    },
+    {
+      href: "/cai-dat/mau-bao-gia",
+      label: "Mẫu báo giá",
+      icon: FileSpreadsheet,
+      permission: { resource: "quote_templates", action: "view" },
     },
     {
       href: "/cai-dat/so-quy",

@@ -1,0 +1,361 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Copy, Eye, FileDown, FileText, Info, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { CustomTooltip } from "@/components/ui/CustomTooltip";
+import { confirmAction } from "@/lib/chat/confirm";
+import { FilterMultiSelect } from "@/components/ui/filters";
+import { useDeleteQuote, useDuplicateQuote, useQuote, useQuotes } from "@/lib/hooks/useQuotes";
+import type { QuoteCategory, QuoteFilters, QuoteListItem, QuoteRegion, QuoteTemplate } from "@/lib/types/quote";
+import {
+  QUOTE_CATEGORY_LABEL,
+  QUOTE_REGION_LABEL,
+  QUOTE_STATUS_COLOR,
+  QUOTE_STATUS_LABEL,
+  QUOTE_TEMPLATE_LABEL,
+} from "@/lib/types/quote";
+import { QuotePreviewModal } from "./QuotePreviewModal";
+
+type Props = {
+  filters: QuoteFilters;
+  onChange: (patch: Partial<QuoteFilters>) => void;
+};
+
+/** dd/mm/yyyy — chỉ ngày, không giờ. */
+const formatDate = (iso: string) =>
+  new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+const options = <K extends string>(labels: Record<K, string>) =>
+  (Object.keys(labels) as K[]).map((value) => ({ value, label: labels[value] }));
+
+const TABS: { key: QuoteFilters["tab"]; label: string }[] = [
+  { key: "quotes", label: "Báo giá" },
+  { key: "library", label: "Thư viện" },
+];
+
+/** Nút biểu tượng + tooltip (hiện sau 200ms). */
+function IconButton({
+  title,
+  onClick,
+  danger,
+  disabled,
+  children,
+}: {
+  title: string;
+  onClick: () => void;
+  danger?: boolean;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <CustomTooltip content={title} delayMs={200}>
+      <button
+        aria-label={title}
+        // aria-disabled thay cho disabled: nút disabled không nhận hover nên tooltip không hiện.
+        aria-disabled={disabled}
+        onClick={disabled ? undefined : onClick}
+        className={`p-1.5 rounded-lg text-gray-500 ${disabled ? "opacity-30 cursor-not-allowed" : ""} ${
+          disabled ? "" : danger ? "hover:text-red-600 hover:bg-red-50" : "hover:text-brand hover:bg-brand-soft"
+        }`}>
+        {children}
+      </button>
+    </CustomTooltip>
+  );
+}
+
+export function QuotesTable({ filters, onChange }: Props) {
+  const router = useRouter();
+  const library = filters.tab === "library";
+  const { data, isLoading } = useQuotes(filters);
+  const rows = data?.data ?? [];
+  const total = data?.total ?? 0;
+  const pageSize = filters.pageSize ?? 20;
+  const page = filters.page ?? 1;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const [previewId, setPreviewId] = useState<number | null>(null);
+  const { data: preview } = useQuote(previewId);
+  const duplicate = useDuplicateQuote();
+  const remove = useDeleteQuote();
+
+  const removeQuote = async (q: QuoteListItem) => {
+    const ok = await confirmAction(
+      `Xoá báo giá ${q.code}${q.customer ? ` của ${q.customer.name}` : ""}? Không khôi phục được.`,
+      { title: "Xoá báo giá", confirmText: "Xoá", danger: true }
+    );
+    if (!ok) return;
+    await remove.mutateAsync(q.id);
+    toast.success(`Đã xoá ${q.code}`);
+  };
+
+  const copyFrom = async (q: QuoteListItem) => {
+    const created = await duplicate.mutateAsync(q.id);
+    toast.success(
+      q.isLibrary
+        ? `Đã tạo báo giá ${created.code} từ mẫu ${q.code}`
+        : `Đã nhân bản ${q.code} thành ${created.code}`
+    );
+    router.push(`/khach-hang/bao-gia/${created.id}`);
+  };
+
+  const columns = library
+    ? ["Mã", "Tiêu đề", "Ngành hàng", "Miền", "Nhóm khách", "Số SP", "Áp dụng từ", ""]
+    : ["Mã", "Khách hàng", "Mẫu", "Số SP", "Ngày tạo", "Hiệu lực", "Trạng thái", "Sale", ""];
+
+  return (
+    <div
+      className={`flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0 ${library ? "ml-4" : ""}`}>
+      {/* Toolbar */}
+      <div className="border-b px-4 py-2.5 flex items-center justify-between gap-4 shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">Báo giá</h2>
+          <div className="flex rounded-lg border p-0.5 bg-gray-50" role="tablist">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                role="tab"
+                aria-selected={filters.tab === t.key}
+                onClick={() =>
+                  onChange({
+                    tab: t.key,
+                    page: 1,
+                    status: undefined,
+                    template: undefined,
+                    region: undefined,
+                    category: undefined,
+                    createdById: undefined,
+                  })
+                }
+                className={`px-3 py-1 text-sm rounded-md ${
+                  filters.tab === t.key ? "bg-white shadow-sm font-medium text-brand" : "text-gray-600"
+                }`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <input
+            type="text"
+            placeholder={library ? "Tìm mã, tiêu đề mẫu..." : "Tìm mã báo giá, khách hàng..."}
+            value={filters.search ?? ""}
+            onChange={(e) => onChange({ search: e.target.value || undefined, page: 1 })}
+            className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+          />
+        </div>
+        <button
+          onClick={() => router.push("/khach-hang/bao-gia/new")}
+          className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium flex items-center gap-1.5 shrink-0">
+          <Plus className="w-4 h-4" />
+          Tạo báo giá
+        </button>
+      </div>
+
+      {library && (
+        // Bộ lọc thư viện: ngành hàng × miền × nhóm khách
+        <div className="px-4 py-2 border-b bg-gray-50 flex flex-wrap items-center gap-2 shrink-0">
+          {[
+            {
+              label: "Ngành hàng",
+              opts: options(QUOTE_CATEGORY_LABEL),
+              values: filters.category ?? [],
+              set: (v: string[]) => onChange({ category: v.length ? (v as QuoteCategory[]) : undefined }),
+            },
+            {
+              label: "Miền",
+              opts: options(QUOTE_REGION_LABEL),
+              values: filters.region ?? [],
+              set: (v: string[]) => onChange({ region: v.length ? (v as QuoteRegion[]) : undefined }),
+            },
+            {
+              label: "Nhóm khách",
+              opts: options(QUOTE_TEMPLATE_LABEL),
+              values: filters.template ?? [],
+              set: (v: string[]) => onChange({ template: v.length ? (v as QuoteTemplate[]) : undefined }),
+            },
+          ].map((f) => (
+            <div key={f.label} className="w-48">
+              <FilterMultiSelect
+                options={f.opts}
+                values={f.values}
+                onChange={f.set}
+                placeholder={`${f.label}: tất cả`}
+                multiLabel={(n) => `${f.label}: ${n} mục`}
+                searchable={false}
+              />
+            </div>
+          ))}
+          {Boolean(filters.category?.length || filters.region?.length || filters.template?.length) && (
+            <button
+              onClick={() => onChange({ category: undefined, region: undefined, template: undefined })}
+              className="text-sm text-brand hover:text-brand-dark font-medium px-1">
+              Xóa lọc
+            </button>
+          )}
+          <span
+            className="ml-auto flex items-center gap-1 text-xs text-gray-600"
+            title="Báo giá mẫu dựng từ file “Bảng báo giá tổng hợp 01.09.26”">
+            <Info className="w-3.5 h-3.5 shrink-0" />
+            Bấm <b>Dùng mẫu này</b> để tạo báo giá mới rồi sửa tiếp
+          </span>
+        </div>
+      )}
+
+      {/* Table */}
+      <div className="flex-1 overflow-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 sticky top-0 z-10">
+            <tr>
+              {columns.map((c, i) => (
+                <th
+                  key={i}
+                  className="px-4 py-2.5 text-left font-medium text-gray-500 whitespace-nowrap text-xs uppercase tracking-wide">
+                  {c}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <tr>
+                <td colSpan={columns.length} className="px-4 py-10 text-center text-gray-400">
+                  Đang tải...
+                </td>
+              </tr>
+            ) : rows.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="px-4 py-10 text-center text-gray-400">
+                  <FileText className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  {library ? "Không có mẫu phù hợp" : "Chưa có báo giá nào"}
+                </td>
+              </tr>
+            ) : (
+              rows.map((q) => (
+                <tr key={q.id} className="border-b hover:bg-gray-50">
+                  <td className="px-4 py-2">
+                    <button
+                      onClick={() => setPreviewId(q.id)}
+                      className="text-brand font-medium hover:underline">
+                      {q.code}
+                    </button>
+                  </td>
+                  {library ? (
+                    <>
+                      <td className="px-4 py-2 min-w-[280px]">{q.title}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">
+                        {q.category ? QUOTE_CATEGORY_LABEL[q.category] : "—"}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap">{QUOTE_REGION_LABEL[q.region]}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{QUOTE_TEMPLATE_LABEL[q.template]}</td>
+                      <td className="px-4 py-2">{q.itemCount}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{formatDate(q.appliedFrom)}</td>
+                      <td className="px-4 py-2">
+                        <div className="flex items-center justify-end gap-1">
+                          <IconButton title="Xem trước" onClick={() => setPreviewId(q.id)}>
+                            <Eye className="w-4 h-4" />
+                          </IconButton>
+                          <button
+                            onClick={() => copyFrom(q)}
+                            disabled={duplicate.isPending}
+                            className="ml-1 px-2.5 py-1 text-xs rounded-lg border border-brand text-brand hover:bg-brand-soft flex items-center gap-1 whitespace-nowrap disabled:opacity-50">
+                            <Sparkles className="w-3.5 h-3.5" /> Dùng mẫu này
+                          </button>
+                        </div>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="px-4 py-2">
+                        {q.customer ? (
+                          <>
+                            <div>{q.customer.name}</div>
+                            <div className="text-xs text-gray-400">{q.customer.code ?? "Chưa có trong POS"}</div>
+                          </>
+                        ) : (
+                          <span className="text-gray-400">Khách chung</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap">
+                        {QUOTE_TEMPLATE_LABEL[q.template]}
+                        <div className="text-xs text-gray-400">{QUOTE_REGION_LABEL[q.region]}</div>
+                      </td>
+                      <td className="px-4 py-2">{q.itemCount}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{formatDate(q.createdAt)}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">
+                        {q.validUntil ? formatDate(q.validUntil) : "—"}
+                      </td>
+                      <td className="px-4 py-2">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${QUOTE_STATUS_COLOR[q.status]}`}>
+                          {QUOTE_STATUS_LABEL[q.status]}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap">{q.createdBy.name}</td>
+                      <td className="px-4 py-2">
+                        <div className="flex items-center justify-end gap-0.5">
+                          <IconButton title="Xem" onClick={() => setPreviewId(q.id)}>
+                            <Eye className="w-4 h-4" />
+                          </IconButton>
+                          <IconButton title="Sửa" onClick={() => router.push(`/khach-hang/bao-gia/${q.id}`)}>
+                            <Pencil className="w-4 h-4" />
+                          </IconButton>
+                          <IconButton title="Nhân bản" onClick={() => copyFrom(q)}>
+                            <Copy className="w-4 h-4" />
+                          </IconButton>
+                          <IconButton title="Xuất PDF / ảnh" onClick={() => setPreviewId(q.id)}>
+                            <FileDown className="w-4 h-4" />
+                          </IconButton>
+                          <IconButton
+                            title={q.status === "draft" ? "Xoá" : "Chỉ xoá được báo giá Nháp"}
+                            danger
+                            disabled={q.status !== "draft"}
+                            onClick={() => removeQuote(q)}>
+                            <Trash2 className="w-4 h-4" />
+                          </IconButton>
+                        </div>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      {total > 0 && (
+        <div className="flex items-center justify-between px-4 py-2 border-t bg-white text-sm shrink-0">
+          <span className="text-gray-500">
+            {total} {library ? "mẫu" : "báo giá"}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              disabled={page <= 1}
+              onClick={() => onChange({ page: page - 1 })}
+              className="px-3 py-1 rounded border disabled:opacity-40">
+              Trước
+            </button>
+            <span>
+              {page} / {totalPages}
+            </span>
+            <button
+              disabled={page >= totalPages}
+              onClick={() => onChange({ page: page + 1 })}
+              className="px-3 py-1 rounded border disabled:opacity-40">
+              Sau
+            </button>
+          </div>
+        </div>
+      )}
+
+      {previewId && preview && preview.id === previewId && (
+        <QuotePreviewModal quote={preview} onClose={() => setPreviewId(null)} />
+      )}
+    </div>
+  );
+}
