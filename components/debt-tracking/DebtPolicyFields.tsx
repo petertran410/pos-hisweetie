@@ -1,6 +1,19 @@
 "use client";
 
-import { Info } from "lucide-react";
+import {
+  Info,
+  Ban,
+  Wallet,
+  CalendarClock,
+  CalendarDays,
+  CalendarRange,
+  ShieldCheck,
+  FileSignature,
+  Truck,
+  Banknote,
+  CheckCircle2,
+  type LucideIcon,
+} from "lucide-react";
 import {
   DebtForm,
   DEBT_FORM_LABELS,
@@ -52,10 +65,11 @@ export const EMPTY_DEBT_POLICY_FORM: DebtPolicyFormValue = {
  * Kiểm tra trước khi submit. Trả về thông báo lỗi đầu tiên, null nếu hợp lệ.
  * Dùng chung cho form khách hàng và các chỗ khác để luật không bị lệch.
  */
-export function validateDebtPolicyForm(
-  v: DebtPolicyFormValue
-): string | null {
-  if (v.debtRuleType === "TERM_DAYS" && (!v.termDays || Number(v.termDays) < 0)) {
+export function validateDebtPolicyForm(v: DebtPolicyFormValue): string | null {
+  if (
+    v.debtRuleType === "TERM_DAYS" &&
+    (!v.termDays || Number(v.termDays) < 0)
+  ) {
     return "Vui lòng nhập số ngày công nợ";
   }
   if (
@@ -99,13 +113,11 @@ export function toDebtPolicyPayload(
     // chỉnh trực tiếp trên giao diện.
     requireFullPaymentForInvoice: v.debtRuleType === "NONE",
     debtRuleType: v.debtRuleType,
-    paymentScheduleType: (
-      v.debtRuleType === "MONTHLY_SCHEDULE"
-        ? "MONTHLY"
-        : v.debtRuleType === "WEEKLY_SCHEDULE"
-          ? "WEEKLY"
-          : null
-    ) as PaymentScheduleType | null,
+    paymentScheduleType: (v.debtRuleType === "MONTHLY_SCHEDULE"
+      ? "MONTHLY"
+      : v.debtRuleType === "WEEKLY_SCHEDULE"
+        ? "WEEKLY"
+        : null) as PaymentScheduleType | null,
     paymentScheduleDays:
       v.debtRuleType === "MONTHLY_SCHEDULE" ||
       v.debtRuleType === "WEEKLY_SCHEDULE"
@@ -119,194 +131,380 @@ interface Props {
   onChange: (patch: Partial<DebtPolicyFormValue>) => void;
 }
 
+const DEBT_FORM_ICONS: Record<DebtForm, LucideIcon> = {
+  TRUST: ShieldCheck,
+  CONTRACT: FileSignature,
+  COD: Truck,
+  PREPAID: Banknote,
+};
+
+const DEBT_RULES: {
+  value: DebtRuleType;
+  label: string;
+  description: string;
+  Icon: LucideIcon;
+}[] = [
+  {
+    value: "NONE",
+    label: "Không công nợ",
+    description: "Thanh toán đủ trên đơn trước khi xuất hóa đơn",
+    Icon: Ban,
+  },
+  {
+    value: "CREDIT_LIMIT",
+    label: "Hạn mức công nợ",
+    description: "Cho nợ tối đa một số tiền",
+    Icon: Wallet,
+  },
+  {
+    value: "TERM_DAYS",
+    label: "Theo số ngày",
+    description: "Thanh toán trong N ngày kể từ ngày giao",
+    Icon: CalendarClock,
+  },
+  {
+    value: "MONTHLY_SCHEDULE",
+    label: "Cố định theo tháng",
+    description: "Thanh toán vào các ngày chọn trong tháng",
+    Icon: CalendarDays,
+  },
+  {
+    value: "WEEKLY_SCHEDULE",
+    label: "Cố định theo tuần",
+    description: "Thanh toán vào các thứ chọn trong tuần",
+    Icon: CalendarRange,
+  },
+];
+
+const WEEKDAY_LABEL = (day: number) => (day === 7 ? "CN" : `T${day + 1}`);
+
+const INPUT_CLASS =
+  "h-[42px] w-full rounded-lg border bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 transition-colors focus:outline-none focus:border-brand focus:shadow-[0_0_0_3px_var(--dt-color-primary-ring)]";
+
+const optionCardClass = (selected: boolean) =>
+  `flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+    selected
+      ? "border-brand bg-brand-soft shadow-[0_0_0_1px_var(--dt-color-primary)]"
+      : "bg-white hover:border-brand-border-strong hover:bg-gray-50"
+  }`;
+
+const iconBoxClass = (selected: boolean) =>
+  `flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+    selected ? "bg-brand text-white" : "bg-gray-100 text-gray-500"
+  }`;
+
+function SectionHead({
+  title,
+  hint,
+  action,
+}: {
+  title: string;
+  hint?: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-3 flex items-end justify-between gap-3">
+      <div>
+        <h4 className="text-sm font-semibold text-gray-900">{title}</h4>
+        {hint && <p className="mt-0.5 text-xs text-gray-500">{hint}</p>}
+      </div>
+      {action}
+    </div>
+  );
+}
+
 /**
  * Phần thiết lập công nợ của một khách hàng.
  *
  * Đây là cấu hình dài hạn, thường chỉ đặt một lần khi tạo/sửa khách, nên
  * component này được nhúng thẳng vào form khách hàng.
  */
-export function DebtPolicyFields({
-  value,
-  onChange,
-}: Props) {
-  const noPolicy = value.debtRuleType === "NONE";
+export function DebtPolicyFields({ value, onChange }: Props) {
+  const isSchedule =
+    value.debtRuleType === "MONTHLY_SCHEDULE" ||
+    value.debtRuleType === "WEEKLY_SCHEDULE";
+  const activeRule = DEBT_RULES.find((r) => r.value === value.debtRuleType);
+
+  const selectRule = (debtRuleType: DebtRuleType) =>
+    onChange({
+      debtRuleType,
+      hasCreditLimit: debtRuleType === "CREDIT_LIMIT",
+      hasTermDays: debtRuleType === "TERM_DAYS",
+      creditLimit: debtRuleType === "CREDIT_LIMIT" ? value.creditLimit : "",
+      termDays: debtRuleType === "TERM_DAYS" ? value.termDays : "",
+      paymentScheduleType:
+        debtRuleType === "MONTHLY_SCHEDULE"
+          ? "MONTHLY"
+          : debtRuleType === "WEEKLY_SCHEDULE"
+            ? "WEEKLY"
+            : "",
+      paymentScheduleDays:
+        debtRuleType === "MONTHLY_SCHEDULE" ||
+        debtRuleType === "WEEKLY_SCHEDULE"
+          ? value.paymentScheduleDays
+          : [],
+    });
+
+  const toggleScheduleDay = (day: number) => {
+    const selected = value.paymentScheduleDays.includes(day);
+    onChange({
+      paymentScheduleDays: selected
+        ? value.paymentScheduleDays.filter((d) => d !== day)
+        : [...value.paymentScheduleDays, day].sort((a, b) => a - b),
+    });
+  };
+
+  const creditLimitNumber = parseNumberInput(value.creditLimit);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {/* ===== Hình thức công nợ ===== */}
       <div>
-        <label className="block text-sm font-medium mb-1.5">
-          Hình Thức Công Nợ
-        </label>
-        <select
-          value={value.debtForm}
-          onChange={(e) =>
-            onChange({ debtForm: e.target.value as DebtForm | "" })
+        <SectionHead
+          title="Hình thức công nợ"
+          hint="Cách khách thường thanh toán"
+          action={
+            value.debtForm ? (
+              <button
+                type="button"
+                onClick={() => onChange({ debtForm: "" })}
+                className="text-xs font-medium text-gray-500 transition-colors hover:text-brand">
+                Bỏ chọn
+              </button>
+            ) : (
+              <span className="text-xs text-gray-400">Chưa xác định</span>
+            )
           }
-          className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
-        >
-          <option value="">— Chưa xác định —</option>
-          {(Object.keys(DEBT_FORM_LABELS) as DebtForm[]).map((k) => (
-            <option key={k} value={k}>
-              {DEBT_FORM_LABELS[k]}
-            </option>
-          ))}
-        </select>
+        />
+        <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+          {(Object.keys(DEBT_FORM_LABELS) as DebtForm[]).map((k) => {
+            const selected = value.debtForm === k;
+            const Icon = DEBT_FORM_ICONS[k];
+            return (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => onChange({ debtForm: selected ? "" : k })}
+                className={optionCardClass(selected)}>
+                <span className={iconBoxClass(selected)}>
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1 text-sm font-medium text-gray-900">
+                  {DEBT_FORM_LABELS[k]}
+                </span>
+                {selected && (
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-brand" />
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="border rounded-lg p-4 space-y-4 bg-gray-50/50">
-        <div className="flex items-start gap-2 text-xs text-gray-600">
-          <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-          <span>Mỗi khách hàng chỉ được chọn một loại quy tắc công nợ.</span>
+      {/* ===== Quy tắc công nợ ===== */}
+      <div>
+        <SectionHead
+          title="Quy tắc công nợ"
+          hint="Mỗi khách hàng chỉ áp dụng một quy tắc"
+        />
+        <div
+          role="radiogroup"
+          className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {DEBT_RULES.map(({ value: rule, label, description, Icon }) => {
+            const selected = value.debtRuleType === rule;
+            return (
+              <button
+                key={rule}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => selectRule(rule)}
+                className={`${optionCardClass(selected)} ${
+                  rule === "NONE" ? "sm:col-span-2" : ""
+                }`}>
+                <span className={iconBoxClass(selected)}>
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-gray-900">
+                    {label}
+                  </span>
+                  <span className="block text-xs text-gray-500">
+                    {description}
+                  </span>
+                </span>
+                <span
+                  aria-hidden
+                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                    selected ? "border-brand" : "border-gray-300"
+                  }`}>
+                  {selected && (
+                    <span className="h-2 w-2 rounded-full bg-brand" />
+                  )}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1.5">
-            Loại quy tắc công nợ
-          </label>
-          <select
-            value={value.debtRuleType}
-            onChange={(e) => {
-              const debtRuleType = e.target.value as DebtRuleType;
-              onChange({
-                debtRuleType,
-                hasCreditLimit: debtRuleType === "CREDIT_LIMIT",
-                hasTermDays: debtRuleType === "TERM_DAYS",
-                creditLimit: debtRuleType === "CREDIT_LIMIT" ? value.creditLimit : "",
-                termDays: debtRuleType === "TERM_DAYS" ? value.termDays : "",
-                paymentScheduleType:
-                  debtRuleType === "MONTHLY_SCHEDULE"
-                    ? "MONTHLY"
-                    : debtRuleType === "WEEKLY_SCHEDULE"
-                      ? "WEEKLY"
-                      : "",
-                paymentScheduleDays:
-                  debtRuleType === "MONTHLY_SCHEDULE" ||
-                  debtRuleType === "WEEKLY_SCHEDULE"
-                    ? value.paymentScheduleDays
-                    : [],
-              });
-            }}
-            className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
-          >
-            <option value="NONE">Không công nợ</option>
-            <option value="CREDIT_LIMIT">Hạn mức công nợ</option>
-            <option value="TERM_DAYS">Công nợ theo số ngày</option>
-            <option value="MONTHLY_SCHEDULE">Thanh toán cố định theo tháng</option>
-            <option value="WEEKLY_SCHEDULE">Thanh toán cố định theo tuần</option>
-          </select>
-          {value.debtRuleType === "CREDIT_LIMIT" && (
-            <div className="mt-2 ml-6">
-              <input
-                type="text"
-                inputMode="numeric"
-                value={formatNumberInput(value.creditLimit)}
-                onChange={(e) =>
-                  onChange({ creditLimit: formatNumberInput(e.target.value) })
-                }
-                placeholder="VD: 500000000"
-                className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
-              />
-              {value.creditLimit && parseNumberInput(value.creditLimit) > 0 && (
-                <p className="text-xs text-gray-500 mt-1">
-                  {formatCurrency(parseNumberInput(value.creditLimit))} đ — khi
-                  vượt mức, số cần thu là phần vượt.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-
-        {value.debtRuleType === "TERM_DAYS" && (
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              Số ngày công nợ
-            </label>
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {COMMON_TERM_DAYS.map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => onChange({ termDays: String(d) })}
-                  className={`px-2.5 py-1 rounded text-xs border transition-colors ${
-                    value.termDays === String(d)
-                      ? "bg-brand text-white border-brand"
-                      : "bg-white hover:bg-gray-50"
-                  }`}
-                >
-                  {d} ngày
-                </button>
-              ))}
-            </div>
-            <input
-              type="number"
-              min={0}
-              value={value.termDays}
-              onChange={(e) => onChange({ termDays: e.target.value })}
-              placeholder="Hoặc nhập số ngày khác"
-              className="w-full border rounded px-3 py-1.5 sm:py-2 text-sm"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Tính từ ngày báo đơn giao hàng; sau đó cộng thêm {DEBT_GRACE_DAYS} ngày ân hạn.
-            </p>
+        {/* ── Cấu hình chi tiết theo quy tắc ── */}
+        {value.debtRuleType === "NONE" ? (
+          <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>
+              Khách không được phép phát sinh công nợ. Phải thanh toán đủ trên
+              đơn hàng trước khi xuất hóa đơn.
+            </span>
           </div>
-        )}
+        ) : (
+          <div className="mt-3 rounded-xl border bg-gray-50 p-4">
+            {activeRule && (
+              <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <activeRule.Icon className="h-3.5 w-3.5" />
+                {activeRule.label}
+              </p>
+            )}
 
-        {(value.debtRuleType === "MONTHLY_SCHEDULE" ||
-          value.debtRuleType === "WEEKLY_SCHEDULE") && (
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              {value.debtRuleType === "MONTHLY_SCHEDULE"
-                ? "Ngày thanh toán cố định trong tháng"
-                : "Thứ thanh toán cố định trong tuần"}
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {(value.debtRuleType === "MONTHLY_SCHEDULE"
-                ? Array.from({ length: 31 }, (_, i) => i + 1)
-                : [1, 2, 3, 4, 5, 6, 7]
-              ).map((day) => {
-                const selected = value.paymentScheduleDays.includes(day);
-                const label =
-                  value.debtRuleType === "MONTHLY_SCHEDULE"
-                    ? String(day)
-                    : day === 7
-                      ? "CN"
-                      : `T${day + 1}`;
-                return (
-                  <button
-                    key={day}
-                    type="button"
-                    onClick={() =>
+            {value.debtRuleType === "CREDIT_LIMIT" && (
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Hạn mức tối đa
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={formatNumberInput(value.creditLimit)}
+                    onChange={(e) =>
                       onChange({
-                        paymentScheduleDays: selected
-                          ? value.paymentScheduleDays.filter((d) => d !== day)
-                          : [...value.paymentScheduleDays, day].sort((a, b) => a - b),
+                        creditLimit: formatNumberInput(e.target.value),
                       })
                     }
-                    className={`min-w-9 px-2 py-1 rounded text-xs border ${
-                      selected
-                        ? "bg-brand text-white border-brand"
-                        : "bg-white hover:bg-gray-50"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Đã chọn {value.paymentScheduleDays.length} kỳ. Ngày 30/31 trong tháng ngắn sẽ tính vào ngày cuối tháng.
-            </p>
+                    placeholder="VD: 500,000,000"
+                    className={`${INPUT_CLASS} pr-9 text-right font-medium tabular-nums`}
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                    đ
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs text-gray-500">
+                  {creditLimitNumber > 0
+                    ? `${formatCurrency(creditLimitNumber)} đ — khi vượt mức, số cần thu là phần vượt.`
+                    : "Khi tổng nợ vượt hạn mức, số cần thu là phần vượt."}
+                </p>
+              </div>
+            )}
+
+            {value.debtRuleType === "TERM_DAYS" && (
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Số ngày công nợ
+                </label>
+                <div className="mb-2.5 flex flex-wrap gap-1.5">
+                  {COMMON_TERM_DAYS.map((d) => {
+                    const selected = value.termDays === String(d);
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => onChange({ termDays: String(d) })}
+                        className={`h-8 rounded-full border px-3 text-xs font-medium transition-colors ${
+                          selected
+                            ? "border-brand bg-brand text-white"
+                            : "bg-white text-gray-700 hover:border-brand-border-strong"
+                        }`}>
+                        {d} ngày
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="relative max-w-[220px]">
+                  <input
+                    type="number"
+                    min={0}
+                    value={value.termDays}
+                    onChange={(e) => onChange({ termDays: e.target.value })}
+                    placeholder="Số ngày khác"
+                    className={`${INPUT_CLASS} pr-14 tabular-nums`}
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                    ngày
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs text-gray-500">
+                  Tính từ ngày báo đơn giao hàng; sau đó cộng thêm{" "}
+                  {DEBT_GRACE_DAYS} ngày ân hạn.
+                </p>
+              </div>
+            )}
+
+            {isSchedule && (
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    {value.debtRuleType === "MONTHLY_SCHEDULE"
+                      ? "Ngày thanh toán trong tháng"
+                      : "Thứ thanh toán trong tuần"}
+                  </label>
+                  {value.paymentScheduleDays.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => onChange({ paymentScheduleDays: [] })}
+                      className="text-xs font-medium text-gray-500 transition-colors hover:text-brand">
+                      Bỏ chọn tất cả
+                    </button>
+                  )}
+                </div>
+                <div className="grid max-w-md grid-cols-7 gap-1.5">
+                  {(value.debtRuleType === "MONTHLY_SCHEDULE"
+                    ? Array.from({ length: 31 }, (_, i) => i + 1)
+                    : [1, 2, 3, 4, 5, 6, 7]
+                  ).map((day) => {
+                    const selected = value.paymentScheduleDays.includes(day);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => toggleScheduleDay(day)}
+                        className={`h-9 rounded-lg border text-sm font-medium tabular-nums transition-colors ${
+                          selected
+                            ? "border-brand bg-brand text-white"
+                            : "bg-white text-gray-700 hover:border-brand-border-strong hover:bg-gray-50"
+                        }`}>
+                        {value.debtRuleType === "MONTHLY_SCHEDULE"
+                          ? day
+                          : WEEKDAY_LABEL(day)}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  {value.paymentScheduleDays.length > 0 ? (
+                    <>
+                      Đã chọn {value.paymentScheduleDays.length} kỳ:{" "}
+                      <span className="font-medium text-gray-700">
+                        {value.paymentScheduleDays
+                          .map((d) =>
+                            value.debtRuleType === "MONTHLY_SCHEDULE"
+                              ? `ngày ${d}`
+                              : WEEKDAY_LABEL(d),
+                          )
+                          .join(", ")}
+                      </span>
+                    </>
+                  ) : (
+                    "Chưa chọn kỳ nào."
+                  )}
+                  {value.debtRuleType === "MONTHLY_SCHEDULE" &&
+                    " Ngày 30/31 trong tháng ngắn sẽ tính vào ngày cuối tháng."}
+                </p>
+              </div>
+            )}
           </div>
         )}
-
-        {noPolicy && (
-          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5">
-            Khách không được phép phát sinh công nợ. Phải thanh toán đủ trên
-            đơn hàng trước khi xuất hóa đơn.
-          </p>
-        )}
       </div>
-
     </div>
   );
 }

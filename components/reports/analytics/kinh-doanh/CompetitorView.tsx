@@ -8,10 +8,18 @@ import type {
   KdFilters,
   NewCustomerCell,
   PlanCell,
+  PivotDim,
 } from "@/lib/api/analytics-kinh-doanh";
 import { Panel } from "../shared/AnalyticsCharts";
 import { AnalyticsTable } from "../shared/AnalyticsTable";
 import { KdPivot } from "./KdPivot";
+
+/** Bảng "Tổng hợp…" của trang Đối Thủ (trang gửi sớm request với cột mặc định = tháng). */
+export const COMPETITOR_PIVOT_ROWS: PivotDim[] = [
+  "sale_admin_pic",
+  "parent_name",
+  "product_name",
+];
 import { BarCell, Block, MiniTable, Unavailable } from "./KdUi";
 import { C, fmtDate, full, int, pbiTargetColor, pct, tr, ty } from "./kdFormat";
 
@@ -149,7 +157,7 @@ export function CompetitorView({
         }>
         <KdPivot
           filters={filters}
-          rows={["sale_admin_pic", "parent_name", "product_name"]}
+          rows={COMPETITOR_PIVOT_ROWS}
           rowLabel="Nhóm Khách / Tên Khách Cha / Tên Sản Phẩm"
           cols={cols}
           measures={[{ key: "metric", label: "Giá trị" }]}

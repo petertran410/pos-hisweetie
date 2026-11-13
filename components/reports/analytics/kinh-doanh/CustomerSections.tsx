@@ -22,6 +22,7 @@ import type {
   KeyValue,
   LineListing,
   RepeatCell,
+  PivotDim,
 } from "@/lib/api/analytics-kinh-doanh";
 import { DT_COLORS, money, vi } from "@/lib/dashboard/format";
 import { BLANK_LABEL, growthDelta, metricTitle } from "../analyticsFormat";
@@ -394,6 +395,17 @@ export function RegionSection({
 // ─────────────────────────────────────────────────────────────────────────────
 // Chi Tiết
 // ─────────────────────────────────────────────────────────────────────────────
+/** Hai bảng pivot của mục Chi Tiết (trang gửi sớm request với cột mặc định). */
+export const DETAIL_PIVOT_REGION = {
+  rows: ["region", "parent_name", "product_name"] as PivotDim[],
+  growth: "mom" as const,
+};
+export const DETAIL_PIVOT_WEEK = {
+  rows: ["parent_name", "product_name"] as PivotDim[],
+  cols: "week" as const,
+  growth: "wow" as const,
+};
+
 export function DetailSection({
   data,
   filters,
@@ -448,10 +460,10 @@ export function DetailSection({
         }>
         <KdPivot
           filters={filters}
-          rows={["region", "parent_name", "product_name"]}
+          rows={DETAIL_PIVOT_REGION.rows}
           rowLabel="Vùng / Tên Khách Cha / Tên Sản Phẩm"
           cols={cols}
-          growth="mom"
+          growth={DETAIL_PIVOT_REGION.growth}
           heat
           measures={[
             { key: "metric", label: "Giá trị" },
@@ -464,10 +476,10 @@ export function DetailSection({
         subtitle="Khách cha › Sản phẩm · Doanh Số WoW %">
         <KdPivot
           filters={filters}
-          rows={["parent_name", "product_name"]}
+          rows={DETAIL_PIVOT_WEEK.rows}
           rowLabel="Tên Khách Cha / Tên Sản Phẩm"
-          cols="week"
-          growth="wow"
+          cols={DETAIL_PIVOT_WEEK.cols}
+          growth={DETAIL_PIVOT_WEEK.growth}
           measures={[
             { key: "metric", label: "Giá trị" },
             { key: "growth", label: "Doanh Số WoW %" },

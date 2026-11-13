@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { ChevronDown, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { useCan } from "@/lib/hooks/useCan";
 import { useChatContext, useDeleteZaloContact, useZaloProfile } from "@/lib/hooks/useSmaxChat";
 import type { ZaloContact, ZaloContactKind } from "@/lib/types/smaxChat";
@@ -67,11 +67,15 @@ export function ZaloContactsManager({ customerId }: { customerId: number }) {
           />
         ) : (
           <p className="text-gray-500">
-            Chưa có.{" "}
-            {canManage && (
-              <button onClick={() => setAdding("user")} className="text-brand hover:underline">
-                Thêm ID Zalo
+            {canManage ? (
+              <button
+                onClick={() => setAdding("user")}
+                className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed px-3 py-2 text-sm font-medium text-gray-500 transition-colors hover:border-brand hover:text-brand">
+                <Plus className="h-4 w-4" aria-hidden />
+                Thêm ID Zalo cá nhân
               </button>
+            ) : (
+              "Chưa có."
             )}
           </p>
         )}
@@ -96,11 +100,15 @@ export function ZaloContactsManager({ customerId }: { customerId: number }) {
           <ZaloContactEditor customerId={customerId} kind="group" onDone={() => setAdding(null)} />
         ) : (
           <p className="text-gray-500">
-            {groups.length === 0 && "Chưa có. "}
-            {canManage && (
-              <button onClick={() => setAdding("group")} className="text-brand hover:underline">
+            {canManage ? (
+              <button
+                onClick={() => setAdding("group")}
+                className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed px-3 py-2 text-sm font-medium text-gray-500 transition-colors hover:border-brand hover:text-brand">
+                <Plus className="h-4 w-4" aria-hidden />
                 Thêm nhóm Zalo
               </button>
+            ) : (
+              groups.length === 0 && "Chưa có."
             )}
           </p>
         )}
@@ -257,7 +265,7 @@ function ContactRow({
 }) {
   const { data: p } = useZaloProfile(customerId, pagePid, c.id);
   return (
-    <li className="rounded border px-3 py-2">
+    <li className="rounded-lg border bg-white px-3 py-2">
       <div className="flex items-center justify-between gap-2">
         <ZaloAvatar
           avatar={p?.avatar ?? null}

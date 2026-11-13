@@ -37,6 +37,10 @@ export function KhChurnView({
     { v: 0, d: 0 },
   );
   const num = "px-2.5 py-1.5 text-right dt-mono whitespace-nowrap";
+  const productValue = (p: [string, number, number, number, number]) => {
+    const v = { amount: p[1], orders: p[2], customers: p[3], quantity: p[4] };
+    return v[metric as keyof typeof v] ?? 0;
+  };
 
   return (
     <div className="grid gap-3 xl:grid-cols-[1fr_2fr]">
@@ -109,12 +113,14 @@ export function KhChurnView({
                     {open.has(r.name) &&
                       r.products.map((p) => (
                         <tr
-                          key={p.code}
+                          key={p[0]}
                           className="border-b hover:bg-[#F7FBFC]"
                           style={{ borderColor: "var(--dt-border)" }}>
-                          <td className="pl-8 pr-2.5 py-1.5">{p.name}</td>
+                          <td className="pl-8 pr-2.5 py-1.5">
+                            {data.productNames[p[0]] ?? p[0]}
+                          </td>
                           <td className={num}>
-                            {p.value[metric] ? vi(p.value[metric]) : ""}
+                            {productValue(p) ? vi(productValue(p)) : ""}
                           </td>
                           <td className={num}>{fmtDate(r.lastOrder)}</td>
                           <td className={num}>{vi(r.churnDay)}</td>

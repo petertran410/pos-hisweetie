@@ -12,7 +12,10 @@ import {
   Star,
   Phone,
   User,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+import { TabEmpty, TabLoading } from "@/components/customers/CustomerTabUI";
 import { CustomerAddressFormModal } from "@/components/pos/CustomerAddressFormModal";
 import { sanitizeAddresses } from "@/lib/utils/sanitize-address";
 
@@ -87,7 +90,7 @@ export function CustomerAddressesTab({
   const [invoiceProvinces, setInvoiceProvinces] = useState<Province[]>([]);
   const [invoiceCommunes, setInvoiceCommunes] = useState<Commune[]>([]);
   const [addresses, setAddresses] = useState<any[]>(() =>
-    initAddresses(customer)
+    initAddresses(customer),
   );
   const [modalState, setModalState] = useState<ModalState>({ open: false });
   const ADDRESSES_PER_PAGE = 2;
@@ -95,11 +98,11 @@ export function CustomerAddressesTab({
 
   const totalAddressPages = Math.max(
     1,
-    Math.ceil(addresses.length / ADDRESSES_PER_PAGE)
+    Math.ceil(addresses.length / ADDRESSES_PER_PAGE),
   );
   const paginatedAddresses = addresses.slice(
     (addressPage - 1) * ADDRESSES_PER_PAGE,
-    addressPage * ADDRESSES_PER_PAGE
+    addressPage * ADDRESSES_PER_PAGE,
   );
   const updateCustomer = useUpdateCustomer();
 
@@ -178,7 +181,7 @@ export function CustomerAddressesTab({
     if (!modalState.open || modalState.mode !== "edit") return;
     const idx = modalState.index;
     let next = addresses.map((a, i) =>
-      i === idx ? { ...a, ...updatedAddr } : a
+      i === idx ? { ...a, ...updatedAddr } : a,
     );
     if (updatedAddr.isDefault) {
       next = next.map((a, i) => ({ ...a, isDefault: i === idx }));
@@ -209,98 +212,106 @@ export function CustomerAddressesTab({
     }
   };
 
-  if (isLoadingData) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-brand" />
-      </div>
-    );
-  }
+  if (isLoadingData) return <TabLoading />;
+
+  const addButton = (
+    <button
+      onClick={() => setModalState({ open: true, mode: "create" })}
+      disabled={updateCustomer.isPending}
+      className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-brand-border px-3 text-sm font-medium text-brand transition-colors hover:bg-brand-soft disabled:opacity-50">
+      <Plus className="h-4 w-4" />
+      Thêm địa chỉ
+    </button>
+  );
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base lg:text-lg font-semibold">
-          Địa chỉ giao hàng
-        </h3>
-        <button
-          onClick={() => setModalState({ open: true, mode: "create" })}
-          disabled={updateCustomer.isPending}
-          className="px-3 lg:px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark flex items-center gap-1.5 disabled:opacity-50">
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Thêm địa chỉ</span>
-        </button>
-      </div>
-
       {addresses.length === 0 ? (
-        <div className="text-center py-8 lg:py-12 text-gray-500 border-2 border-dashed rounded-lg">
-          <MapPin className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-          <p>Khách hàng chưa có địa chỉ giao hàng.</p>
-          <p className="text-sm">Bấm "Thêm địa chỉ" để bắt đầu.</p>
-        </div>
+        <TabEmpty
+          icon={MapPin}
+          title="Khách hàng chưa có địa chỉ giao hàng"
+          description="Thêm địa chỉ để chọn nhanh khi tạo đơn cho khách."
+          action={addButton}
+        />
       ) : (
-        <div className="space-y-3">
-          {paginatedAddresses.map((addr: any, localIndex: number) => {
-            const index = (addressPage - 1) * ADDRESSES_PER_PAGE + localIndex;
-            return (
-              <div
-                key={addr.id ?? index}
-                className={`group border rounded-lg p-3 lg:p-4 transition-colors ${
-                  addr.isDefault
-                    ? "border-brand bg-brand-soft/50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}>
-                <div className="flex items-start justify-between gap-2 lg:gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5 lg:mb-2 flex-wrap">
-                      <MapPin className="w-4 h-4 text-brand flex-shrink-0" />
-                      <span className="text-sm lg:text-base font-medium truncate">
+        <>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <span className="text-sm text-gray-500">
+              {addresses.length} địa chỉ
+              {updateCustomer.isPending && (
+                <Loader2 className="ml-2 inline h-3.5 w-3.5 animate-spin text-brand" />
+              )}
+            </span>
+            {addButton}
+          </div>
+
+          <div className="space-y-2">
+            {paginatedAddresses.map((addr: any, localIndex: number) => {
+              const index = (addressPage - 1) * ADDRESSES_PER_PAGE + localIndex;
+              const line = formatAddressLine(addr);
+              return (
+                <div
+                  key={addr.id ?? index}
+                  className={`flex items-start gap-3 rounded-xl border bg-white px-4 py-3 transition-colors ${
+                    addr.isDefault
+                      ? "border-brand bg-brand-soft"
+                      : "hover:border-brand-border-strong"
+                  }`}>
+                  <span
+                    className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                      addr.isDefault
+                        ? "bg-brand text-white"
+                        : "bg-gray-100 text-gray-500"
+                    }`}>
+                    <MapPin className="h-4 w-4" />
+                  </span>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate text-sm font-semibold text-gray-900">
                         {addr.label || addr.receiver || `Địa chỉ #${index + 1}`}
                       </span>
                       {addr.isDefault && (
-                        <span className="px-2 py-0.5 text-xs bg-brand text-white rounded flex items-center gap-1">
-                          <Star className="w-3 h-3" fill="currentColor" />
+                        <span className="inline-flex items-center gap-1 rounded bg-brand px-1.5 py-0.5 text-[11px] font-medium text-white">
+                          <Star className="h-3 w-3" fill="currentColor" />
                           Mặc định
                         </span>
                       )}
                     </div>
-
-                    <div className="space-y-1 text-sm lg:text-sm text-gray-700">
-                      {(addr.receiver || addr.contactNumber) && (
-                        <div className="lg:flex items-center lg:gap-4 text-gray-600">
-                          {addr.receiver && (
-                            <span className="flex items-center gap-1 mb-1 lg:mb-0">
-                              <User className="w-3.5 h-3.5" />
-                              {addr.receiver}
-                            </span>
-                          )}
-                          {addr.contactNumber && (
-                            <span className="flex items-center gap-1">
-                              <Phone className="w-3.5 h-3.5" />
-                              {addr.contactNumber}
-                            </span>
-                          )}
-                        </div>
+                    <p className="mt-0.5 text-sm text-gray-700">
+                      {line || (
+                        <span className="italic text-gray-400">
+                          Chưa có địa chỉ — bấm sửa để bổ sung
+                        </span>
                       )}
-                      <div className="text-gray-800">
-                        {formatAddressLine(addr) || (
-                          <span className="italic text-gray-400">
-                            Chưa có địa chỉ
+                    </p>
+                    {(addr.receiver || addr.contactNumber) && (
+                      <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-0.5 text-xs text-gray-500">
+                        {addr.receiver && (
+                          <span className="inline-flex items-center gap-1">
+                            <User className="h-3.5 w-3.5" />
+                            {addr.receiver}
+                          </span>
+                        )}
+                        {addr.contactNumber && (
+                          <span className="inline-flex items-center gap-1">
+                            <Phone className="h-3.5 w-3.5" />
+                            {addr.contactNumber}
                           </span>
                         )}
                       </div>
-                    </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center gap-1 flex-shrink-0">
+                  <div className="flex shrink-0 items-center gap-0.5">
                     {!addr.isDefault && (
                       <button
                         type="button"
                         onClick={() => handleSetDefault(index)}
                         disabled={updateCustomer.isPending}
                         title="Đặt làm mặc định"
-                        className="p-1.5 lg:p-2 text-gray-500 hover:text-brand hover:bg-brand-soft rounded disabled:opacity-50">
-                        <Star className="w-4 h-4" />
+                        className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-brand-soft hover:text-brand disabled:opacity-50">
+                        <Star className="h-4 w-4" />
                       </button>
                     )}
                     <button
@@ -310,33 +321,34 @@ export function CustomerAddressesTab({
                       }
                       disabled={updateCustomer.isPending}
                       title="Chỉnh sửa"
-                      className="p-1.5 lg:p-2 text-gray-500 hover:text-brand hover:bg-brand-soft rounded disabled:opacity-50">
-                      <Pencil className="w-4 h-4" />
+                      className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-brand-soft hover:text-brand disabled:opacity-50">
+                      <Pencil className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
                       onClick={() => handleRemove(index)}
                       disabled={updateCustomer.isPending}
                       title="Xóa"
-                      className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded disabled:opacity-50">
-                      <Trash2 className="w-4 h-4" />
+                      className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50">
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
 
           {totalAddressPages > 1 && (
-            <div className="flex items-center justify-center gap-2 pt-2">
+            <div className="mt-3 flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setAddressPage((p) => Math.max(1, p - 1))}
                 disabled={addressPage <= 1}
-                className="px-3 py-1.5 text-sm border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
-                ‹ Trước
+                aria-label="Trang trước"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border bg-white text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">
+                <ChevronLeft className="h-4 w-4" />
               </button>
-              <span className="text-sm text-gray-600">
+              <span className="min-w-[48px] text-center text-xs font-medium tabular-nums text-gray-700">
                 {addressPage} / {totalAddressPages}
               </span>
               <button
@@ -345,12 +357,13 @@ export function CustomerAddressesTab({
                   setAddressPage((p) => Math.min(totalAddressPages, p + 1))
                 }
                 disabled={addressPage >= totalAddressPages}
-                className="px-3 py-1.5 text-sm border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
-                Sau ›
+                aria-label="Trang sau"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border bg-white text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">
+                <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           )}
-        </div>
+        </>
       )}
 
       <CustomerAddressFormModal

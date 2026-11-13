@@ -2,10 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MapPin, Loader2 } from "lucide-react";
-import {
-  autocompleteAddress,
-  TrackAsiaPrediction,
-} from "@/lib/api/trackasia";
+import { autocompleteAddress, TrackAsiaPrediction } from "@/lib/api/trackasia";
 
 interface Props {
   value: string;
@@ -35,6 +32,9 @@ export function AddressAutocompleteInput({
   const [loading, setLoading] = useState(false);
   // Bỏ qua lần fetch ngay sau khi vừa chọn 1 gợi ý (tránh mở lại dropdown).
   const skipNextFetch = useRef(false);
+  // Chỉ gợi ý sau khi người dùng tự gõ — tránh bật dropdown che form ngay khi
+  // mở modal sửa với địa chỉ có sẵn.
+  const userTyped = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Debounce + abort theo value
@@ -43,6 +43,7 @@ export function AddressAutocompleteInput({
       skipNextFetch.current = false;
       return;
     }
+    if (!userTyped.current) return;
 
     const q = (value || "").trim();
     if (q.length < 2) {
@@ -94,7 +95,10 @@ export function AddressAutocompleteInput({
       <input
         type="text"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          userTyped.current = true;
+          onChange(e.target.value);
+        }}
         onFocus={() => {
           if (predictions.length > 0) setIsOpen(true);
         }}

@@ -7,7 +7,18 @@ import {
   getStatusLabel,
 } from "@/lib/types/consignment";
 import { formatCurrency } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { PackageOpen } from "lucide-react";
+import {
+  DateCell,
+  StatusPill,
+  TabEmpty,
+  TabLoading,
+  TabPagination,
+  TabTable,
+  Td,
+  Th,
+  Tr,
+} from "./CustomerTabUI";
 import { useState } from "react";
 import { DocumentPreviewModal } from "../shared/DocumentPreviewModal";
 
@@ -30,7 +41,7 @@ export function CustomerConsignmentsTab({
   const [page, setPage] = useState(1);
   const limit = 5;
   const [preview, setPreview] = useState<{ id: number; code: string } | null>(
-    null
+    null,
   );
 
   const consignments = data?.data || [];
@@ -38,106 +49,77 @@ export function CustomerConsignmentsTab({
   const totalPages = Math.ceil(consignments.length / limit);
   const paginated = consignments.slice((page - 1) * limit, page * limit);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-brand" />
-      </div>
-    );
-  }
+  if (isLoading) return <TabLoading />;
 
   if (consignments.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
-        Chưa có lịch sử ký gửi
-      </div>
+      <TabEmpty
+        icon={PackageOpen}
+        title="Chưa có lịch sử ký gửi"
+        description="Các phiếu ký gửi hàng của khách sẽ hiện ở đây."
+      />
     );
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
+    <>
+      <TabTable
+        footer={
+          <TabPagination
+            page={page}
+            totalPages={totalPages}
+            total={consignments.length}
+            unit="phiếu ký gửi"
+            onChange={setPage}
+          />
+        }>
         <thead>
-          <tr className="border-b bg-gray-50">
-            <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
-              Mã ký gửi
-            </th>
-            <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
-              Ngày ký gửi
-            </th>
-            <th className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
-              Người bán
-            </th>
-            <th className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
-              Chi nhánh
-            </th>
-            <th className="px-2 py-2 lg:px-4 lg:py-3 text-right text-xs lg:text-sm font-medium">
-              Tổng cộng
-            </th>
-            <th className="px-2 py-2 lg:px-4 lg:py-3 text-center text-xs lg:text-sm font-medium">
-              Trạng thái
-            </th>
+          <tr>
+            <Th>Mã ký gửi</Th>
+            <Th>Ngày ký gửi</Th>
+            <Th className="hidden md:table-cell">Người bán</Th>
+            <Th className="hidden md:table-cell">Chi nhánh</Th>
+            <Th align="right">Tổng cộng</Th>
+            <Th align="center">Trạng thái</Th>
           </tr>
         </thead>
         <tbody>
           {paginated.map((c) => (
-            <tr key={c.id} className="border-b hover:bg-gray-50">
-              <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
+            <Tr key={c.id}>
+              <Td>
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     setPreview({ id: c.id, code: c.code });
                   }}
-                  className="text-brand hover:underline">
+                  className="font-medium text-brand hover:underline">
                   {c.code}
                 </button>
-              </td>
-              <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
-                {new Date(c.consignDate).toLocaleString("vi-VN")}
-              </td>
-              <td className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
-                {c.soldBy?.name || "-"}
-              </td>
-              <td className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
-                {c.branch?.name || "-"}
-              </td>
-              <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm text-right">
+              </Td>
+              <Td>
+                <DateCell value={c.consignDate} />
+              </Td>
+              <Td className="hidden md:table-cell">{c.soldBy?.name || "—"}</Td>
+              <Td className="hidden md:table-cell">{c.branch?.name || "—"}</Td>
+              <Td
+                align="right"
+                className="font-medium tabular-nums text-gray-900">
                 {formatCurrency(Number(c.grandTotal))}
-              </td>
-              <td className="px-2 py-2 lg:px-4 lg:py-3 text-center">
-                <span
-                  className={`px-2 py-1 rounded text-xs font-medium ${
+              </Td>
+              <Td align="center">
+                <StatusPill
+                  colorClass={
                     CONSIGNMENT_STATUS_COLOR[c.status] ??
                     "bg-gray-100 text-gray-700"
-                  }`}>
+                  }>
                   {getStatusLabel(c.status)}
-                </span>
-              </td>
-            </tr>
+                </StatusPill>
+              </Td>
+            </Tr>
           ))}
         </tbody>
-      </table>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-4">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-3 py-1 text-sm border rounded disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50">
-            Trước
-          </button>
-          <span className="text-sm text-gray-500">
-            {page}/{totalPages}
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page >= totalPages}
-            className="px-3 py-1 text-sm border rounded disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50">
-            Sau
-          </button>
-        </div>
-      )}
+      </TabTable>
 
       {preview && (
         <DocumentPreviewModal
@@ -147,6 +129,6 @@ export function CustomerConsignmentsTab({
           onClose={() => setPreview(null)}
         />
       )}
-    </div>
+    </>
   );
 }
