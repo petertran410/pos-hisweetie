@@ -11,9 +11,10 @@ import {
   useSetDefaultQuoteTemplate,
   useSetQuoteTemplateActive,
 } from "@/lib/hooks/useQuoteTemplates";
-import { MOCK_LIBRARY } from "@/lib/api/quotes.mock";
+import { useQuote, useQuotes } from "@/lib/hooks/useQuotes";
 import { applyTiers, renderTitle } from "@/lib/quotes/pricing";
 import type {
+  QuoteItem,
   QuoteLayout,
   QuoteRegion,
   QuoteTemplate,
@@ -196,8 +197,7 @@ function TierDefsEditor({ tiers, onChange }: { tiers: QuoteTierDef[]; onChange: 
 }
 
 /** Báo giá minh hoạ cho phần xem trước: vài dòng thật trong Thư viện cùng nhóm khách. */
-function sampleQuote(form: QuoteTemplatePayload, region: QuoteRegion) {
-  const lib = MOCK_LIBRARY.find((q) => q.template === form.group) ?? MOCK_LIBRARY[0];
+function sampleQuote(form: QuoteTemplatePayload, region: QuoteRegion, libItems: QuoteItem[]) {
   const today = new Date().toISOString().slice(0, 10);
   const until = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
   return {
@@ -213,7 +213,7 @@ function sampleQuote(form: QuoteTemplatePayload, region: QuoteRegion) {
     appliedFrom: today,
     validUntil: until,
     customer: null,
-    items: lib.items.slice(0, 6).map((it) => applyTiers(it, form.tiers)),
+    items: libItems.slice(0, 6).map((it) => applyTiers(it, form.tiers)),
   };
 }
 
@@ -303,7 +303,13 @@ export function QuoteTemplatesSettings() {
   };
 
   const patch = (p: Partial<QuoteTemplatePayload>) => setForm((f) => (f ? { ...f, ...p } : f));
-  const preview = form ? sampleQuote(form, region) : null;
+  // Sản phẩm minh hoạ: mẫu thư viện đầu tiên cùng nhóm khách (chưa có thì mẫu bất kỳ).
+  const previewGroup = form?.group ?? group;
+  const { data: libSame } = useQuotes({ tab: "library", template: [previewGroup], pageSize: 1 });
+  const { data: libAny } = useQuotes({ tab: "library", pageSize: 1 });
+  const libId = libSame?.data[0]?.id ?? libAny?.data[0]?.id ?? null;
+  const { data: libQuote } = useQuote(libId);
+  const preview = form ? sampleQuote(form, region, libQuote?.items ?? []) : null;
 
   return (
     <div className="flex flex-col h-full">

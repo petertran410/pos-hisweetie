@@ -25,7 +25,6 @@ import type {
 } from "@/lib/types/quote";
 import {
   QUOTE_CATEGORY_LABEL,
-  QUOTE_LAYOUT_LABEL,
   QUOTE_REGION_LABEL,
   QUOTE_STATUS_COLOR,
   QUOTE_STATUS_LABEL,
@@ -132,7 +131,7 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
   const [preview, setPreview] = useState(false);
   const { data: templates = [], isLoading: templatesLoading } = useQuoteTemplates();
   const tpl = templates.find((t) => t.id === draft.templateId) ?? null;
-  /** Mẫu chọn được trong nhóm: đang sử dụng, cộng mẫu báo giá này đang dùng (kể cả đã ngừng). */
+  /** Mẫu chọn được (Cài đặt › Mẫu báo giá): đang sử dụng, cộng mẫu báo giá này đang dùng (kể cả đã ngừng). */
   const usable = (g: QuoteTemplate) =>
     templates.filter((t) => t.group === g && (t.isActive || t.id === draft.templateId));
   const defaultOf = (g: QuoteTemplate) =>
@@ -197,10 +196,6 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templates, quoteId, draft.templateId]);
 
-  const changeGroup = (g: QuoteTemplate) => {
-    const cfg = defaultOf(g);
-    if (cfg) applyConfig(cfg);
-  };
   const changeRegion = (region: QuoteRegion) =>
     setDraft((d) => ({
       ...d,
@@ -237,21 +232,18 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
     patch({ items: [...draft.items, fillFromPriceBook(item, priceFor(item))] });
   };
 
-  const addGroup = (category: QuoteCategory) => {
-    const lib = libraryFor(category, draft.region, draft.template);
-    if (!lib) return;
+  const addGroup = async (category: QuoteCategory) => {
+    const lib = await libraryFor(category, draft.region, draft.template).catch(() => null);
+    if (!lib) return toast.error(`Thư viện chưa có mẫu ${QUOTE_CATEGORY_LABEL[category]}`);
     const have = new Set(draft.items.map((it) => it.productId ?? it.productName));
-    const sameTemplate = lib.template === draft.template;
     const added = lib.items
       .filter((it) => !have.has(it.productId ?? it.productName))
       .map((it, i) => {
-        const base = { ...it, id: `g${Date.now()}-${i}` };
-        // Cùng mẫu: giữ giá trong file báo giá (đánh dấu sửa tay); khác mẫu: điền theo bảng giá.
-        return sameTemplate
-          ? { ...base, priceBookPrice: priceFor(base) ?? base.priceBookPrice }
-          : fillFromPriceBook({ ...base, tiers: newTiers() }, priceFor(base));
+        const base = { ...it, id: `g${Date.now()}-${i}`, priceBookPrice: priceFor(it) ?? it.priceBookPrice };
+        // Khung theo mẫu đang chọn: khung trùng khoá giữ giá trong file báo giá (sửa tay), còn lại điền theo bảng giá.
+        return tpl ? applyTiers(base, tpl.tiers) : base;
       });
-    patch({ items: [...draft.items, ...added] });
+    setDraft((d) => ({ ...d, items: [...d.items, ...added] }));
     toast.success(`Đã thêm ${added.length} sản phẩm ${QUOTE_CATEGORY_LABEL[category]} (${lib.code})`);
   };
 
@@ -272,6 +264,8 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
   }
 
   const status = draft.status;
+  // Đã chốt (chấp nhận / từ chối / hết hạn): không sửa nội dung, chỉ nhân bản.
+  const locked = !!existing && ["accepted", "rejected", "expired"].includes(existing.status);
   // Khách nhập tay: customer có id null.
   const guest = draft.customer?.id === null ? draft.customer : null;
   const setGuest = (p: Partial<QuoteCustomerRef>) =>
@@ -398,30 +392,36 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
             </Row>
 
             <Row label="Mẫu báo giá">
-              <Segmented value={draft.template} options={QUOTE_TEMPLATE_LABEL} onChange={changeGroup} />
-              {usable(draft.template).length > 1 && (
-                <select
-                  value={draft.templateId ?? ""}
-                  aria-label="Chọn mẫu trong nhóm"
-                  onChange={(e) => {
-                    const cfg = templates.find((t) => t.id === Number(e.target.value));
-                    if (cfg) applyConfig(cfg);
-                  }}
-                  className="w-full border rounded-lg px-2 py-1.5 text-sm bg-white">
-                  {draft.templateId == null && <option value="">(Không theo mẫu)</option>}
-                  {usable(draft.template).map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                      {t.isDefault ? " (Mặc định)" : ""}
-                      {t.isActive ? "" : " (Ngừng sử dụng)"}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </Row>
-
-            <Row label="Kiểu trình bày">
-              <Segmented value={draft.layout} options={QUOTE_LAYOUT_LABEL} onChange={(layout) => patch({ layout })} />
+              <select
+                value={draft.templateId ?? ""}
+                aria-label="Mẫu báo giá"
+                onChange={(e) => {
+                  const cfg = templates.find((t) => t.id === Number(e.target.value));
+                  if (cfg) applyConfig(cfg);
+                }}
+                className="w-full border rounded-lg px-3 py-1.5 text-sm bg-white">
+                {draft.templateId == null && <option value="">(Không theo mẫu)</option>}
+                {(Object.keys(QUOTE_TEMPLATE_LABEL) as QuoteTemplate[]).map((g) => {
+                  const list = usable(g);
+                  return list.length ? (
+                    <optgroup key={g} label={QUOTE_TEMPLATE_LABEL[g]}>
+                      {list.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                          {t.isActive ? "" : " (Ngừng sử dụng)"}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null;
+                })}
+              </select>
+              <a
+                href="/cai-dat/mau-bao-gia"
+                target="_blank"
+                rel="noopener"
+                className="inline-block text-xs text-brand hover:underline">
+                Quản lý mẫu báo giá
+              </a>
             </Row>
 
             <Row label="Miền">
@@ -524,7 +524,8 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
             </button>
             <button
               onClick={submit}
-              disabled={save.isPending}
+              disabled={save.isPending || locked}
+              title={locked ? "Báo giá đã chốt — nhân bản ở danh sách để tạo bản mới" : undefined}
               className="flex-1 px-3 py-2 text-sm rounded-lg bg-brand text-white hover:bg-brand-dark flex items-center justify-center gap-1.5 disabled:opacity-50">
               <Save className="w-4 h-4" /> {save.isPending ? "Đang lưu…" : quoteId ? "Lưu" : "Tạo báo giá"}
             </button>

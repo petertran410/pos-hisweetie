@@ -278,6 +278,9 @@ export function QuoteItemsList({ items, onChange, onAddGroup, priceBookName }: P
                 <th className="w-8" />
                 <th className="px-2 py-2 text-left font-medium w-8">#</th>
                 <th className="px-2 py-2 text-left font-medium">Sản phẩm</th>
+                <th className="px-2 py-2 text-right font-medium whitespace-nowrap" title="Mặc định lấy giá bán trong POS; sửa được. Dòng không có khung số lượng in theo giá này.">
+                  Giá bán
+                </th>
                 {cols.map((c) => (
                   <th key={c.key} className="px-2 py-2 text-right font-medium whitespace-nowrap">
                     {c.label}
@@ -322,6 +325,17 @@ export function QuoteItemsList({ items, onChange, onAddGroup, priceBookName }: P
                           </div>
                         </div>
                       </td>
+                      <td className="px-2 py-2">
+                        <div className="flex justify-end">
+                          <NumericInput
+                            value={it.basePrice ?? 0}
+                            onValueChange={(basePrice) => setItem(it.id, { ...it, basePrice: basePrice || null })}
+                            maxFractionDigits={0}
+                            formatWhileTyping
+                            className="w-24 border rounded-md px-2 py-1 text-right text-sm tabular-nums bg-white"
+                          />
+                        </div>
+                      </td>
                       {cols.map((c) => {
                         const k = it.tiers.findIndex((t) => t.key === c.key);
                         return (
@@ -355,7 +369,7 @@ export function QuoteItemsList({ items, onChange, onAddGroup, priceBookName }: P
                     </tr>
                     {expanded && (
                       <tr>
-                        <td colSpan={cols.length + 4} className="p-0">
+                        <td colSpan={cols.length + 5} className="p-0">
                           <TierEditor
                             item={it}
                             onItem={(next) => setItem(it.id, next)}

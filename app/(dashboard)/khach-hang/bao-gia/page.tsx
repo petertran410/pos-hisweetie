@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { QuotesSidebar } from "@/components/quotes/QuotesSidebar";
 import { QuotesTable } from "@/components/quotes/QuotesTable";
-import { MOCK_QUOTES } from "@/lib/api/quotes.mock";
+import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import type { QuoteFilters } from "@/lib/types/quote";
 
 /** Báo giá theo khách + thư viện báo giá mẫu (giai đoạn 1: dữ liệu mẫu). */
@@ -17,11 +17,7 @@ export default function QuotesPage() {
       setFilters((f) => ({ ...f, ...patch, page: patch.page ?? 1 })),
     []
   );
-  // Giai đoạn 2: lấy danh sách Sale từ người dùng có quyền quotes:create.
-  const sales = useMemo(
-    () => [...new Map(MOCK_QUOTES.map((q) => [q.createdBy.id, q.createdBy])).values()],
-    []
-  );
+  const { data: sales = [] } = useUsersForFilter();
 
   return (
     <PagePermissionGuard resource="quotes" action="view">

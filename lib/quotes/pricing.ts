@@ -67,6 +67,15 @@ export function diffPct(price: number | null, base: number | null): number | nul
 }
 
 /** Cột khung giá của cả báo giá: hợp các khoá theo thứ tự xuất hiện. */
+/** Dòng không áp khung số lượng: in một cột "Giá bán" (giá bán sửa trên form báo giá). */
+export function withSalePrice(it: QuoteItem): QuoteItem {
+  if (it.tiers.length) return it;
+  return {
+    ...it,
+    tiers: [{ key: "gia_ban", label: "Giá bán", minQty: null, maxQty: null, unit: "", price: it.basePrice, manual: true }],
+  };
+}
+
 export function tierColumns(items: QuoteItem[]): { key: string; label: string }[] {
   const seen = new Map<string, string>();
   for (const it of items) for (const t of it.tiers) if (!seen.has(t.key)) seen.set(t.key, t.label);

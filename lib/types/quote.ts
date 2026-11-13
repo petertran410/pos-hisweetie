@@ -1,8 +1,7 @@
 /**
  * Báo giá (/khach-hang/bao-gia) — hợp đồng dữ liệu giữa giao diện và API.
  *
- * Giai đoạn 1 chạy bằng mock (`lib/api/quotes.mock.ts`); giai đoạn 2 backend
- * trả đúng các kiểu này.
+ * Backend (hisweetie_ban_hang_backend/src/quotes) trả đúng các kiểu này.
  */
 
 /** Mẫu báo giá — quyết định bộ khung giá mặc định và cách trình bày. */

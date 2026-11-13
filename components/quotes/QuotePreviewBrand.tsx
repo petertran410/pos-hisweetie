@@ -2,7 +2,7 @@
 
 import { forwardRef } from "react";
 import type { Quote, QuoteItem } from "@/lib/types/quote";
-import { diffPct, formatVnd, marginPct, tierColumns } from "@/lib/quotes/pricing";
+import { diffPct, formatVnd, marginPct, tierColumns, withSalePrice } from "@/lib/quotes/pricing";
 
 /**
  * Mẫu 2 — thiết kế thương hiệu LerMao (canvas "Báo giá LerMao – 3 nhóm khách"):
@@ -398,7 +398,8 @@ function Agency({ quote }: { quote: BrandPreviewQuote }) {
 }
 
 export const QuotePreviewBrand = forwardRef<HTMLDivElement, { quote: BrandPreviewQuote }>(
-  function QuotePreviewBrand({ quote }, ref) {
+  function QuotePreviewBrand({ quote: raw }, ref) {
+    const quote = { ...raw, items: raw.items.map(withSalePrice) };
     return (
       <div ref={ref}>
         {quote.template === "retail" ? (

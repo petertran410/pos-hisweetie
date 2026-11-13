@@ -2,7 +2,7 @@
 
 import { forwardRef } from "react";
 import type { Quote } from "@/lib/types/quote";
-import { formatVnd, marginPct, tierColumns } from "@/lib/quotes/pricing";
+import { formatVnd, marginPct, tierColumns, withSalePrice } from "@/lib/quotes/pricing";
 
 /**
  * Bản báo giá theo bố cục sheet Excel "BẢNG BÁO GIÁ TỔNG HỢP":
@@ -52,7 +52,8 @@ function longDate(iso: string) {
 }
 
 export const QuotePreview = forwardRef<HTMLDivElement, { quote: PreviewQuote }>(
-  function QuotePreview({ quote }, ref) {
+  function QuotePreview({ quote: raw }, ref) {
+    const quote = { ...raw, items: raw.items.map(withSalePrice) };
     const cols = tierColumns(quote.items);
     const showMargin = quote.showMargin && cols.length > 1;
     const recipient = quote.customer
