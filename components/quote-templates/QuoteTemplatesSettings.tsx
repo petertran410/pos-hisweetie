@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Plus, Power, PowerOff, Save, Star, Trash2, Undo2 } from "lucide-react";
+import { Copy, ImageUp, Plus, Power, PowerOff, RotateCcw, Save, Star, Trash2, Undo2 } from "lucide-react";
 import { CustomTooltip } from "@/components/ui/CustomTooltip";
 import { confirmAction } from "@/lib/chat/confirm";
 import {
@@ -21,7 +21,8 @@ import type {
   QuoteTemplatePayload,
   QuoteTierDef,
 } from "@/lib/types/quote";
-import { QUOTE_LAYOUT_LABEL, QUOTE_REGION_LABEL } from "@/lib/types/quote";
+import { QUOTE_DEFAULT_LOGO, QUOTE_LAYOUT_LABEL, QUOTE_REGION_LABEL } from "@/lib/types/quote";
+import { quoteTemplatesApi } from "@/lib/api/quote-templates";
 import { QuotePreview } from "@/components/quotes/QuotePreview";
 import { QuotePreviewBrand } from "@/components/quotes/QuotePreviewBrand";
 
@@ -29,6 +30,9 @@ const UNITS = ["thùng", "túi", "hộp", "gói", "bao", "kg"];
 
 const toPayload = (t: QuoteTemplateConfig): QuoteTemplatePayload => ({
   name: t.name,
+  logoUrl: t.logoUrl,
+  companyName: t.companyName,
+  department: t.department,
   tiers: t.tiers,
   titlePattern: t.titlePattern,
   greeting: t.greeting,
@@ -194,6 +198,9 @@ function sampleQuote(form: QuoteTemplatePayload, region: QuoteRegion, libItems: 
   const until = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
   return {
     code: "BG000123",
+    logoUrl: form.logoUrl,
+    companyName: form.companyName,
+    department: form.department,
     title: renderTitle(form.titlePattern, region),
     greeting: form.greeting,
     intro: form.intro,
@@ -220,6 +227,8 @@ export function QuoteTemplatesSettings() {
   const [region, setRegion] = useState<QuoteRegion>("HN");
   /** Chỉ để xem trước — kiểu trình bày chọn lúc xuất báo giá, không lưu theo mẫu. */
   const [previewLayout, setPreviewLayout] = useState<QuoteLayout>("classic");
+  const logoInput = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
   const selected = useMemo(
     () => templates.find((t) => t.id === selectedId) ?? templates.find((t) => t.isDefault) ?? templates[0] ?? null,
@@ -283,6 +292,19 @@ export function QuoteTemplatesSettings() {
   };
 
   const patch = (p: Partial<QuoteTemplatePayload>) => setForm((f) => (f ? { ...f, ...p } : f));
+  const uploadLogo = async (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return toast.error("Chọn file ảnh (PNG, JPG, WEBP…)");
+    setUploading(true);
+    try {
+      patch({ logoUrl: await quoteTemplatesApi.uploadLogo(file) });
+    } catch {
+      toast.error("Tải logo thất bại");
+    } finally {
+      setUploading(false);
+      if (logoInput.current) logoInput.current.value = "";
+    }
+  };
   // Sản phẩm minh hoạ: mẫu thư viện đầu tiên; giá theo khung của mẫu đang sửa.
   const { data: lib } = useQuotes({ tab: "library", pageSize: 1 });
   const libId = lib?.data[0]?.id ?? null;
@@ -388,6 +410,53 @@ export function QuoteTemplatesSettings() {
                   value={form.name}
                   onChange={(e) => patch({ name: e.target.value })}
                   className="w-full border rounded-lg px-3 py-1.5 text-sm font-medium"
+                />
+              </Field>
+              <Field label="Đầu trang · Logo">
+                <div className="flex items-center gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={form.logoUrl || QUOTE_DEFAULT_LOGO}
+                    alt="Logo đầu trang"
+                    className="w-14 h-14 object-contain border rounded-lg bg-white p-1"
+                  />
+                  <input
+                    ref={logoInput}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => uploadLogo(e.target.files?.[0])}
+                  />
+                  <button
+                    type="button"
+                    disabled={uploading}
+                    onClick={() => logoInput.current?.click()}
+                    className="px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-50 flex items-center gap-1.5 disabled:opacity-50">
+                    <ImageUp className="w-4 h-4" /> {uploading ? "Đang tải…" : "Tải logo"}
+                  </button>
+                  {form.logoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => patch({ logoUrl: null })}
+                      className="px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-50 flex items-center gap-1.5">
+                      <RotateCcw className="w-4 h-4" /> Logo mặc định
+                    </button>
+                  )}
+                </div>
+              </Field>
+              <Field label="Tên công ty" hint="Xuống dòng để tách dòng như đầu trang Mẫu 1.">
+                <textarea
+                  value={form.companyName}
+                  onChange={(e) => patch({ companyName: e.target.value })}
+                  rows={2}
+                  className="w-full border rounded-lg px-3 py-1.5 text-sm"
+                />
+              </Field>
+              <Field label="Phòng ban" hint="Để trống = không in.">
+                <input
+                  value={form.department}
+                  onChange={(e) => patch({ department: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-1.5 text-sm"
                 />
               </Field>
               <Field

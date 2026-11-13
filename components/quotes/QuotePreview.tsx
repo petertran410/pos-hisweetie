@@ -2,6 +2,7 @@
 
 import { forwardRef } from "react";
 import type { Quote } from "@/lib/types/quote";
+import { QUOTE_DEFAULT_LOGO } from "@/lib/types/quote";
 import { formatVnd, marginPct, tierColumns, withSalePrice } from "@/lib/quotes/pricing";
 
 /**
@@ -24,6 +25,9 @@ type PreviewQuote = Pick<
   | "customer"
   | "items"
   | "showMargin"
+  | "logoUrl"
+  | "companyName"
+  | "department"
 >;
 
 const FONT = "'Times New Roman', Times, serif";
@@ -81,12 +85,21 @@ export const QuotePreview = forwardRef<HTMLDivElement, { quote: PreviewQuote }>(
               <td style={{ width: "50%", textAlign: "center", verticalAlign: "top" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/brands/lermao.webp" alt="LerMao" style={{ width: 52, height: 52, objectFit: "contain" }} />
+                  <img
+                    src={quote.logoUrl || QUOTE_DEFAULT_LOGO}
+                    alt="Logo"
+                    style={{ width: 52, height: 52, objectFit: "contain" }}
+                  />
                   <div style={{ fontWeight: 700, fontSize: 14 }}>
-                    <div>CÔNG TY TNHH XUẤT NHẬP KHẨU</div>
-                    <div>HI SWEETIE VIỆT NAM</div>
-                    <div>*</div>
-                    <div>PHÒNG KINH DOANH</div>
+                    {quote.companyName.split("\n").map((line, i) => (
+                      <div key={i}>{line}</div>
+                    ))}
+                    {quote.department && (
+                      <>
+                        <div>*</div>
+                        <div>{quote.department}</div>
+                      </>
+                    )}
                   </div>
                 </div>
               </td>

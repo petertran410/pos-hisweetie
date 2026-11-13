@@ -24,6 +24,9 @@ export const QUOTE_LAYOUT_LABEL: Record<QuoteLayout, string> = {
   brand: "Mẫu 2 · LerMao",
 };
 
+/** Logo đầu trang khi mẫu chưa tải logo riêng. */
+export const QUOTE_DEFAULT_LOGO = "/brands/lermao.webp";
+
 export const QUOTE_REGION_LABEL: Record<QuoteRegion, string> = {
   HN: "Hà Nội",
   SG: "Sài Gòn",
@@ -129,6 +132,10 @@ export interface Quote {
   category: QuoteCategory | null;
   customer: QuoteCustomerRef | null;
   priceBook: { id: number; name: string } | null;
+  /** Đầu trang: logo (null = logo LerMao mặc định), tên công ty ("\n" = xuống dòng), phòng ban. */
+  logoUrl: string | null;
+  companyName: string;
+  department: string;
   /** Tiêu đề in đậm, ví dụ "BẢNG BÁO GIÁ ĐẠI LÝ HÀ NỘI TOPPING ĐÔNG LẠNH LERMAO". */
   title: string;
   /** Người nhận sau "Kính gửi:", ví dụ "Quý khách hàng", "Quý Đại lý". */
@@ -154,7 +161,7 @@ export interface Quote {
 
 /** Một dòng ở trang danh sách (không kèm items). */
 export interface QuoteListItem
-  extends Omit<Quote, "items" | "intro" | "closing" | "note"> {
+  extends Omit<Quote, "items" | "intro" | "closing" | "note" | "logoUrl" | "companyName" | "department"> {
   /** Tên mẫu báo giá đã áp dụng (null = không theo mẫu). */
   templateName: string | null;
   itemCount: number;
@@ -200,6 +207,10 @@ export interface QuoteTemplateConfig {
   isDefault: boolean;
   /** false = Ngừng sử dụng: ẩn khỏi form tạo báo giá, vẫn giữ để tra cứu báo giá cũ. */
   isActive: boolean;
+  /** Đầu trang: logo (null = logo LerMao mặc định), tên công ty ("\n" = xuống dòng), phòng ban. */
+  logoUrl: string | null;
+  companyName: string;
+  department: string;
   tiers: QuoteTierDef[];
   /** Tiêu đề mặc định; {MIEN} = tên miền viết hoa ("HÀ NỘI"), bỏ trống khi Toàn quốc. */
   titlePattern: string;

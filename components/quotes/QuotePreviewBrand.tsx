@@ -2,6 +2,7 @@
 
 import { forwardRef } from "react";
 import type { Quote, QuoteItem } from "@/lib/types/quote";
+import { QUOTE_DEFAULT_LOGO } from "@/lib/types/quote";
 import { formatVnd, marginPct, tierColumns, withSalePrice } from "@/lib/quotes/pricing";
 
 /**
@@ -22,6 +23,9 @@ export type BrandPreviewQuote = Pick<
   | "validUntil"
   | "customer"
   | "items"
+  | "logoUrl"
+  | "companyName"
+  | "department"
 > & { code?: string };
 
 // Tokens design system LerMao
@@ -36,7 +40,8 @@ const C = {
   white: "#ffffff",
 };
 const FONT = "Montserrat, 'Segoe UI', Arial, sans-serif";
-const COMPANY = "Công ty TNHH Xuất Nhập Khẩu Hi Sweetie Việt Nam";
+/** Tên công ty trên 1 dòng (mẫu lưu xuống dòng cho Mẫu 1). */
+const company = (q: BrandPreviewQuote) => q.companyName.split("\n").join(" ").trim();
 
 const dmy = (iso: string | null) => {
   if (!iso) return "";
@@ -48,7 +53,7 @@ const pct = (p: number | null) => (p == null ? "" : `${(p * 100).toFixed(1).repl
 const perCarton = (spec: string) => Number(spec.match(/(\d+)\s*[^\d/]*\/\s*thùng/i)?.[1]) || null;
 const firstPrice = (it: QuoteItem) => it.tiers[0]?.price ?? null;
 
-function Header({ title, sub, dark }: { title: string; sub: string; dark?: boolean }) {
+function Header({ quote, title, sub, dark }: { quote: BrandPreviewQuote; title: string; sub: string; dark?: boolean }) {
   const fg = dark ? C.white : C.navy;
   return (
     <div
@@ -63,10 +68,10 @@ function Header({ title, sub, dark }: { title: string; sub: string; dark?: boole
       }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brands/lermao.webp" alt="Logo Gấu LerMao" style={{ width: 58, height: 58, objectFit: "contain" }} />
+        <img src={quote.logoUrl || QUOTE_DEFAULT_LOGO} alt="Logo" style={{ width: 58, height: 58, objectFit: "contain" }} />
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <span style={{ fontSize: 18, fontWeight: 800, color: fg, letterSpacing: 0.5 }}>GẤU LERMAO</span>
-          <span style={{ fontSize: 12, color: fg }}>{COMPANY}</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: fg, letterSpacing: 0.3 }}>{company(quote)}</span>
+          {quote.department && <span style={{ fontSize: 12, color: fg }}>{quote.department}</span>}
         </div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, textAlign: "right" }}>
@@ -145,7 +150,7 @@ function NoteAndClosing({ quote }: { quote: BrandPreviewQuote }) {
   );
 }
 
-function Footer() {
+function Footer({ quote }: { quote: BrandPreviewQuote }) {
   return (
     <div
       style={{
@@ -155,7 +160,7 @@ function Footer() {
         fontSize: 12,
         color: C.navy,
       }}>
-      {COMPANY} · Thương hiệu Gấu LerMao
+      {company(quote)}
     </div>
   );
 }
@@ -178,7 +183,7 @@ const sub = (q: BrandPreviewQuote, prefix: string) =>
 function Cards({ quote }: { quote: BrandPreviewQuote }) {
   return (
     <div style={{ ...page, padding: "36px 40px 28px", gap: 16 }}>
-      <Header title="BÁO GIÁ" sub={sub(quote, "Ngày")} />
+      <Header quote={quote} title="BÁO GIÁ" sub={sub(quote, "Ngày")} />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
         <Recipient quote={quote} />
         <Validity quote={quote} />
@@ -225,7 +230,7 @@ function Cards({ quote }: { quote: BrandPreviewQuote }) {
       </div>
       <div style={{ fontSize: 12, color: C.navy }}>Đơn giá đã bao gồm VAT.</div>
       <NoteAndClosing quote={quote} />
-      <Footer />
+      <Footer quote={quote} />
     </div>
   );
 }
@@ -255,7 +260,7 @@ function PriceTable({ quote }: { quote: BrandPreviewQuote }) {
   const lowKey = cols[cols.length - 1]?.key;
   return (
     <div style={{ ...page, padding: "32px 40px 28px", gap: 14 }}>
-      <Header title="BẢNG GIÁ" sub={sub(quote, "Áp dụng từ")} />
+      <Header quote={quote} title="BẢNG GIÁ" sub={sub(quote, "Áp dụng từ")} />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
         <Recipient quote={quote} />
         <Validity quote={quote} />
@@ -302,7 +307,7 @@ function PriceTable({ quote }: { quote: BrandPreviewQuote }) {
         khung đầu − giá thấp nhất) ÷ giá thấp nhất.
       </div>
       <NoteAndClosing quote={quote} />
-      <Footer />
+      <Footer quote={quote} />
     </div>
   );
 }
