@@ -51,6 +51,7 @@ import {
 } from "@/lib/utils/nsx-pricing";
 import { NumericInput } from "@/components/ui/NumericInput";
 import { formatNumber } from "@/lib/utils";
+import { DatePickerInput } from "@/components/ui/DatePickerInput";
 import { PartnerPicker, ProductPicker } from "./ProductionPickers";
 import {
   ManufacturerMaterialsEditor,
@@ -100,6 +101,8 @@ const defaultOwnUnit = (product: Product) =>
   !product.isPieceUnit && gramsPerStockUnit(product) > 0
     ? "g"
     : product.unit || "unit";
+const localDate = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
 type ExternalFormProps = {
   sourceBranchId: number;
@@ -210,6 +213,9 @@ function ExternalProductionFormContent({
     production?.formulaId ?? null,
   );
   const [feePerUnit, setFeePerUnit] = useState<number | null>(null);
+  const [sentDate, setSentDate] = useState(
+    production?.sentDate ? localDate(new Date(production.sentDate)) : "",
+  );
 
   const product = useQuery({
     queryKey: ["products", productId],
@@ -223,7 +229,13 @@ function ExternalProductionFormContent({
   });
   const { data: branches } = useBranches();
   const activeBranches = branches?.filter((branch) => branch.isActive) ?? [];
-  const locked = !!production && production.status !== 1;
+  // Phiếu đã gửi / nhận một phần / hoàn thành vẫn sửa được (server ghi lại
+  // tồn nguyên liệu, giá thành dự kiến); chỉ phiếu đã hủy là chỉ xem.
+  const locked = !!production && production.status === 3;
+  const sent = !!production && [2, 4, 5].includes(production.status);
+  const hasReceipts =
+    !!production?.receipts?.some((item) => item.status === 1) ||
+    (production?.status === 2 && production.receivedQuantity != null);
   // Phiếu đã gửi thì tồn đã trừ rồi — chỉ so tồn với phiếu mới / phiếu tạm.
   const checkStock = !production || production.status === 1;
   // Dòng nạp từ phiếu đã lưu chưa có thông tin sản phẩm (đơn vị, khối lượng, tồn).
@@ -265,7 +277,19 @@ function ExternalProductionFormContent({
     setQuantity(next);
   };
 
+  // Giữ giờ gửi cũ nếu không đổi ngày.
+  const sentDatePayload = () => {
+    if (!sent || !sentDate) return undefined;
+    const original = production?.sentDate ? new Date(production.sentDate) : null;
+    if (original && localDate(original) === sentDate) return original.toISOString();
+    const next = new Date(`${sentDate}T00:00:00`);
+    const now = new Date();
+    next.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+    return next.toISOString();
+  };
+
   const payload = () => ({
+    sentDate: sentDatePayload(),
     code: code || undefined,
     isExternal: true,
     manufacturerId: manufacturerId!,
@@ -298,6 +322,14 @@ function ExternalProductionFormContent({
       if (send && !confirm("Gửi nguyên liệu và khóa phiếu để sản xuất?")) {
         return false;
       }
+      if (
+        sent &&
+        !confirm(
+          "Lưu thay đổi phiếu đã gửi? Tồn kho nguyên liệu ở kho gửi và giá thành dự kiến sẽ được tính lại.",
+        )
+      ) {
+        return false;
+      }
       const saved = draftId
         ? await productionsApi.update(draftId, payload())
         : await productionsApi.create(payload());
@@ -314,10 +346,14 @@ function ExternalProductionFormContent({
         "manufacturer-accounts",
         "suppliers",
         "supplier-debt-timeline",
+        "production-cost-history",
+        "payables",
       ]) {
         queryClient.invalidateQueries({ queryKey: [key] });
       }
-      toast.success("Đã lưu phiếu gửi sản xuất");
+      toast.success(
+        sent ? "Đã cập nhật phiếu gửi sản xuất" : "Đã lưu phiếu gửi sản xuất",
+      );
       onClose();
     },
     onError: (error: Error) => toast.error(error.message),
@@ -415,8 +451,10 @@ function ExternalProductionFormContent({
               </h2>
               <p className="mt-0.5 text-xs text-gray-400">
                 {locked
-                  ? "Phiếu đã khóa, chỉ có thể xem"
-                  : draftId
+                  ? "Phiếu đã hủy, chỉ có thể xem"
+                  : sent
+                    ? "Phiếu đã gửi — sửa sẽ cập nhật tồn kho và giá thành dự kiến"
+                    : draftId
                     ? "Phiếu tạm, có thể tiếp tục chỉnh sửa"
                     : "Phiếu mới"}
               </p>
@@ -439,6 +477,26 @@ function ExternalProductionFormContent({
             disabled={locked || save.isPending}
             className="min-w-0 px-4 py-5 disabled:opacity-75 sm:px-6"
           >
+            {sent && (
+              <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <p>
+                  Phiếu đã gửi: sửa nguyên liệu mình gửi sẽ ghi lại xuất kho tại{" "}
+                  <b>{production?.sourceBranchName}</b> (dòng cũ giữ giá vốn lúc gửi).
+                  Sửa sản lượng, nguyên liệu NSX hoặc phí sẽ tính lại giá thành dự
+                  kiến; các đợt đã nhận không tự đổi tiền.
+                </p>
+                <p className="mt-1">
+                  Giá thành dự kiến hiện tại:{" "}
+                  <b>
+                    {production?.batchUnitCost != null
+                      ? `${formatNumber(production.batchUnitCost)} đ/sp`
+                      : "-"}
+                  </b>
+                  {production?.costAppliedAt &&
+                    " · Đã áp giá vốn — nếu giá thành đổi, nút \"Áp dụng giá vốn\" sẽ hiện lại để áp lần nữa."}
+                </p>
+              </div>
+            )}
             <section aria-labelledby={`${titleId}-general`}>
               <div className="mb-4 flex items-center gap-2">
                 <Building2 size={17} className="text-brand" />
@@ -456,6 +514,7 @@ function ExternalProductionFormContent({
                   </span>
                   <PartnerPicker
                     manufacturer
+                    disabled={sent}
                     label="Chọn nhà sản xuất"
                     value={manufacturerId}
                     onChange={(id) => {
@@ -479,6 +538,7 @@ function ExternalProductionFormContent({
                   </span>
                   <ProductPicker
                     value={productId}
+                    disabled={sent}
                     label="Chọn thành phẩm nhận về"
                     onChange={(value) => {
                       if (value.id !== productId) {
@@ -507,6 +567,7 @@ function ExternalProductionFormContent({
                   <input
                     className={fieldClass}
                     value={code}
+                    disabled={sent}
                     onChange={(event) => setCode(event.target.value)}
                     placeholder="Tự động"
                   />
@@ -516,6 +577,7 @@ function ExternalProductionFormContent({
                   <select
                     className={fieldClass}
                     value={source}
+                    disabled={sent}
                     onChange={(event) => setSource(Number(event.target.value))}
                   >
                     {activeBranches.map((branch) => (
@@ -533,6 +595,7 @@ function ExternalProductionFormContent({
                   <select
                     className={fieldClass}
                     value={dest}
+                    disabled={sent}
                     onChange={(event) => setDest(Number(event.target.value))}
                   >
                     {activeBranches.map((branch) => (
@@ -542,6 +605,17 @@ function ExternalProductionFormContent({
                     ))}
                   </select>
                 </label>
+                {sent && (
+                  <div className={`${labelClass} lg:col-span-3`}>
+                    <span className="mb-1.5 block">Ngày gửi</span>
+                    <DatePickerInput
+                      value={sentDate}
+                      onChange={setSentDate}
+                      placeholder="Chọn ngày gửi"
+                      className="flex w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-left text-sm transition-colors hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-soft"
+                    />
+                  </div>
+                )}
                 <div className="flex min-w-0 items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 lg:col-span-5">
                   <Warehouse
                     size={18}
@@ -848,7 +922,7 @@ function ExternalProductionFormContent({
                             name={`${titleId}-currency`}
                             className="sr-only"
                             checked={currency === option}
-                            disabled={!!formulaId}
+                            disabled={!!formulaId || (sent && hasReceipts)}
                             onChange={() => setCurrency(option)}
                           />
                           {option}
@@ -857,10 +931,16 @@ function ExternalProductionFormContent({
                     </div>
                   </fieldset>
 
-                  {!!formulaId && (
+                  {sent && hasReceipts ? (
                     <p className="mt-1.5 text-xs text-gray-400">
-                      Tiền tệ theo công thức. Chọn &quot;Nhập tay&quot; để đổi.
+                      Phiếu đã có đợt nhận nên không đổi được tiền tệ.
                     </p>
+                  ) : (
+                    !!formulaId && (
+                      <p className="mt-1.5 text-xs text-gray-400">
+                        Tiền tệ theo công thức. Chọn &quot;Nhập tay&quot; để đổi.
+                      </p>
+                    )
                   )}
                   <label className={`${labelClass} mt-4`}>
                     <span className="mb-1.5 block">Phí gia công cả lô</span>
@@ -951,7 +1031,7 @@ function ExternalProductionFormContent({
           </Link>
           <div
             className={`grid w-full gap-2 sm:flex sm:w-auto ${
-              locked ? "grid-cols-1" : "grid-cols-3"
+              locked ? "grid-cols-1" : sent ? "grid-cols-2" : "grid-cols-3"
             }`}
           >
             <button
@@ -962,7 +1042,22 @@ function ExternalProductionFormContent({
             >
               Đóng
             </button>
-            {!locked && (
+            {sent && (
+              <button
+                type="button"
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-brand px-4 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={save.isPending}
+                onClick={() => save.mutate(false)}
+              >
+                {save.isPending ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Save size={16} />
+                )}
+                {save.isPending ? "Đang lưu…" : "Lưu thay đổi"}
+              </button>
+            )}
+            {!locked && !sent && (
               <>
                 <button
                   type="button"

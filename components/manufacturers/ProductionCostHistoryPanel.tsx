@@ -247,7 +247,7 @@ export function ProductionCostHistoryPanel({
       ) : mode === "table" ? (
         <>
           <div className="min-h-0 flex-1 overflow-auto">
-            <table className="w-full min-w-[1650px] text-right text-sm">
+            <table className="w-full min-w-[1780px] text-right text-sm">
               <thead className="sticky top-0 z-10 border-b bg-gray-100 text-xs text-gray-600">
                 <tr>
                   {[
@@ -259,13 +259,14 @@ export function ProductionCostHistoryPanel({
                     "NSX bổ sung (đ)",
                     "Gia công (đ)",
                     "Tổng giá thành (đ)",
-                    "Giá thành đơn vị (đ)",
+                    "Giá thành dự kiến (đ)",
+                    "Giá thành thực tế (đ)",
                     "Chênh lệch (đ / %)",
                     "Áp giá vốn",
                   ].map((label, index) => (
                     <th
                       key={label}
-                      className={`whitespace-nowrap px-3 py-3 font-medium ${index < 4 || index === 10 ? "text-left" : ""}`}
+                      className={`whitespace-nowrap px-3 py-3 font-medium ${index < 4 || index === 11 ? "text-left" : ""}`}
                     >
                       {label}
                     </th>
@@ -312,6 +313,12 @@ export function ProductionCostHistoryPanel({
                           Thiếu snapshot
                         </span>
                       )}
+                    </td>
+                    {/* Toàn bộ chi phí / tổng đã nhận: lệch dự kiến khi NSX trả thiếu hoặc đổi tiền theo đợt. */}
+                    <td
+                      className={`${td} ${row.actualUnitCost != null && row.unitCost != null && row.actualUnitCost - row.unitCost > 0.005 ? "text-red-700" : "text-gray-700"}`}
+                    >
+                      {row.actualUnitCost == null ? "-" : money(row.actualUnitCost)}
                     </td>
                     <td
                       className={`${td} ${row.deltaAmount != null && row.deltaAmount > 0 ? "text-red-700" : row.deltaAmount != null && row.deltaAmount < 0 ? "text-green-700" : "text-gray-500"}`}

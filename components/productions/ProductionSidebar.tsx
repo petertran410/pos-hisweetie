@@ -57,6 +57,12 @@ const STATUS_OPTIONS: DropdownOption[] = [
     dot: "bg-blue-400",
   },
   {
+    value: "5",
+    label: "Nhận một phần",
+    color: "bg-orange-100 text-orange-700",
+    dot: "bg-orange-400",
+  },
+  {
     value: "2",
     label: "Hoàn thành",
     color: "bg-green-100 text-green-700",
