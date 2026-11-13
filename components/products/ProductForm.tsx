@@ -15,6 +15,8 @@ import { TrademarkDropdown } from "./TrademarkDropdown";
 import { MisaItemDropdown } from "./MisaItemDropdown";
 import { MisaInventoryItem } from "@/lib/api/misa";
 import { FormSection } from "./FormSection";
+import { ProductFormHeader } from "./ProductFormHeader";
+import "./product-form.css";
 import {
   ProductFactoryMappings,
   buildFactoryMappingsPayload,
@@ -23,7 +25,6 @@ import {
 import { useFormattedNumber } from "@/lib/hooks/useFormattedNumber";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { API_URL } from "@/lib/config/api";
-import { X } from "lucide-react";
 import { usePublication } from "./publication/usePublication";
 import { PublicationSection } from "./publication/PublicationSection";
 import {
@@ -380,21 +381,20 @@ export function ProductForm({
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-      <div className="bg-white w-full max-w-5xl h-[90vh] flex flex-col rounded-lg">
-        <div className="border-b p-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold">
-            {product
+      <div className="product-form bg-white w-full max-w-5xl h-[90vh] flex flex-col">
+        <ProductFormHeader
+          title={
+            product
               ? `Sửa ${getProductTypeLabel(product.type)}`
-              : `Thêm ${getProductTypeLabel(productType || 2)}`}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+              : `Thêm ${getProductTypeLabel(productType || 2)}`
+          }
+          productType={product?.type ?? productType ?? 2}
+          code={product?.code}
+          name={product?.name}
+          onClose={onClose}
+        />
 
-        <div className="border-b px-4 flex gap-1">
+        <div className="pf-tabs">
           <button
             type="button"
             onClick={() => setActiveTab("info")}
@@ -431,7 +431,7 @@ export function ProductForm({
 
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="flex-1 overflow-y-auto bg-gray-50">
+          className="pf-body flex-1 overflow-y-auto">
           <div className={activeTab === "info" ? "p-6 space-y-5" : "hidden"}>
             {/* Thông tin cơ bản; ảnh nằm ở section riêng bên dưới */}
             <FormSection title="Thông tin chung" collapsible={false}>
@@ -532,14 +532,17 @@ export function ProductForm({
                       <label className="block text-sm font-medium mb-1">
                         Giá vốn
                       </label>
-                      <input
-                        type="text"
-                        value={purchasePrice.displayValue}
-                        onChange={purchasePrice.handleChange}
-                        onBlur={purchasePrice.handleBlur}
-                        className="w-full border rounded px-3 py-2 bg-white"
-                        placeholder="0"
-                      />
+                      <span className="pf-suffix" data-suffix="đ">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={purchasePrice.displayValue}
+                          onChange={purchasePrice.handleChange}
+                          onBlur={purchasePrice.handleBlur}
+                          className="w-full border rounded px-3 py-2 bg-white"
+                          placeholder="0"
+                        />
+                      </span>
                     </div>
                   )}
                   {canViewSalePrice && (
@@ -547,14 +550,17 @@ export function ProductForm({
                       <label className="block text-sm font-medium mb-1">
                         Giá bán
                       </label>
-                      <input
-                        type="text"
-                        value={basePrice.displayValue}
-                        onChange={basePrice.handleChange}
-                        onBlur={basePrice.handleBlur}
-                        className="w-full border rounded px-3 py-2 bg-white"
-                        placeholder="0"
-                      />
+                      <span className="pf-suffix" data-suffix="đ">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={basePrice.displayValue}
+                          onChange={basePrice.handleChange}
+                          onBlur={basePrice.handleBlur}
+                          className="w-full border rounded px-3 py-2 bg-white"
+                          placeholder="0"
+                        />
+                      </span>
                     </div>
                   )}
                 </div>
@@ -707,14 +713,16 @@ export function ProductForm({
                   <label className="block text-sm font-medium mb-1">
                     VAT (%)
                   </label>
-                  <input
-                    {...register("vat", { valueAsNumber: true })}
-                    type="number"
-                    step="any"
-                    min={0}
-                    className="w-full border rounded px-3 py-2 bg-white"
-                    placeholder="8"
-                  />
+                  <span className="pf-suffix" data-suffix="%">
+                    <input
+                      {...register("vat", { valueAsNumber: true })}
+                      type="number"
+                      step="any"
+                      min={0}
+                      className="w-full border rounded px-3 py-2 bg-white"
+                      placeholder="8"
+                    />
+                  </span>
                 </div>
               </div>
 
@@ -828,12 +836,6 @@ export function ProductForm({
                 </div>
               )}
             </FormSection>
-
-            {/* Bán trực tiếp */}
-            <label className="flex items-center gap-2">
-              <input {...register("isDirectSale")} type="checkbox" />
-              <span className="text-sm font-medium">Bán trực tiếp</span>
-            </label>
           </div>
 
           {/* Tab Mô tả */}
@@ -873,20 +875,27 @@ export function ProductForm({
             <PublicationSection pub={pub} />
           </div>
 
-          <div className="border-t p-4 flex justify-end gap-2 bg-white sticky bottom-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border rounded hover:bg-gray-50"
-              disabled={isSubmitting}>
-              Bỏ qua
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50">
-              {isSubmitting ? "Đang lưu..." : product ? "Lưu" : "Tạo mới"}
-            </button>
+          <div className="pf-footer sticky bottom-0">
+            {/* Bán trực tiếp: luôn thấy ở footer */}
+            <label className="pf-direct-sale">
+              <input {...register("isDirectSale")} type="checkbox" />
+              Bán trực tiếp
+            </label>
+            <div className="pf-footer-actions">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 border rounded hover:bg-gray-50"
+                disabled={isSubmitting}>
+                Bỏ qua
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50">
+                {isSubmitting ? "Đang lưu..." : product ? "Lưu" : "Tạo mới"}
+              </button>
+            </div>
           </div>
         </form>
       </div>

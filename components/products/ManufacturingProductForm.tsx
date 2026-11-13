@@ -30,6 +30,9 @@ import {
 import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
 import { CostConfirmationModal } from "./CostConfirmationModal";
+import { FormSection } from "./FormSection";
+import { ProductFormHeader } from "./ProductFormHeader";
+import "./product-form.css";
 import { CategoryDropdown } from "./CategoryDropdown";
 import { toast } from "sonner";
 import { TrademarkDropdown } from "./TrademarkDropdown";
@@ -186,7 +189,7 @@ export function ManufacturingProductForm({
   // (gram/quantity lưu theo gram; piece/carton lưu theo đơn vị tính).
   const getUnitsPerProduct = (
     comp: ManufacturingComponent,
-    mode: InputMode,
+    mode: InputMode
   ): number => {
     if (mode === "piece" || mode === "carton") return comp.quantity;
     const wg = getWeightInGrams(comp);
@@ -336,10 +339,7 @@ export function ManufacturingProductForm({
   const watchedWeightUnit = watch("weightUnit");
 
   const canLinkMisa = usePermission("products", "link_misa");
-  const canEditPublication = usePermission(
-    "products",
-    "edit_publication"
-  );
+  const canEditPublication = usePermission("products", "edit_publication");
   const canViewCostPrice = usePermission("products", "view_cost_price");
   const canViewSalePrice = usePermission("products", "view_sale_price");
   // view_cost_price/view_sale_price chỉ ẩn ô giá trên UI, không quyết định
@@ -494,7 +494,8 @@ export function ManufacturingProductForm({
             ...buildFormulaState(f.components),
             isExternal: !!f.isExternal,
             processingFeePerUnit: Number(f.processingFeePerUnit ?? 0),
-            currency: f.currency === "CNY" ? ("CNY" as const) : ("VND" as const),
+            currency:
+              f.currency === "CNY" ? ("CNY" as const) : ("VND" as const),
             nsxLines: nsxLinesFromFormula(f),
           }))
         : [
@@ -543,7 +544,11 @@ export function ManufacturingProductForm({
     while (names.has(`công thức ${n}`)) n++;
     const current = synced.find((f) => f.key === activeFormulaKey);
     const draft: FormulaDraft = {
-      ...emptyFormula(`new-${formulaKeySeq.current++}`, `Công thức ${n}`, false),
+      ...emptyFormula(
+        `new-${formulaKeySeq.current++}`,
+        `Công thức ${n}`,
+        false
+      ),
       ...(copyCurrent
         ? {
             components: components.map((c) => ({ ...c, id: undefined })),
@@ -565,7 +570,9 @@ export function ManufacturingProductForm({
   };
 
   const renameFormula = (key: string, name: string) => {
-    setFormulas((prev) => prev.map((f) => (f.key === key ? { ...f, name } : f)));
+    setFormulas((prev) =>
+      prev.map((f) => (f.key === key ? { ...f, name } : f))
+    );
   };
 
   const setDefaultFormula = (key: string) => {
@@ -764,7 +771,9 @@ export function ManufacturingProductForm({
 
   const onSubmit = async (data: any) => {
     const allFormulas = syncedFormulas();
-    const emptyFormulaDraft = allFormulas.find((f) => f.components.length === 0);
+    const emptyFormulaDraft = allFormulas.find(
+      (f) => f.components.length === 0
+    );
     if (emptyFormulaDraft) {
       toast.error("Hàng thành phần thiếu", {
         description: `"${emptyFormulaDraft.name}" chưa có hàng thành phần.`,
@@ -847,9 +856,7 @@ export function ManufacturingProductForm({
         shippingWeight: shippingWeight.value || undefined,
         shippingWeightUnit: data.shippingWeightUnit || "g",
         vat:
-          data.vat != null && !isNaN(Number(data.vat))
-            ? Number(data.vat)
-            : 8,
+          data.vat != null && !isNaN(Number(data.vat)) ? Number(data.vat) : 8,
         unit: data.unit || undefined,
         conversionValue: Math.max(
           1,
@@ -865,7 +872,9 @@ export function ManufacturingProductForm({
             inputMode: f.inputModes[comp.componentProductId] ?? "gram",
           })),
           isExternal: f.isExternal,
-          processingFeePerUnit: f.isExternal ? round6(f.processingFeePerUnit) : 0,
+          processingFeePerUnit: f.isExternal
+            ? round6(f.processingFeePerUnit)
+            : 0,
           currency: f.isExternal ? f.currency : "VND",
           // Map tường minh: server bật forbidNonWhitelisted.
           nsxLines: f.isExternal
@@ -936,19 +945,16 @@ export function ManufacturingProductForm({
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-      <div className="bg-white w-full max-w-5xl h-[90vh] flex flex-col rounded-lg">
-        <div className="border-b p-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold">
-            {product ? "Sửa Hàng sản xuất" : "Tạo Hàng sản xuất"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600">
-            ✕
-          </button>
-        </div>
+      <div className="product-form bg-white w-full max-w-5xl h-[90vh] flex flex-col">
+        <ProductFormHeader
+          title={product ? "Sửa Hàng sản xuất" : "Tạo Hàng sản xuất"}
+          productType={4}
+          code={product?.code}
+          name={product?.name}
+          onClose={onClose}
+        />
 
-        <div className="border-b px-4 flex gap-1">
+        <div className="pf-tabs">
           <button
             type="button"
             onClick={() => setActiveTab("info")}
@@ -985,79 +991,85 @@ export function ManufacturingProductForm({
 
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="flex-1 overflow-y-auto">
-          <div className={activeTab === "info" ? "p-6 space-y-6" : "hidden"}>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Mã hàng
-                </label>
-                <input
-                  {...register("code")}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="Tự động"
-                />
+          className="pf-body flex-1 overflow-y-auto">
+          <div className={activeTab === "info" ? "p-6 space-y-5" : "hidden"}>
+            <FormSection title="Thông tin chung" collapsible={false}>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Mã hàng
+                    </label>
+                    <input
+                      {...register("code")}
+                      className="w-full border rounded px-3 py-2"
+                      placeholder="Tự động"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Tên hàng <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      {...register("name", { required: true })}
+                      className="w-full border rounded px-3 py-2"
+                      placeholder="Nhập tên hàng"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <CategoryDropdown
+                    type="parent"
+                    label="Loại Hàng"
+                    placeholder="Chọn loại hàng"
+                    value={watch("parentName")}
+                    onChange={(value) => setValue("parentName", value)}
+                  />
+
+                  <CategoryDropdown
+                    type="middle"
+                    label="Nguồn Gốc"
+                    placeholder="Chọn nguồn gốc"
+                    value={watch("middleName")}
+                    onChange={(value) => setValue("middleName", value)}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <CategoryDropdown
+                    type="child"
+                    label="Danh Mục"
+                    placeholder="Chọn danh mục"
+                    value={watch("childName")}
+                    onChange={(value) => setValue("childName", value)}
+                  />
+
+                  <TrademarkDropdown
+                    label="Thương hiệu"
+                    placeholder="Chọn thương hiệu"
+                    value={watch("tradeMarkId")}
+                    onChange={(value) => setValue("tradeMarkId", value)}
+                  />
+                </div>
               </div>
+            </FormSection>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Tên hàng <span className="text-red-500">*</span>
-                </label>
-                <input
-                  {...register("name", { required: true })}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="Nhập tên hàng"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <CategoryDropdown
-                type="parent"
-                label="Loại Hàng"
-                placeholder="Chọn loại hàng"
-                value={watch("parentName")}
-                onChange={(value) => setValue("parentName", value)}
-              />
-
-              <CategoryDropdown
-                type="middle"
-                label="Nguồn Gốc"
-                placeholder="Chọn nguồn gốc"
-                value={watch("middleName")}
-                onChange={(value) => setValue("middleName", value)}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <CategoryDropdown
-                type="child"
-                label="Danh Mục"
-                placeholder="Chọn danh mục"
-                value={watch("childName")}
-                onChange={(value) => setValue("childName", value)}
-              />
-
-              <TrademarkDropdown
-                label="Thương hiệu"
-                placeholder="Chọn thương hiệu"
-                value={watch("tradeMarkId")}
-                onChange={(value) => setValue("tradeMarkId", value)}
-              />
-            </div>
-
-            <div className="border-t pt-6">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold">
+            <FormSection
+              title={
+                <>
                   Hàng thành phần <span className="text-red-500">*</span>
-                </h3>
-                {components.length > 0 && (
+                </>
+              }
+              collapsible={false}
+              headerRight={
+                components.length > 0 && (
                   <span className="text-sm text-gray-600">
                     Tổng: {components.length} sản phẩm
                   </span>
-                )}
-              </div>
-
+                )
+              }>
               {/* Công thức: mỗi tab là 1 bộ thành phần riêng */}
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 {formulas.map((f) => (
@@ -1107,14 +1119,18 @@ export function ManufacturingProductForm({
                     <input
                       type="text"
                       value={active.name}
-                      onChange={(e) => renameFormula(active.key, e.target.value)}
+                      onChange={(e) =>
+                        renameFormula(active.key, e.target.value)
+                      }
                       className="border rounded px-2 py-1 w-56"
                     />
                     <label className="inline-flex items-center gap-1.5 text-gray-700 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={active.isExternal}
-                        onChange={(e) => toggleExternal(active.key, e.target.checked)}
+                        onChange={(e) =>
+                          toggleExternal(active.key, e.target.checked)
+                        }
                       />
                       Dùng cho gửi đi sản xuất
                     </label>
@@ -1134,17 +1150,19 @@ export function ManufacturingProductForm({
                         Xóa công thức
                       </button>
                     )}
-                    {canViewCostPrice && !active.isDefault && !active.isExternal && (
-                      <span className="text-gray-500">
-                        Giá vốn theo công thức này:{" "}
-                        {calculateFormulaCost({
-                          ...active,
-                          components,
-                          inputModes,
-                        }).toLocaleString("vi-VN")}{" "}
-                        đ
-                      </span>
-                    )}
+                    {canViewCostPrice &&
+                      !active.isDefault &&
+                      !active.isExternal && (
+                        <span className="text-gray-500">
+                          Giá vốn theo công thức này:{" "}
+                          {calculateFormulaCost({
+                            ...active,
+                            components,
+                            inputModes,
+                          }).toLocaleString("vi-VN")}{" "}
+                          đ
+                        </span>
+                      )}
                   </div>
                 );
               })()}
@@ -1472,7 +1490,9 @@ export function ManufacturingProductForm({
                             <button
                               key={c}
                               type="button"
-                              onClick={() => updateFormula(active.key, { currency: c })}
+                              onClick={() =>
+                                updateFormula(active.key, { currency: c })
+                              }
                               className={`px-3 py-1.5 rounded-md text-sm ${
                                 active.currency === c
                                   ? "bg-brand text-white"
@@ -1493,12 +1513,15 @@ export function ManufacturingProductForm({
                           maxFractionDigits={6}
                           formatWhileTyping
                           onValueChange={(fee) =>
-                            updateFormula(active.key, { processingFeePerUnit: fee })
+                            updateFormula(active.key, {
+                              processingFeePerUnit: fee,
+                            })
                           }
                         />
                       </label>
                       <p className="text-xs text-gray-500 pb-2">
-                        Công thức này chỉ dùng khi tạo phiếu gửi đi sản xuất; không dùng cho sản xuất nội bộ.
+                        Công thức này chỉ dùng khi tạo phiếu gửi đi sản xuất;
+                        không dùng cho sản xuất nội bộ.
                       </p>
                     </div>
                     <ManufacturerMaterialsEditor
@@ -1506,27 +1529,38 @@ export function ManufacturingProductForm({
                       value={active.nsxLines}
                       currency={active.currency}
                       outputUnit={outputUnit}
-                      onChange={(nsxLines) => updateFormula(active.key, { nsxLines })}
+                      onChange={(nsxLines) =>
+                        updateFormula(active.key, { nsxLines })
+                      }
                     />
                     <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 text-sm text-gray-600">
                       {canViewCostPrice && (
                         <span>
                           Hàng mình / 1 {outputUnit}:{" "}
                           <b className="text-gray-800">
-                            {ownCost.toLocaleString("vi-VN", { maximumFractionDigits: 2 })} đ
+                            {ownCost.toLocaleString("vi-VN", {
+                              maximumFractionDigits: 2,
+                            })}{" "}
+                            đ
                           </b>
                         </span>
                       )}
                       <span>
                         Nguyên liệu NSX / 1 {outputUnit}:{" "}
                         <b className="text-gray-800">
-                          {nsxCost.toLocaleString("vi-VN", { maximumFractionDigits: 4 })} {sym}
+                          {nsxCost.toLocaleString("vi-VN", {
+                            maximumFractionDigits: 4,
+                          })}{" "}
+                          {sym}
                         </b>
                       </span>
                       <span>
                         Phí gia công / 1 {outputUnit}:{" "}
                         <b className="text-gray-800">
-                          {active.processingFeePerUnit.toLocaleString("vi-VN", { maximumFractionDigits: 6 })} {sym}
+                          {active.processingFeePerUnit.toLocaleString("vi-VN", {
+                            maximumFractionDigits: 6,
+                          })}{" "}
+                          {sym}
                         </b>
                       </span>
                     </div>
@@ -1535,224 +1569,231 @@ export function ManufacturingProductForm({
               })()}
               {formulas.length > 0 && formulas.every((f) => f.isExternal) && (
                 <p className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                  Sản phẩm chỉ có công thức gửi đi sản xuất: không sản xuất nội bộ được và giá vốn không tự tính theo công thức.
+                  Sản phẩm chỉ có công thức gửi đi sản xuất: không sản xuất nội
+                  bộ được và giá vốn không tự tính theo công thức.
                 </p>
               )}
-            </div>
+            </FormSection>
 
             {(canViewCostPrice || canViewSalePrice) && (
-              <div className="grid grid-cols-2 gap-4">
-                {canViewCostPrice && (
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Giá vốn
-                    </label>
-                    <input
-                      type="text"
-                      value={purchasePrice.displayValue}
-                      onChange={(e) => {
-                        costManuallyEdited.current = true;
-                        purchasePrice.handleChange(e);
-                      }}
-                      onBlur={purchasePrice.handleBlur}
-                      className="w-full border rounded px-3 py-2"
-                      placeholder="0"
-                    />
-                    <p className="text-xs text-gray-400 mt-1">
-                      {(() => {
-                        const autoCost = calculateTotalPurchasePrice();
-                        return autoCost == null
-                          ? "Chưa có công thức nội bộ mặc định — giá vốn không tự tính"
-                          : `Tự động tính (công thức mặc định): ${autoCost.toLocaleString("vi-VN")} đ`;
-                      })()}
-                    </p>
-                  </div>
-                )}
-                {canViewSalePrice && (
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Giá bán
-                    </label>
-                    <input
-                      type="text"
-                      value={formatNumberInput(basePrice.displayValue)}
-                      onChange={basePrice.handleChange}
-                      onBlur={basePrice.handleBlur}
-                      className="w-full border rounded px-3 py-2"
-                      placeholder="0"
-                    />
-                  </div>
-                )}
-              </div>
+              <FormSection title="Giá vốn, giá bán">
+                <div className="grid grid-cols-2 gap-4">
+                  {canViewCostPrice && (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Giá vốn
+                      </label>
+                      <span className="pf-suffix" data-suffix="đ">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={purchasePrice.displayValue}
+                          onChange={(e) => {
+                            costManuallyEdited.current = true;
+                            purchasePrice.handleChange(e);
+                          }}
+                          onBlur={purchasePrice.handleBlur}
+                          className="w-full border rounded px-3 py-2"
+                          placeholder="0"
+                        />
+                      </span>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {(() => {
+                          const autoCost = calculateTotalPurchasePrice();
+                          return autoCost == null
+                            ? "Chưa có công thức nội bộ mặc định — giá vốn không tự tính"
+                            : `Tự động tính (công thức mặc định): ${autoCost.toLocaleString("vi-VN")} đ`;
+                        })()}
+                      </p>
+                    </div>
+                  )}
+                  {canViewSalePrice && (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Giá bán
+                      </label>
+                      <span className="pf-suffix" data-suffix="đ">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={formatNumberInput(basePrice.displayValue)}
+                          onChange={basePrice.handleChange}
+                          onBlur={basePrice.handleBlur}
+                          className="w-full border rounded px-3 py-2"
+                          placeholder="0"
+                        />
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </FormSection>
             )}
 
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Tồn kho
-                </label>
-                <input
-                  type="text"
-                  value={stockQuantity.displayValue}
-                  onChange={stockQuantity.handleChange}
-                  onBlur={stockQuantity.handleBlur}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Định mức tồn thấp nhất
-                </label>
-                <input
-                  type="text"
-                  value={minStockAlert.displayValue}
-                  onChange={minStockAlert.handleChange}
-                  onBlur={minStockAlert.handleBlur}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Định mức tồn cao nhất
-                </label>
-                <input
-                  type="text"
-                  value={maxStockAlert.displayValue}
-                  onChange={maxStockAlert.handleChange}
-                  onBlur={maxStockAlert.handleBlur}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="0"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Khối lượng tịnh
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={weight.displayValue}
-                    onChange={weight.handleChange}
-                    onBlur={weight.handleBlur}
-                    className="flex-1 border rounded px-3 py-2"
-                    placeholder="0"
-                  />
-                  <select
-                    {...register("weightUnit")}
-                    className="border rounded px-3 py-2 w-24">
-                    <option value="kg">kg</option>
-                    <option value="g">g</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Trọng lượng vận chuyển
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={shippingWeight.displayValue}
-                    onChange={shippingWeight.handleChange}
-                    onBlur={shippingWeight.handleBlur}
-                    className="flex-1 border rounded px-3 py-2"
-                    placeholder="0"
-                  />
-                  <select
-                    {...register("shippingWeightUnit")}
-                    className="border rounded px-3 py-2 w-24">
-                    <option value="g">g</option>
-                    <option value="kg">kg</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Đơn vị tính
-                </label>
-                <UnitSelect
-                  value={watch("unit")}
-                  onChange={(name) =>
-                    setValue("unit", name, { shouldDirty: true })
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Định lượng đóng gói
-                </label>
-                <input
-                  {...register("conversionValue", { valueAsNumber: true })}
-                  type="number"
-                  min={1}
-                  step={1}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="1"
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                  Ví dụ: 12 nghĩa là 1 thùng gồm 12 đơn vị sản phẩm.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  VAT (%)
-                </label>
-                <input
-                  {...register("vat", { valueAsNumber: true })}
-                  type="number"
-                  step="any"
-                  min={0}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="8"
-                />
-              </div>
-
-              {canLinkMisa && (
+            <FormSection title="Tồn kho">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <MisaItemDropdown
-                    label="Liên kết Misa"
-                    placeholder="Chọn vật tư hàng hóa Misa"
-                    value={misaMapping.code || undefined}
-                    valueName={misaMapping.name || undefined}
-                    onChange={(item: MisaInventoryItem | null) =>
-                      setMisaMapping({
-                        code: item?.code || "",
-                        name: item?.name || "",
-                        unit: item?.unitName || "",
-                      })
+                  <label className="block text-sm font-medium mb-1">
+                    Tồn kho
+                  </label>
+                  <input
+                    type="text"
+                    value={stockQuantity.displayValue}
+                    onChange={stockQuantity.handleChange}
+                    onBlur={stockQuantity.handleBlur}
+                    className="w-full border rounded px-3 py-2"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Định mức tồn thấp nhất
+                  </label>
+                  <input
+                    type="text"
+                    value={minStockAlert.displayValue}
+                    onChange={minStockAlert.handleChange}
+                    onBlur={minStockAlert.handleBlur}
+                    className="w-full border rounded px-3 py-2"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Định mức tồn cao nhất
+                  </label>
+                  <input
+                    type="text"
+                    value={maxStockAlert.displayValue}
+                    onChange={maxStockAlert.handleChange}
+                    onBlur={maxStockAlert.handleBlur}
+                    className="w-full border rounded px-3 py-2"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            </FormSection>
+
+            <FormSection title="Vị trí, trọng lượng">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Khối lượng tịnh
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={weight.displayValue}
+                      onChange={weight.handleChange}
+                      onBlur={weight.handleBlur}
+                      className="flex-1 border rounded px-3 py-2"
+                      placeholder="0"
+                    />
+                    <select
+                      {...register("weightUnit")}
+                      className="border rounded px-3 py-2 w-24">
+                      <option value="kg">kg</option>
+                      <option value="g">g</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Trọng lượng vận chuyển
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={shippingWeight.displayValue}
+                      onChange={shippingWeight.handleChange}
+                      onBlur={shippingWeight.handleBlur}
+                      className="flex-1 border rounded px-3 py-2"
+                      placeholder="0"
+                    />
+                    <select
+                      {...register("shippingWeightUnit")}
+                      className="border rounded px-3 py-2 w-24">
+                      <option value="g">g</option>
+                      <option value="kg">kg</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Đơn vị tính
+                  </label>
+                  <UnitSelect
+                    value={watch("unit")}
+                    onChange={(name) =>
+                      setValue("unit", name, { shouldDirty: true })
                     }
                   />
-                  {misaMapping.code ? (
-                    <p className="mt-1 text-xs text-gray-500">
-                      Đã liên kết: {misaMapping.code}
-                      {misaMapping.name ? ` - ${misaMapping.name}` : ""}
-                      {misaMapping.unit ? ` (${misaMapping.unit})` : ""}
-                    </p>
-                  ) : null}
                 </div>
-              )}
-            </div>
 
-            <div>
-              <h3 className="font-semibold mb-3">Hình ảnh</h3>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Định lượng đóng gói
+                  </label>
+                  <input
+                    {...register("conversionValue", { valueAsNumber: true })}
+                    type="number"
+                    min={1}
+                    step={1}
+                    className="w-full border rounded px-3 py-2"
+                    placeholder="1"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Ví dụ: 12 nghĩa là 1 thùng gồm 12 đơn vị sản phẩm.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    VAT (%)
+                  </label>
+                  <span className="pf-suffix" data-suffix="%">
+                    <input
+                      {...register("vat", { valueAsNumber: true })}
+                      type="number"
+                      step="any"
+                      min={0}
+                      className="w-full border rounded px-3 py-2"
+                      placeholder="8"
+                    />
+                  </span>
+                </div>
+
+                {canLinkMisa && (
+                  <div>
+                    <MisaItemDropdown
+                      label="Liên kết Misa"
+                      placeholder="Chọn vật tư hàng hóa Misa"
+                      value={misaMapping.code || undefined}
+                      valueName={misaMapping.name || undefined}
+                      onChange={(item: MisaInventoryItem | null) =>
+                        setMisaMapping({
+                          code: item?.code || "",
+                          name: item?.name || "",
+                          unit: item?.unitName || "",
+                        })
+                      }
+                    />
+                    {misaMapping.code ? (
+                      <p className="mt-1 text-xs text-gray-500">
+                        Đã liên kết: {misaMapping.code}
+                        {misaMapping.name ? ` - ${misaMapping.name}` : ""}
+                        {misaMapping.unit ? ` (${misaMapping.unit})` : ""}
+                      </p>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            </FormSection>
+
+            <FormSection title="Hình ảnh">
               <ProductImageGallery images={images} onChange={setImages} />
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2">
-                <input {...register("isDirectSale")} type="checkbox" />
-                <span className="text-sm font-medium">Bán trực tiếp</span>
-              </label>
-            </div>
+            </FormSection>
           </div>
 
           {/* Tab Mô tả */}
@@ -1792,20 +1833,27 @@ export function ManufacturingProductForm({
             <PublicationSection pub={pub} />
           </div>
 
-          <div className="border-t p-4 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border rounded hover:bg-gray-50"
-              disabled={isSubmitting}>
-              Bỏ qua
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50">
-              {isSubmitting ? "Đang lưu..." : product ? "Lưu" : "Tạo mới"}
-            </button>
+          <div className="pf-footer sticky bottom-0">
+            {/* Bán trực tiếp: luôn thấy ở footer */}
+            <label className="pf-direct-sale">
+              <input {...register("isDirectSale")} type="checkbox" />
+              Bán trực tiếp
+            </label>
+            <div className="pf-footer-actions">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 border rounded hover:bg-gray-50"
+                disabled={isSubmitting}>
+                Bỏ qua
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50">
+                {isSubmitting ? "Đang lưu..." : product ? "Lưu" : "Tạo mới"}
+              </button>
+            </div>
           </div>
         </form>
       </div>

@@ -147,7 +147,7 @@ export function CategoryDropdown({
       )}
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-80 overflow-hidden">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-80 overflow-hidden flex flex-col">
           <div className="p-2 border-b">
             <input
               type="text"
@@ -168,7 +168,7 @@ export function CategoryDropdown({
             </button>
           </div>
 
-          <div className="max-h-60 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             {filteredCategories && filteredCategories.length > 0 ? (
               filteredCategories.map((cat) => (
                 <div
