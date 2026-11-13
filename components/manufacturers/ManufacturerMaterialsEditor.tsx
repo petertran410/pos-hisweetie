@@ -26,7 +26,8 @@ const selectClass =
   "w-full rounded-lg border border-gray-200 bg-white px-2 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-soft disabled:cursor-not-allowed disabled:bg-gray-50";
 
 const formatAmount = (value: number, digits = 2) =>
-  value.toLocaleString("vi-VN", { maximumFractionDigits: digits });
+  // Cùng kiểu phân cách (dấu phẩy) với ô nhập lượng / đơn giá.
+  value.toLocaleString("en-US", { maximumFractionDigits: digits });
 
 /**
  * Bảng nguyên liệu NSX bổ sung — dùng chung cho công thức (định lượng / 1 sp)

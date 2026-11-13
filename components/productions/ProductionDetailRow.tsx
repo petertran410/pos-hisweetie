@@ -3,22 +3,41 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import {
+  useCancelProductionReceipt,
   useCancelSentProduction,
+  useCloseProductionReceiving,
   useProduction,
+  useReopenProductionReceiving,
   useSendProduction,
 } from "@/lib/hooks/useProductions";
+import type { Production, ProductionReceipt } from "@/lib/api/productions";
 import { usePermission } from "@/lib/hooks/usePermissions";
-import { ExternalLink, Loader2 } from "lucide-react";
+import {
+  Ban,
+  CircleDollarSign,
+  ExternalLink,
+  FilePlus2,
+  Flag,
+  Loader2,
+  PackageCheck,
+  Pencil,
+  RotateCcw,
+  Send,
+  type LucideIcon,
+} from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { CodeLink } from "../shared/CodeLink";
 import { ProductionReceiveModal } from "./ProductionReceiveModal";
 import { BatchCostApplyModal } from "./BatchCostApplyModal";
-import { ExternalProductionReceiveModal } from "../manufacturers/ExternalProductionReceiveModal";
+import {
+  ExternalProductionReceiveModal,
+  legacyReceipt,
+} from "../manufacturers/ExternalProductionReceiveModal";
 import { ManufacturerMaterialsEditor } from "../manufacturers/ManufacturerMaterialsEditor";
 
 const vnd = (v: unknown, precise = false) =>
-  `${(precise ? Number(v ?? 0) : Math.round(Number(v ?? 0))).toLocaleString("vi-VN", { maximumFractionDigits: precise ? 6 : 0 })} đ`;
+  `${(precise ? Number(v ?? 0) : Math.round(Number(v ?? 0))).toLocaleString("en-US", { maximumFractionDigits: precise ? 6 : 0 })} đ`;
 
 interface ProductionDetailRowProps {
   productionId: number;
@@ -36,6 +55,8 @@ const getStatusColor = (status: number) => {
       return "bg-red-100 text-red-700";
     case 4:
       return "bg-blue-100 text-blue-700";
+    case 5:
+      return "bg-orange-100 text-orange-700";
     default:
       return "bg-gray-100 text-gray-700";
   }
@@ -51,6 +72,8 @@ const getStatusText = (status: number) => {
       return "Đã hủy";
     case 4:
       return "Đã gửi";
+    case 5:
+      return "Nhận một phần";
     default:
       return "Không xác định";
   }
@@ -66,6 +89,9 @@ export function ProductionDetailRow({
   const [receiveMode, setReceiveMode] = useState<
     "receive" | "applyCost" | null
   >(null);
+  // Đợt nhận đang sửa (phiếu gửi NSX).
+  const [editingReceipt, setEditingReceipt] =
+    useState<ProductionReceipt | null>(null);
   const canUpdate = usePermission("productions", "update");
   const canApplyCost = usePermission("productions", "apply_cost");
   // "Admin có thể hủy": phiếu gửi đã gửi/hoàn thành dùng quyền Xóa phiếu SX.
@@ -74,6 +100,10 @@ export function ProductionDetailRow({
   const { mutate: sendProduction, isPending: isSending } = useSendProduction();
   const { mutate: cancelSent, isPending: isCancelling } =
     useCancelSentProduction();
+  const { mutate: closeReceiving, isPending: isClosing } =
+    useCloseProductionReceiving();
+  const { mutate: reopenReceiving, isPending: isReopening } =
+    useReopenProductionReceiving();
 
   // Sticky width theo scroll container (giống InvoiceDetailRow)
   useLayoutEffect(() => {
@@ -122,8 +152,8 @@ export function ProductionDetailRow({
     const res = await Swal.fire({
       title: `Hủy phiếu ${production.code}?`,
       html:
-        production.status === 2
-          ? "Nguyên liệu được cộng lại vào kho, thành phẩm đã nhập bị trừ ra và phí sản xuất bị bỏ khỏi nợ NCC." +
+        production.status === 2 || production.status === 5
+          ? "Nguyên liệu được cộng lại vào kho, thành phẩm đã nhập (mọi đợt) bị trừ ra và phí sản xuất bị bỏ khỏi nợ NCC." +
             (production.costAppliedAt
               ? "<br/><b>Giá vốn thành phẩm đã áp sẽ không tự hoàn lại.</b>"
               : "")
@@ -143,6 +173,28 @@ export function ProductionDetailRow({
 
   // Phiếu nhập nhận hàng còn hiệu lực (tạm hoặc đã nhập) — tối đa 1.
   const activePurchaseOrder = production?.purchaseOrders?.[0];
+  const isNsx = !!production?.manufacturerId;
+  const planned = Number(production?.quantity ?? 0);
+  const received = Number(production?.receivedQuantity ?? 0);
+  const leftToReceive = Math.max(0, planned - received);
+  const canReceive =
+    !!production?.isExternal &&
+    canUpdate &&
+    (production.status === 4 || (isNsx && production.status === 5)) &&
+    !activePurchaseOrder;
+
+  const handleCloseReceiving = async () => {
+    if (!production) return;
+    const res = await Swal.fire({
+      title: `Kết thúc nhận hàng ${production.code}?`,
+      html: `Đã nhận <b>${received.toLocaleString("en-US")}</b> / ${planned.toLocaleString("en-US")}. <b>${leftToReceive.toLocaleString("en-US")}</b> sp còn lại sẽ không nhận nữa (coi là hao hụt).`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Kết thúc",
+      cancelButtonText: "Đóng",
+    });
+    if (res.isConfirmed) closeReceiving(production.id);
+  };
 
   if (isLoading) {
     return (
@@ -297,28 +349,59 @@ export function ProductionDetailRow({
 
                   {production.isExternal && (
                     <>
-                      <InfoItem label={production.manufacturerId ? "Nhà sản xuất:" : "Nhà máy:"}>
-                        {production.manufacturer?.name || production.factory?.name || "-"}
+                      <InfoItem
+                        label={
+                          production.manufacturerId
+                            ? "Nhà sản xuất:"
+                            : "Nhà máy:"
+                        }>
+                        {production.manufacturer?.name ||
+                          production.factory?.name ||
+                          "-"}
                       </InfoItem>
                       <InfoItem label="Nhà cung cấp:">
                         {production.supplier?.name || "-"}
                       </InfoItem>
-                      <InfoItem label="Phí sản xuất lô:">
-                        {vnd(production.processingFee)}
-                        {production.feeCurrency === "CNY" &&
-                          ` (${Number(production.feeForeignAmount ?? 0).toLocaleString("vi-VN")} CNY × ${Number(production.feeExchangeRate ?? 0).toLocaleString("vi-VN")})`}
-                      </InfoItem>
-                      {!!production.manufacturerId && <>
-                        <InfoItem label="Nguyên liệu NSX bổ sung:">{vnd(production.manufacturerMaterialCost)}</InfoItem>
-                        <InfoItem label="Phải trả NSX:">{vnd(production.totalPayable)}</InfoItem>
-                        <InfoItem label="Đã thanh toán:">{vnd(production.paidAmount)}</InfoItem>
-                        <InfoItem label="Còn nợ:">{vnd(production.debtAmount)}</InfoItem>
-                        <InfoItem label="Công thức:">{production.formulaName || "Nhập tay"}</InfoItem>
-                        {production.externalTemplateName && <InfoItem label="Mẫu phối trộn (cũ):">{production.externalTemplateName}</InfoItem>}
-                      </>}
                       <InfoItem
                         label={
-                          production.status === 4
+                          isNsx ? "Phí gia công dự kiến:" : "Phí sản xuất lô:"
+                        }>
+                        {vnd(production.processingFee)}
+                        {production.feeCurrency === "CNY" &&
+                          ` (${Number(production.feeForeignAmount ?? 0).toLocaleString("en-US")} CNY × ${Number(production.feeExchangeRate ?? 0).toLocaleString("en-US")})`}
+                      </InfoItem>
+                      {isNsx && (
+                        <>
+                          <InfoItem label="Nguyên liệu NSX dự kiến:">
+                            {vnd(production.manufacturerMaterialCost)}
+                          </InfoItem>
+                          <InfoItem
+                            label={
+                              production.status === 2 || production.status === 5
+                                ? "Phải trả NSX (các đợt đã nhận):"
+                                : "Phải trả NSX dự kiến:"
+                            }>
+                            {vnd(production.totalPayable)}
+                          </InfoItem>
+                          <InfoItem label="Đã thanh toán:">
+                            {vnd(production.paidAmount)}
+                          </InfoItem>
+                          <InfoItem label="Còn nợ:">
+                            {vnd(production.debtAmount)}
+                          </InfoItem>
+                          <InfoItem label="Công thức:">
+                            {production.formulaName || "Nhập tay"}
+                          </InfoItem>
+                          {production.externalTemplateName && (
+                            <InfoItem label="Mẫu phối trộn (cũ):">
+                              {production.externalTemplateName}
+                            </InfoItem>
+                          )}
+                        </>
+                      )}
+                      <InfoItem
+                        label={
+                          production.status === 4 || production.status === 5
                             ? "Đơn vị sản xuất đang giữ (giá vốn NVL):"
                             : "Giá vốn nguyên liệu đã gửi:"
                         }>
@@ -350,41 +433,56 @@ export function ProductionDetailRow({
                           )}
                         </InfoItem>
                       )}
-                      {production.status === 2 && (
+                      {isNsx && [2, 4, 5].includes(production.status) && (
+                        <NsxCostInfo production={production} />
+                      )}
+                      {!isNsx && production.status === 2 && (
                         <>
                           <InfoItem label="Số lượng nhận:">
                             {Number(
-                              production.receivedQuantity ??
-                                production.quantity,
-                            ).toLocaleString("vi-VN")}
+                              production.receivedQuantity ?? production.quantity
+                            ).toLocaleString("en-US")}
                           </InfoItem>
                           <InfoItem label="Giá thành / sp:">
                             {vnd(
                               production.batchUnitCost != null
                                 ? Number(production.batchUnitCost)
                                 : Number(production.totalCost) /
-                                  Number(production.receivedQuantity || production.quantity || 1),
-                              !!production.manufacturerId,
+                                    Number(
+                                      production.receivedQuantity ||
+                                        production.quantity ||
+                                        1
+                                    ),
+                              !!production.manufacturerId
                             )}
                           </InfoItem>
                           <InfoItem label="Giá vốn đã áp:">
                             {production.costAppliedAt ? (
-                              vnd(production.appliedUnitCost, !!production.manufacturerId)
+                              vnd(
+                                production.appliedUnitCost,
+                                !!production.manufacturerId
+                              )
                             ) : (
                               <span className="text-amber-600">
                                 Chưa áp giá vốn
                               </span>
                             )}
                           </InfoItem>
-                          {production.manufacturerId && !production.costSnapshotAt && (
-                            <InfoItem label="Snapshot giá thành:">
-                              <span className="text-amber-700">Thiếu snapshot lịch sử</span>
-                            </InfoItem>
-                          )}
+                          {production.manufacturerId &&
+                            !production.costSnapshotAt && (
+                              <InfoItem label="Snapshot giá thành:">
+                                <span className="text-amber-700">
+                                  Thiếu snapshot lịch sử
+                                </span>
+                              </InfoItem>
+                            )}
                           {production.costAppliedAt && (
                             <InfoItem label="Thực hiện áp giá:">
-                              {production.costAppliedByName || "-"} · {formatDate(production.costAppliedAt)} ·{" "}
-                              {production.costAppliedScope === "allBranches" ? "Tất cả chi nhánh" : "Kho nhận"}
+                              {production.costAppliedByName || "-"} ·{" "}
+                              {formatDate(production.costAppliedAt)} ·{" "}
+                              {production.costAppliedScope === "allBranches"
+                                ? "Tất cả chi nhánh"
+                                : "Kho nhận"}
                             </InfoItem>
                           )}
                         </>
@@ -417,7 +515,11 @@ export function ProductionDetailRow({
                             <th className="px-3 py-2 text-right">
                               Số lượng trừ kho
                             </th>
-                            {!!production.manufacturerId && <th className="px-3 py-2 text-right">Lượng gửi</th>}
+                            {!!production.manufacturerId && (
+                              <th className="px-3 py-2 text-right">
+                                Lượng gửi
+                              </th>
+                            )}
                           </tr>
                         </thead>
                         <tbody>
@@ -427,11 +529,18 @@ export function ProductionDetailRow({
                               <td className="px-3 py-2">{c.componentName}</td>
                               <td className="px-3 py-2 text-right">
                                 {Number(c.unitsDeducted).toLocaleString(
-                                  "vi-VN",
-                                  { maximumFractionDigits: 3 },
+                                  "en-US",
+                                  { maximumFractionDigits: 3 }
                                 )}
                               </td>
-                              {!!production.manufacturerId && <td className="px-3 py-2 text-right">{Number(c.actualGrams).toLocaleString("vi-VN")} {c.unit}</td>}
+                              {!!production.manufacturerId && (
+                                <td className="px-3 py-2 text-right">
+                                  {Number(c.actualGrams).toLocaleString(
+                                    "en-US"
+                                  )}{" "}
+                                  {c.unit}
+                                </td>
+                              )}
                             </tr>
                           ))}
                         </tbody>
@@ -439,8 +548,26 @@ export function ProductionDetailRow({
                     </div>
                   )}
 
-                {!!production.manufacturerId && <ManufacturerMaterialsEditor
-                  value={production.manufacturerMaterials ?? []} onChange={() => {}} currency={production.feeCurrency ?? "VND"} disabled />}
+                {isNsx && [2, 4, 5].includes(production.status) && (
+                  <ReceiveProgress planned={planned} received={received} />
+                )}
+                {isNsx && (
+                  <ManufacturerMaterialsEditor
+                    title="Nguyên liệu NSX dự kiến (cả lô)"
+                    value={production.manufacturerMaterials ?? []}
+                    onChange={() => {}}
+                    currency={production.feeCurrency ?? "VND"}
+                    disabled
+                  />
+                )}
+                {isNsx && production.status !== 1 && (
+                  <ReceiptHistory
+                    production={production}
+                    canEdit={canUpdate && production.status !== 3}
+                    canCancel={canCancelSent && production.status !== 3}
+                    onEdit={setEditingReceipt}
+                  />
+                )}
                 {production.note && (
                   <div>
                     <label className="block text-md font-medium text-gray-500 mb-1.5">
@@ -453,95 +580,139 @@ export function ProductionDetailRow({
                 )}
               </div>
 
-              {/* Footer */}
-              <div className="flex items-center justify-end gap-2 pt-4 mt-4 border-t border-gray-200">
+              {/* Footer: trái = thao tác hủy; phải = thao tác phụ rồi thao tác chính. */}
+              <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-200 pt-4">
                 {production.isExternal &&
                   canCancelSent &&
-                  (production.status === 4 || production.status === 2) &&
+                  [2, 4, 5].includes(production.status) &&
                   (activePurchaseOrder ? (
                     // Đã có phiếu nhập: hủy phiếu nhập trước (trả tồn thành
                     // phẩm, bỏ phí khỏi nợ) thì phiếu mới về Đã gửi.
-                    <span className="mr-auto text-sm text-gray-500">
+                    <span className="text-sm text-gray-500">
                       Muốn hủy phiếu: hủy phiếu nhập {activePurchaseOrder.code}{" "}
                       trước.
                     </span>
                   ) : (
-                    <button
-                      onClick={handleCancelSent}
-                      disabled={isCancelling}
-                      className="px-4 py-2 text-md font-medium text-red-600 border border-red-300 rounded hover:bg-red-50 transition-colors mr-auto disabled:opacity-50">
+                    <ActionButton
+                      variant="danger"
+                      icon={Ban}
+                      pending={isCancelling}
+                      onClick={handleCancelSent}>
                       Hủy phiếu
-                    </button>
+                    </ActionButton>
                   ))}
-                {onEdit &&
-                  production.status !== 3 &&
-                  (!production.isExternal || production.status === 1) && (
-                    <button
-                      onClick={onEdit}
-                      className={
-                        production.isExternal
-                          ? "px-4 py-2 text-md font-medium text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
-                          : "px-4 py-2 text-md font-medium text-white bg-brand rounded hover:bg-brand-dark transition-colors"
-                      }>
-                      Chỉnh sửa
-                    </button>
+                <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+                  {onEdit &&
+                    production.status !== 3 &&
+                    // Phiếu gửi NSX sửa được cả khi đã gửi / đã nhận (ghi lại tồn, giá thành).
+                    (!production.isExternal ||
+                      production.status === 1 ||
+                      isNsx) && (
+                      <ActionButton
+                        variant={production.isExternal ? "secondary" : "primary"}
+                        icon={Pencil}
+                        onClick={onEdit}>
+                        Chỉnh sửa
+                      </ActionButton>
+                    )}
+                  {production.isExternal &&
+                    !production.manufacturerId &&
+                    canCreatePurchaseOrder &&
+                    production.status === 4 &&
+                    !activePurchaseOrder && (
+                      <Link
+                        href={`/san-pham/nhap-hang/new?productionId=${production.id}`}
+                        className={BUTTON_CLASS.secondary}>
+                        <FilePlus2 size={16} />
+                        Mở form nhập hàng
+                      </Link>
+                    )}
+                  {isNsx && canUpdate && production.status === 5 && (
+                    <ActionButton
+                      icon={Flag}
+                      pending={isClosing}
+                      onClick={handleCloseReceiving}>
+                      Kết thúc nhận hàng
+                    </ActionButton>
                   )}
-                {production.isExternal &&
-                  canUpdate &&
-                  production.status === 1 && (
-                    <button
-                      onClick={handleSend}
-                      disabled={isSending}
-                      className="px-4 py-2 text-md font-medium text-white bg-brand rounded hover:bg-brand-dark transition-colors disabled:opacity-50">
-                      Gửi hàng
-                    </button>
+                  {isNsx &&
+                    canUpdate &&
+                    production.status === 2 &&
+                    received < planned && (
+                      <ActionButton
+                        icon={RotateCcw}
+                        pending={isReopening}
+                        onClick={() => reopenReceiving(production.id)}>
+                        Mở lại nhận hàng
+                      </ActionButton>
+                    )}
+                  {production.isExternal &&
+                    canApplyCost &&
+                    // Phiếu gửi NSX: giá thành chốt lúc gửi nên áp được từ khi đã gửi.
+                    (isNsx
+                      ? [2, 4, 5].includes(production.status)
+                      : production.status === 2) &&
+                    !production.costAppliedAt && (
+                      <ActionButton
+                        // Còn nút Nhận hàng thì áp giá là thao tác phụ.
+                        variant={canReceive ? "secondary" : "primary"}
+                        icon={CircleDollarSign}
+                        onClick={() => setReceiveMode("applyCost")}>
+                        Áp dụng giá vốn
+                      </ActionButton>
+                    )}
+                  {production.isExternal &&
+                    canUpdate &&
+                    production.status === 1 && (
+                      <ActionButton
+                        variant="primary"
+                        icon={Send}
+                        pending={isSending}
+                        onClick={handleSend}>
+                        Gửi hàng
+                      </ActionButton>
+                    )}
+                  {canReceive && (
+                    <ActionButton
+                      variant="primary"
+                      icon={PackageCheck}
+                      onClick={() => setReceiveMode("receive")}>
+                      {production.status === 5 ? "Nhận đợt tiếp" : "Nhận hàng"}
+                    </ActionButton>
                   )}
-                {production.isExternal &&
-                  !production.manufacturerId &&
-                  canCreatePurchaseOrder &&
-                  production.status === 4 &&
-                  !activePurchaseOrder && (
-                    <Link
-                      href={`/san-pham/nhap-hang/new?productionId=${production.id}`}
-                      className="px-4 py-2 text-md font-medium text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-                      Mở form nhập hàng
-                    </Link>
-                  )}
-                {production.isExternal &&
-                  canUpdate &&
-                  production.status === 4 &&
-                  !activePurchaseOrder && (
-                    <button
-                      onClick={() => setReceiveMode("receive")}
-                      className="px-4 py-2 text-md font-medium text-white bg-brand rounded hover:bg-brand-dark transition-colors">
-                      Nhận hàng
-                    </button>
-                  )}
-                {production.isExternal &&
-                  canApplyCost &&
-                  production.status === 2 &&
-                  (!production.manufacturerId || (
-                    production.batchUnitCost != null &&
-                    !!production.costSnapshotAt &&
-                    !!production.outputSpecSnapshot?.unit &&
-                    !!production.outputSpecSnapshot.conversionValue
-                  )) &&
-                  !production.costAppliedAt && (
-                    <button
-                      onClick={() => setReceiveMode("applyCost")}
-                      className="px-4 py-2 text-md font-medium text-white bg-brand rounded hover:bg-brand-dark transition-colors">
-                      Áp dụng giá vốn
-                    </button>
-                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
-        {receiveMode && (production.manufacturerId
-          ? receiveMode === "receive"
-            ? <ExternalProductionReceiveModal production={production} onClose={() => setReceiveMode(null)} />
-            : canApplyCost && <BatchCostApplyModal productionId={production.id} onClose={() => setReceiveMode(null)} />
-          : <ProductionReceiveModal production={production} mode={receiveMode} onClose={() => setReceiveMode(null)} />
+        {receiveMode &&
+          (production.manufacturerId ? (
+            receiveMode === "receive" ? (
+              <ExternalProductionReceiveModal
+                production={production}
+                onClose={() => setReceiveMode(null)}
+              />
+            ) : (
+              canApplyCost && (
+                <BatchCostApplyModal
+                  productionId={production.id}
+                  onClose={() => setReceiveMode(null)}
+                />
+              )
+            )
+          ) : (
+            <ProductionReceiveModal
+              production={production}
+              mode={receiveMode}
+              onClose={() => setReceiveMode(null)}
+            />
+          ))}
+        {editingReceipt && (
+          <ExternalProductionReceiveModal
+            production={production}
+            receipt={editingReceipt}
+            onClose={() => setEditingReceipt(null)}
+          />
         )}
       </td>
     </tr>
@@ -562,5 +733,243 @@ function InfoItem({
       </label>
       <span className="block text-sm text-gray-800">{children}</span>
     </div>
+  );
+}
+
+const qty = (value: unknown) =>
+  Number(value ?? 0).toLocaleString("en-US", { maximumFractionDigits: 4 });
+
+/** Giá thành dự kiến (chốt lúc gửi) + trạng thái áp giá của phiếu gửi NSX. */
+function NsxCostInfo({ production }: { production: Production }) {
+  return (
+    <>
+      <InfoItem label="Giá thành dự kiến / sp:">
+        {production.batchUnitCost != null
+          ? vnd(production.batchUnitCost, true)
+          : "-"}
+      </InfoItem>
+      <InfoItem label="Giá vốn đã áp:">
+        {production.costAppliedAt ? (
+          vnd(production.appliedUnitCost, true)
+        ) : (
+          <span className="text-amber-600">Chưa áp giá vốn</span>
+        )}
+      </InfoItem>
+      {production.costAppliedAt && (
+        <InfoItem label="Thực hiện áp giá:">
+          {production.costAppliedByName || "-"} ·{" "}
+          {formatDate(production.costAppliedAt)} ·{" "}
+          {production.costAppliedScope === "allBranches"
+            ? "Tất cả chi nhánh"
+            : "Kho nhận"}
+        </InfoItem>
+      )}
+    </>
+  );
+}
+
+/** Thanh tiến độ "Đã nhận X / Y · còn Z". */
+function ReceiveProgress({
+  planned,
+  received,
+}: {
+  planned: number;
+  received: number;
+}) {
+  const percent = planned > 0 ? Math.min(100, (received / planned) * 100) : 0;
+  const left = Math.max(0, planned - received);
+  return (
+    <div className="rounded-lg border border-gray-200 px-4 py-3">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+        <span className="font-medium text-gray-700">Tiến độ nhận hàng</span>
+        <span className="tabular-nums text-gray-600">
+          Đã nhận <b className="text-green-700">{qty(received)}</b> /{" "}
+          {qty(planned)}
+          {left > 0 ? (
+            <>
+              {" "}
+              · còn <b className="text-amber-700">{qty(left)}</b>
+            </>
+          ) : received > planned ? (
+            <> · vượt {qty(received - planned)}</>
+          ) : null}
+        </span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+        <div
+          className="h-full rounded-full bg-green-500 transition-[width] duration-300 ease-out"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Lịch sử các đợt nhận: sửa / hủy từng đợt. */
+function ReceiptHistory({
+  production,
+  canEdit,
+  canCancel,
+  onEdit,
+}: {
+  production: Production;
+  canEdit: boolean;
+  canCancel: boolean;
+  onEdit: (receipt: ProductionReceipt) => void;
+}) {
+  const { mutate: cancelReceipt, isPending } = useCancelProductionReceipt();
+  const legacy = legacyReceipt(production);
+  const receipts = production.receipts?.length
+    ? production.receipts
+    : legacy
+      ? [legacy]
+      : [];
+  const cny = production.feeCurrency === "CNY";
+
+  const handleCancel = async (receipt: ProductionReceipt) => {
+    const res = await Swal.fire({
+      title: `Hủy đợt nhận ${receipt.code}?`,
+      html: `Trừ lại <b>${qty(receipt.quantity)}</b> thành phẩm khỏi kho ${production.destinationBranchName} và bỏ <b>${vnd(receipt.totalPayable)}</b> khỏi nợ NSX.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Hủy đợt",
+      cancelButtonText: "Đóng",
+      confirmButtonColor: "#dc2626",
+    });
+    if (res.isConfirmed)
+      cancelReceipt({ id: production.id, receiptId: receipt.id });
+  };
+
+  return (
+    <div>
+      <label className="block text-md font-medium text-gray-500 mb-1.5">
+        Lịch sử nhận hàng:
+      </label>
+      <div className="overflow-x-auto rounded border">
+        <table className="w-full min-w-[820px] text-sm">
+          <thead className="bg-gray-50 text-gray-600">
+            <tr>
+              <th className="px-3 py-2 text-left">Mã đợt</th>
+              <th className="px-3 py-2 text-left">Ngày nhận</th>
+              <th className="px-3 py-2 text-right">Số lượng</th>
+              <th className="px-3 py-2 text-right">NL NSX</th>
+              <th className="px-3 py-2 text-right">
+                Phí gia công{cny ? " (VND)" : ""}
+              </th>
+              <th className="px-3 py-2 text-right">Phải trả</th>
+              <th className="px-3 py-2 text-left">Người nhận</th>
+              <th className="px-3 py-2 text-left">Trạng thái</th>
+              <th className="w-32 px-3 py-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {receipts.map((receipt) => {
+              const active = receipt.status === 1;
+              return (
+                <tr
+                  key={receipt.id || receipt.code}
+                  className={`border-t ${active ? "" : "text-gray-400 line-through decoration-gray-300"}`}>
+                  <td className="px-3 py-2 font-medium">{receipt.code}</td>
+                  <td className="px-3 py-2">
+                    {formatDate(receipt.receivedDate)}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {qty(receipt.quantity)}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {vnd(receipt.manufacturerMaterialCost)}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {vnd(receipt.processingFee)}
+                  </td>
+                  <td className="px-3 py-2 text-right font-medium tabular-nums">
+                    {vnd(receipt.totalPayable)}
+                  </td>
+                  <td className="px-3 py-2">
+                    {receipt.updatedByName || receipt.createdByName}
+                  </td>
+                  <td className="px-3 py-2">
+                    {active ? (
+                      <span className="text-green-700">Đã nhận</span>
+                    ) : (
+                      <span title={receipt.cancelledByName ?? undefined}>
+                        Đã hủy
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-right whitespace-nowrap">
+                    <div className="inline-flex items-center gap-1">
+                      {active && canEdit && (
+                        <button
+                          onClick={() => onEdit(receipt)}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium text-brand transition-colors hover:bg-brand-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-soft">
+                          <Pencil size={14} />
+                          Sửa
+                        </button>
+                      )}
+                      {active && canCancel && (
+                        <button
+                          onClick={() => handleCancel(receipt)}
+                          disabled={isPending}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-100 disabled:cursor-not-allowed disabled:opacity-50">
+                          <Ban size={14} />
+                          Hủy đợt
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {!receipts.length && (
+              <tr>
+                <td colSpan={9} className="px-3 py-6 text-center text-gray-400">
+                  Chưa nhận đợt nào
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+const BUTTON_BASE =
+  "inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50";
+const BUTTON_CLASS = {
+  primary: `${BUTTON_BASE} bg-brand text-white shadow-sm hover:bg-brand-dark focus-visible:ring-brand-soft`,
+  secondary: `${BUTTON_BASE} border border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50 focus-visible:ring-brand-soft`,
+  danger: `${BUTTON_BASE} border border-red-200 bg-white text-red-600 hover:border-red-300 hover:bg-red-50 focus-visible:ring-red-100`,
+} as const;
+
+/** Nút thao tác của chi tiết phiếu: icon + nhãn, xoay khi đang xử lý. */
+function ActionButton({
+  variant = "secondary",
+  icon: Icon,
+  pending = false,
+  onClick,
+  children,
+}: {
+  variant?: keyof typeof BUTTON_CLASS;
+  icon: LucideIcon;
+  pending?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={pending}
+      aria-busy={pending}
+      className={BUTTON_CLASS[variant]}>
+      {pending ? (
+        <Loader2 size={16} className="animate-spin" />
+      ) : (
+        <Icon size={16} />
+      )}
+      {children}
+    </button>
   );
 }

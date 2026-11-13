@@ -108,6 +108,10 @@ export function ManufacturerDetailPanel({
       0
     ) ?? 0;
   const completed = data?.productions.filter((row) => row.status === 2) ?? [];
+  // Nợ NSX ghi theo đợt nhận: phiếu Nhận một phần cũng đã có công nợ.
+  const withDebt =
+    data?.productions.filter((row) => row.status === 2 || row.status === 5) ??
+    [];
   const title = MANUFACTURER_VIEWS.find((item) => item.value === view)!.label;
   const refreshing = accounts.isFetching;
   const refresh = () => {
@@ -309,7 +313,7 @@ export function ManufacturerDetailPanel({
                         <dt className="text-gray-600">Phải trả NSX:</dt>
                         <dd className="break-words text-right font-semibold tabular-nums text-gray-900">
                           {money(
-                            completed.reduce(
+                            withDebt.reduce(
                               (sum, row) => sum + Number(row.totalPayable ?? 0),
                               0
                             )
@@ -320,7 +324,7 @@ export function ManufacturerDetailPanel({
                         <dt className="text-gray-600">Đã thanh toán:</dt>
                         <dd className="break-words text-right font-semibold tabular-nums text-green-600">
                           {money(
-                            completed.reduce(
+                            withDebt.reduce(
                               (sum, row) => sum + Number(row.paidAmount ?? 0),
                               0
                             )
@@ -512,11 +516,11 @@ export function ManufacturerDetailPanel({
                       {data.productions.length > 0 && (
                         <tr className="bg-amber-50 font-semibold">
                           <td className={td} colSpan={3}>
-                            Tổng phiếu hoàn thành ({completed.length})
+                            Tổng phiếu đã nhận hàng ({withDebt.length})
                           </td>
                           <td className={`${td} text-right tabular-nums`}>
                             {money(
-                              completed.reduce(
+                              withDebt.reduce(
                                 (sum, row) =>
                                   sum + Number(row.totalPayable ?? 0),
                                 0
@@ -526,7 +530,7 @@ export function ManufacturerDetailPanel({
                           <td
                             className={`${td} text-right tabular-nums text-green-700`}>
                             {money(
-                              completed.reduce(
+                              withDebt.reduce(
                                 (sum, row) => sum + Number(row.paidAmount ?? 0),
                                 0
                               )
@@ -535,7 +539,7 @@ export function ManufacturerDetailPanel({
                           <td
                             className={`${td} text-right tabular-nums text-orange-600`}>
                             {money(
-                              completed.reduce(
+                              withDebt.reduce(
                                 (sum, row) => sum + Number(row.debtAmount ?? 0),
                                 0
                               )
@@ -567,11 +571,11 @@ export function ManufacturerDetailPanel({
                           </td>
                           <td
                             className={`${td} whitespace-nowrap text-right tabular-nums text-green-700`}>
-                            {row.status === 2 ? money(row.paidAmount) : "-"}
+                            {row.status === 2 || row.status === 5 ? money(row.paidAmount) : "-"}
                           </td>
                           <td
                             className={`${td} whitespace-nowrap text-right tabular-nums text-orange-600`}>
-                            {row.status === 2 ? money(row.debtAmount) : "-"}
+                            {row.status === 2 || row.status === 5 ? money(row.debtAmount) : "-"}
                           </td>
                         </tr>
                       ))}
@@ -652,6 +656,7 @@ function ProductionStatus({ status }: { status: number }) {
     2: { text: "Hoàn thành", color: "text-green-700" },
     3: { text: "Đã hủy", color: "text-red-600" },
     4: { text: "Đã gửi", color: "text-brand-dark" },
+    5: { text: "Nhận một phần", color: "text-orange-600" },
   };
   const state = labels[status];
   return <span className={state?.color}>{state?.text ?? "-"}</span>;
