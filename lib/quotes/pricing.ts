@@ -1,33 +1,8 @@
 /**
  * Tính giá báo giá theo khung — hàm thuần, không gọi API (test jest ở giai đoạn 2).
  */
-import type { QuoteItem, QuoteRegion, QuoteTemplate, QuoteTier, QuoteTierDef } from "@/lib/types/quote";
+import type { QuoteItem, QuoteRegion, QuoteTier, QuoteTierDef } from "@/lib/types/quote";
 import { QUOTE_REGION_LABEL } from "@/lib/types/quote";
-
-const tier = (
-  key: string,
-  label: string,
-  minQty: number | null = null,
-  maxQty: number | null = null
-): QuoteTier => ({ key, label, minQty, maxQty, unit: "thùng", price: null, manual: false });
-
-/** Khung giá ban đầu của 3 mẫu hệ thống (cột giá của file Excel) — dữ liệu khởi tạo cho Cài đặt › Mẫu báo giá. */
-export function defaultTiers(template: QuoteTemplate): QuoteTier[] {
-  switch (template) {
-    case "retail":
-      return [tier("le", "Giá lẻ")];
-    case "agency":
-      return [
-        tier("le", "Giá lẻ"),
-        tier("ctv", "Giá CTV"),
-        tier("dl_lt10", "Giá Đại lý < 10T", 1, 9),
-        tier("dl_ge10", "Giá Đại lý ≥ 10T", 10, null),
-      ];
-    case "chain":
-      // Chuỗi: Sale tự đặt khung, bắt đầu với 1 khung.
-      return [tier("chuoi", "Giá chuỗi", 1, null)];
-  }
-}
 
 /** Điền giá bảng giá vào các khung chưa sửa tay (không có giá tham chiếu thì giữ giá đang có). */
 export function fillFromPriceBook(item: QuoteItem, priceBookPrice: number | null): QuoteItem {

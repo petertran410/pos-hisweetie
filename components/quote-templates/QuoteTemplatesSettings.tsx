@@ -17,26 +17,18 @@ import type {
   QuoteItem,
   QuoteLayout,
   QuoteRegion,
-  QuoteTemplate,
   QuoteTemplateConfig,
   QuoteTemplatePayload,
   QuoteTierDef,
 } from "@/lib/types/quote";
-import {
-  QUOTE_LAYOUT_LABEL,
-  QUOTE_REGION_LABEL,
-  QUOTE_TEMPLATE_LABEL,
-} from "@/lib/types/quote";
+import { QUOTE_LAYOUT_LABEL, QUOTE_REGION_LABEL } from "@/lib/types/quote";
 import { QuotePreview } from "@/components/quotes/QuotePreview";
 import { QuotePreviewBrand } from "@/components/quotes/QuotePreviewBrand";
 
-const GROUPS = Object.keys(QUOTE_TEMPLATE_LABEL) as QuoteTemplate[];
 const UNITS = ["thùng", "túi", "hộp", "gói", "bao", "kg"];
 
 const toPayload = (t: QuoteTemplateConfig): QuoteTemplatePayload => ({
   name: t.name,
-  group: t.group,
-  layout: t.layout,
   tiers: t.tiers,
   titlePattern: t.titlePattern,
   greeting: t.greeting,
@@ -196,14 +188,12 @@ function TierDefsEditor({ tiers, onChange }: { tiers: QuoteTierDef[]; onChange: 
   );
 }
 
-/** Báo giá minh hoạ cho phần xem trước: vài dòng thật trong Thư viện cùng nhóm khách. */
+/** Báo giá minh hoạ cho phần xem trước: vài dòng thật trong Thư viện. */
 function sampleQuote(form: QuoteTemplatePayload, region: QuoteRegion, libItems: QuoteItem[]) {
   const today = new Date().toISOString().slice(0, 10);
   const until = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
   return {
     code: "BG000123",
-    template: form.group,
-    layout: form.layout,
     title: renderTitle(form.titlePattern, region),
     greeting: form.greeting,
     intro: form.intro,
@@ -223,17 +213,17 @@ export function QuoteTemplatesSettings() {
   const setDefault = useSetDefaultQuoteTemplate();
   const setActive = useSetQuoteTemplateActive();
 
-  const [group, setGroup] = useState<QuoteTemplate>("retail");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   /** Mẫu đang sửa; id null = mẫu mới chưa lưu. */
   const [form, setForm] = useState<QuoteTemplatePayload | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [region, setRegion] = useState<QuoteRegion>("HN");
+  /** Chỉ để xem trước — kiểu trình bày chọn lúc xuất báo giá, không lưu theo mẫu. */
+  const [previewLayout, setPreviewLayout] = useState<QuoteLayout>("classic");
 
-  const inGroup = templates.filter((t) => t.group === group);
   const selected = useMemo(
-    () => inGroup.find((t) => t.id === selectedId) ?? inGroup.find((t) => t.isDefault) ?? inGroup[0] ?? null,
-    [inGroup, selectedId]
+    () => templates.find((t) => t.id === selectedId) ?? templates.find((t) => t.isDefault) ?? templates[0] ?? null,
+    [templates, selectedId]
   );
   const original = editingId == null ? null : templates.find((t) => t.id === editingId) ?? null;
   const dirty = !!form && (original ? JSON.stringify(toPayload(original)) !== JSON.stringify(form) : true);
@@ -258,15 +248,6 @@ export function QuoteTemplatesSettings() {
     setForm(toPayload(t));
   };
 
-  const switchGroup = async (g: QuoteTemplate) => {
-    if (!(await guard())) return;
-    setGroup(g);
-    const t = templates.find((x) => x.group === g && x.isDefault) ?? templates.find((x) => x.group === g);
-    setSelectedId(t?.id ?? null);
-    setEditingId(t?.id ?? null);
-    setForm(t ? toPayload(t) : null);
-  };
-
   const startNew = async (from?: QuoteTemplatePayload) => {
     if (!(await guard())) return;
     const base = from ?? (selected ? toPayload(selected) : null);
@@ -281,7 +262,6 @@ export function QuoteTemplatesSettings() {
     if (!form.tiers.length || form.tiers.some((t) => !t.label.trim())) return toast.error("Cột giá cần có nhãn");
     const saved = await save.mutateAsync({ id: editingId ?? undefined, payload: form });
     toast.success(editingId ? `Đã lưu mẫu “${saved.name}”` : `Đã tạo mẫu “${saved.name}”`);
-    setGroup(saved.group);
     setSelectedId(saved.id);
     setEditingId(saved.id);
     setForm(toPayload(saved));
@@ -303,30 +283,17 @@ export function QuoteTemplatesSettings() {
   };
 
   const patch = (p: Partial<QuoteTemplatePayload>) => setForm((f) => (f ? { ...f, ...p } : f));
-  // Sản phẩm minh hoạ: mẫu thư viện đầu tiên cùng nhóm khách (chưa có thì mẫu bất kỳ).
-  const previewGroup = form?.group ?? group;
-  const { data: libSame } = useQuotes({ tab: "library", template: [previewGroup], pageSize: 1 });
-  const { data: libAny } = useQuotes({ tab: "library", pageSize: 1 });
-  const libId = libSame?.data[0]?.id ?? libAny?.data[0]?.id ?? null;
+  // Sản phẩm minh hoạ: mẫu thư viện đầu tiên; giá theo khung của mẫu đang sửa.
+  const { data: lib } = useQuotes({ tab: "library", pageSize: 1 });
+  const libId = lib?.data[0]?.id ?? null;
   const { data: libQuote } = useQuote(libId);
   const preview = form ? sampleQuote(form, region, libQuote?.items ?? []) : null;
 
   return (
     <div className="flex flex-col h-full">
-      {/* Tabs nhóm khách */}
-      <div className="flex items-center border-b bg-white px-6 overflow-x-auto shrink-0">
-        <h1 className="text-lg font-bold pr-6 whitespace-nowrap">Mẫu báo giá</h1>
-        {GROUPS.map((g) => (
-          <button
-            key={g}
-            onClick={() => switchGroup(g)}
-            className={`px-4 py-3 text-sm whitespace-nowrap border-b-2 transition-colors ${
-              group === g ? "border-brand text-brand font-medium" : "border-transparent text-gray-600 hover:text-gray-900"
-            }`}>
-            {QUOTE_TEMPLATE_LABEL[g]}
-            <span className="ml-1.5 text-xs text-gray-400">{templates.filter((t) => t.group === g).length}</span>
-          </button>
-        ))}
+      <div className="flex items-center border-b bg-white px-6 py-3 shrink-0">
+        <h1 className="text-lg font-bold whitespace-nowrap">Mẫu báo giá</h1>
+        <span className="ml-2 text-xs text-gray-400">{templates.length}</span>
       </div>
 
       {/* Toolbar */}
@@ -338,12 +305,12 @@ export function QuoteTemplatesSettings() {
           id="qt-select"
           value={editingId ?? ""}
           onChange={(e) => {
-            const t = inGroup.find((x) => x.id === Number(e.target.value));
+            const t = templates.find((x) => x.id === Number(e.target.value));
             if (t) open(t);
           }}
           className="border rounded-lg px-3 py-1.5 text-sm min-w-[240px]">
           {editingId == null && <option value="">{form?.name || "(Mẫu mới chưa lưu)"} — chưa lưu</option>}
-          {inGroup.map((t) => (
+          {templates.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
               {t.isDefault ? " (Mặc định)" : ""}
@@ -363,7 +330,7 @@ export function QuoteTemplatesSettings() {
         <ToolButton
           title={
             original?.isDefault
-              ? "Đang là mẫu mặc định của nhóm"
+              ? "Đang là mẫu mặc định"
               : original && !original.isActive
                 ? "Dùng lại mẫu trước khi đặt mặc định"
                 : "Đặt làm mẫu mặc định"
@@ -372,7 +339,7 @@ export function QuoteTemplatesSettings() {
           onClick={async () => {
             if (!original) return;
             await setDefault.mutateAsync(original.id);
-            toast.success(`“${original.name}” là mẫu mặc định của ${QUOTE_TEMPLATE_LABEL[original.group]}`);
+            toast.success(`“${original.name}” là mẫu mặc định khi tạo báo giá`);
           }}>
           <Star className={`w-4 h-4 ${original?.isDefault ? "fill-amber-400 text-amber-500" : ""}`} />
         </ToolButton>
@@ -409,40 +376,18 @@ export function QuoteTemplatesSettings() {
         <div className="flex-1 flex items-center justify-center text-gray-400">Đang tải…</div>
       ) : !form ? (
         <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
-          Nhóm này chưa có mẫu. Bấm + để tạo mẫu mới.
+          Chưa có mẫu báo giá.
         </div>
       ) : (
         <div className="flex-1 flex min-h-0">
           {/* Form sửa mẫu */}
           <div className="w-1/2 border-r bg-white flex flex-col min-h-0">
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Tên mẫu">
-                  <input
-                    value={form.name}
-                    onChange={(e) => patch({ name: e.target.value })}
-                    className="w-full border rounded-lg px-3 py-1.5 text-sm font-medium"
-                  />
-                </Field>
-                <Field label="Nhóm khách">
-                  <select
-                    value={form.group}
-                    disabled={!!original?.isDefault}
-                    onChange={(e) => patch({ group: e.target.value as QuoteTemplate })}
-                    className="w-full border rounded-lg px-2 py-1.5 text-sm bg-white disabled:bg-gray-50">
-                    {GROUPS.map((g) => (
-                      <option key={g} value={g}>
-                        {QUOTE_TEMPLATE_LABEL[g]}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
-              <Field label="Kiểu trình bày mặc định">
-                <Segmented<QuoteLayout>
-                  value={form.layout}
-                  options={QUOTE_LAYOUT_LABEL}
-                  onChange={(layout) => patch({ layout })}
+              <Field label="Tên mẫu">
+                <input
+                  value={form.name}
+                  onChange={(e) => patch({ name: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-1.5 text-sm font-medium"
                 />
               </Field>
               <Field
@@ -521,12 +466,15 @@ export function QuoteTemplatesSettings() {
 
           {/* Xem trước trực tiếp */}
           <div className="w-1/2 bg-gray-100 p-4 overflow-auto">
-            <div className="text-xs text-gray-500 mb-2">
-              Xem trước ({QUOTE_LAYOUT_LABEL[form.layout]}) — 6 sản phẩm minh hoạ từ Thư viện
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-xs text-gray-500 whitespace-nowrap">Xem trước · 6 sản phẩm từ Thư viện</span>
+              <div className="ml-auto w-64">
+                <Segmented<QuoteLayout> value={previewLayout} options={QUOTE_LAYOUT_LABEL} onChange={setPreviewLayout} />
+              </div>
             </div>
             {preview && (
               <div className="w-fit shadow-sm" style={{ zoom: 0.62 }}>
-                {form.layout === "brand" ? <QuotePreviewBrand quote={preview} /> : <QuotePreview quote={preview} />}
+                {previewLayout === "brand" ? <QuotePreviewBrand quote={preview} /> : <QuotePreview quote={preview} />}
               </div>
             )}
           </div>

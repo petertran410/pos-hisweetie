@@ -7,8 +7,9 @@ import {
   rangeToIso,
   type TimeRangeState,
 } from "@/components/shared/TimeRangeFilter";
-import type { QuoteFilters, QuoteStatus, QuoteTemplate } from "@/lib/types/quote";
-import { QUOTE_STATUS_LABEL, QUOTE_TEMPLATE_LABEL } from "@/lib/types/quote";
+import { useQuoteTemplates } from "@/lib/hooks/useQuoteTemplates";
+import type { QuoteFilters, QuoteStatus } from "@/lib/types/quote";
+import { QUOTE_STATUS_LABEL } from "@/lib/types/quote";
 
 const options = <K extends string>(labels: Record<K, string>) =>
   (Object.keys(labels) as K[]).map((value) => ({ value, label: labels[value] }));
@@ -38,10 +39,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 export function QuotesSidebar({ filters, sales, onChange }: Props) {
   const [range, setRange] = useState<TimeRangeState>(ALL_TIME);
+  const { data: templates = [] } = useQuoteTemplates();
 
   const active =
     (filters.status?.length ?? 0) +
-    (filters.template?.length ?? 0) +
+    (filters.templateId?.length ?? 0) +
     (filters.createdById?.length ?? 0) +
     (filters.fromDate ? 1 : 0);
 
@@ -49,7 +51,7 @@ export function QuotesSidebar({ filters, sales, onChange }: Props) {
     setRange(ALL_TIME);
     onChange({
       status: undefined,
-      template: undefined,
+      templateId: undefined,
       createdById: undefined,
       fromDate: undefined,
       toDate: undefined,
@@ -90,9 +92,9 @@ export function QuotesSidebar({ filters, sales, onChange }: Props) {
         <div className="border-t border-gray-100" />
         <Field label="Mẫu báo giá">
           <FilterMultiSelect
-            options={options(QUOTE_TEMPLATE_LABEL)}
-            values={filters.template ?? []}
-            onChange={(v) => onChange({ template: v.length ? (v as QuoteTemplate[]) : undefined })}
+            options={templates.map((t) => ({ value: String(t.id), label: t.name }))}
+            values={(filters.templateId ?? []).map(String)}
+            onChange={(v) => onChange({ templateId: v.length ? v.map(Number) : undefined })}
             placeholder="Tất cả mẫu"
             searchable={false}
           />

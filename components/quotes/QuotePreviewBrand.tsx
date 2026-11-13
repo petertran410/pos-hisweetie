@@ -2,19 +2,17 @@
 
 import { forwardRef } from "react";
 import type { Quote, QuoteItem } from "@/lib/types/quote";
-import { diffPct, formatVnd, marginPct, tierColumns, withSalePrice } from "@/lib/quotes/pricing";
+import { formatVnd, marginPct, tierColumns, withSalePrice } from "@/lib/quotes/pricing";
 
 /**
- * Mẫu 2 — thiết kế thương hiệu LerMao (canvas "Báo giá LerMao – 3 nhóm khách"):
- * - Khách lẻ: thẻ sản phẩm có ảnh lớn.
- * - Khách chuỗi: đầu trang navy, giá niêm yết gạch ngang + % tiết kiệm, ô ký xác nhận.
- * - Đại lý: bảng theo thùng (giá / thùng) + lợi nhuận.
+ * Mẫu 2 — thiết kế thương hiệu LerMao, chọn bố cục theo số cột giá:
+ * - 1 cột giá: thẻ sản phẩm có ảnh lớn.
+ * - Nhiều cột giá (khung số lượng): bảng theo thùng (giá / thùng) + lợi nhuận.
  * Style inline (tokens LerMao) để in PDF / chụp ảnh như Mẫu 1.
  */
 
 export type BrandPreviewQuote = Pick<
   Quote,
-  | "template"
   | "title"
   | "greeting"
   | "intro"
@@ -176,8 +174,8 @@ const page: React.CSSProperties = {
 const sub = (q: BrandPreviewQuote, prefix: string) =>
   `${q.code ? `Số ${q.code} · ` : ""}${prefix} ${dmy(q.appliedFrom)}`;
 
-/** Khách lẻ: thẻ sản phẩm. */
-function Retail({ quote }: { quote: BrandPreviewQuote }) {
+/** 1 cột giá: thẻ sản phẩm. */
+function Cards({ quote }: { quote: BrandPreviewQuote }) {
   return (
     <div style={{ ...page, padding: "36px 40px 28px", gap: 16 }}>
       <Header title="BÁO GIÁ" sub={sub(quote, "Ngày")} />
@@ -251,101 +249,13 @@ function ProductCell({ it }: { it: QuoteItem }) {
   );
 }
 
-/** Khách chuỗi: giá niêm yết vs giá chuỗi. */
-function Chain({ quote }: { quote: BrandPreviewQuote }) {
-  const cols = tierColumns(quote.items);
-  const saves = quote.items
-    .map((it) => diffPct(firstPrice(it), it.basePrice))
-    .filter((p): p is number => p != null && p < 0)
-    .map((p) => -p);
-  const saveRange = saves.length
-    ? `${Math.round(Math.min(...saves) * 100)}–${Math.round(Math.max(...saves) * 100)}%`
-    : "—";
-  const kpi = (big: string, text: string, gold?: boolean) => (
-    <div
-      style={{
-        background: gold ? C.gold : C.surface,
-        borderRadius: 8,
-        padding: "12px 16px",
-        display: "flex",
-        alignItems: "baseline",
-        gap: 10,
-      }}>
-      <span style={{ fontSize: 26, fontWeight: 800, color: gold ? C.navy : C.link }}>{big}</span>
-      <span style={{ fontSize: 12, lineHeight: "16px", color: C.navy }}>{text}</span>
-    </div>
-  );
-  return (
-    <div style={page}>
-      <Header title="BÁO GIÁ CHIẾN LƯỢC" sub={sub(quote, "Dành cho chuỗi F&B ·")} dark />
-      <div style={{ flexGrow: 1, padding: "20px 40px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-          <Recipient quote={quote} />
-          <Validity quote={quote} />
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-          {kpi(String(quote.items.length), "SKU đề xuất cho menu của chuỗi")}
-          {kpi(saveRange, "thấp hơn giá niêm yết", true)}
-        </div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: C.navy }}>{quote.title}</div>
-        <table style={{ width: "100%", borderCollapse: "collapse", border: `1px solid ${C.border}` }}>
-          <thead style={{ display: "table-header-group", background: C.navy }}>
-            <tr>
-              <th style={{ ...th, textAlign: "left", width: 26 }}>STT</th>
-              <th style={{ ...th, textAlign: "left" }}>Sản phẩm</th>
-              <th style={th}>Giá niêm yết</th>
-              {cols.map((c) => (
-                <th key={c.key} style={th}>
-                  {c.label}
-                </th>
-              ))}
-              <th style={th}>Tiết kiệm</th>
-            </tr>
-          </thead>
-          <tbody>
-            {quote.items.map((it, i) => {
-              const save = diffPct(firstPrice(it), it.basePrice);
-              return (
-                <tr key={it.id} style={{ pageBreakInside: "avoid" }}>
-                  <td style={{ ...td, textAlign: "left", color: C.navy }}>{i + 1}</td>
-                  <ProductCell it={it} />
-                  <td style={{ ...td, color: C.navy, textDecoration: "line-through" }}>{formatVnd(it.basePrice)}</td>
-                  {cols.map((c) => (
-                    <td key={c.key} style={{ ...td, fontSize: 14, fontWeight: 800, color: C.link }}>
-                      {it.comingSoon ? "—" : formatVnd(it.tiers.find((t) => t.key === c.key)?.price)}
-                    </td>
-                  ))}
-                  <td style={{ ...td, fontWeight: 700, color: C.navy }}>
-                    {save != null && save < 0 ? `−${pct(-save)}` : ""}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        <div style={{ fontSize: 12, color: C.navy }}>Đơn vị: đồng / đơn vị bán, đã bao gồm VAT. Giá niêm yết = Bảng giá chung.</div>
-        <NoteAndClosing quote={quote} />
-        <div style={{ marginTop: "auto", display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 24, textAlign: "center", fontSize: 12 }}>
-          {[`ĐẠI DIỆN ${COMPANY.toUpperCase()}`, "XÁC NHẬN CỦA CHUỖI"].map((s, i) => (
-            <div key={s} style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "center" }}>
-              <span style={{ fontWeight: 700 }}>{s}</span>
-              <span style={{ color: C.navy }}>{i ? "(Ký, ghi rõ họ tên, đóng dấu)" : "(Ký, ghi rõ họ tên)"}</span>
-              <div style={{ height: 56 }} />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Đại lý: giá theo đơn vị + theo thùng + lợi nhuận. */
-function Agency({ quote }: { quote: BrandPreviewQuote }) {
+/** Nhiều cột giá: giá theo đơn vị + theo thùng + lợi nhuận. */
+function PriceTable({ quote }: { quote: BrandPreviewQuote }) {
   const cols = tierColumns(quote.items);
   const lowKey = cols[cols.length - 1]?.key;
   return (
     <div style={{ ...page, padding: "32px 40px 28px", gap: 14 }}>
-      <Header title="BẢNG GIÁ ĐẠI LÝ" sub={sub(quote, "Áp dụng từ")} />
+      <Header title="BẢNG GIÁ" sub={sub(quote, "Áp dụng từ")} />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
         <Recipient quote={quote} />
         <Validity quote={quote} />
@@ -402,13 +312,7 @@ export const QuotePreviewBrand = forwardRef<HTMLDivElement, { quote: BrandPrevie
     const quote = { ...raw, items: raw.items.map(withSalePrice) };
     return (
       <div ref={ref}>
-        {quote.template === "retail" ? (
-          <Retail quote={quote} />
-        ) : quote.template === "chain" ? (
-          <Chain quote={quote} />
-        ) : (
-          <Agency quote={quote} />
-        )}
+        {tierColumns(quote.items).length > 1 ? <PriceTable quote={quote} /> : <Cards quote={quote} />}
       </div>
     );
   }

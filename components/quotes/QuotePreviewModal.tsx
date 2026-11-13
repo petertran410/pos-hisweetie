@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Copy, FileDown, FileSpreadsheet, Image as ImageIcon, Link2, X } from "lucide-react";
 import { quotesApi } from "@/lib/api/quotes";
 import type { Quote, QuoteLayout } from "@/lib/types/quote";
-import { QUOTE_LAYOUT_LABEL, QUOTE_TEMPLATE_LABEL } from "@/lib/types/quote";
+import { QUOTE_LAYOUT_LABEL } from "@/lib/types/quote";
 import { copyQuoteImage, printQuote } from "@/lib/quotes/export";
 import { QuotePreview } from "./QuotePreview";
 import { QuotePreviewBrand, type BrandPreviewQuote } from "./QuotePreviewBrand";
@@ -74,9 +74,6 @@ export function QuotePreviewModal({ quote, onClose }: Props) {
         <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 border-b shrink-0">
           <h2 className="font-semibold text-base mr-auto whitespace-nowrap">
             Xem trước báo giá{quote.code ? ` ${quote.code}` : ""}
-            <span className="ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-brand-soft text-brand">
-              {QUOTE_TEMPLATE_LABEL[quote.template]}
-            </span>
           </h2>
           <div className="flex rounded-lg border p-0.5 bg-gray-50" role="group" aria-label="Kiểu trình bày">
             {(Object.keys(QUOTE_LAYOUT_LABEL) as QuoteLayout[]).map((k) => (

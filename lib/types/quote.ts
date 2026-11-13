@@ -4,9 +4,6 @@
  * Backend (hisweetie_ban_hang_backend/src/quotes) trả đúng các kiểu này.
  */
 
-/** Mẫu báo giá — quyết định bộ khung giá mặc định và cách trình bày. */
-export type QuoteTemplate = "retail" | "chain" | "agency";
-
 /** Miền áp dụng. "ALL" = sheet không tách miền (Bột, Mứt/Siro). */
 export type QuoteRegion = "HN" | "SG" | "ALL";
 
@@ -25,12 +22,6 @@ export type QuoteLayout = "classic" | "brand";
 export const QUOTE_LAYOUT_LABEL: Record<QuoteLayout, string> = {
   classic: "Mẫu 1 · Bảng giá",
   brand: "Mẫu 2 · LerMao",
-};
-
-export const QUOTE_TEMPLATE_LABEL: Record<QuoteTemplate, string> = {
-  retail: "Khách lẻ",
-  chain: "Khách chuỗi",
-  agency: "Đại lý",
 };
 
 export const QUOTE_REGION_LABEL: Record<QuoteRegion, string> = {
@@ -130,8 +121,6 @@ export interface Quote {
   /** true = báo giá mẫu trong Thư viện (không gắn khách). */
   isLibrary: boolean;
   status: QuoteStatus;
-  /** Nhóm khách của mẫu đã dùng (lọc, chọn bố cục Mẫu 2). */
-  template: QuoteTemplate;
   /** Mẫu báo giá (Cài đặt › Mẫu báo giá) đã áp dụng; null = báo giá cũ / không theo mẫu. */
   templateId: number | null;
   layout: QuoteLayout;
@@ -166,6 +155,8 @@ export interface Quote {
 /** Một dòng ở trang danh sách (không kèm items). */
 export interface QuoteListItem
   extends Omit<Quote, "items" | "intro" | "closing" | "note"> {
+  /** Tên mẫu báo giá đã áp dụng (null = không theo mẫu). */
+  templateName: string | null;
   itemCount: number;
 }
 
@@ -173,7 +164,8 @@ export interface QuoteFilters {
   tab: "quotes" | "library";
   search?: string;
   status?: QuoteStatus[];
-  template?: QuoteTemplate[];
+  /** Lọc theo mẫu báo giá (Cài đặt › Mẫu báo giá). */
+  templateId?: number[];
   createdById?: number[];
   region?: QuoteRegion[];
   category?: QuoteCategory[];
@@ -198,18 +190,16 @@ export type QuotePayload = Omit<
 export type QuoteTierDef = Pick<QuoteTier, "key" | "label" | "minQty" | "maxQty" | "unit">;
 
 /**
- * Mẫu báo giá — cấu hình ở Cài đặt › Mẫu báo giá. Mỗi nhóm khách có 1 mẫu mặc định;
+ * Mẫu báo giá — cấu hình ở Cài đặt › Mẫu báo giá. Đúng 1 mẫu mặc định (chọn sẵn khi tạo báo giá);
  * tạo báo giá thì nội dung + khung giá của mẫu được chép vào báo giá (sửa mẫu sau đó
  * không đổi báo giá đã tạo).
  */
 export interface QuoteTemplateConfig {
   id: number;
   name: string;
-  group: QuoteTemplate;
   isDefault: boolean;
   /** false = Ngừng sử dụng: ẩn khỏi form tạo báo giá, vẫn giữ để tra cứu báo giá cũ. */
   isActive: boolean;
-  layout: QuoteLayout;
   tiers: QuoteTierDef[];
   /** Tiêu đề mặc định; {MIEN} = tên miền viết hoa ("HÀ NỘI"), bỏ trống khi Toàn quốc. */
   titlePattern: string;

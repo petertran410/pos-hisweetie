@@ -11,7 +11,7 @@ import { DatePickerInput } from "@/components/ui/DatePickerInput";
 import { usePriceBook } from "@/lib/hooks/usePriceBooks";
 import { useQuote, useSaveQuote, useSetQuoteStatus } from "@/lib/hooks/useQuotes";
 import { libraryFor, toPayload } from "@/lib/api/quotes";
-import { applyTiers, fillFromPriceBook, renderTitle, tiersFrom } from "@/lib/quotes/pricing";
+import { applyTiers, fillFromPriceBook, renderTitle, tierColumns, tiersFrom } from "@/lib/quotes/pricing";
 import { useQuoteTemplates } from "@/lib/hooks/useQuoteTemplates";
 import type {
   Quote,
@@ -20,7 +20,6 @@ import type {
   QuoteItem,
   QuotePayload,
   QuoteRegion,
-  QuoteTemplate,
   QuoteTemplateConfig,
 } from "@/lib/types/quote";
 import {
@@ -29,16 +28,9 @@ import {
   QUOTE_STATUS_COLOR,
   QUOTE_STATUS_LABEL,
   QUOTE_STATUS_NEXT,
-  QUOTE_TEMPLATE_LABEL,
 } from "@/lib/types/quote";
 import { QuoteItemsList } from "./QuoteItemsList";
 import { QuotePreviewModal } from "./QuotePreviewModal";
-
-/** Tiêu đề Sale đã sửa / lấy từ mẫu: chỉ thay chữ nhóm khách ("BẢNG BÁO GIÁ ĐẠI LÝ …" → "… LẺ …"). */
-function swapGroupWord(title: string, t: QuoteTemplate) {
-  const group = { retail: "LẺ", chain: "CHUỖI", agency: "ĐẠI LÝ" }[t];
-  return title.replace(/(BÁO GIÁ|BẢNG GIÁ)( BÁN)? (ĐẠI LÝ|LẺ|CHUỖI)/, `$1 ${group}`);
-}
 
 /** Khách / sản phẩm theo dạng các component POS (CustomerSearch, ProductSearchDropdown) trả về. */
 type PosCustomer = { id: number; code?: string | null; name: string; contactNumber?: string | null };
@@ -63,7 +55,6 @@ function emptyDraft(): QuotePayload {
   return {
     isLibrary: false,
     status: "draft",
-    template: "retail",
     templateId: null,
     layout: "classic",
     region: "HN",
@@ -132,12 +123,9 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
   const { data: templates = [], isLoading: templatesLoading } = useQuoteTemplates();
   const tpl = templates.find((t) => t.id === draft.templateId) ?? null;
   /** Mẫu chọn được (Cài đặt › Mẫu báo giá): đang sử dụng, cộng mẫu báo giá này đang dùng (kể cả đã ngừng). */
-  const usable = (g: QuoteTemplate) =>
-    templates.filter((t) => t.group === g && (t.isActive || t.id === draft.templateId));
-  const defaultOf = (g: QuoteTemplate) =>
-    templates.find((t) => t.group === g && t.isDefault && t.isActive) ??
-    templates.find((t) => t.group === g && t.isActive) ??
-    null;
+  const usable = templates.filter((t) => t.isActive || t.id === draft.templateId);
+  const defaultTemplate =
+    templates.find((t) => t.isDefault && t.isActive) ?? templates.find((t) => t.isActive) ?? null;
 
   // Nạp báo giá đang sửa một lần.
   useEffect(() => {
@@ -174,25 +162,22 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
       const prev = templates.find((t) => t.id === d.templateId);
       return {
         ...d,
-        template: cfg.group,
         templateId: cfg.id,
-        layout: cfg.layout,
         greeting: cfg.greeting,
         intro: cfg.intro,
         closing: cfg.closing,
         // Giữ chính sách Sale đã tự viết; chỉ thay khi trống hoặc còn là chữ của mẫu cũ.
         note: d.note.trim() && d.note !== prev?.note ? d.note : cfg.note,
         showMargin: cfg.showMargin,
-        title: autoTitle ? renderTitle(cfg.titlePattern, d.region) : swapGroupWord(d.title, cfg.group),
+        title: autoTitle ? renderTitle(cfg.titlePattern, d.region) : d.title,
         items: d.items.map((it) => applyTiers(it, cfg.tiers)),
       };
     });
 
-  // Báo giá mới: áp mẫu mặc định của Khách lẻ khi tải xong danh sách mẫu.
+  // Báo giá mới: áp mẫu mặc định khi tải xong danh sách mẫu.
   useEffect(() => {
     if (quoteId || draft.templateId != null || !templates.length) return;
-    const cfg = defaultOf("retail");
-    if (cfg) applyConfig(cfg);
+    if (defaultTemplate) applyConfig(defaultTemplate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templates, quoteId, draft.templateId]);
 
@@ -233,7 +218,7 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
   };
 
   const addGroup = async (category: QuoteCategory) => {
-    const lib = await libraryFor(category, draft.region, draft.template).catch(() => null);
+    const lib = await libraryFor(category, draft.region, (tpl?.tiers ?? []).map((t) => t.key)).catch(() => null);
     if (!lib) return toast.error(`Thư viện chưa có mẫu ${QUOTE_CATEGORY_LABEL[category]}`);
     const have = new Set(draft.items.map((it) => it.productId ?? it.productName));
     const added = lib.items
@@ -401,19 +386,12 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
                 }}
                 className="w-full border rounded-lg px-3 py-1.5 text-sm bg-white">
                 {draft.templateId == null && <option value="">(Không theo mẫu)</option>}
-                {(Object.keys(QUOTE_TEMPLATE_LABEL) as QuoteTemplate[]).map((g) => {
-                  const list = usable(g);
-                  return list.length ? (
-                    <optgroup key={g} label={QUOTE_TEMPLATE_LABEL[g]}>
-                      {list.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                          {t.isActive ? "" : " (Ngừng sử dụng)"}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ) : null;
-                })}
+                {usable.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                    {t.isActive ? "" : " (Ngừng sử dụng)"}
+                  </option>
+                ))}
               </select>
               <a
                 href="/cai-dat/mau-bao-gia"
@@ -484,7 +462,7 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
                 className="w-full border rounded-lg px-3 py-1.5 text-sm"
               />
             </Row>
-            {draft.template === "agency" && (
+            {tierColumns(draft.items).length > 1 && (
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"

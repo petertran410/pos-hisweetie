@@ -42,18 +42,20 @@ export const quotesApi = {
   },
 };
 
-/** Mẫu thư viện của ngành hàng (cho nút "Thêm cả nhóm hàng"): ưu tiên cùng miền, rồi Toàn quốc; cùng nhóm khách. */
+/**
+ * Mẫu thư viện của ngành hàng (cho nút "Thêm cả nhóm hàng"): ưu tiên cùng miền, rồi Toàn quốc;
+ * trong đó chọn mẫu có nhiều khung giá trùng khoá với `tierKeys` (khung của mẫu báo giá đang chọn) nhất.
+ */
 export async function libraryFor(
   category: NonNullable<Quote["category"]>,
   region: Quote["region"],
-  template: Quote["template"]
+  tierKeys: string[]
 ): Promise<Quote | null> {
   const { data } = await quotesApi.getAll({ tab: "library", category: [category], pageSize: 50 });
-  const best = [...data].sort(
-    (a, b) =>
-      Number(b.region === region) - Number(a.region === region) ||
-      Number(b.region === "ALL") - Number(a.region === "ALL") ||
-      Number(b.template === template) - Number(a.template === template)
-  )[0];
-  return best ? quotesApi.getOne(best.id) : null;
+  const rank = (r: Quote["region"]) => (r === region ? 2 : r === "ALL" ? 1 : 0);
+  const top = Math.max(-1, ...data.map((q) => rank(q.region)));
+  const candidates = await Promise.all(data.filter((q) => rank(q.region) === top).map((q) => quotesApi.getOne(q.id)));
+  const keys = new Set(tierKeys);
+  const overlap = (q: Quote) => new Set(q.items.flatMap((it) => it.tiers.map((t) => t.key)).filter((k) => keys.has(k))).size;
+  return candidates.reduce<Quote | null>((best, q) => (!best || overlap(q) > overlap(best) ? q : best), null);
 }

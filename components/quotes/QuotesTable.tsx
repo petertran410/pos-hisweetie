@@ -8,13 +8,12 @@ import { CustomTooltip } from "@/components/ui/CustomTooltip";
 import { confirmAction } from "@/lib/chat/confirm";
 import { FilterMultiSelect } from "@/components/ui/filters";
 import { useDeleteQuote, useDuplicateQuote, useQuote, useQuotes } from "@/lib/hooks/useQuotes";
-import type { QuoteCategory, QuoteFilters, QuoteListItem, QuoteRegion, QuoteTemplate } from "@/lib/types/quote";
+import type { QuoteCategory, QuoteFilters, QuoteListItem, QuoteRegion } from "@/lib/types/quote";
 import {
   QUOTE_CATEGORY_LABEL,
   QUOTE_REGION_LABEL,
   QUOTE_STATUS_COLOR,
   QUOTE_STATUS_LABEL,
-  QUOTE_TEMPLATE_LABEL,
 } from "@/lib/types/quote";
 import { QuotePreviewModal } from "./QuotePreviewModal";
 
@@ -105,7 +104,7 @@ export function QuotesTable({ filters, onChange }: Props) {
   };
 
   const columns = library
-    ? ["Mã", "Tiêu đề", "Ngành hàng", "Miền", "Nhóm khách", "Số SP", "Áp dụng từ", ""]
+    ? ["Mã", "Tiêu đề", "Ngành hàng", "Miền", "Số SP", "Áp dụng từ", ""]
     : ["Mã", "Khách hàng", "Mẫu", "Số SP", "Ngày tạo", "Hiệu lực", "Trạng thái", "Sale", ""];
 
   return (
@@ -126,7 +125,7 @@ export function QuotesTable({ filters, onChange }: Props) {
                     tab: t.key,
                     page: 1,
                     status: undefined,
-                    template: undefined,
+                    templateId: undefined,
                     region: undefined,
                     category: undefined,
                     createdById: undefined,
@@ -156,7 +155,7 @@ export function QuotesTable({ filters, onChange }: Props) {
       </div>
 
       {library && (
-        // Bộ lọc thư viện: ngành hàng × miền × nhóm khách
+        // Bộ lọc thư viện: ngành hàng × miền
         <div className="px-4 py-2 border-b bg-gray-50 flex flex-wrap items-center gap-2 shrink-0">
           {[
             {
@@ -171,12 +170,6 @@ export function QuotesTable({ filters, onChange }: Props) {
               values: filters.region ?? [],
               set: (v: string[]) => onChange({ region: v.length ? (v as QuoteRegion[]) : undefined }),
             },
-            {
-              label: "Nhóm khách",
-              opts: options(QUOTE_TEMPLATE_LABEL),
-              values: filters.template ?? [],
-              set: (v: string[]) => onChange({ template: v.length ? (v as QuoteTemplate[]) : undefined }),
-            },
           ].map((f) => (
             <div key={f.label} className="w-48">
               <FilterMultiSelect
@@ -189,9 +182,9 @@ export function QuotesTable({ filters, onChange }: Props) {
               />
             </div>
           ))}
-          {Boolean(filters.category?.length || filters.region?.length || filters.template?.length) && (
+          {Boolean(filters.category?.length || filters.region?.length) && (
             <button
-              onClick={() => onChange({ category: undefined, region: undefined, template: undefined })}
+              onClick={() => onChange({ category: undefined, region: undefined })}
               className="text-sm text-brand hover:text-brand-dark font-medium px-1">
               Xóa lọc
             </button>
@@ -250,7 +243,6 @@ export function QuotesTable({ filters, onChange }: Props) {
                         {q.category ? QUOTE_CATEGORY_LABEL[q.category] : "—"}
                       </td>
                       <td className="px-4 py-2 whitespace-nowrap">{QUOTE_REGION_LABEL[q.region]}</td>
-                      <td className="px-4 py-2 whitespace-nowrap">{QUOTE_TEMPLATE_LABEL[q.template]}</td>
                       <td className="px-4 py-2">{q.itemCount}</td>
                       <td className="px-4 py-2 whitespace-nowrap">{formatDate(q.appliedFrom)}</td>
                       <td className="px-4 py-2">
@@ -280,7 +272,7 @@ export function QuotesTable({ filters, onChange }: Props) {
                         )}
                       </td>
                       <td className="px-4 py-2 whitespace-nowrap">
-                        {QUOTE_TEMPLATE_LABEL[q.template]}
+                        {q.templateName ?? <span className="text-gray-400">Không theo mẫu</span>}
                         <div className="text-xs text-gray-400">{QUOTE_REGION_LABEL[q.region]}</div>
                       </td>
                       <td className="px-4 py-2">{q.itemCount}</td>
