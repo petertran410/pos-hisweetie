@@ -14,7 +14,7 @@ import type { Production } from "@/lib/api/productions";
 import { usePermission } from "@/lib/hooks/usePermissions";
 
 const vnd = (v: number) =>
-  `${(Math.round(v * 100) / 100).toLocaleString("vi-VN")} đ`;
+  `${(Math.round(v * 100) / 100).toLocaleString("en-US")} đ`;
 
 const todayStr = () => {
   const d = new Date();
@@ -35,7 +35,7 @@ const dateWithNow = (value: string) => {
     d,
     now.getHours(),
     now.getMinutes(),
-    now.getSeconds(),
+    now.getSeconds()
   ).toISOString();
 };
 
@@ -56,7 +56,7 @@ export function ProductionReceiveModal({
   const isReceive = mode === "receive";
   const canApplyCost = usePermission("productions", "apply_cost");
   const [receivedQuantity, setReceivedQuantity] = useState(
-    Number(production.quantity),
+    Number(production.quantity)
   );
   const [debouncedQuantity, setDebouncedQuantity] = useState(receivedQuantity);
   const [completedDate, setCompletedDate] = useState(todayStr());
@@ -64,17 +64,17 @@ export function ProductionReceiveModal({
   // null = chưa sửa → dùng giá đề xuất.
   const [editedCost, setEditedCost] = useState<number | null>(null);
   const [scope, setScope] = useState<"receiveBranch" | "allBranches">(
-    "receiveBranch",
+    "receiveBranch"
   );
 
   // Phí chốt lúc nhận = giá trị phiếu nhập. Mặc định = phí ước tính.
   const isCnyFee = production.feeCurrency === "CNY";
   const [feeVnd, setFeeVnd] = useState(Number(production.processingFee ?? 0));
   const [feeForeign, setFeeForeign] = useState(
-    Number(production.feeForeignAmount ?? 0),
+    Number(production.feeForeignAmount ?? 0)
   );
   const [feeRate, setFeeRate] = useState(
-    Number(production.feeExchangeRate ?? 0),
+    Number(production.feeExchangeRate ?? 0)
   );
   const processingFee = isCnyFee
     ? Math.round(feeForeign * feeRate)
@@ -93,7 +93,7 @@ export function ProductionReceiveModal({
     production.id,
     isReceive ? debouncedQuantity : undefined,
     !isReceive || debouncedQuantity > 0,
-    isReceive ? debouncedFee : undefined,
+    isReceive ? debouncedFee : undefined
   );
   const receive = useReceiveProduction();
   const applyCostMutation = useApplyProductionCost();
@@ -127,7 +127,7 @@ export function ProductionReceiveModal({
               : { processingFee: feeVnd }),
           },
         },
-        { onSuccess: onClose },
+        { onSuccess: onClose }
       );
       return;
     }
@@ -137,7 +137,7 @@ export function ProductionReceiveModal({
         id: production.id,
         data: { newCost, scope, expectedOldCost: preview.oldCost },
       },
-      { onSuccess: onClose },
+      { onSuccess: onClose }
     );
   };
 
@@ -157,7 +157,11 @@ export function ProductionReceiveModal({
         </div>
 
         <div className="px-5 py-4 overflow-y-auto flex-1 space-y-4 text-sm">
-          {!isReceive && !canApplyCost && <p role="alert" className="text-red-700">Bạn không có quyền Áp dụng giá vốn gia công.</p>}
+          {!isReceive && !canApplyCost && (
+            <p role="alert" className="text-red-700">
+              Bạn không có quyền Áp dụng giá vốn gia công.
+            </p>
+          )}
           <div className="rounded border bg-gray-50 px-3 py-2">
             <div className="font-medium">{production.productName}</div>
             <div className="text-gray-500">
@@ -192,7 +196,7 @@ export function ProductionReceiveModal({
                   className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-brand"
                 />
                 <p className="text-xs text-gray-400 mt-1">
-                  Phiếu: {Number(production.quantity).toLocaleString("vi-VN")}
+                  Phiếu: {Number(production.quantity).toLocaleString("en-US")}
                 </p>
               </div>
               <div className="col-span-2">
@@ -226,7 +230,7 @@ export function ProductionReceiveModal({
                     value={feeVnd ? formatNumberInput(String(feeVnd)) : ""}
                     onChange={(e) =>
                       setFeeVnd(
-                        parseNumberInput(formatNumberInput(e.target.value)),
+                        parseNumberInput(formatNumberInput(e.target.value))
                       )
                     }
                     placeholder="0"
@@ -269,7 +273,7 @@ export function ProductionReceiveModal({
                 <div className="flex items-center justify-between px-3 py-2 bg-brand-soft">
                   <span className="font-medium">
                     Giá thành / sp (
-                    {preview.receivedQuantity.toLocaleString("vi-VN")} sp)
+                    {preview.receivedQuantity.toLocaleString("en-US")} sp)
                   </span>
                   <span className="text-base font-bold text-brand">
                     {vnd(preview.unitCost)}
@@ -292,7 +296,7 @@ export function ProductionReceiveModal({
                 <div className="space-y-3">
                   <div className="rounded border divide-y">
                     <Row
-                      label={`Giá vốn hiện tại (tồn khác: ${preview.otherQuantity.toLocaleString("vi-VN")})`}
+                      label={`Giá vốn hiện tại (tồn khác: ${preview.otherQuantity.toLocaleString("en-US")})`}
                       value={vnd(preview.oldCost)}
                     />
                     <Row
@@ -356,7 +360,11 @@ export function ProductionReceiveModal({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={isPending || (!isReceive && (!canApplyCost || !preview || newCost <= 0)) || (applyCost && !canApplyCost)}
+            disabled={
+              isPending ||
+              (!isReceive && (!canApplyCost || !preview || newCost <= 0)) ||
+              (applyCost && !canApplyCost)
+            }
             className="px-4 py-2 text-sm text-white bg-brand rounded hover:bg-brand-dark disabled:opacity-50">
             {isPending
               ? "Đang lưu..."

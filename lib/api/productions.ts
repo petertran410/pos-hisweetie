@@ -49,8 +49,12 @@ export interface Production {
   components?: SavedProductionComponent[];
 
   // ── Gửi sản xuất ở nhà máy ngoài ──
-  // Phiếu gửi: 1 Phiếu tạm → 4 Đã gửi → 2 Hoàn thành; 3 Đã hủy.
+  // Phiếu gửi: 1 Phiếu tạm → 4 Đã gửi → 5 Nhận một phần → 2 Hoàn thành; 3 Đã hủy.
   isExternal?: boolean;
+  /** Phiếu gửi NSX: đã "Kết thúc nhận hàng" khi chưa nhận đủ. */
+  receivingClosed?: boolean;
+  /** Đợt nhận thành phẩm (cả đợt đã hủy), theo thứ tự. */
+  receipts?: ProductionReceipt[];
   factoryId?: number | null;
   supplierId?: number | null;
   factory?: { id: number; code?: string | null; name: string } | null;
@@ -83,6 +87,44 @@ export interface Production {
   costApplicationSnapshot?: { basis: string; changes: Array<{ branchId: number; before: string; after: string }> } | null;
   /** Phiếu nhập nhận thành phẩm còn hiệu lực (tạm hoặc đã nhập), mới nhất trước. */
   purchaseOrders?: ProductionPurchaseOrder[];
+}
+
+/** Đợt nhận thành phẩm của phiếu gửi NSX (status 1 hiệu lực, 2 đã hủy). */
+export interface ProductionReceipt {
+  id: number;
+  productionId: number;
+  seq: number;
+  code: string;
+  status: number;
+  receivedDate: string;
+  quantity: number | string;
+  note?: string | null;
+  /** Phí gia công của đợt, quy VND. */
+  processingFee: number | string;
+  feeForeignAmount?: number | string | null;
+  feeExchangeRate?: number | string | null;
+  manufacturerMaterialCost: number | string;
+  totalPayable: number | string;
+  totalForeignPayable?: number | string | null;
+  manufacturerMaterials: ManufacturerMaterial[];
+  createdByName: string;
+  updatedByName?: string | null;
+  cancelledAt?: string | null;
+  cancelledByName?: string | null;
+  createdAt: string;
+}
+
+/** Dữ liệu nhận / sửa một đợt (phiếu gửi NSX). */
+export interface ProductionReceiptData {
+  completedDate?: string;
+  receivedQuantity?: number;
+  processingFee?: number;
+  manufacturerMaterials?: ManufacturerMaterial[];
+  feeForeignAmount?: number;
+  feeExchangeRate?: number;
+  /** Đợt cuối — hoàn tất phiếu dù chưa nhận đủ dự kiến. */
+  finish?: boolean;
+  note?: string;
 }
 
 /** PN nhận hàng của phiếu Gửi sản xuất (PN status: 0 tạm, 1 đã nhập, 2 hủy). */
@@ -164,6 +206,8 @@ export interface CreateProductionData {
   processingFee?: number;
   feeForeignAmount?: number;
   feeExchangeRate?: number;
+  /** Phiếu gửi NSX đã gửi: sửa ngày gửi (ngày ghi xuất kho nguyên liệu). */
+  sentDate?: string;
 }
 
 export interface ProductionCostHistoryQuery {
@@ -193,6 +237,8 @@ export interface ProductionCostHistoryRow {
   processingFee: number;
   totalCost: number;
   unitCost: number | null;
+  /** Toàn bộ chi phí / tổng đã nhận (so với giá thành dự kiến đã áp). */
+  actualUnitCost?: number | null;
   variantKey: string;
   variantLabel: string;
   snapshotMissing: boolean;
@@ -265,8 +311,26 @@ export const productionsApi = {
       manufacturerMaterials?: ManufacturerMaterial[];
       feeForeignAmount?: number;
       feeExchangeRate?: number;
+      finish?: boolean;
+      note?: string;
     },
   ) => apiClient.post<Production>(`/productions/${id}/receive`, data),
+
+  // ── Đợt nhận của phiếu gửi NSX ──
+  updateReceipt: (id: number, receiptId: number, data: ProductionReceiptData) =>
+    apiClient.put<Production>(`/productions/${id}/receipts/${receiptId}`, data),
+
+  cancelReceipt: (id: number, receiptId: number) =>
+    apiClient.post<Production>(
+      `/productions/${id}/receipts/${receiptId}/cancel`,
+      {},
+    ),
+
+  closeReceiving: (id: number) =>
+    apiClient.post<Production>(`/productions/${id}/close-receiving`, {}),
+
+  reopenReceiving: (id: number) =>
+    apiClient.post<Production>(`/productions/${id}/reopen-receiving`, {}),
 
   getCostPreview: (
     id: number,
