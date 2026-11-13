@@ -4,8 +4,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Copy, FileDown, FileSpreadsheet, Image as ImageIcon, Link2, X } from "lucide-react";
 import { quotesApi } from "@/lib/api/quotes";
-import type { Quote, QuoteLayout } from "@/lib/types/quote";
-import { QUOTE_LAYOUT_LABEL } from "@/lib/types/quote";
+import type { Quote } from "@/lib/types/quote";
 import { copyQuoteImage, printQuote } from "@/lib/quotes/export";
 import { QuotePreview } from "./QuotePreview";
 import { QuotePreviewBrand, type BrandPreviewQuote } from "./QuotePreviewBrand";
@@ -21,8 +20,8 @@ type Props = {
 export function QuotePreviewModal({ quote, onClose }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState<"" | "pdf" | "image" | "excel">("");
-  // Đổi kiểu trình bày ngay trong xem trước (không đổi báo giá đã lưu).
-  const [layout, setLayout] = useState<QuoteLayout>(quote.layout);
+  // Kiểu trình bày theo mẫu báo giá đã áp (Cài đặt › Mẫu báo giá).
+  const layout = quote.layout;
   const name = quote.code ? `Bao-gia-${quote.code}` : "Bao-gia";
 
   const run = async (kind: "pdf" | "image") => {
@@ -75,19 +74,6 @@ export function QuotePreviewModal({ quote, onClose }: Props) {
           <h2 className="font-semibold text-base mr-auto whitespace-nowrap">
             Xem trước báo giá{quote.code ? ` ${quote.code}` : ""}
           </h2>
-          <div className="flex rounded-lg border p-0.5 bg-gray-50" role="group" aria-label="Kiểu trình bày">
-            {(Object.keys(QUOTE_LAYOUT_LABEL) as QuoteLayout[]).map((k) => (
-              <button
-                key={k}
-                aria-pressed={layout === k}
-                onClick={() => setLayout(k)}
-                className={`px-2.5 py-1 text-sm rounded-md whitespace-nowrap ${
-                  layout === k ? "bg-white shadow-sm font-medium text-brand" : "text-gray-600"
-                }`}>
-                {QUOTE_LAYOUT_LABEL[k]}
-              </button>
-            ))}
-          </div>
           <button
             onClick={() => run("pdf")}
             disabled={!!busy}

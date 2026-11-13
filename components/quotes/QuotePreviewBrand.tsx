@@ -67,8 +67,10 @@ function Header({ quote, title, sub, dark }: { quote: BrandPreviewQuote; title: 
         borderBottom: dark ? "none" : `3px solid ${C.accent}`,
       }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={quote.logoUrl || QUOTE_DEFAULT_LOGO} alt="Logo" style={{ width: 58, height: 58, objectFit: "contain" }} />
+        {quote.logoUrl !== "" && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={quote.logoUrl || QUOTE_DEFAULT_LOGO} alt="Logo" style={{ width: 58, height: 58, objectFit: "contain" }} />
+        )}
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <span style={{ fontSize: 15, fontWeight: 800, color: fg, letterSpacing: 0.3 }}>{company(quote)}</span>
           {quote.department && <span style={{ fontSize: 12, color: fg }}>{quote.department}</span>}

@@ -132,7 +132,7 @@ export interface Quote {
   category: QuoteCategory | null;
   customer: QuoteCustomerRef | null;
   priceBook: { id: number; name: string } | null;
-  /** Đầu trang: logo (null = logo LerMao mặc định), tên công ty ("\n" = xuống dòng), phòng ban. */
+  /** Đầu trang: logo (null = logo LerMao mặc định, "" = không logo), tên công ty ("\n" = xuống dòng), phòng ban. */
   logoUrl: string | null;
   companyName: string;
   department: string;
@@ -207,7 +207,9 @@ export interface QuoteTemplateConfig {
   isDefault: boolean;
   /** false = Ngừng sử dụng: ẩn khỏi form tạo báo giá, vẫn giữ để tra cứu báo giá cũ. */
   isActive: boolean;
-  /** Đầu trang: logo (null = logo LerMao mặc định), tên công ty ("\n" = xuống dòng), phòng ban. */
+  /** Kiểu trình bày gắn với mẫu (không sửa trên form) — báo giá theo mẫu xem trước / xuất theo kiểu này. */
+  layout: QuoteLayout;
+  /** Đầu trang: logo (null = logo LerMao mặc định, "" = không logo), tên công ty ("\n" = xuống dòng), phòng ban. */
   logoUrl: string | null;
   companyName: string;
   department: string;

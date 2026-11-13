@@ -84,12 +84,14 @@ export const QuotePreview = forwardRef<HTMLDivElement, { quote: PreviewQuote }>(
             <tr>
               <td style={{ width: "50%", textAlign: "center", verticalAlign: "top" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={quote.logoUrl || QUOTE_DEFAULT_LOGO}
-                    alt="Logo"
-                    style={{ width: 52, height: 52, objectFit: "contain" }}
-                  />
+                  {quote.logoUrl !== "" && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={quote.logoUrl || QUOTE_DEFAULT_LOGO}
+                      alt="Logo"
+                      style={{ width: 52, height: 52, objectFit: "contain" }}
+                    />
+                  )}
                   <div style={{ fontWeight: 700, fontSize: 14 }}>
                     {quote.companyName.split("\n").map((line, i) => (
                       <div key={i}>{line}</div>

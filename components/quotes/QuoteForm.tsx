@@ -166,6 +166,7 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
       return {
         ...d,
         templateId: cfg.id,
+        layout: cfg.layout,
         logoUrl: cfg.logoUrl,
         companyName: cfg.companyName,
         department: cfg.department,

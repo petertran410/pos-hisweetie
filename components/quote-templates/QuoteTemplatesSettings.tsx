@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Copy, ImageUp, Plus, Power, PowerOff, RotateCcw, Save, Star, Trash2, Undo2 } from "lucide-react";
+import { Copy, ImageOff, ImageUp, Plus, Power, PowerOff, RotateCcw, Save, Star, Trash2, Undo2 } from "lucide-react";
 import { CustomTooltip } from "@/components/ui/CustomTooltip";
 import { confirmAction } from "@/lib/chat/confirm";
 import {
@@ -15,7 +15,6 @@ import { useQuote, useQuotes } from "@/lib/hooks/useQuotes";
 import { applyTiers, renderTitle } from "@/lib/quotes/pricing";
 import type {
   QuoteItem,
-  QuoteLayout,
   QuoteRegion,
   QuoteTemplateConfig,
   QuoteTemplatePayload,
@@ -30,6 +29,7 @@ const UNITS = ["thùng", "túi", "hộp", "gói", "bao", "kg"];
 
 const toPayload = (t: QuoteTemplateConfig): QuoteTemplatePayload => ({
   name: t.name,
+  layout: t.layout,
   logoUrl: t.logoUrl,
   companyName: t.companyName,
   department: t.department,
@@ -67,33 +67,6 @@ function ToolButton({
         {children}
       </button>
     </CustomTooltip>
-  );
-}
-
-function Segmented<T extends string>({
-  value,
-  options,
-  onChange,
-}: {
-  value: T;
-  options: Record<T, string>;
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div className="flex rounded-lg border p-0.5 bg-gray-50">
-      {(Object.keys(options) as T[]).map((k) => (
-        <button
-          key={k}
-          type="button"
-          aria-pressed={value === k}
-          onClick={() => onChange(k)}
-          className={`flex-1 px-2 py-1 text-sm rounded-md whitespace-nowrap ${
-            value === k ? "bg-white shadow-sm font-medium text-brand" : "text-gray-600 hover:text-gray-900"
-          }`}>
-          {options[k]}
-        </button>
-      ))}
-    </div>
   );
 }
 
@@ -198,6 +171,7 @@ function sampleQuote(form: QuoteTemplatePayload, region: QuoteRegion, libItems: 
   const until = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
   return {
     code: "BG000123",
+    layout: form.layout,
     logoUrl: form.logoUrl,
     companyName: form.companyName,
     department: form.department,
@@ -225,8 +199,6 @@ export function QuoteTemplatesSettings() {
   const [form, setForm] = useState<QuoteTemplatePayload | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [region, setRegion] = useState<QuoteRegion>("HN");
-  /** Chỉ để xem trước — kiểu trình bày chọn lúc xuất báo giá, không lưu theo mẫu. */
-  const [previewLayout, setPreviewLayout] = useState<QuoteLayout>("classic");
   const logoInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -414,12 +386,18 @@ export function QuoteTemplatesSettings() {
               </Field>
               <Field label="Đầu trang · Logo">
                 <div className="flex items-center gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={form.logoUrl || QUOTE_DEFAULT_LOGO}
-                    alt="Logo đầu trang"
-                    className="w-14 h-14 object-contain border rounded-lg bg-white p-1"
-                  />
+                  {form.logoUrl === "" ? (
+                    <div className="w-14 h-14 border border-dashed rounded-lg bg-gray-50 flex items-center justify-center text-[11px] text-gray-400 text-center leading-tight">
+                      Không logo
+                    </div>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={form.logoUrl || QUOTE_DEFAULT_LOGO}
+                      alt="Logo đầu trang"
+                      className="w-14 h-14 object-contain border rounded-lg bg-white p-1"
+                    />
+                  )}
                   <input
                     ref={logoInput}
                     type="file"
@@ -434,12 +412,20 @@ export function QuoteTemplatesSettings() {
                     className="px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-50 flex items-center gap-1.5 disabled:opacity-50">
                     <ImageUp className="w-4 h-4" /> {uploading ? "Đang tải…" : "Tải logo"}
                   </button>
-                  {form.logoUrl && (
+                  {form.logoUrl !== null && (
                     <button
                       type="button"
                       onClick={() => patch({ logoUrl: null })}
                       className="px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-50 flex items-center gap-1.5">
                       <RotateCcw className="w-4 h-4" /> Logo mặc định
+                    </button>
+                  )}
+                  {form.logoUrl !== "" && (
+                    <button
+                      type="button"
+                      onClick={() => patch({ logoUrl: "" })}
+                      className="px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-50 flex items-center gap-1.5">
+                      <ImageOff className="w-4 h-4" /> Không logo
                     </button>
                   )}
                 </div>
@@ -535,15 +521,12 @@ export function QuoteTemplatesSettings() {
 
           {/* Xem trước trực tiếp */}
           <div className="w-1/2 bg-gray-100 p-4 overflow-auto">
-            <div className="flex items-center gap-3 mb-2">
-              <span className="text-xs text-gray-500 whitespace-nowrap">Xem trước · 6 sản phẩm từ Thư viện</span>
-              <div className="ml-auto w-64">
-                <Segmented<QuoteLayout> value={previewLayout} options={QUOTE_LAYOUT_LABEL} onChange={setPreviewLayout} />
-              </div>
+            <div className="text-xs text-gray-500 mb-2">
+              Xem trước ({QUOTE_LAYOUT_LABEL[form.layout]}) — 6 sản phẩm minh hoạ từ Thư viện
             </div>
             {preview && (
               <div className="w-fit shadow-sm" style={{ zoom: 0.62 }}>
-                {previewLayout === "brand" ? <QuotePreviewBrand quote={preview} /> : <QuotePreview quote={preview} />}
+                {form.layout === "brand" ? <QuotePreviewBrand quote={preview} /> : <QuotePreview quote={preview} />}
               </div>
             )}
           </div>
