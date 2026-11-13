@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSearchCustomers } from "@/lib/hooks/useCustomers";
-import { Plus, X } from "lucide-react";
+import { Loader2, Search, UserPlus, X } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 import { PriceBookDropdown } from "./PriceBookDropdown";
 import { CustomerDetailModal } from "./CustomerDetailModal";
 import { CustomerForm } from "../customers/CustomerForm";
@@ -18,7 +19,7 @@ interface CustomerSearchProps {
   selectedPriceBookName?: string | null;
   onSelectPriceBook: (
     priceBookId: number | null,
-    priceBookName: string | null
+    priceBookName: string | null,
   ) => void;
   cartItems?: any[];
 }
@@ -40,6 +41,7 @@ export function CustomerSearch({
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const { selectedBranch } = useBranchStore();
@@ -104,6 +106,21 @@ export function CustomerSearch({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // F4: đưa con trỏ vào ô tìm khách (chỉ ô đang hiển thị — 2 giỏ Đơn/Hóa đơn
+  // có thể cùng được mount nhưng chỉ 1 giỏ hiện).
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "F4") return;
+      const input = inputRef.current;
+      if (!input || input.offsetParent === null) return;
+      e.preventDefault();
+      input.focus();
+      input.select();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   const handleSelect = (customer: any) => {
     onSelectCustomer(customer);
     setSearch("");
@@ -128,13 +145,18 @@ export function CustomerSearch({
     }
   };
 
+  const isSearching =
+    !!search && (search !== searchDebounced || isFetchingCustomers);
+
   return (
     <>
-      <div className="space-y-2">
-        <div className="flex items-center gap-1 lg:gap-2">
-          <div className="flex-1 relative" ref={dropdownRef}>
-            {!selectedCustomer ? (
+      <div className="flex items-center gap-1.5 lg:gap-2">
+        <div className="relative min-w-0 flex-1" ref={dropdownRef}>
+          {!selectedCustomer ? (
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
+                ref={inputRef}
                 type="text"
                 placeholder="Tìm khách hàng (F4)"
                 value={search}
@@ -145,7 +167,7 @@ export function CustomerSearch({
                   if (e.key === "ArrowDown") {
                     e.preventDefault();
                     setHighlightedIndex((i) =>
-                      Math.min(i + 1, customers.length - 1)
+                      Math.min(i + 1, customers.length - 1),
                     );
                   } else if (e.key === "ArrowUp") {
                     e.preventDefault();
@@ -159,50 +181,49 @@ export function CustomerSearch({
                     setShowDropdown(false);
                   }
                 }}
-                className="w-full border rounded-xl px-2 lg:px-3 py-1 lg:py-2 text-sm lg:text-base"
+                className="h-8 w-full rounded-lg border bg-white pl-8 pr-8 text-sm text-gray-900 placeholder:text-gray-400 transition-colors focus:border-brand focus:shadow-[0_0_0_3px_var(--dt-color-primary-ring)] focus:outline-none lg:h-10"
               />
-            ) : (
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={handleOpenModal}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    handleOpenModal();
-                  }
-                }}
-                className="w-full flex items-start lg:items-center justify-between gap-1 lg:gap-2 border rounded-lg px-1 py-0.5 lg:py-1 cursor-pointer transition-colors select-none bg-white">
-                {/* MOBILE: tách 2 dòng, cho phép wrap */}
-                <div className="lg:hidden flex-1 min-w-0 pl-1">
-                  <div
-                    className={`text-sm hover:underline break-words ${Number(selectedCustomer.totalDebt) > 0 ? "text-red-600" : "text-brand"}`}>
-                    {selectedCustomer.name}
-                  </div>
-                  {selectedCustomer.contactNumber && (
-                    <div
-                      className={`text-xs hover:underline break-words ${Number(selectedCustomer.totalDebt) > 0 ? "text-red-600" : "text-brand"}`}>
-                      {selectedCustomer.contactNumber}
-                    </div>
-                  )}
+              {isSearching && (
+                <Loader2 className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-400" />
+              )}
+            </div>
+          ) : (
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={handleOpenModal}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  handleOpenModal();
+                }
+              }}
+              title="Xem chi tiết khách hàng"
+              className="group flex min-h-8 w-full cursor-pointer select-none items-center gap-2 rounded-lg border border-brand-border bg-brand-soft py-1 pl-2 pr-1 transition-colors hover:border-brand lg:min-h-10">
+              <div className="min-w-0 flex-1 leading-tight">
+                <div
+                  className={`line-clamp-2 break-words text-sm font-semibold group-hover:underline ${
+                    Number(selectedCustomer.totalDebt) > 0
+                      ? "text-red-600"
+                      : "text-brand"
+                  }`}>
+                  {selectedCustomer.name}
                 </div>
-
-                {/* DESKTOP: giữ NGUYÊN logic cũ */}
-                <span
-                  className={`hidden lg:inline hover:underline text-md pl-1 ${Number(selectedCustomer.totalDebt) > 0 ? "text-red-600" : "text-brand"}`}>
-                  {selectedCustomer.name} {selectedCustomer.contactNumber}
-                </span>
-
-                <button
-                  onClick={handleClear}
-                  className="ml-1 lg:ml-2 p-0.5 lg:p-1 hover:bg-gray-200 rounded-full transition-colors flex-shrink-0 mt-0.5 lg:mt-0">
-                  <X className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-gray-500" />
-                </button>
               </div>
-            )}
+              <button
+                type="button"
+                onClick={handleClear}
+                aria-label="Bỏ chọn khách hàng"
+                className="flex-shrink-0 rounded-md p-1 text-gray-400 transition-colors hover:bg-white hover:text-gray-700">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
 
-            {showDropdown && customers.length > 0 && !selectedCustomer && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg max-h-80 overflow-y-auto z-50 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
-                {customers.map((customer, index) => (
+          {showDropdown && customers.length > 0 && !selectedCustomer && (
+            <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-xl border bg-white py-1 shadow-lg [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5">
+              {customers.map((customer, index) => {
+                const debt = Number((customer as any).totalDebt) || 0;
+                return (
                   <button
                     key={customer.id}
                     ref={(el) => {
@@ -210,57 +231,76 @@ export function CustomerSearch({
                     }}
                     onClick={() => handleSelect(customer)}
                     onMouseEnter={() => setHighlightedIndex(index)}
-                    className={`w-full px-4 py-3 text-left border-b last:border-b-0 ${
-                      index === highlightedIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                    className={`flex w-full items-start gap-3 px-3 py-2 text-left transition-colors ${
+                      index === highlightedIndex ? "bg-brand-soft" : ""
                     }`}>
-                    <div className="font-medium text-sm">{customer.name}</div>
-                    <div className="text-xs text-gray-600">
-                      Mã: {customer.code || "Chưa có mã"}
-                    </div>
-                    <div className="flex items-center gap-4 mt-1">
-                      <span className="text-xs text-brand">
-                        {customer.contactNumber || "Chưa có SĐT"}
-                      </span>
-                    </div>
-                    {(customer as any).parent && (
-                      <div className="text-xs text-orange-600 mt-1">
-                        thuộc: {(customer as any).parent.code} -{" "}
-                        {(customer as any).parent.name}
+                    <div className="min-w-0 flex-1">
+                      <div className="line-clamp-2 break-words text-sm font-medium text-gray-900">
+                        {customer.name}
                       </div>
-                    )}
-                    <div className="text-xs text-red-600 mt-1 font-medium">
-                      Nợ:{" "}
-                      {Number((customer as any).totalDebt).toLocaleString(
-                        "vi-VN"
+                      <div className="truncate text-xs text-gray-500">
+                        {customer.code || "Chưa có mã"}
+                        {" · "}
+                        <span className="text-brand">
+                          {customer.contactNumber || "Chưa có SĐT"}
+                        </span>
+                      </div>
+                      {(customer as any).parent && (
+                        <div className="mt-0.5 truncate text-xs text-orange-600">
+                          Thuộc {(customer as any).parent.code} –{" "}
+                          {(customer as any).parent.name}
+                        </div>
                       )}
                     </div>
+                    <div className="shrink-0 text-right leading-tight">
+                      <div className="text-[10px] uppercase tracking-wide text-gray-400">
+                        Nợ
+                      </div>
+                      <div
+                        className={`text-xs font-semibold tabular-nums ${
+                          debt > 0 ? "text-red-600" : "text-gray-400"
+                        }`}>
+                        {formatCurrency(debt)}
+                      </div>
+                    </div>
                   </button>
-                ))}
-              </div>
-            )}
+                );
+              })}
+            </div>
+          )}
 
-            {showNoResult && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg z-50 px-4 py-3 text-sm text-gray-500">
-                {`Không tìm thấy khách hàng trong ${priceBookLabel}`}
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={() => setShowCreateModal(true)}
-            title="Tạo khách hàng mới"
-            className="p-1 lg:p-2 border rounded-md hover:bg-gray-50 flex-shrink-0">
-            <Plus className="w-3 h-3 lg:w-3.5 lg:h-3.5" />
-          </button>
-          <PriceBookDropdown
-            selectedPriceBookId={selectedPriceBookId}
-            selectedPriceBookName={selectedPriceBookName}
-            onSelectPriceBook={onSelectPriceBook}
-            cartItems={cartItems}
-            selectedCustomerId={selectedCustomer?.id}
-            selectedCustomerName={selectedCustomer?.name}
-          />
+          {showNoResult && (
+            <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border bg-white px-4 py-3 text-sm text-gray-500 shadow-lg">
+              {`Không tìm thấy khách hàng trong ${priceBookLabel}`}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDropdown(false);
+                  setShowCreateModal(true);
+                }}
+                className="mt-2 flex items-center gap-1.5 text-sm font-medium text-brand hover:underline">
+                <UserPlus className="h-4 w-4" />
+                Tạo khách hàng mới
+              </button>
+            </div>
+          )}
         </div>
+
+        <button
+          onClick={() => setShowCreateModal(true)}
+          title="Tạo khách hàng mới"
+          aria-label="Tạo khách hàng mới"
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border bg-white text-gray-600 transition-colors hover:border-brand hover:text-brand lg:h-10 lg:w-10">
+          <UserPlus className="h-4 w-4" />
+        </button>
+        <PriceBookDropdown
+          selectedPriceBookId={selectedPriceBookId}
+          selectedPriceBookName={selectedPriceBookName}
+          onSelectPriceBook={onSelectPriceBook}
+          cartItems={cartItems}
+          selectedCustomerId={selectedCustomer?.id}
+          selectedCustomerName={selectedCustomer?.name}
+        />
       </div>
 
       {showCreateModal && (
@@ -279,7 +319,7 @@ export function CustomerSearch({
               });
               if (!allowed) {
                 toast.error(
-                  `Đã tạo khách hàng "${createdCustomer.name}" nhưng khách không thuộc ${priceBookLabel}.`
+                  `Đã tạo khách hàng "${createdCustomer.name}" nhưng khách không thuộc ${priceBookLabel}.`,
                 );
                 return;
               }

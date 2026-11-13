@@ -21,6 +21,8 @@ interface SearchableSelectProps {
   required?: boolean;
   error?: string;
   size?: "sm" | "md";
+  /** "form": cao 42px, chữ 14px, viền sáng khi mở — khớp ô nhập trong các form mới */
+  variant?: "default" | "form";
   footer?: React.ReactNode;
   clearable?: boolean;
 }
@@ -36,6 +38,7 @@ export function SearchableSelect({
   required = false,
   error,
   size = "md",
+  variant = "default",
   footer,
   clearable = false,
 }: SearchableSelectProps) {
@@ -50,11 +53,26 @@ export function SearchableSelect({
   const pos = useDropdownPosition(isOpen, triggerRef, 320);
 
   const selectedOption = options.find((opt) => opt.value === value);
+  const isForm = variant === "form";
+  const triggerSizeClass = isForm
+    ? "h-[42px] px-3 text-sm"
+    : size === "sm"
+      ? "px-2.5 py-1.5 text-sm"
+      : "px-3 py-2";
+  const triggerStateClass = disabled
+    ? isForm
+      ? "bg-gray-50 text-gray-400 cursor-not-allowed"
+      : "bg-gray-100 cursor-not-allowed opacity-60"
+    : error
+      ? "bg-white border-red-500"
+      : isForm && isOpen
+        ? "bg-white border-brand shadow-[0_0_0_3px_var(--dt-color-primary-ring)]"
+        : "bg-white hover:border-gray-400";
 
   const filteredOptions = options.filter((option) =>
     (option.value + " " + option.label)
       .toLowerCase()
-      .includes(searchQuery.toLowerCase())
+      .includes(searchQuery.toLowerCase()),
   );
 
   useEffect(() => {
@@ -62,6 +80,14 @@ export function SearchableSelect({
       searchInputRef.current.focus();
     }
   }, [isOpen]);
+
+  // Mở danh sách dài (vd 34 tỉnh) → cuộn tới mục đang chọn
+  useEffect(() => {
+    if (!isOpen || !pos) return;
+    const idx = options.findIndex((opt) => opt.value === value);
+    if (idx >= 0) optionRefs.current[idx]?.scrollIntoView({ block: "center" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, !!pos]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -95,7 +121,7 @@ export function SearchableSelect({
   };
 
   const handleSearchKeyDown = (
-    event: React.KeyboardEvent<HTMLInputElement>
+    event: React.KeyboardEvent<HTMLInputElement>,
   ) => {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -134,13 +160,7 @@ export function SearchableSelect({
         data-invalid={error ? true : undefined}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        className={`w-full ${size === "sm" ? "px-2.5 py-1.5 text-sm" : "px-3 py-2"} border rounded-lg flex items-center justify-between transition-colors ${
-          disabled
-            ? "bg-gray-100 cursor-not-allowed opacity-60"
-            : error
-              ? "bg-white border-red-500"
-              : "bg-white hover:border-gray-400"
-        }`}>
+        className={`w-full ${triggerSizeClass} border rounded-lg flex items-center justify-between gap-2 transition-colors ${triggerStateClass}`}>
         <span
           className={`min-w-0 flex-1 truncate text-left ${selectedOption ? "text-gray-900" : "text-gray-400"}`}>
           {selectedOption
@@ -170,7 +190,7 @@ export function SearchableSelect({
           </span>
         )}
         <ChevronDown
-          className={`${size === "sm" ? "w-4 h-4" : "w-5 h-5"} text-gray-400 transition-transform ${
+          className={`${size === "sm" || isForm ? "w-4 h-4" : "w-5 h-5"} shrink-0 text-gray-400 transition-transform ${
             isOpen ? "rotate-180" : ""
           }`}
         />
@@ -203,7 +223,7 @@ export function SearchableSelect({
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleSearchKeyDown}
                   placeholder={searchPlaceholder}
-                  className={`w-full pl-9 pr-3 ${size === "sm" ? "py-1.5 text-xs" : "py-2 text-sm"} border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand`}
+                  className={`w-full pl-9 pr-3 ${size === "sm" && !isForm ? "py-1.5 text-xs" : "py-2 text-sm"} border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand`}
                 />
               </div>
             </div>
@@ -242,7 +262,7 @@ export function SearchableSelect({
             </div>
             {footer && <div className="border-t p-2">{footer}</div>}
           </div>,
-          document.body
+          document.body,
         )}
 
       {error && <p className="mt-1 text-sm text-red-500">{error}</p>}

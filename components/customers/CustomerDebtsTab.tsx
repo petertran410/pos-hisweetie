@@ -4,7 +4,20 @@ import {
   useExportCustomerDebtTimeline,
 } from "@/lib/hooks/useCustomers";
 import { formatCurrency } from "@/lib/utils";
-import { Download, Loader2 } from "lucide-react";
+import { FileDown, HandCoins, Loader2, Wallet } from "lucide-react";
+import {
+  DateCell,
+  MoneyChange,
+  TAB_BUTTON_PRIMARY,
+  TAB_BUTTON_SECONDARY,
+  TabEmpty,
+  TabLoading,
+  TabPagination,
+  TabTable,
+  Td,
+  Th,
+  Tr,
+} from "./CustomerTabUI";
 import { useState } from "react";
 import { CustomerPaymentModal } from "./CustomerPaymentModal";
 import Link from "next/link";
@@ -20,6 +33,8 @@ interface CustomerDebtsTabProps {
   /** Ẩn toàn bộ cụm nút thao tác (Lịch sử TT, Công nợ, Thanh toán) — dùng khi
    * chỉ cần hiển thị bảng công nợ để chụp màn hình gửi khách. */
   hideActions?: boolean;
+  /** Ẩn dòng "Nợ hiện tại" khi nơi nhúng đã hiển thị số nợ (vd header chi tiết khách). */
+  hideSummary?: boolean;
 }
 
 export function CustomerDebtsTab({
@@ -28,6 +43,7 @@ export function CustomerDebtsTab({
   hidePaymentButton = false,
   includeChildren = false,
   hideActions = false,
+  hideSummary = false,
 }: CustomerDebtsTabProps) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [page, setPage] = useState(1);
@@ -35,7 +51,7 @@ export function CustomerDebtsTab({
 
   const { data, isLoading } = useCustomerDebtTimeline(
     customerId,
-    includeChildren
+    includeChildren,
   );
 
   const { exportToFile: exportTimeline, isExporting: exportingTimeline } =
@@ -104,249 +120,201 @@ export function CustomerDebtsTab({
     setShowExportDebtModal(false);
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-brand" />
-      </div>
-    );
-  }
+  if (isLoading) return <TabLoading />;
+
+  const debtNumber = Number(customerDebt) || 0;
+  const showToolbar = !hideSummary || !hideActions;
 
   return (
     <>
-      <div>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 lg:mb-4">
-          <div className="text-sm lg:text-sm text-gray-600">
-            Nợ hiện tại:{" "}
-            <span className="font-semibold text-red-600">
-              {formatCurrency(customerDebt)}
-            </span>
+      <div className="space-y-3">
+        {showToolbar && (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {!hideSummary ? (
+              <div className="flex items-baseline gap-2">
+                <span className="text-sm text-gray-500">Nợ hiện tại</span>
+                <span
+                  className={`text-lg font-semibold tabular-nums ${
+                    debtNumber > 0 ? "text-orange-600" : "text-gray-500"
+                  }`}>
+                  {formatCurrency(customerDebt)}
+                </span>
+              </div>
+            ) : (
+              <span />
+            )}
+            {!hideActions && (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => exportTimeline(customerId, includeChildren)}
+                  disabled={exportingTimeline}
+                  title="Xuất file lịch sử thanh toán"
+                  className={TAB_BUTTON_SECONDARY}>
+                  {exportingTimeline ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileDown className="h-4 w-4" />
+                  )}
+                  Xuất lịch sử TT
+                </button>
+
+                <button
+                  onClick={() => setShowExportDebtModal(true)}
+                  disabled={exportingDebt}
+                  title="Xuất file công nợ"
+                  className={TAB_BUTTON_SECONDARY}>
+                  {exportingDebt ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileDown className="h-4 w-4" />
+                  )}
+                  Xuất công nợ
+                </button>
+
+                {!hidePaymentButton && (
+                  <PermissionGate resource="cash_flows" action="create">
+                    <button
+                      onClick={() => setShowPaymentModal(true)}
+                      className={TAB_BUTTON_PRIMARY}>
+                      <HandCoins className="h-4 w-4" />
+                      Thanh toán
+                    </button>
+                  </PermissionGate>
+                )}
+              </div>
+            )}
           </div>
-          {!hideActions && (
-            <div className="flex flex-wrap items-center gap-1.5 lg:gap-2">
-              <button
-                onClick={() => exportTimeline(customerId, includeChildren)}
-                disabled={exportingTimeline}
-                className="px-2 py-1.5 lg:px-3 lg:py-2 border rounded hover:bg-gray-50 flex items-center gap-1 lg:gap-1.5 text-xs lg:text-sm text-gray-700 disabled:opacity-50">
-                {exportingTimeline ? (
-                  <Loader2 className="w-3.5 h-3.5 lg:w-4 lg:h-4 animate-spin" />
-                ) : (
-                  <Download className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
-                )}
-                Lịch sử TT
-              </button>
+        )}
 
-              <button
-                onClick={() => setShowExportDebtModal(true)}
-                disabled={exportingDebt}
-                className="px-2 py-1.5 lg:px-3 lg:py-2 border rounded hover:bg-gray-50 flex items-center gap-1 lg:gap-1.5 text-xs lg:text-sm text-gray-700 disabled:opacity-50">
-                {exportingDebt ? (
-                  <Loader2 className="w-3.5 h-3.5 lg:w-4 lg:h-4 animate-spin" />
-                ) : (
-                  <Download className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
-                )}
-                Công nợ
-              </button>
-
-              {!hidePaymentButton && (
-                <PermissionGate resource="cash_flows" action="create">
-                  <button
-                    onClick={() => setShowPaymentModal(true)}
-                    className="px-2.5 py-1.5 lg:px-4 lg:py-2 bg-brand text-white rounded hover:bg-brand-dark flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
-                    💵 Thanh toán
-                  </button>
-                </PermissionGate>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        {timeline.length === 0 ? (
+          <TabEmpty
+            icon={Wallet}
+            title="Chưa có giao dịch nào"
+            description="Hóa đơn, thanh toán và cấn trừ công nợ của khách sẽ hiện ở đây."
+          />
+        ) : (
+          <TabTable
+            footer={
+              <TabPagination
+                page={page}
+                totalPages={totalPages}
+                total={timeline.length}
+                unit="giao dịch"
+                onChange={setPage}
+              />
+            }>
             <thead>
-              <tr className="border-b bg-gray-50">
-                <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
-                  Mã phiếu
-                </th>
-                <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
-                  Thời gian
-                </th>
-                <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
-                  Loại
-                </th>
-                <th className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
-                  Khách hàng
-                </th>
-                <th className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
-                  Chi nhánh
-                </th>
-                <th className="px-2 py-2 lg:px-4 lg:py-3 text-right text-xs lg:text-sm font-medium">
-                  Giá trị
-                </th>
-                <th className="px-2 py-2 lg:px-4 lg:py-3 text-right text-xs lg:text-sm font-medium">
-                  Dư nợ
-                </th>
+              <tr>
+                <Th>Mã phiếu</Th>
+                <Th>Thời gian</Th>
+                <Th className="hidden sm:table-cell">Loại</Th>
+                {/* Chỉ cần khi xem cả khách con — còn lại luôn là chính khách này */}
+                {includeChildren && (
+                  <Th className="hidden md:table-cell">Khách hàng</Th>
+                )}
+                <Th className="hidden md:table-cell">Chi nhánh</Th>
+                <Th align="right">Giá trị</Th>
+                <Th align="right">Dư nợ</Th>
               </tr>
             </thead>
             <tbody>
-              {timeline.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="px-4 py-8 text-center text-gray-500 text-xs lg:text-sm">
-                    Chưa có giao dịch nào
-                  </td>
-                </tr>
-              ) : (
-                paginatedTimeline.map((item: any) => {
-                  const isInvoice = item.type === "invoice";
-                  const isPayment = item.type === "payment";
-                  const isDebtOffset = item.type === "debt_offset";
-                  const isReturnOrder = item.type === "return_order";
-                  const isExpense = item.type === "expense";
+              {paginatedTimeline.map((item: any) => {
+                const isInvoice = item.type === "invoice";
+                const isDebtOffset = item.type === "debt_offset";
+                const isReturnOrder = item.type === "return_order";
+                const isExpense = item.type === "expense";
+                // Bán hàng / chi tiền cho khách làm tăng nợ; còn lại làm giảm nợ
+                const increasesDebt = isInvoice || isExpense;
+                const snapshot = Number(item.debtSnapshot) || 0;
+                const linkClass = "font-medium text-brand hover:underline";
+                const typeLabel = isInvoice
+                  ? "Bán hàng"
+                  : isDebtOffset
+                    ? "Cấn trừ công nợ"
+                    : isReturnOrder
+                      ? "Trả hàng"
+                      : isExpense
+                        ? "Thanh toán"
+                        : getPaymentType(item.code);
 
-                  return (
-                    <tr
-                      key={`${item.type}-${item.id}`}
-                      className="border-b hover:bg-gray-50">
-                      <td className="px-2 py-2 lg:px-4 lg:py-3">
-                        {item.type === "invoice" ? (
-                          <Link
-                            href={`/don-hang/hoa-don?Code=${item.code}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs lg:text-sm font-medium text-brand hover:underline"
-                            onClick={(e) => e.stopPropagation()}>
-                            {item.code}
-                          </Link>
-                        ) : item.type === "payment" ? (
-                          <Link
-                            href={`/tai-chinh/so-quy?Code=${item.code}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs lg:text-sm font-medium text-brand hover:underline"
-                            onClick={(e) => e.stopPropagation()}>
-                            {item.code}
-                          </Link>
-                        ) : item.type === "debt_offset" ? (
-                          <CodeLink
-                            entity="debt-offset"
-                            code={item.code}
-                            className="text-xs lg:text-sm font-medium text-brand hover:underline"
-                          />
-                        ) : item.type === "return_order" ? (
-                          <CodeLink
-                            entity="return-order"
-                            code={item.code}
-                            className="text-xs lg:text-sm font-medium text-brand hover:underline"
-                          />
-                        ) : (
-                          <span className="text-xs lg:text-sm font-medium text-brand hover:underline cursor-pointer">
-                            {item.code}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
-                        {(() => {
-                          const d = new Date(item.date);
-                          return (
-                            <>
-                              <div>{d.toLocaleDateString("vi-VN")}</div>
-                              <div className="text-gray-500">
-                                {d.toLocaleTimeString("vi-VN")}
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </td>
-                      <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm font-medium">
-                        {isInvoice
-                          ? "Bán hàng"
-                          : isDebtOffset
-                            ? "Cấn trừ công nợ"
-                            : isReturnOrder
-                              ? "Trả hàng"
-                              : isExpense
-                                ? "Thanh toán"
-                                : getPaymentType(item.code)}
-                      </td>
-                      <td className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
-                        {item.customerName ? (
-                          <div>
-                            <div className="font-medium">
-                              {item.customerName}
-                            </div>
-                          </div>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                      <td className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
-                        {item.branch?.name || "-"}
-                      </td>
-                      <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm text-right whitespace-nowrap">
-                        {isInvoice && (
-                          <span className="text-green-600 font-medium">
-                            {formatCurrency(item.amount)}
-                          </span>
-                        )}
-                        {isPayment && (
-                          <span className="text-red-600 font-medium">
-                            -{formatCurrency(item.amount)}
-                          </span>
-                        )}
-                        {isDebtOffset && (
-                          <span className="text-red-600 font-medium">
-                            -{formatCurrency(item.amount)}
-                          </span>
-                        )}
-                        {isReturnOrder && (
-                          <span className="text-red-600 font-medium">
-                            -{formatCurrency(item.amount)}
-                          </span>
-                        )}
-                        {isExpense && (
-                          <span className="text-green-600 font-medium">
-                            {formatCurrency(item.amount)}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm text-right font-medium whitespace-nowrap">
-                        <span className="text-red-600">
-                          {formatCurrency(item.debtSnapshot)}
+                return (
+                  <Tr key={`${item.type}-${item.id}`}>
+                    <Td className="whitespace-nowrap">
+                      {item.type === "invoice" ? (
+                        <Link
+                          href={`/don-hang/hoa-don?Code=${item.code}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={linkClass}
+                          onClick={(e) => e.stopPropagation()}>
+                          {item.code}
+                        </Link>
+                      ) : item.type === "payment" ? (
+                        <Link
+                          href={`/tai-chinh/so-quy?Code=${item.code}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={linkClass}
+                          onClick={(e) => e.stopPropagation()}>
+                          {item.code}
+                        </Link>
+                      ) : item.type === "debt_offset" ? (
+                        <CodeLink
+                          entity="debt-offset"
+                          code={item.code}
+                          className={linkClass}
+                        />
+                      ) : item.type === "return_order" ? (
+                        <CodeLink
+                          entity="return-order"
+                          code={item.code}
+                          className={linkClass}
+                        />
+                      ) : (
+                        <span className="font-medium text-brand">
+                          {item.code}
                         </span>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
+                      )}
+                      <div className="text-xs text-gray-500 sm:hidden">
+                        {typeLabel}
+                      </div>
+                    </Td>
+                    <Td>
+                      <DateCell value={item.date} />
+                    </Td>
+                    <Td className="hidden whitespace-nowrap text-gray-900 sm:table-cell">
+                      {typeLabel}
+                    </Td>
+                    {includeChildren && (
+                      <Td className="hidden md:table-cell">
+                        {item.customerName || "—"}
+                      </Td>
+                    )}
+                    <Td className="hidden whitespace-nowrap md:table-cell">
+                      {item.branch?.name || "—"}
+                    </Td>
+                    <Td align="right">
+                      <MoneyChange
+                        direction={increasesDebt ? "increase" : "decrease"}
+                        formatted={formatCurrency(item.amount)}
+                      />
+                    </Td>
+                    <Td
+                      align="right"
+                      className={`whitespace-nowrap font-semibold tabular-nums ${
+                        snapshot > 0
+                          ? "text-orange-600"
+                          : snapshot < 0
+                            ? "text-green-600"
+                            : "text-gray-400"
+                      }`}>
+                      {formatCurrency(item.debtSnapshot)}
+                    </Td>
+                  </Tr>
+                );
+              })}
             </tbody>
-          </table>
-        </div>
-
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-2 py-2 lg:px-4 lg:py-3 border-t">
-            <div className="text-xs lg:text-sm text-gray-600">
-              Tổng: {timeline.length} giao dịch
-            </div>
-            <div className="flex items-center gap-1.5 lg:gap-2">
-              <button
-                onClick={() => setPage(Math.max(1, page - 1))}
-                disabled={page === 1}
-                className="px-2 py-1 lg:px-3 border rounded text-xs lg:text-sm disabled:opacity-50 hover:bg-gray-50">
-                Trước
-              </button>
-              <span className="text-xs lg:text-sm">
-                {page} / {totalPages}
-              </span>
-              <button
-                onClick={() => setPage(Math.min(totalPages, page + 1))}
-                disabled={page >= totalPages}
-                className="px-2 py-1 lg:px-3 border rounded text-xs lg:text-sm disabled:opacity-50 hover:bg-gray-50">
-                Sau
-              </button>
-            </div>
-          </div>
+          </TabTable>
         )}
       </div>
 

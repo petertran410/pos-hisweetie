@@ -4,12 +4,17 @@
 import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import { useCustomer } from "@/lib/hooks/useCustomers";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Pencil, Trash2, Loader2, ExternalLink, MapPin } from "lucide-react";
 import {
-  useDeleteCustomer,
-  useUpdateCustomer,
-  useUpdateCustomerComments,
-} from "@/lib/hooks/useCustomers";
+  Pencil,
+  Trash2,
+  Loader2,
+  Store,
+  CalendarDays,
+  Network,
+  Link2,
+  Power,
+} from "lucide-react";
+import { useDeleteCustomer, useUpdateCustomer } from "@/lib/hooks/useCustomers";
 import { CustomerInvoicesTab } from "./CustomerInvoicesTab";
 import { CustomerOrdersTab } from "./CustomerOrdersTab";
 import { CustomerConsignmentsTab } from "./CustomerConsignmentsTab";
@@ -22,6 +27,8 @@ import { useRegisterCustomerInView } from "@/lib/store/customersInView";
 import { useCustomerJourney } from "@/lib/hooks/useLeads";
 import { CustomerJourneyTab } from "../journey/CustomerJourneyTab";
 import { LEAD_SOURCE_LABEL, leadHref } from "@/lib/leads/constants";
+import { StatBox } from "./CustomerTabUI";
+import { CustomerInfoPanel } from "./CustomerInfoPanel";
 
 interface CustomerDetailRowProps {
   customerId: number;
@@ -60,21 +67,6 @@ export function CustomerDetailRow({
   const journey = useCustomerJourney(customerId, canViewLeads);
   const sourceLead = journey.data?.lead ?? null;
   useRegisterCustomerInView(customer, "Chi tiết khách hàng");
-
-  // ─── Ghi chú sửa trực tiếp (giống ghi chú ở OrderDetailRow) ───
-  // Sửa được khi có quyền sửa khách hàng HOẶC quyền riêng sửa ghi chú.
-  const canUpdateComments = useCan("customers", "update_comments");
-  const canEditComments = canUpdateCustomer || canUpdateComments;
-  const updateComments = useUpdateCustomerComments();
-  const [comments, setComments] = useState("");
-  useEffect(() => {
-    setComments(customer?.comments ?? "");
-  }, [customer?.id, customer?.comments]);
-  // Nút "Lưu" ở footer (giống InvoiceDetailRow) — lưu ghi chú đang nhập.
-  const handleSaveComments = () => {
-    if (!customer || updateComments.isPending) return;
-    updateComments.mutate({ id: customer.id, comments: comments.trim() });
-  };
 
   // ─── Sticky width trick (giống OrderDetailRow) ───
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -133,7 +125,7 @@ export function CustomerDetailRow({
     if (!customer) return;
     if (
       confirm(
-        "Bạn có chắc chắn muốn xóa khách hàng này? Hành động này không thể hoàn tác!"
+        "Bạn có chắc chắn muốn xóa khách hàng này? Hành động này không thể hoàn tác!",
       )
     ) {
       try {
@@ -198,297 +190,142 @@ export function CustomerDetailRow({
     ...(canViewLeads ? [{ key: "journey", label: "Hành trình" }] : []),
   ] as const;
 
-  const groups =
-    customer.customerGroupDetails
-      ?.map((d: any) => d.customerGroup?.name)
-      .filter(Boolean) || [];
+  const isOrg = Number(customer.type) === 1;
+  const ownDebt = Number(customer.totalDebt) || 0;
+  const totalDebtWithChildren =
+    ownDebt +
+    (customer.children?.reduce((sum, c) => sum + Number(c.totalDebt), 0) ?? 0);
 
   return (
     <tr>
       <td
         colSpan={colSpan}
-        className="border-b-2 border-l-2 border-r-2 border-brand p-0 bg-gray-50">
+        className="border-b-2 border-l-2 border-r-2 border-brand bg-gray-50 p-0">
         <div
           ref={wrapperRef}
           className="sticky left-0 bg-gray-50"
           style={{ width: 0 }}>
-          <div className="bg-white border border-gray-200 overflow-hidden">
-            <div className="p-4">
-              <div className=" border-gray-200 mb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-gray-900">
-                      <CodeLink
-                        entity="customer"
-                        code={customer.code}
-                        className="text-lg font-bold text-brand hover:underline"
-                      />
-                    </span>
-                    {customer.parent && (
-                      <span className="text-sm text-gray-500 ml-2">
-                        (thuộc{" "}
-                        <CodeLink
-                          entity="customer"
-                          code={customer.parent.code}
-                          className="text-brand hover:underline"
-                        />{" "}
-                        - {customer.parent.name})
-                      </span>
-                    )}
-                    <span className="text-gray-400">-</span>
-                    <span className="text-lg font-semibold text-gray-800">
-                      {customer.name}
-                    </span>
-                    <span
-                      className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${
-                        customer.isActive
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}>
-                      {customer.isActive ? "Hoạt động" : "Ngừng hoạt động"}
-                    </span>
-                  </div>
-                  <span className="text-sm font-medium text-gray-700">
-                    {customer.branch?.name || "-"}
+          <div className="bg-white">
+            {/* ===== Header ===== */}
+            <div className="flex flex-wrap items-start justify-between gap-4 px-5 pb-3 pt-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <CodeLink
+                    entity="customer"
+                    code={customer.code}
+                    className="text-base font-semibold text-brand hover:underline"
+                  />
+                  <span className="text-gray-300">·</span>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {customer.name}
+                  </h3>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      customer.isActive
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
+                    }`}>
+                    {customer.isActive ? "Hoạt động" : "Ngừng hoạt động"}
+                  </span>
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                    {isOrg ? "Tổ chức/Hộ KD" : "Cá nhân"}
                   </span>
                 </div>
-
-                {isParent && (
-                  <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
-                    <span>
-                      Công nợ riêng:{" "}
-                      <span className="font-semibold text-red-600">
-                        {formatCurrency(customer.totalDebt)}
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+                  <span className="inline-flex items-center gap-1">
+                    <Store className="h-3.5 w-3.5" />
+                    {customer.branch?.name || "Chưa có chi nhánh"}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    Tạo {formatDate(customer.createdAt)}
+                  </span>
+                  {customer.parent && (
+                    <span className="inline-flex items-center gap-1">
+                      <Network className="h-3.5 w-3.5" />
+                      Thuộc{" "}
+                      <CodeLink
+                        entity="customer"
+                        code={customer.parent.code}
+                        className="font-medium text-brand hover:underline"
+                      />
+                      <span className="text-gray-600">
+                        – {customer.parent.name}
                       </span>
                     </span>
-                    <span>
-                      Công nợ tổng:{" "}
-                      <span className="font-semibold text-red-600">
-                        {formatCurrency(
-                          Number(customer.totalDebt) +
-                            (customer.children?.reduce(
-                              (sum, c) => sum + Number(c.totalDebt),
-                              0
-                            ) ?? 0)
-                        )}
+                  )}
+                  {sourceLead && (
+                    <span className="inline-flex items-center gap-1">
+                      <Link2 className="h-3.5 w-3.5" />
+                      Từ lead{" "}
+                      <a
+                        href={leadHref(sourceLead.id)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-brand hover:underline">
+                        {sourceLead.code}
+                      </a>
+                      <span className="text-gray-600">
+                        · {LEAD_SOURCE_LABEL[sourceLead.source]}
+                        {sourceLead.cskh
+                          ? ` · CSKH ${sourceLead.cskh.name}`
+                          : ""}
                       </span>
                     </span>
-                  </div>
-                )}
-
-                {/* ── Tabs ── */}
-                <div className="flex gap-1 border-b border-gray-200 mb-4">
-                  {TABS.map((tab) => (
-                    <button
-                      key={tab.key}
-                      onClick={() => setActiveTab(tab.key as typeof activeTab)}
-                      className={`px-4 py-2 text-md font-medium border-b-2 transition-colors ${
-                        activeTab === tab.key
-                          ? "border-brand text-brand"
-                          : "border-transparent text-gray-500 hover:text-gray-700"
-                      }`}>
-                      {tab.label}
-                    </button>
-                  ))}
+                  )}
                 </div>
               </div>
 
-              {/* ── Tab content ── */}
+              {/* Chỉ số nhanh */}
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <StatBox
+                  label="Tổng bán"
+                  value={formatCurrency(customer.totalPurchased)}
+                />
+                {canViewDebt && (
+                  <StatBox
+                    label={isParent ? "Nợ riêng" : "Nợ hiện tại"}
+                    value={formatCurrency(ownDebt)}
+                    tone={ownDebt > 0 ? "warn" : "muted"}
+                  />
+                )}
+                {canViewDebt && isParent && (
+                  <StatBox
+                    label="Nợ tổng (gồm con)"
+                    value={formatCurrency(totalDebtWithChildren)}
+                    tone={totalDebtWithChildren > 0 ? "warn" : "muted"}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* ===== Tabs (cuộn ngang khi hẹp) ===== */}
+            <div className="flex gap-1 overflow-x-auto border-b px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key as typeof activeTab)}
+                  className={`-mb-px shrink-0 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+                    activeTab === tab.key
+                      ? "border-brand text-brand"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* ===== Tab content ===== */}
+            <div
+              className={
+                activeTab === "info" ? "bg-gray-50 p-4" : "bg-white p-4"
+              }>
               {activeTab === "info" && (
-                <div>
-                  {/* ── Profile header (không avatar) ── */}
-                  <div className="flex items-start justify-between mb-6">
-                    <div>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <span>
-                          Ngày tạo:{" "}
-                          <span className="text-gray-700">
-                            {formatDate(customer.createdAt)}
-                          </span>
-                        </span>
-                        <span className="text-gray-300">|</span>
-                        <span>
-                          Nhóm khách:{" "}
-                          <span className="text-gray-700">
-                            {groups.length > 0 ? groups.join(", ") : "Chưa có"}
-                          </span>
-                        </span>
-                        {sourceLead && (
-                          <>
-                            <span className="text-gray-300">|</span>
-                            <span>
-                              Từ lead:{" "}
-                              <a
-                                href={leadHref(sourceLead.id)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-brand hover:underline">
-                                {sourceLead.code}
-                              </a>{" "}
-                              <span className="text-gray-700">
-                                · {LEAD_SOURCE_LABEL[sourceLead.source]}
-                                {sourceLead.cskh ? ` · CSKH ${sourceLead.cskh.name}` : ""}
-                              </span>
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ── Info fields: label trên, value dưới, 3 cột ── */}
-                  <div className="grid grid-cols-3 gap-x-8 border-gray-200 pb-2 mb-2">
-                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                      <label className="block text-sm text-gray-500">
-                        Điện thoại:
-                      </label>
-                      <div className="block text-sm text-gray-900">
-                        {customer.contactNumber || "Chưa có"}
-                      </div>
-                    </div>
-                    {/* <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                      <label className="block text-sm text-gray-500">
-                        Sinh nhật:
-                      </label>
-                      <div className="block text-sm text-gray-900">
-                        {customer.birthDate
-                          ? formatDate(customer.birthDate)
-                          : "Chưa có"}
-                      </div>
-                    </div> */}
-                    {/* <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                      <label className="block text-sm text-gray-500">
-                        Giới tính:
-                      </label>
-                      <div className="block text-sm text-gray-900">
-                        {customer.gender === true
-                          ? "Nam"
-                          : customer.gender === false
-                            ? "Nữ"
-                            : "Chưa có"}
-                      </div>
-                    </div> */}
-
-                    {/* <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                      <label className="block text-sm text-gray-500">
-                        Email:
-                      </label>
-                      <div className="block text-sm text-gray-900">
-                        {customer.email || "Chưa có"}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2 mb-2 border-b pb-1">
-                      <label className="block text-sm text-gray-500">
-                        Facebook:
-                      </label>
-                      <div className="block text-sm text-gray-900">Chưa có</div>
-                    </div>
-                    <div /> */}
-                  </div>
-
-                  {/* ── Địa chỉ ── */}
-                  {/* {(() => {
-                    const defaultAddr =
-                      (customer as any).addresses?.find(
-                        (a: any) => a.isDefault
-                      ) || (customer as any).addresses?.[0];
-                    const fullAddress = [
-                      defaultAddr?.address,
-                      defaultAddr?.wardName || defaultAddr?.newWardName,
-                      defaultAddr?.cityName || defaultAddr?.newCityName,
-                    ]
-                      .filter(Boolean)
-                      .join(", ");
-
-                    return fullAddress ? (
-                      <div className="border-b border-gray-200 pb-4 mb-4">
-                        <label className="block text-sm text-gray-500 mb-1">
-                          Địa chỉ
-                        </label>
-                        <div className="text-base text-gray-900">
-                          {fullAddress}
-                        </div>
-                      </div>
-                    ) : null;
-                  })()} */}
-
-                  {/* ── Thông tin xuất hóa đơn ── */}
-                  {/* {(customer.invoiceBuyerName ||
-                    customer.invoiceAddress ||
-                    customer.invoiceCccdCmnd ||
-                    customer.invoiceBankAccount ||
-                    customer.invoiceEmail ||
-                    customer.invoicePhone) && ( */}
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
-                    <h4 className="text-sm font-semibold text-gray-800 mb-2">
-                      Thông tin xuất hóa đơn
-                    </h4>
-                    <div className="text-sm text-gray-700 leading-relaxed">
-                      {[
-                        customer.invoiceBuyerName,
-                        customer.invoiceCccdCmnd,
-                        customer.invoiceAddress,
-                        [customer.invoiceWardName, customer.invoiceCityName]
-                          .filter(Boolean)
-                          .join(", "),
-                        customer.invoiceEmail,
-                        customer.invoicePhone,
-                        customer.invoiceBankAccount,
-                      ]
-                        .filter(Boolean)
-                        .join(" / ")}
-                    </div>
-                  </div>
-                  {/* )} */}
-
-                  {/* ── Ghi chú: có quyền sửa → sửa trực tiếp; không quyền → chỉ xem ── */}
-                  {canEditComments ? (
-                    <div className="max-w-3xl">
-                      <label
-                        htmlFor={`customer-comments-${customer.id}`}
-                        className="flex items-center gap-1 text-md font-medium text-gray-500 mb-1.5">
-                        <Pencil className="w-4 h-4 text-gray-400" />
-                        Ghi chú:
-                      </label>
-                      <textarea
-                        id={`customer-comments-${customer.id}`}
-                        value={comments}
-                        onChange={(e) =>
-                          setComments(e.target.value.slice(0, 1000))
-                        }
-                        onKeyDown={(e) => {
-                          // Ctrl/Cmd + Enter để lưu nhanh
-                          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                            e.preventDefault();
-                            handleSaveComments();
-                          }
-                        }}
-                        maxLength={1000}
-                        rows={3}
-                        placeholder="Nhập ghi chú..."
-                        className="w-full px-3 py-2 text-md border rounded bg-white resize-none focus:outline-none focus:border-brand"
-                      />
-                    </div>
-                  ) : (
-                    customer.comments && (
-                      <div className="flex items-start gap-1 text-md text-gray-700">
-                        <svg
-                          className="w-4 h-4 text-gray-400 mt-0.5 shrink-0"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                          />
-                        </svg>
-                        <span>Ghi chú: {customer.comments}</span>
-                      </div>
-                    )
-                  )}
-                </div>
+                <CustomerInfoPanel
+                  customer={customer}
+                  onEdit={() => onEditClick(customer)}
+                  onViewAddresses={() => setActiveTab("addresses")}
+                />
               )}
 
               {activeTab === "addresses" && (
@@ -504,7 +341,16 @@ export function CustomerDetailRow({
                 <CustomerConsignmentsTab customerId={customer.id} />
               )}
               {activeTab === "zalo" && (
-                <div className="max-w-md">
+                <div className="max-w-xl rounded-xl border bg-white p-4">
+                  <div className="mb-4">
+                    <h4 className="text-sm font-semibold text-gray-900">
+                      Liên kết Zalo (Smax)
+                    </h4>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      ID Zalo cá nhân và các nhóm Zalo của khách, dùng để nhắn
+                      tin qua Smax.
+                    </p>
+                  </div>
                   <ZaloContactsManager customerId={customer.id} />
                 </div>
               )}
@@ -513,29 +359,32 @@ export function CustomerDetailRow({
               )}
               {activeTab === "debts" && (
                 <CustomerDebtsTab
+                  hideSummary
                   customerId={customer.id}
                   customerDebt={customer.totalDebt}
                 />
               )}
 
               {activeTab === "children" && customer.children && (
-                <div>
+                <div className="overflow-hidden rounded-xl border">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b bg-gray-50">
-                        <th className="px-4 py-3 text-left text-sm font-medium">
+                      <tr className="border-b bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                        <th className="px-4 py-2.5 text-left font-medium">
                           Mã KH
                         </th>
-                        <th className="px-4 py-3 text-left text-sm font-medium">
+                        <th className="px-4 py-2.5 text-left font-medium">
                           Tên
                         </th>
-                        <th className="px-4 py-3 text-left text-sm font-medium">
+                        <th className="px-4 py-2.5 text-left font-medium">
                           Điện thoại
                         </th>
-                        <th className="px-4 py-3 text-right text-sm font-medium">
-                          Công nợ
-                        </th>
-                        <th className="px-4 py-3 text-center text-sm font-medium">
+                        {canViewDebt && (
+                          <th className="px-4 py-2.5 text-right font-medium">
+                            Công nợ
+                          </th>
+                        )}
+                        <th className="px-4 py-2.5 text-center font-medium">
                           Trạng thái
                         </th>
                       </tr>
@@ -544,20 +393,29 @@ export function CustomerDetailRow({
                       {customer.children.map((child) => (
                         <tr
                           key={child.id}
-                          className="border-b hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm font-medium text-brand">
+                          className="border-b last:border-b-0 hover:bg-gray-50">
+                          <td className="px-4 py-2.5 text-sm font-medium text-brand">
                             <CodeLink entity="customer" code={child.code} />
                           </td>
-                          <td className="px-4 py-3 text-sm">{child.name}</td>
-                          <td className="px-4 py-3 text-sm">
-                            {child.contactNumber || "-"}
+                          <td className="px-4 py-2.5 text-sm text-gray-900">
+                            {child.name}
                           </td>
-                          <td className="px-4 py-3 text-sm text-right font-medium text-red-600">
-                            {formatCurrency(child.totalDebt)}
+                          <td className="px-4 py-2.5 text-sm text-gray-700">
+                            {child.contactNumber || "—"}
                           </td>
-                          <td className="px-4 py-3 text-center">
+                          {canViewDebt && (
+                            <td
+                              className={`px-4 py-2.5 text-right text-sm font-medium tabular-nums ${
+                                Number(child.totalDebt) > 0
+                                  ? "text-orange-600"
+                                  : "text-gray-400"
+                              }`}>
+                              {formatCurrency(child.totalDebt)}
+                            </td>
+                          )}
+                          <td className="px-4 py-2.5 text-center">
                             <span
-                              className={`px-2 py-0.5 rounded text-xs font-medium ${
+                              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                                 child.isActive
                                   ? "bg-green-100 text-green-700"
                                   : "bg-red-100 text-red-700"
@@ -574,65 +432,55 @@ export function CustomerDetailRow({
 
               {activeTab === "debts_total" && (
                 <CustomerDebtsTab
+                  hideSummary
                   customerId={customer.id}
-                  customerDebt={
-                    Number(customer.totalDebt) +
-                    (customer.children?.reduce(
-                      (sum, c) => sum + Number(c.totalDebt),
-                      0
-                    ) ?? 0)
-                  }
+                  customerDebt={totalDebtWithChildren}
                   includeChildren
                 />
               )}
 
               {activeTab === "debts_own" && (
                 <CustomerDebtsTab
+                  hideSummary
                   customerId={customer.id}
                   customerDebt={customer.totalDebt}
                 />
               )}
+            </div>
 
-              {/* ── Action footer (giống OrderDetailRow) ── */}
-              <div className="flex items-center justify-between pt-4 border-t border-gray-200 mt-4">
+            {/* ===== Action footer ===== */}
+            {(canDeleteCustomer || canUpdateCustomer) && (
+              <div className="flex items-center justify-between gap-2 border-t px-5 py-3">
                 <div className="flex gap-2">
                   {canDeleteCustomer && (
                     <button
                       onClick={handleDelete}
-                      className="px-4 py-2 text-md font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors">
-                      <Trash2 className="w-4 h-4 inline mr-1" />
+                      disabled={deleteCustomer.isPending}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-red-200 px-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50">
+                      <Trash2 className="h-4 w-4" />
                       Xóa
                     </button>
                   )}
                   {canUpdateCustomer && (
                     <button
                       onClick={handleStatusToggle}
-                      className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
+                      disabled={updateCustomer.isPending}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50">
+                      <Power className="h-4 w-4" />
                       {customer.isActive ? "Ngừng hoạt động" : "Kích hoạt"}
                     </button>
                   )}
                 </div>
-                <div className="flex gap-2">
-                  {/* Lưu ghi chú — chỉ ở tab Thông tin (nơi có ô ghi chú) */}
-                  {canEditComments && activeTab === "info" && (
-                    <button
-                      onClick={handleSaveComments}
-                      disabled={updateComments.isPending}
-                      className="px-4 py-2 text-md font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                      {updateComments.isPending ? "Đang lưu..." : "Lưu"}
-                    </button>
-                  )}
-                  {canUpdateCustomer && (
-                    <button
-                      onClick={() => onEditClick(customer)}
-                      className="px-4 py-2 text-md font-medium text-white bg-brand rounded hover:bg-brand-dark transition-colors shadow-sm">
-                      <Pencil className="w-4 h-4 inline mr-1" />
-                      Chỉnh sửa
-                    </button>
-                  )}
-                </div>
+                {canUpdateCustomer && (
+                  <button
+                    onClick={() => onEditClick(customer)}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-dark">
+                    <Pencil className="h-4 w-4" />
+                    Chỉnh sửa
+                  </button>
+                )}
               </div>
-            </div>
+            )}
           </div>
         </div>
       </td>

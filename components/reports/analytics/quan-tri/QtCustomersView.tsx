@@ -18,7 +18,7 @@ import { money, vi } from "@/lib/dashboard/format";
 import { AnalyticsTable, type AnalyticsColumn } from "../shared/AnalyticsTable";
 import { Panel } from "../shared/AnalyticsCharts";
 import { QtDonut, QtHBar, QtStacked100 } from "./QtCharts";
-import { QtMonthPivot, collectMonths } from "./QtMonthPivot";
+import { QtMonthPivot, collectMonths, leavesFromRows } from "./QtMonthPivot";
 import { TONES } from "./QtOverview";
 import { BLANK, num, pct2, qtLabel, qtMetricTitle } from "./qtFormat";
 
@@ -72,23 +72,8 @@ export function QtCustomersView({
   const pivot = data.pivot;
   const pivotData = useMemo(() => {
     if (!pivot) return null;
-    const leafVals = collectMonths(
-      pivot.cells,
-      (x) => `${x.customerType}\u0001${x.code}`,
-    );
-    const names = new Map<string, { group: string | null; label: string }>();
-    for (const x of pivot.cells)
-      names.set(`${x.customerType}\u0001${x.code}`, {
-        group: x.customerType,
-        label: x.name ?? x.code ?? BLANK,
-      });
     return {
-      leaves: [...leafVals.entries()].map(([id, values]) => ({
-        id,
-        label: names.get(id)?.label ?? id,
-        group: names.get(id)?.group ?? null,
-        values,
-      })),
+      leaves: leavesFromRows(pivot),
       groups: collectMonths(pivot.typeMonths, (x) => x.customerType ?? BLANK),
       total: collectMonths(pivot.monthTotals, () => "t").get("t") ?? new Map(),
     };

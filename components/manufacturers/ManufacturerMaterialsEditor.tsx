@@ -121,8 +121,16 @@ export function ManufacturerMaterialsEditor({
                   : "Số lượng"}
               </th>
               <th className="w-24 px-3 py-2.5">Đơn vị</th>
-              <th className="w-32 px-3 py-2.5">Đơn giá</th>
-              <th className="w-28 px-3 py-2.5">Theo</th>
+              <th
+                className="w-32 px-3 py-2.5"
+                title="Nhập đúng giá NSX báo, vd 205,200 nếu NSX báo 205,200 đ/kg">
+                Giá NSX báo
+              </th>
+              <th
+                className="w-28 px-3 py-2.5"
+                title="Giá trên mỗi g / kg / gói — hệ thống tự quy đổi theo đơn vị lượng">
+                Tính trên
+              </th>
               <th className="w-36 px-3 py-2.5 text-right">
                 {isFormula ? `Tiền / 1 ${outputUnit || "sp"}` : "Thành tiền"} (
                 {currencySymbol(currency)})
@@ -231,6 +239,17 @@ export function ManufacturerMaterialsEditor({
                   </td>
                   <td className="px-3 py-2.5 text-right font-medium text-gray-800">
                     {formatAmount(lineAmount(line), isFormula ? 4 : 2)}
+                    {/* Phép tính để thấy hệ thống đã quy đổi g ↔ kg: 250 g × 205,200 đ/kg. */}
+                    {!legacy &&
+                      line.pricingMode !== "TOTAL" &&
+                      Number(line.quantity) > 0 &&
+                      Number(line.unitPrice) > 0 && (
+                        <span className="block text-xs font-normal text-gray-400">
+                          {formatAmount(Number(line.quantity), 6)} {line.unit} ×{" "}
+                          {formatAmount(Number(line.unitPrice), 6)}{" "}
+                          {priceUnitLabel(currency, line.priceUnit ?? line.unit ?? "")}
+                        </span>
+                      )}
                   </td>
                   <td className="px-2 py-2.5 text-center">
                     {!disabled && (

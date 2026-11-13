@@ -1,13 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { X, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  X,
+  ChevronDown,
+  MapPin,
+  User,
+  Phone,
+  Search,
+  Loader2,
+} from "lucide-react";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { AddressAutocompleteInput } from "@/components/pos/AddressAutocompleteInput";
-import {
-  extractAddressParts,
-  TrackAsiaPrediction,
-} from "@/lib/api/trackasia";
+import { extractAddressParts, TrackAsiaPrediction } from "@/lib/api/trackasia";
 import { createPortal } from "react-dom";
 
 /**
@@ -19,7 +24,7 @@ function normalizeAdminName(name: string): string {
     .toLowerCase()
     .replace(
       /^(tỉnh|thành phố|tp\.?|phường|xã|thị trấn|quận|huyện|thị xã)\s+/,
-      ""
+      "",
     )
     .replace(/\s+/g, " ")
     .trim();
@@ -55,6 +60,11 @@ interface Props {
   onClose: () => void;
   onSubmit: (address: any) => void;
 }
+
+const LABEL_CLASS = "mb-1.5 block text-sm font-medium text-gray-700";
+const INPUT_CLASS =
+  "h-[42px] w-full rounded-lg border bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 transition-colors focus:outline-none focus:border-brand focus:shadow-[0_0_0_3px_var(--dt-color-primary-ring)]";
+const LABEL_SUGGESTIONS = ["Nhà riêng", "Văn phòng", "Cửa hàng", "Kho"];
 
 const emptyForm = {
   label: undefined,
@@ -110,7 +120,7 @@ export function CustomerAddressFormModal({
   const wards = useMemo(() => {
     if (!form.districtCode) return [];
     const d = districts.find(
-      (x) => String(x.code) === String(form.districtCode)
+      (x) => String(x.code) === String(form.districtCode),
     );
     return d?.wards || [];
   }, [form.districtCode, districts]);
@@ -119,7 +129,7 @@ export function CustomerAddressFormModal({
   const filteredCommunes = useMemo(() => {
     if (!form.newCityCode) return [];
     return invoiceCommunes.filter(
-      (x) => String(x.provinceCode) === String(form.newCityCode)
+      (x) => String(x.provinceCode) === String(form.newCityCode),
     );
   }, [form.newCityCode, invoiceCommunes]);
 
@@ -188,7 +198,8 @@ export function CustomerAddressFormModal({
 
     const province = provinceName
       ? invoiceProvinces.find(
-          (p) => normalizeAdminName(p.name) === normalizeAdminName(provinceName)
+          (p) =>
+            normalizeAdminName(p.name) === normalizeAdminName(provinceName),
         )
       : undefined;
 
@@ -197,7 +208,7 @@ export function CustomerAddressFormModal({
         ? invoiceCommunes.find(
             (c) =>
               String(c.provinceCode) === String(province.code) &&
-              normalizeAdminName(c.name) === normalizeAdminName(wardName)
+              normalizeAdminName(c.name) === normalizeAdminName(wardName),
           )
         : undefined;
 
@@ -225,233 +236,312 @@ export function CustomerAddressFormModal({
     onSubmit(form);
   };
 
-  if (!isOpen) return null;
+  const newAddressLine = [form.address, form.newWardName, form.newCityName]
+    .filter(Boolean)
+    .join(", ");
+  const oldAddressLine = [
+    form.address,
+    form.wardName,
+    form.districtName,
+    form.cityName,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const hasAnyRegion = !!(form.newCityCode || form.cityCode);
 
   return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4 lg:p-0"
+      className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/50 sm:items-center sm:p-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}>
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 lg:px-6 lg:py-4 border-b shrink-0">
-          <h3 className="text-base lg:text-lg font-semibold">
-            {mode === "create"
-              ? "Thêm địa chỉ giao hàng"
-              : "Chỉnh sửa địa chỉ giao hàng"}
-          </h3>
+      <div className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-h-[90vh] sm:max-w-2xl sm:rounded-2xl">
+        {/* ===== Header ===== */}
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b px-4 py-3.5 sm:px-6 sm:py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand">
+              <MapPin className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold text-gray-900">
+                {mode === "create"
+                  ? "Thêm địa chỉ giao hàng"
+                  : "Chỉnh sửa địa chỉ giao hàng"}
+              </h3>
+              <p className="truncate text-xs text-gray-500">
+                Người nhận và nơi giao hàng của khách
+              </p>
+            </div>
+          </div>
           <button
+            type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600">
-            <X className="w-5 h-5" />
+            aria-label="Đóng"
+            className="-mr-2 rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700">
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="p-4 lg:p-6 space-y-3 lg:space-y-5 overflow-y-auto flex-1">
-          {/* Row 1: Tên gợi nhớ / Người nhận / SĐT */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 lg:gap-4">
-            <div>
-              <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-1.5">
-                Tên gợi nhớ
-              </label>
-              <input
-                type="text"
-                value={form.label || ""}
-                onChange={(e) => set("label", e.target.value || undefined)}
-                placeholder="VD: Văn phòng, Kho 1"
-                className="w-full border rounded px-2.5 py-1.5 lg:px-3 lg:py-2 text-sm"
-              />
+        {/* ===== Body ===== */}
+        <div className="flex-1 space-y-3 overflow-y-auto bg-gray-50 p-3 sm:space-y-4 sm:p-5">
+          {/* ── Người nhận ── */}
+          <section className="rounded-xl border bg-white p-4 sm:p-5">
+            <h4 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              Người nhận
+            </h4>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="col-span-2">
+                <label className={LABEL_CLASS}>Tên gợi nhớ</label>
+                <input
+                  type="text"
+                  value={form.label || ""}
+                  onChange={(e) => set("label", e.target.value || undefined)}
+                  placeholder="VD: Văn phòng, Kho 1"
+                  className={INPUT_CLASS}
+                />
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {LABEL_SUGGESTIONS.map((s) => {
+                    const active = form.label === s;
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => set("label", active ? undefined : s)}
+                        className={`rounded-full border px-2.5 py-0.5 text-xs transition-colors ${
+                          active
+                            ? "border-brand bg-brand-soft font-medium text-brand"
+                            : "bg-white text-gray-600 hover:border-brand-border-strong hover:bg-gray-50"
+                        }`}>
+                        {s}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="col-span-2 sm:col-span-1">
+                <label className={LABEL_CLASS}>Người nhận</label>
+                <div className="relative">
+                  <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={form.receiver ?? ""}
+                    onChange={(e) => set("receiver", e.target.value)}
+                    placeholder="Tên người nhận"
+                    className={`${INPUT_CLASS} pl-9`}
+                  />
+                </div>
+              </div>
+              <div className="col-span-2 sm:col-span-1">
+                <label className={LABEL_CLASS}>Số điện thoại</label>
+                <div className="relative">
+                  <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="tel"
+                    value={form.contactNumber || ""}
+                    onChange={(e) =>
+                      set("contactNumber", e.target.value || undefined)
+                    }
+                    placeholder="SĐT người nhận"
+                    className={`${INPUT_CLASS} pl-9`}
+                  />
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-1.5">
-                Người nhận
-              </label>
-              <input
-                type="text"
-                value={form.receiver ?? ""}
-                onChange={(e) => set("receiver", e.target.value)}
-                placeholder="Tên người nhận"
-                className="w-full border rounded px-2.5 py-1.5 lg:px-3 lg:py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-1.5">
-                Số điện thoại
-              </label>
-              <input
-                type="text"
-                value={form.contactNumber || ""}
-                onChange={(e) =>
-                  set("contactNumber", e.target.value || undefined)
-                }
-                placeholder="SĐT người nhận"
-                className="w-full border rounded px-2.5 py-1.5 lg:px-3 lg:py-2 text-sm"
-              />
-            </div>
-          </div>
+          </section>
 
-          {/* Địa chỉ chi tiết */}
-          <div>
-            <label className="block text-xs lg:text-sm font-medium mb-1 lg:mb-1.5">
-              Địa chỉ chi tiết (số nhà, tên đường)
-            </label>
-            <AddressAutocompleteInput
-              value={form.address || ""}
-              onChange={(text) => set("address", text || undefined)}
-              onSelect={handleSelectSuggestion}
-              placeholder="VD: 123 Nguyễn Trãi"
-              className="w-full border rounded px-2.5 py-1.5 lg:px-3 lg:py-2 text-sm"
-            />
-          </div>
+          {/* ── Địa chỉ ── */}
+          <section
+            className={`rounded-xl border bg-white p-4 sm:p-5 ${
+              error && !hasAnyRegion ? "border-red-300" : ""
+            }`}>
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Địa chỉ giao hàng
+              </h4>
+              <span className="text-right text-[11px] text-gray-400">
+                Cần ít nhất 1 trong 2 loại địa chỉ
+              </span>
+            </div>
 
-          {/* Địa chỉ mới */}
-          <div className="border-t pt-3 lg:pt-4">
-            <p className="text-xs lg:text-sm font-medium mb-2 lg:mb-3 text-gray-700">
-              Địa chỉ mới (Tỉnh / Phường — sau sáp nhập)
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 lg:gap-4">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  Tỉnh/Thành phố
-                </label>
+            <div>
+              <label className={LABEL_CLASS}>Số nhà, tên đường</label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <AddressAutocompleteInput
+                  value={form.address || ""}
+                  onChange={(text) => set("address", text || undefined)}
+                  onSelect={handleSelectSuggestion}
+                  placeholder="VD: 123 Nguyễn Trãi"
+                  className={`${INPUT_CLASS} pl-9 pr-9`}
+                />
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Gõ để xem gợi ý — chọn gợi ý sẽ tự điền Tỉnh và Phường mới.
+              </p>
+            </div>
+
+            {/* Địa chỉ mới */}
+            <div className="mt-4">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">
+                  Địa chỉ mới
+                </span>
+                <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-medium text-brand">
+                  Sau sáp nhập
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                 <SearchableSelect
+                  variant="form"
                   options={(invoiceProvinces || []).map((p) => ({
                     value: p.code,
                     label: p.name,
                   }))}
                   value={form.newCityCode || ""}
                   onChange={handleNewCityChange}
-                  placeholder="Tìm Tỉnh/Thành phố"
-                  size="sm"
+                  placeholder="Tỉnh/Thành phố"
+                  searchPlaceholder="Tìm Tỉnh/Thành phố..."
                 />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  Phường/Xã
-                </label>
                 <SearchableSelect
+                  variant="form"
                   options={filteredCommunes.map((c) => ({
                     value: c.code,
                     label: c.name,
                   }))}
                   value={form.newWardCode || ""}
                   onChange={handleNewWardChange}
-                  placeholder="Tìm Phường/Xã"
+                  placeholder={
+                    form.newCityCode ? "Phường/Xã" : "Chọn Tỉnh trước"
+                  }
+                  searchPlaceholder="Tìm Phường/Xã..."
                   disabled={!form.newCityCode}
-                  size="sm"
                 />
               </div>
             </div>
-          </div>
 
-          {/* Địa chỉ cũ — toggle */}
-          <div className="border-t pt-3 lg:pt-4">
-            <button
-              type="button"
-              onClick={() => setShowOld((v) => !v)}
-              className="flex items-center gap-1.5 text-xs lg:text-sm text-brand hover:text-brand-dark font-medium">
-              {showOld ? (
-                <ChevronUp className="w-4 h-4" />
-              ) : (
-                <ChevronDown className="w-4 h-4" />
-              )}
-              Địa chỉ cũ (Tỉnh / Quận / Phường — trước sáp nhập)
-            </button>
+            {/* Địa chỉ cũ — thu gọn */}
+            <div className="mt-4 rounded-lg border">
+              <button
+                type="button"
+                onClick={() => setShowOld((v) => !v)}
+                className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm transition-colors hover:bg-gray-50">
+                <span className="flex items-center gap-2">
+                  <span className="font-medium text-gray-700">Địa chỉ cũ</span>
+                  <span className="text-xs text-gray-500">
+                    Tỉnh / Quận / Phường — trước sáp nhập
+                  </span>
+                </span>
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${
+                    showOld ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
 
-            {showOld && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 lg:gap-4 mt-2 lg:mt-3">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">
-                    Tỉnh/Thành phố
-                  </label>
+              {showOld && (
+                <div className="grid grid-cols-1 gap-3 border-t p-3 sm:grid-cols-3">
                   <SearchableSelect
+                    variant="form"
                     options={cities.map((c) => ({
                       value: String(c.code),
                       label: c.name,
                     }))}
                     value={form.cityCode || ""}
                     onChange={handleCityChange}
-                    placeholder="Chọn Tỉnh/Thành phố"
-                    size="sm"
+                    placeholder="Tỉnh/Thành phố"
+                    searchPlaceholder="Tìm Tỉnh/Thành phố..."
                   />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">
-                    Quận/Huyện
-                  </label>
                   <SearchableSelect
+                    variant="form"
                     options={districts.map((d) => ({
                       value: String(d.code),
                       label: d.name,
                     }))}
                     value={form.districtCode || ""}
                     onChange={handleDistrictChange}
-                    placeholder="Chọn Quận/Huyện"
+                    placeholder="Quận/Huyện"
+                    searchPlaceholder="Tìm Quận/Huyện..."
                     disabled={!form.cityCode}
-                    size="sm"
                   />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">
-                    Phường/Xã
-                  </label>
                   <SearchableSelect
+                    variant="form"
                     options={wards.map((w) => ({
                       value: String(w.code),
                       label: w.name,
                     }))}
                     value={form.wardCode || ""}
                     onChange={handleWardChange}
-                    placeholder="Chọn Phường/Xã"
+                    placeholder="Phường/Xã"
+                    searchPlaceholder="Tìm Phường/Xã..."
                     disabled={!form.districtCode}
-                    size="sm"
                   />
                 </div>
+              )}
+            </div>
+
+            {/* Xem trước địa chỉ đầy đủ */}
+            {hasAnyRegion && (
+              <div className="mt-4 space-y-1 rounded-lg bg-brand-soft px-3 py-2.5 text-xs">
+                {form.newCityCode && (
+                  <p className="text-gray-700">
+                    <span className="font-medium text-brand">Mới:</span>{" "}
+                    {newAddressLine}
+                  </p>
+                )}
+                {form.cityCode && (
+                  <p className="text-gray-700">
+                    <span className="font-medium text-brand">Cũ:</span>{" "}
+                    {oldAddressLine}
+                  </p>
+                )}
               </div>
             )}
+          </section>
 
-            <p className="text-xs text-gray-500 mt-2">
-              Phải điền ít nhất 1 trong 2 loại địa chỉ (cũ hoặc mới)
-            </p>
-          </div>
-
-          {/* isDefault checkbox */}
-          <div className="border-t pt-3 lg:pt-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={!form.isDefault}
-                onChange={(e) => set("isDefault", e.target.checked)}
-              />
-              <span className="text-xs lg:text-sm">
-                Đặt làm địa chỉ giao hàng mặc định
+          {/* ── Mặc định ── */}
+          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border bg-white px-4 py-3.5 sm:px-5">
+            <span className="min-w-0">
+              <span className="block text-sm font-medium text-gray-900">
+                Đặt làm địa chỉ mặc định
               </span>
-            </label>
-          </div>
+              <span className="block text-xs text-gray-500">
+                Tự chọn địa chỉ này khi tạo đơn cho khách
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              className="peer sr-only"
+              checked={!!form.isDefault}
+              onChange={(e) => set("isDefault", e.target.checked)}
+            />
+            <span
+              aria-hidden
+              className="relative h-6 w-11 shrink-0 rounded-full bg-gray-200 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-brand peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-brand"
+            />
+          </label>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-xs lg:text-sm rounded px-3 py-2">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {error}
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="border-t px-4 py-3 lg:px-6 lg:py-4 flex justify-end gap-2">
+        {/* ===== Footer ===== */}
+        <div className="flex shrink-0 justify-end gap-2 border-t bg-white px-4 py-3 sm:px-6">
           <button
             type="button"
             onClick={onClose}
             disabled={isSaving}
-            className="px-3 py-1.5 lg:px-4 lg:py-2 text-sm border rounded hover:bg-gray-50 disabled:opacity-50">
+            className="h-10 rounded-lg border px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50">
             Hủy
           </button>
           <button
             type="button"
             onClick={handleSubmit}
             disabled={isSaving}
-            className="px-3 py-1.5 lg:px-4 lg:py-2 text-sm bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50">
+            className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50">
+            {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
             {isSaving
               ? "Đang lưu..."
               : mode === "create"
@@ -461,6 +551,6 @@ export function CustomerAddressFormModal({
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

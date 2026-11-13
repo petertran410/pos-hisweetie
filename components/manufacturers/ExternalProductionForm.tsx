@@ -2,7 +2,12 @@
 
 import { useId, useState } from "react";
 import { createPortal } from "react-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -71,6 +76,31 @@ const currencyText = (value: number, currency: "VND" | "CNY") =>
 const vndText = (value: number) => `${formatNumber(Math.round(value))} đ`;
 const plain = (value: number, digits: number) =>
   value.toLocaleString("en-US", { maximumFractionDigits: digits });
+const stockText = (value: number) =>
+  value.toLocaleString("en-US", { maximumFractionDigits: 4 });
+
+/** Gram của 1 đơn vị kho (thiếu weightUnit coi là gram — cùng quy tắc backend). */
+const gramsPerStockUnit = (product?: Product) =>
+  Number(product?.weight ?? 0) * (product?.weightUnit === "kg" ? 1000 : 1);
+
+/** Hệ số đổi lượng gửi sang đơn vị kho — cùng quy tắc ownConversion ở backend. */
+const stockFactor = (product: Product | undefined, unit: string) => {
+  if (!product) return null;
+  if (unit === product.unit || unit === "unit") return 1;
+  const grams = gramsPerStockUnit(product);
+  if (grams > 0 && (unit === "g" || unit === "kg"))
+    return (unit === "kg" ? 1000 : 1) / grams;
+  return null;
+};
+
+/**
+ * Hàng có khối lượng (vd thùng 20 kg) gửi theo gram như công thức; hàng
+ * không có khối lượng / tính theo chiếc thì theo đơn vị kho.
+ */
+const defaultOwnUnit = (product: Product) =>
+  !product.isPieceUnit && gramsPerStockUnit(product) > 0
+    ? "g"
+    : product.unit || "unit";
 const localDate = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
@@ -206,6 +236,21 @@ function ExternalProductionFormContent({
   const hasReceipts =
     !!production?.receipts?.some((item) => item.status === 1) ||
     (production?.status === 2 && production.receivedQuantity != null);
+  // Phiếu đã gửi thì tồn đã trừ rồi — chỉ so tồn với phiếu mới / phiếu tạm.
+  const checkStock = !production || production.status === 1;
+  // Dòng nạp từ phiếu đã lưu chưa có thông tin sản phẩm (đơn vị, khối lượng, tồn).
+  const ownProducts = useQueries({
+    queries: own
+      .filter((line) => !line.product)
+      .map((line) => ({
+        queryKey: ["products", line.productId],
+        queryFn: () => productsApi.getProduct(line.productId),
+        staleTime: 60_000,
+      })),
+  });
+  const productOf = (line: OwnDraft) =>
+    line.product ??
+    ownProducts.find((query) => query.data?.id === line.productId)?.data;
 
   // Phiếu theo công thức (hoặc phiếu cũ từ mẫu phối trộn): đổi sản lượng thì co
   // giãn hàng mình, nguyên liệu NSX theo lượng và phí gia công (nếu biết phí/sp).
@@ -698,7 +743,7 @@ function ExternalProductionFormContent({
                               code: item.code,
                               name: item.name,
                               quantity: 1,
-                              unit: item.unit || "unit",
+                              unit: defaultOwnUnit(item),
                             },
                           ]);
                         }}
@@ -706,13 +751,18 @@ function ExternalProductionFormContent({
                     </div>
                   </div>
                   <div className="overflow-x-auto rounded-lg border border-gray-200">
-                    <table className="w-full min-w-[680px] text-sm">
+                    <table className="w-full min-w-[820px] text-sm">
                       <thead className="bg-gray-50 text-left text-xs font-medium text-gray-500">
                         <tr>
                           <th className="px-3 py-2.5">Sản phẩm</th>
                           <th className="w-36 px-3 py-2.5">Lượng gửi</th>
                           <th className="w-32 px-3 py-2.5">Đơn vị</th>
-                          <th className="w-28 px-3 py-2.5 text-right">
+                          <th
+                            className="w-36 px-3 py-2.5 text-right"
+                            title="Lượng gửi đổi sang đơn vị kho — số sẽ bị trừ khỏi kho gửi">
+                            Trừ kho
+                          </th>
+                          <th className="w-32 px-3 py-2.5 text-right">
                             Tồn kho
                           </th>
                           <th className="w-12" />
@@ -773,8 +823,8 @@ function ExternalProductionFormContent({
                                 {[
                                   ...new Set([
                                     line.unit,
-                                    line.product?.unit || "unit",
-                                    ...(line.product?.weight
+                                    productOf(line)?.unit || "unit",
+                                    ...(gramsPerStockUnit(productOf(line)) > 0
                                       ? ["g", "kg"]
                                       : []),
                                   ]),
@@ -785,14 +835,13 @@ function ExternalProductionFormContent({
                                 ))}
                               </select>
                             </td>
-                            <td className="px-3 py-2.5 text-right font-medium text-gray-600">
-                              {line.product?.inventories
-                                ?.find(
-                                  (inventory) =>
-                                    inventory.branchId === source,
-                                )
-                                ?.onHand?.toLocaleString("en-US", { maximumFractionDigits: 4 }) ?? "-"}
-                            </td>
+                            <OwnStockCells
+                              product={productOf(line)}
+                              quantity={line.quantity}
+                              unit={line.unit}
+                              branchId={source}
+                              checkStock={checkStock}
+                            />
                             <td className="px-2 py-2.5 text-center">
                               <button
                                 type="button"
@@ -815,7 +864,7 @@ function ExternalProductionFormContent({
                         {!own.length && (
                           <tr>
                             <td
-                              colSpan={5}
+                              colSpan={6}
                               className="px-4 py-10 text-center"
                             >
                               <div className="sticky left-0 w-[calc(100vw-2rem)] sm:w-auto">
@@ -1039,5 +1088,67 @@ function ExternalProductionFormContent({
       </div>
     </div>,
     document.body,
+  );
+}
+
+/**
+ * Cột "Trừ kho" + "Tồn kho" của một dòng hàng mình gửi: lượng gửi đổi sang
+ * đơn vị kho (vd 250 g → 0.0125 Thùng của thùng 20 kg) và cảnh báo thiếu tồn
+ * ngay trên form, trước khi bấm gửi.
+ */
+function OwnStockCells({
+  product,
+  quantity,
+  unit,
+  branchId,
+  checkStock,
+}: {
+  product?: Product;
+  quantity: number;
+  unit: string;
+  branchId: number;
+  checkStock: boolean;
+}) {
+  const factor = stockFactor(product, unit);
+  const deduct = factor == null ? null : round4(Number(quantity) * factor);
+  const rawOnHand = product?.inventories?.find(
+    (inventory) => inventory.branchId === branchId,
+  )?.onHand;
+  // Tồn có thể còn số lẻ dư (2.5999…): so ở 4 số lẻ như backend.
+  const onHand = rawOnHand == null ? null : round4(Number(rawOnHand));
+  const stockUnit = product?.unit || "";
+  const missing =
+    checkStock && deduct != null && onHand != null && deduct > onHand
+      ? round4(deduct - onHand)
+      : 0;
+  return (
+    <>
+      <td className="px-3 py-2.5 text-right">
+        {deduct == null ? (
+          product ? (
+            <span className="text-xs text-amber-700">
+              Đơn vị không quy đổi được
+            </span>
+          ) : (
+            <span className="text-gray-400">-</span>
+          )
+        ) : (
+          <>
+            <span
+              className={`font-medium tabular-nums ${missing > 0 ? "text-red-600" : "text-gray-800"}`}>
+              {stockText(deduct)} {stockUnit}
+            </span>
+            {missing > 0 && (
+              <span className="block text-xs text-red-600">
+                Thiếu {stockText(missing)} {stockUnit}
+              </span>
+            )}
+          </>
+        )}
+      </td>
+      <td className="px-3 py-2.5 text-right font-medium tabular-nums text-gray-600">
+        {onHand == null ? "-" : `${stockText(onHand)} ${stockUnit}`}
+      </td>
+    </>
   );
 }

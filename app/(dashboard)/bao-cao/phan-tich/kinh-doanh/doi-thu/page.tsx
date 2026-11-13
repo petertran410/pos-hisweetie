@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { AnalyticsReportShell } from "@/components/reports/analytics/AnalyticsReportShell";
-import { CompetitorView } from "@/components/reports/analytics/kinh-doanh/CompetitorView";
+import {
+  COMPETITOR_PIVOT_ROWS,
+  CompetitorView,
+} from "@/components/reports/analytics/kinh-doanh/CompetitorView";
+import { usePrefetchKdPivot } from "@/components/reports/analytics/kinh-doanh/KdPivot";
 import { KdFilterBar } from "@/components/reports/analytics/kinh-doanh/KdFilterBar";
 import {
   ErrorBox,
@@ -19,6 +23,8 @@ export default function Page() {
     year: new Date().getFullYear(),
   });
   const { data, isLoading, isFetching, error } = useKdCompetitor(filters);
+  // Bảng tổng hợp tải song song với số liệu chính (trước đây đợi số liệu chính về).
+  usePrefetchKdPivot(filters, { rows: COMPETITOR_PIVOT_ROWS });
 
   return (
     <AnalyticsReportShell
