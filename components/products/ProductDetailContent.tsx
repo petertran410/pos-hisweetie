@@ -2,6 +2,7 @@
 
 import { useRegisterPosInView } from "@/lib/store/posInView";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import type { Product, ProductComponent } from "@/lib/api/products";
 import { useUpdateProduct } from "@/lib/hooks/useProducts";
 import { useBranchStore } from "@/lib/store/branch";
@@ -176,31 +177,29 @@ export function ProductDetailContent({
     const handleCloseEdit = () => setIsEditing(false);
     const handleSuccess = () => setIsEditing(false);
 
-    if (product.type === 1) {
-      return (
+    // Portal ra body: dòng chi tiết nằm trong `div.sticky` (tạo stacking context),
+    // nếu render tại chỗ thì z-50 của modal bị nhốt và header bảng/sidebar sticky đè lên.
+    const form =
+      product.type === 1 ? (
         <ComboProductForm
           product={product}
           onClose={handleCloseEdit}
           onSuccess={handleSuccess}
         />
-      );
-    }
-    if (product.type === 4) {
-      return (
+      ) : product.type === 4 ? (
         <ManufacturingProductForm
           product={product}
           onClose={handleCloseEdit}
           onSuccess={handleSuccess}
         />
+      ) : (
+        <ProductForm
+          product={product}
+          onClose={handleCloseEdit}
+          onSuccess={handleSuccess}
+        />
       );
-    }
-    return (
-      <ProductForm
-        product={product}
-        onClose={handleCloseEdit}
-        onSuccess={handleSuccess}
-      />
-    );
+    return createPortal(form, document.body);
   }
 
   // ── Calculations ──
