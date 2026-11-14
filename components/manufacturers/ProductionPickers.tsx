@@ -8,8 +8,9 @@ import { productsApi, type Product } from "@/lib/api/products";
 import { manufacturersApi } from "@/lib/api/manufacturers";
 import { suppliersApi } from "@/lib/api/suppliers";
 
+// 42px: cùng chiều cao với ô chọn / ô ngày đặt cạnh trong các form.
 const fieldClass =
-  "w-full min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-brand focus:ring-2 focus:ring-brand-soft disabled:cursor-not-allowed disabled:bg-gray-50";
+  "h-[42px] w-full min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-brand focus:ring-2 focus:ring-brand-soft disabled:cursor-not-allowed disabled:bg-gray-50";
 
 export function ProductPicker({ value, label, onChange, disabled, branchId }: {
   value?: number | null; label?: string; onChange: (product: Product) => void; disabled?: boolean; branchId?: number;

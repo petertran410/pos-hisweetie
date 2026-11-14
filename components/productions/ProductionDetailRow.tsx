@@ -1,6 +1,8 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import Swal from "sweetalert2";
 import {
   useCancelProductionReceipt,
@@ -14,6 +16,7 @@ import type { Production, ProductionReceipt } from "@/lib/api/productions";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import {
   Ban,
+  ChevronDown,
   CircleDollarSign,
   ExternalLink,
   FilePlus2,
@@ -21,11 +24,14 @@ import {
   Loader2,
   PackageCheck,
   Pencil,
+  Printer,
   RotateCcw,
   Send,
   type LucideIcon,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { printTemplatesApi } from "@/lib/api/print-templates";
+import { printEntity } from "@/lib/utils/print";
 import Link from "next/link";
 import { CodeLink } from "../shared/CodeLink";
 import { ProductionReceiveModal } from "./ProductionReceiveModal";
@@ -105,6 +111,42 @@ export function ProductionDetailRow({
   const { mutate: reopenReceiving, isPending: isReopening } =
     useReopenProductionReceiving();
 
+  // Mẫu in phiếu gửi sản xuất (không có giá/tiền). Backend tự tạo mẫu mặc
+  // định lần đầu nếu loại này chưa có mẫu nào.
+  const { data: printTemplates } = useQuery({
+    queryKey: ["print-templates", "production_external"],
+    queryFn: () =>
+      printTemplatesApi.getAll({
+        templateFor: "production_external",
+        isActive: true,
+      }),
+    enabled: !!production?.manufacturerId,
+  });
+  const [showPrintMenu, setShowPrintMenu] = useState(false);
+  const [printing, setPrinting] = useState(false);
+  const printMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!showPrintMenu) return;
+    const close = (event: MouseEvent) => {
+      if (!printMenuRef.current?.contains(event.target as Node))
+        setShowPrintMenu(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [showPrintMenu]);
+  const handlePrint = async (templateId?: number) => {
+    if (!production) return;
+    setShowPrintMenu(false);
+    setPrinting(true);
+    try {
+      await printEntity("production_external", production.id, templateId);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "In thất bại");
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   // Sticky width theo scroll container (giống InvoiceDetailRow)
   useLayoutEffect(() => {
     const el = wrapperRef.current;
@@ -136,15 +178,32 @@ export function ProductionDetailRow({
   // Gửi từ chi tiết phiếu: dùng đúng nguyên liệu đã lưu ở phiếu tạm.
   const handleSend = async () => {
     if (!production) return;
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     const res = await Swal.fire({
       title: `Gửi hàng phiếu ${production.code}?`,
-      text: `Nguyên liệu sẽ bị trừ khỏi kho ${production.sourceBranchName} và phiếu không sửa được nữa.`,
+      // Ngày gửi = ngày trừ tồn: chọn lùi khi hàng đã gửi trước lúc làm phiếu.
+      html: `Hàng mình gửi sẽ trừ khỏi kho <b>${production.sourceBranchName}</b> theo ngày gửi bên dưới.`,
+      input: "date",
+      inputLabel: "Ngày gửi",
+      inputValue: today,
+      inputAttributes: { max: today },
+      inputValidator: (value) =>
+        !value
+          ? "Chọn ngày gửi"
+          : value > today
+            ? "Ngày gửi không được sau hôm nay"
+            : undefined,
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Gửi hàng",
       cancelButtonText: "Đóng",
     });
-    if (res.isConfirmed) sendProduction({ id: production.id, data: {} });
+    if (!res.isConfirmed) return;
+    // Hôm nay → đúng lúc bấm; ngày cũ → ngày đó, giờ hiện tại.
+    const sentAt = new Date(`${res.value}T00:00:00`);
+    sentAt.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+    sendProduction({ id: production.id, data: { sentDate: sentAt.toISOString() } });
   };
 
   const handleCancelSent = async () => {
@@ -602,6 +661,52 @@ export function ProductionDetailRow({
                     </ActionButton>
                   ))}
                 <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+                  {/* In phiếu gửi sản xuất: chỉ lượng hàng, không giá / tiền. */}
+                  {isNsx &&
+                    ((printTemplates?.length ?? 0) <= 1 ? (
+                      <ActionButton
+                        icon={Printer}
+                        pending={printing}
+                        onClick={() => handlePrint(printTemplates?.[0]?.id)}>
+                        In phiếu
+                      </ActionButton>
+                    ) : (
+                      <div ref={printMenuRef} className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setShowPrintMenu((open) => !open)}
+                          disabled={printing}
+                          className={BUTTON_CLASS.secondary}>
+                          {printing ? (
+                            <Loader2 size={16} className="animate-spin" />
+                          ) : (
+                            <Printer size={16} />
+                          )}
+                          In phiếu
+                          <ChevronDown
+                            size={14}
+                            className={`text-gray-400 transition-transform ${showPrintMenu ? "rotate-180" : ""}`}
+                          />
+                        </button>
+                        {showPrintMenu && (
+                          // Mở lên trên: khung chi tiết phiếu cắt phần tràn xuống dưới.
+                          <div className="absolute bottom-full right-0 z-20 mb-1 w-60 overflow-hidden rounded-lg border bg-white shadow-lg">
+                            {printTemplates!.map(
+                              (template: { id: number; name: string; isDefault?: boolean }) => (
+                              <button
+                                key={template.id}
+                                type="button"
+                                onClick={() => handlePrint(template.id)}
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50">
+                                {template.name}
+                                {template.isDefault ? " (Mặc định)" : ""}
+                              </button>
+                              ),
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   {onEdit &&
                     production.status !== 3 &&
                     // Phiếu gửi NSX sửa được cả khi đã gửi / đã nhận (ghi lại tồn, giá thành).
