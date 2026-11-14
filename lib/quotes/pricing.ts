@@ -4,6 +4,26 @@
 import type { QuoteItem, QuoteRegion, QuoteTier, QuoteTierDef } from "@/lib/types/quote";
 import { QUOTE_REGION_LABEL } from "@/lib/types/quote";
 
+/**
+ * Tách tên sản phẩm POS đầy đủ thành các cột báo giá:
+ * "Gấu Lermao - Mứt Xoài Xanh 1kg (12 Túi/Thùng)" →
+ * { name: "Gấu Lermao - Mứt Xoài Xanh", weight: "1kg", spec: "12 Túi/Thùng", unit: "Túi" }.
+ * Phần nào không có thì để trống.
+ */
+export function splitProductName(full: string): { name: string; weight: string; spec: string; unit: string } {
+  let rest = full.trim();
+  const spec = rest.match(/\(([^()]*)\)\s*$/)?.[1]?.trim() ?? "";
+  if (spec) rest = rest.slice(0, rest.lastIndexOf("(")).trim();
+  const weight = rest.match(/\s(\d+(?:[.,]\d+)?\s*(?:kg|gr|g|ml|lít|l))$/i)?.[1] ?? "";
+  if (weight) rest = rest.slice(0, rest.length - weight.length).trim();
+  const unit = spec.match(/\d+\s*([^\d/]+?)\s*\//)?.[1]?.trim() ?? "";
+  return { name: rest, weight, spec, unit };
+}
+
+/** Tên in trên báo giá: tên hiển thị + khối lượng. */
+export const printName = (it: Pick<QuoteItem, "productName" | "weight">) =>
+  [it.productName, it.weight].filter(Boolean).join(" ");
+
 /** Điền giá bảng giá vào các khung chưa sửa tay (không có giá tham chiếu thì giữ giá đang có). */
 export function fillFromPriceBook(item: QuoteItem, priceBookPrice: number | null): QuoteItem {
   return {

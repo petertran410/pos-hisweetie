@@ -3,7 +3,7 @@
 import { forwardRef } from "react";
 import type { Quote } from "@/lib/types/quote";
 import { QUOTE_DEFAULT_LOGO } from "@/lib/types/quote";
-import { formatVnd, marginPct, tierColumns, withSalePrice } from "@/lib/quotes/pricing";
+import { formatVnd, marginPct, printName, tierColumns, withSalePrice } from "@/lib/quotes/pricing";
 
 /**
  * Bản báo giá theo bố cục sheet Excel "BẢNG BÁO GIÁ TỔNG HỢP":
@@ -154,7 +154,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, { quote: PreviewQuote }>(
               return (
                 <tr key={it.id} style={{ pageBreakInside: "avoid" }}>
                   <td style={{ ...cell, textAlign: "center" }}>{i + 1}</td>
-                  <td style={cell}>{it.productName}</td>
+                  <td style={cell}>{printName(it)}</td>
                   <td style={{ ...cell, textAlign: "center", fontSize: 13 }}>({it.spec})</td>
                   <td style={{ ...cell, textAlign: "center", padding: 2, height: 66 }}>
                     {it.imageUrl && (

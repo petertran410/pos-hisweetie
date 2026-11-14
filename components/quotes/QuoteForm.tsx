@@ -11,7 +11,7 @@ import { DatePickerInput } from "@/components/ui/DatePickerInput";
 import { usePriceBook } from "@/lib/hooks/usePriceBooks";
 import { useQuote, useSaveQuote, useSetQuoteStatus } from "@/lib/hooks/useQuotes";
 import { libraryFor, toPayload } from "@/lib/api/quotes";
-import { applyTiers, fillFromPriceBook, renderTitle, tierColumns, tiersFrom } from "@/lib/quotes/pricing";
+import { applyTiers, fillFromPriceBook, renderTitle, splitProductName, tierColumns, tiersFrom } from "@/lib/quotes/pricing";
 import { useQuoteTemplates } from "@/lib/hooks/useQuoteTemplates";
 import type {
   Quote,
@@ -203,19 +203,18 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
       toast.info("Sản phẩm đã có trong báo giá");
       return;
     }
-    const spec = String(product.name).match(/\(([^)]*\/\s*thùng[^)]*)\)/i)?.[1] ?? "";
+    // Tên hiển thị / khối lượng / quy cách / ĐVT tách từ tên POS đầy đủ — Sale sửa được từng dòng.
+    const parts = splitProductName(product.name);
     const base = Number(product.basePrice) || null;
     const item: QuoteItem = {
       id: `n${Date.now()}`,
       productId: product.id,
       productCode: product.code,
-      // Tên ngắn như file báo giá: bỏ "Gấu Lermao - " và "(12 Túi/Thùng)".
-      productName: product.name
-        .replace(/^gấu\s+lermao\s*[-–]\s*/i, "")
-        .replace(/\s*\([^)]*\/\s*thùng[^)]*\)\s*$/i, "")
-        .trim(),
-      spec,
-      unit: String(product.unit || "túi").toLowerCase(),
+      fullName: product.name,
+      productName: parts.name || product.name,
+      weight: parts.weight,
+      spec: parts.spec,
+      unit: parts.unit || String(product.unit || "túi"),
       imageUrl: product.images?.find((i) => i.isPrimary)?.image ?? product.images?.[0]?.image ?? null,
       basePrice: base,
       priceBookPrice: null,

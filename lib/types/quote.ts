@@ -88,7 +88,12 @@ export interface QuoteItem {
   /** null = dòng nhập từ Excel chưa khớp sản phẩm POS. */
   productId: number | null;
   productCode: string | null;
+  /** Tên sản phẩm POS đầy đủ lúc thêm, ví dụ "Gấu Lermao - Mứt Xoài Xanh 1kg (12 Túi/Thùng)" (null = không lấy từ POS). */
+  fullName: string | null;
+  /** Tên hiển thị trên báo giá, ví dụ "Gấu Lermao - Mứt Xoài Xanh". */
   productName: string;
+  /** Khối lượng, ví dụ "1kg" — in sau tên hiển thị. */
+  weight: string;
   /** Quy cách đóng gói, ví dụ "30 túi/thùng". */
   spec: string;
   /** Đơn vị bán của giá (túi, hộp, gói…). */

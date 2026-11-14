@@ -23,6 +23,29 @@ type Props = {
 
 const UNITS = ["thùng", "túi", "hộp", "gói", "bao", "kg"];
 
+/** Ô chữ sửa trực tiếp trên dòng (tên hiển thị, ĐVT, khối lượng, quy cách). */
+function TextCell({
+  value,
+  label,
+  width,
+  onChange,
+}: {
+  value: string;
+  label: string;
+  width: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <input
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      aria-label={label}
+      title={label}
+      className={`${width} border rounded-md px-2 py-1 text-sm bg-white`}
+    />
+  );
+}
+
 /** Ô giá: tô vàng khi Sale sửa tay, kèm % chênh lệch so với bảng giá. */
 function PriceCell({
   tier,
@@ -278,6 +301,10 @@ export function QuoteItemsList({ items, onChange, onAddGroup, priceBookName }: P
                 <th className="w-8" />
                 <th className="px-2 py-2 text-left font-medium w-8">#</th>
                 <th className="px-2 py-2 text-left font-medium">Sản phẩm</th>
+                <th className="px-2 py-2 text-left font-medium whitespace-nowrap">Tên hiển thị</th>
+                <th className="px-2 py-2 text-left font-medium whitespace-nowrap">ĐVT</th>
+                <th className="px-2 py-2 text-left font-medium whitespace-nowrap">Khối lượng</th>
+                <th className="px-2 py-2 text-left font-medium whitespace-nowrap">Quy cách</th>
                 <th className="px-2 py-2 text-right font-medium whitespace-nowrap" title="Mặc định lấy giá bán trong POS; sửa được. Dòng không có khung số lượng in theo giá này.">
                   Giá bán
                 </th>
@@ -305,7 +332,7 @@ export function QuoteItemsList({ items, onChange, onAddGroup, priceBookName }: P
                         </button>
                       </td>
                       <td className="px-2 py-2 text-gray-500">{i + 1}</td>
-                      <td className="px-2 py-2">
+                      <td className="px-2 py-2 min-w-[240px]">
                         <div className="flex items-center gap-2.5 min-w-0">
                           {it.imageUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -314,16 +341,48 @@ export function QuoteItemsList({ items, onChange, onAddGroup, priceBookName }: P
                             <div className="w-11 h-11 rounded-md border bg-gray-50 shrink-0" />
                           )}
                           <div className="min-w-0">
-                            <div className="font-medium leading-snug">{it.productName}</div>
+                            {/* Tên POS đầy đủ (dòng cũ chưa lưu tên đầy đủ → tên hiển thị) */}
+                            <div className="font-medium leading-snug">{it.fullName ?? it.productName}</div>
                             <div className="text-xs text-gray-500">
                               {it.productCode ?? (
                                 <span className="text-orange-600">Chưa khớp sản phẩm POS</span>
-                              )}{" "}
-                              · {it.spec} · giá / {it.unit}
+                              )}
                               {it.comingSoon && <span className="ml-1 text-purple-700 font-medium">· Coming soon</span>}
                             </div>
                           </div>
                         </div>
+                      </td>
+                      <td className="px-2 py-2">
+                        <TextCell
+                          value={it.productName}
+                          label="Tên hiển thị"
+                          width="w-44"
+                          onChange={(productName) => setItem(it.id, { ...it, productName })}
+                        />
+                      </td>
+                      <td className="px-2 py-2">
+                        <TextCell
+                          value={it.unit}
+                          label="Đơn vị tính"
+                          width="w-16"
+                          onChange={(unit) => setItem(it.id, { ...it, unit })}
+                        />
+                      </td>
+                      <td className="px-2 py-2">
+                        <TextCell
+                          value={it.weight}
+                          label="Khối lượng"
+                          width="w-20"
+                          onChange={(weight) => setItem(it.id, { ...it, weight })}
+                        />
+                      </td>
+                      <td className="px-2 py-2">
+                        <TextCell
+                          value={it.spec}
+                          label="Quy cách"
+                          width="w-28"
+                          onChange={(spec) => setItem(it.id, { ...it, spec })}
+                        />
                       </td>
                       <td className="px-2 py-2">
                         <div className="flex justify-end">
@@ -369,7 +428,7 @@ export function QuoteItemsList({ items, onChange, onAddGroup, priceBookName }: P
                     </tr>
                     {expanded && (
                       <tr>
-                        <td colSpan={cols.length + 5} className="p-0">
+                        <td colSpan={cols.length + 9} className="p-0">
                           <TierEditor
                             item={it}
                             onItem={(next) => setItem(it.id, next)}

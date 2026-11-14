@@ -3,7 +3,7 @@
 import { forwardRef } from "react";
 import type { Quote, QuoteItem } from "@/lib/types/quote";
 import { QUOTE_DEFAULT_LOGO } from "@/lib/types/quote";
-import { formatVnd, marginPct, tierColumns, withSalePrice } from "@/lib/quotes/pricing";
+import { formatVnd, marginPct, printName, tierColumns, withSalePrice } from "@/lib/quotes/pricing";
 
 /**
  * Mẫu 2 — thiết kế thương hiệu LerMao, chọn bố cục theo số cột giá:
@@ -214,7 +214,7 @@ function Cards({ quote }: { quote: BrandPreviewQuote }) {
             )}
             <div style={{ padding: "8px 12px 10px", display: "flex", flexDirection: "column", gap: 3, flexGrow: 1 }}>
               {it.productCode && <span style={{ fontSize: 12, color: C.navy }}>{it.productCode}</span>}
-              <span style={{ fontSize: 13, lineHeight: "18px", fontWeight: 700 }}>{it.productName}</span>
+              <span style={{ fontSize: 13, lineHeight: "18px", fontWeight: 700 }}>{printName(it)}</span>
               <span style={{ fontSize: 12, lineHeight: "16px", color: C.navy }}>{it.spec}</span>
               <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginTop: "auto", paddingTop: 4 }}>
                 {it.comingSoon ? (
@@ -246,7 +246,7 @@ function ProductCell({ it }: { it: QuoteItem }) {
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <Thumb src={it.imageUrl} size={38} />
         <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-          <span style={{ fontSize: 13, fontWeight: 700 }}>{it.productName}</span>
+          <span style={{ fontSize: 13, fontWeight: 700 }}>{printName(it)}</span>
           <span style={{ color: C.navy }}>
             {[it.productCode, it.spec].filter(Boolean).join(" · ")}
           </span>
