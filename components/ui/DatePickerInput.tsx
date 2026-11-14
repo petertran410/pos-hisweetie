@@ -12,6 +12,8 @@ interface Props {
   placeholder?: string;
   /** Không cho chọn trước ngày này (YYYY-MM-DD). */
   minDate?: string;
+  /** Không cho chọn sau ngày này (YYYY-MM-DD). */
+  maxDate?: string;
   className?: string;
   /**
    * Chỉ chọn THÁNG/NĂM (dùng cho NSX — ngày sản xuất chỉ có nghĩa tới tháng).
@@ -36,12 +38,14 @@ function CalendarBody({
   onChange,
   onClose,
   minDate,
+  maxDate,
   monthOnly,
 }: {
   value: string;
   onChange: (v: string) => void;
   onClose: () => void;
   minDate?: string;
+  maxDate?: string;
   monthOnly?: boolean;
 }) {
   const todayObj = new Date();
@@ -166,7 +170,8 @@ function CalendarBody({
               const ds = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
               const isSel = ds === value;
               const isToday = ds === todayStr;
-              const isDisabled = !!minDate && ds < minDate;
+              const isDisabled =
+                (!!minDate && ds < minDate) || (!!maxDate && ds > maxDate);
               return (
                 <button
                   key={i}
@@ -278,6 +283,7 @@ export function DatePickerInput({
   onChange,
   placeholder,
   minDate,
+  maxDate,
   className,
   monthOnly,
 }: Props) {
@@ -359,6 +365,7 @@ export function DatePickerInput({
               onChange={onChange}
               onClose={() => setOpen(false)}
               minDate={minDate}
+              maxDate={maxDate}
               monthOnly={monthOnly}
             />
           </div>,

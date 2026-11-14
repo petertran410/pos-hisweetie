@@ -16,6 +16,7 @@ import {
   CircleDollarSign,
   Factory,
   FileDown,
+  Info,
   Layers3,
   Loader2,
   PackagePlus,
@@ -64,8 +65,9 @@ type OwnDraft = OwnMaterial & {
   product?: Product;
 };
 
+// Cùng chiều cao 42px với ô tìm sản phẩm / ô số / ô ngày (ô chọn mặc định thấp hơn 1px).
 const fieldClass =
-  "w-full min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-brand focus:ring-2 focus:ring-brand-soft disabled:cursor-not-allowed disabled:bg-gray-50";
+  "h-[42px] w-full min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-brand focus:ring-2 focus:ring-brand-soft disabled:cursor-not-allowed disabled:bg-gray-50";
 const labelClass = "block min-w-0 text-sm font-medium text-gray-600";
 const secondaryButtonClass =
   "inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-600 transition-colors hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50";
@@ -213,8 +215,10 @@ function ExternalProductionFormContent({
     production?.formulaId ?? null,
   );
   const [feePerUnit, setFeePerUnit] = useState<number | null>(null);
+  // Ngày gửi = ngày ghi trừ tồn hàng mình gửi. Phiếu mới / phiếu tạm mặc định
+  // hôm nay, chọn lùi được khi hàng đã gửi đi trước lúc làm phiếu.
   const [sentDate, setSentDate] = useState(
-    production?.sentDate ? localDate(new Date(production.sentDate)) : "",
+    localDate(production?.sentDate ? new Date(production.sentDate) : new Date()),
   );
 
   const product = useQuery({
@@ -277,9 +281,10 @@ function ExternalProductionFormContent({
     setQuantity(next);
   };
 
-  // Giữ giờ gửi cũ nếu không đổi ngày.
-  const sentDatePayload = () => {
-    if (!sent || !sentDate) return undefined;
+  // Ngày → thời điểm gửi: giữ giờ gửi cũ nếu không đổi ngày; ngày khác lấy giờ
+  // hiện tại (hôm nay thì đúng bằng lúc bấm gửi).
+  const sentDateIso = () => {
+    if (!sentDate) return undefined;
     const original = production?.sentDate ? new Date(production.sentDate) : null;
     if (original && localDate(original) === sentDate) return original.toISOString();
     const next = new Date(`${sentDate}T00:00:00`);
@@ -287,6 +292,8 @@ function ExternalProductionFormContent({
     next.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
     return next.toISOString();
   };
+  // Phiếu đã gửi: sửa ngày gửi qua lưu phiếu. Phiếu tạm: ngày dùng khi bấm gửi.
+  const sentDatePayload = () => (sent ? sentDateIso() : undefined);
 
   const payload = () => ({
     sentDate: sentDatePayload(),
@@ -319,7 +326,12 @@ function ExternalProductionFormContent({
           "Chọn nhà sản xuất, thành phẩm và sản lượng hợp lệ",
         );
       }
-      if (send && !confirm("Gửi nguyên liệu và khóa phiếu để sản xuất?")) {
+      if (
+        send &&
+        !confirm(
+          `Gửi nguyên liệu ngày ${sentDate.split("-").reverse().join("/")}? Hàng mình gửi sẽ trừ tồn kho theo ngày này.`,
+        )
+      ) {
         return false;
       }
       if (
@@ -334,7 +346,7 @@ function ExternalProductionFormContent({
         ? await productionsApi.update(draftId, payload())
         : await productionsApi.create(payload());
       setDraftId(saved.id);
-      if (send) await productionsApi.send(saved.id, {});
+      if (send) await productionsApi.send(saved.id, { sentDate: sentDateIso() });
       return true;
     },
     onSuccess: (saved) => {
@@ -555,7 +567,7 @@ function ExternalProductionFormContent({
                     <span className="text-red-500">*</span>
                   </span>
                   <NumericInput
-                    className={numericClass}
+                    className={`${numericClass} h-[42px]`}
                     value={quantity}
                     onValueChange={changeQuantity}
                     maxFractionDigits={4}
@@ -572,62 +584,68 @@ function ExternalProductionFormContent({
                     placeholder="Tự động"
                   />
                 </label>
-                <label className={`${labelClass} lg:col-span-3`}>
-                  <span className="mb-1.5 block">Kho gửi</span>
-                  <select
-                    className={fieldClass}
-                    value={source}
-                    disabled={sent}
-                    onChange={(event) => setSource(Number(event.target.value))}
-                  >
-                    {activeBranches.map((branch) => (
-                      <option key={branch.id} value={branch.id}>
-                        {branch.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="hidden items-end justify-center pb-3 text-gray-300 lg:flex lg:col-span-1">
-                  <ArrowRight size={20} />
-                </div>
-                <label className={`${labelClass} lg:col-span-3`}>
-                  <span className="mb-1.5 block">Kho nhận</span>
-                  <select
-                    className={fieldClass}
-                    value={dest}
-                    disabled={sent}
-                    onChange={(event) => setDest(Number(event.target.value))}
-                  >
-                    {activeBranches.map((branch) => (
-                      <option key={branch.id} value={branch.id}>
-                        {branch.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {sent && (
-                  <div className={`${labelClass} lg:col-span-3`}>
-                    <span className="mb-1.5 block">Ngày gửi</span>
-                    <DatePickerInput
-                      value={sentDate}
-                      onChange={setSentDate}
-                      placeholder="Chọn ngày gửi"
-                      className="flex w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-left text-sm transition-colors hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-soft"
-                    />
+                {/* Kho gửi → Kho nhận: một nhóm 6 cột, mũi tên nhỏ ở giữa (không chiếm nguyên cột). */}
+                <div className="grid min-w-0 grid-cols-1 gap-4 sm:col-span-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:gap-3 lg:col-span-6">
+                  <label className={labelClass}>
+                    <span className="mb-1.5 block">Kho gửi</span>
+                    <select
+                      className={fieldClass}
+                      value={source}
+                      disabled={sent}
+                      onChange={(event) => setSource(Number(event.target.value))}
+                    >
+                      {activeBranches.map((branch) => (
+                        <option key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="hidden items-end justify-center pb-3 text-gray-300 sm:flex">
+                    <ArrowRight size={18} />
                   </div>
-                )}
-                <div className="flex min-w-0 items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 lg:col-span-5">
-                  <Warehouse
-                    size={18}
-                    className="shrink-0 text-gray-400"
+                  <label className={labelClass}>
+                    <span className="mb-1.5 block">Kho nhận</span>
+                    <select
+                      className={fieldClass}
+                      value={dest}
+                      disabled={sent}
+                      onChange={(event) => setDest(Number(event.target.value))}
+                    >
+                      {activeBranches.map((branch) => (
+                        <option key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className={`${labelClass} lg:col-span-2`}>
+                  <span className="mb-1.5 flex items-center gap-1">
+                    Ngày gửi
+                    <span
+                      className="text-gray-400"
+                      title="Ngày ghi trừ tồn hàng mình gửi trên thẻ kho. Hàng đã gửi trước lúc làm phiếu thì chọn lùi ngày để tồn kho khớp thực tế."
+                    >
+                      <Info size={13} />
+                    </span>
+                  </span>
+                  <DatePickerInput
+                    value={sentDate}
+                    onChange={setSentDate}
+                    maxDate={localDate(new Date())}
+                    placeholder="Chọn ngày gửi"
+                    className="flex h-[42px] w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-3 text-left text-sm transition-colors hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-soft"
                   />
-                  <div className="min-w-0">
-                    <p className="text-xs text-gray-400">
-                      Đơn vị ghi nhận công nợ
-                    </p>
-                    <p className="truncate text-sm font-medium text-gray-700">
-                      {supplierLabel}
-                    </p>
+                </div>
+                <div className={`${labelClass} lg:col-span-4`}>
+                  <span className="mb-1.5 block">Ghi nhận công nợ</span>
+                  <div
+                    className="flex h-[42px] min-w-0 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-700"
+                    title="Đơn vị nhận công nợ của phiếu (theo nhà sản xuất đã chọn)"
+                  >
+                    <Warehouse size={16} className="shrink-0 text-gray-400" />
+                    <span className="truncate">{supplierLabel}</span>
                   </div>
                 </div>
               </div>
@@ -680,7 +698,8 @@ function ExternalProductionFormContent({
                 </label>
                 <button
                   type="button"
-                  className={secondaryButtonClass}
+                  // Cao bằng ô chọn công thức bên cạnh (42px).
+                  className={secondaryButtonClass.replace("h-10", "h-[42px]")}
                   disabled={!formulaId || missingFormula}
                   onClick={() => {
                     const formula = externalFormulas.find((item) => item.id === formulaId);
