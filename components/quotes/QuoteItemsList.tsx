@@ -3,6 +3,7 @@
 import { Fragment, useState } from "react";
 import { ChevronDown, ChevronRight, Layers, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { NumericInput } from "@/components/ui/NumericInput";
+import { ColdBadge } from "./ColdBadge";
 import type { QuoteCategory, QuoteItem, QuoteTier } from "@/lib/types/quote";
 import { QUOTE_CATEGORY_LABEL } from "@/lib/types/quote";
 import {
@@ -23,7 +24,11 @@ type Props = {
 
 const UNITS = ["thùng", "túi", "hộp", "gói", "bao", "kg"];
 
-/** Ô chữ sửa trực tiếp trên dòng (tên hiển thị, ĐVT, khối lượng, quy cách). */
+/**
+ * Ô chữ sửa trực tiếp trên dòng (tên hiển thị, ĐVT, khối lượng, quy cách).
+ * Textarea tự giãn theo nội dung (field-sizing: content) để tên dài xuống dòng thay vì bị cắt;
+ * không cho xuống dòng thủ công vì nội dung in trên một ô.
+ */
 function TextCell({
   value,
   label,
@@ -36,12 +41,14 @@ function TextCell({
   onChange: (v: string) => void;
 }) {
   return (
-    <input
+    <textarea
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      rows={1}
+      onChange={(e) => onChange(e.target.value.replace(/\s*\n\s*/g, " "))}
+      onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
       aria-label={label}
       title={label}
-      className={`${width} border rounded-md px-2 py-1 text-sm bg-white`}
+      className={`${width} block resize-none [field-sizing:content] min-h-[30px] border rounded-md px-2 py-1 text-sm leading-snug bg-white`}
     />
   );
 }
@@ -334,12 +341,15 @@ export function QuoteItemsList({ items, onChange, onAddGroup, priceBookName }: P
                       <td className="px-2 py-2 text-gray-500">{i + 1}</td>
                       <td className="px-2 py-2 min-w-[240px]">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          {it.imageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={it.imageUrl} alt="" className="w-11 h-11 rounded-md object-cover border shrink-0" />
-                          ) : (
-                            <div className="w-11 h-11 rounded-md border bg-gray-50 shrink-0" />
-                          )}
+                          <div className="relative shrink-0">
+                            {it.imageUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={it.imageUrl} alt="" className="w-11 h-11 rounded-md object-cover border" />
+                            ) : (
+                              <div className="w-11 h-11 rounded-md border bg-gray-50" />
+                            )}
+                            {it.cold && <ColdBadge size={16} />}
+                          </div>
                           <div className="min-w-0">
                             {/* Tên POS đầy đủ (dòng cũ chưa lưu tên đầy đủ → tên hiển thị) */}
                             <div className="font-medium leading-snug">{it.fullName ?? it.productName}</div>
@@ -356,7 +366,7 @@ export function QuoteItemsList({ items, onChange, onAddGroup, priceBookName }: P
                         <TextCell
                           value={it.productName}
                           label="Tên hiển thị"
-                          width="w-44"
+                          width="w-56"
                           onChange={(productName) => setItem(it.id, { ...it, productName })}
                         />
                       </td>
@@ -380,7 +390,7 @@ export function QuoteItemsList({ items, onChange, onAddGroup, priceBookName }: P
                         <TextCell
                           value={it.spec}
                           label="Quy cách"
-                          width="w-28"
+                          width="w-32"
                           onChange={(spec) => setItem(it.id, { ...it, spec })}
                         />
                       </td>

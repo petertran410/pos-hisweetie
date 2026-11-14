@@ -2,6 +2,7 @@
 
 import { forwardRef } from "react";
 import type { Quote } from "@/lib/types/quote";
+import { ColdBadge } from "./ColdBadge";
 import { QUOTE_DEFAULT_LOGO } from "@/lib/types/quote";
 import { formatVnd, marginPct, printName, tierColumns, withSalePrice } from "@/lib/quotes/pricing";
 
@@ -155,16 +156,19 @@ export const QuotePreview = forwardRef<HTMLDivElement, { quote: PreviewQuote }>(
                 <tr key={it.id} style={{ pageBreakInside: "avoid" }}>
                   <td style={{ ...cell, textAlign: "center" }}>{i + 1}</td>
                   <td style={cell}>{printName(it)}</td>
-                  <td style={{ ...cell, textAlign: "center", fontSize: 13 }}>({it.spec})</td>
+                  <td style={{ ...cell, textAlign: "center", fontSize: 13 }}>{it.spec}</td>
                   <td style={{ ...cell, textAlign: "center", padding: 2, height: 66 }}>
-                    {it.imageUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={it.imageUrl}
-                        alt=""
-                        style={{ width: 62, height: 62, objectFit: "contain", display: "block", margin: "0 auto" }}
-                      />
-                    )}
+                    <div style={{ position: "relative", width: 62, height: 62, margin: "0 auto" }}>
+                      {it.imageUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={it.imageUrl}
+                          alt=""
+                          style={{ width: 62, height: 62, objectFit: "contain", display: "block" }}
+                        />
+                      )}
+                      {it.cold && <ColdBadge />}
+                    </div>
                   </td>
                   {cols.map((c) => {
                     const t = it.tiers.find((x) => x.key === c.key);

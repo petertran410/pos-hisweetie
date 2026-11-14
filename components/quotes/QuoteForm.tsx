@@ -11,7 +11,15 @@ import { DatePickerInput } from "@/components/ui/DatePickerInput";
 import { usePriceBook } from "@/lib/hooks/usePriceBooks";
 import { useQuote, useSaveQuote, useSetQuoteStatus } from "@/lib/hooks/useQuotes";
 import { libraryFor, toPayload } from "@/lib/api/quotes";
-import { applyTiers, fillFromPriceBook, renderTitle, splitProductName, tierColumns, tiersFrom } from "@/lib/quotes/pricing";
+import {
+  applyTiers,
+  fillFromPriceBook,
+  renderTitle,
+  splitProductName,
+  splitWeight,
+  tierColumns,
+  tiersFrom,
+} from "@/lib/quotes/pricing";
 import { useQuoteTemplates } from "@/lib/hooks/useQuoteTemplates";
 import type {
   Quote,
@@ -41,6 +49,7 @@ type PosProduct = {
   unit?: string | null;
   basePrice?: number | string | null;
   images?: { image: string; isPrimary?: boolean }[];
+  cargoType?: string | null;
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -133,7 +142,8 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
   // Nạp báo giá đang sửa một lần.
   useEffect(() => {
     if (!existing || loaded) return;
-    setDraft(toPayload(existing));
+    const payload = toPayload(existing);
+    setDraft({ ...payload, items: payload.items.map(splitWeight) });
     // Khách nhập tay (id null) không đưa vào ô tìm khách POS.
     setCustomer(existing.customer?.id != null ? (existing.customer as PosCustomer) : null);
     setLoaded(true);
@@ -211,6 +221,7 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
       productId: product.id,
       productCode: product.code,
       fullName: product.name,
+      cold: product.cargoType === "COLD",
       productName: parts.name || product.name,
       weight: parts.weight,
       spec: parts.spec,
@@ -230,7 +241,7 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
     const added = lib.items
       .filter((it) => !have.has(it.productId ?? it.productName))
       .map((it, i) => {
-        const base = { ...it, id: `g${Date.now()}-${i}`, priceBookPrice: priceFor(it) ?? it.priceBookPrice };
+        const base = splitWeight({ ...it, id: `g${Date.now()}-${i}`, priceBookPrice: priceFor(it) ?? it.priceBookPrice });
         // Khung theo mẫu đang chọn: khung trùng khoá giữ giá trong file báo giá (sửa tay), còn lại điền theo bảng giá.
         return tpl ? applyTiers(base, tpl.tiers) : base;
       });

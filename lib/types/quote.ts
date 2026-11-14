@@ -27,6 +27,22 @@ export const QUOTE_LAYOUT_LABEL: Record<QuoteLayout, string> = {
 /** Logo đầu trang khi mẫu chưa tải logo riêng. */
 export const QUOTE_DEFAULT_LOGO = "/brands/lermao.webp";
 
+/**
+ * Logo có sẵn để chọn ở Cài đặt › Mẫu báo giá (file tĩnh trong public/brands/quote-logos).
+ * `light` = logo chữ trắng — chỉ thấy trên nền tối, in trên giấy trắng sẽ không hiện.
+ */
+export const QUOTE_LOGO_PRESETS: { url: string; label: string; light?: boolean }[] = [
+  { url: "/brands/quote-logos/lermao-logo-basic.webp", label: "LerMao" },
+  { url: "/brands/quote-logos/lermao-mascot-xin-chao.webp", label: "LerMao · mascot xin chào" },
+  { url: "/brands/quote-logos/dieptra-xanh.webp", label: "Diệp Trà · xanh" },
+  { url: "/brands/quote-logos/dieptra-den.webp", label: "Diệp Trà · đen" },
+  { url: "/brands/quote-logos/dieptra-trong.webp", label: "Diệp Trà · trắng (nền tối)", light: true },
+  { url: "/brands/quote-logos/traphuonghoang-xanh.webp", label: "Trà Phượng Hoàng · xanh" },
+  { url: "/brands/quote-logos/traphuonghoang-den.webp", label: "Trà Phượng Hoàng · đen" },
+  { url: "/brands/quote-logos/traphuonghoang-trong.webp", label: "Trà Phượng Hoàng · trắng (nền tối)", light: true },
+  { url: "/brands/quote-logos/amo-den.webp", label: "AMO Pastel · đen" },
+];
+
 export const QUOTE_REGION_LABEL: Record<QuoteRegion, string> = {
   HN: "Hà Nội",
   SG: "Sài Gòn",
@@ -105,6 +121,8 @@ export interface QuoteItem {
   priceBookPrice: number | null;
   tiers: QuoteTier[];
   comingSoon?: boolean;
+  /** Hàng lạnh (sản phẩm POS loại COLD) — in bông tuyết ở cột Hình ảnh; không lưu, lấy từ sản phẩm. */
+  cold?: boolean;
   note?: string;
 }
 

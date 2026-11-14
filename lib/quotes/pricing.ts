@@ -20,6 +20,16 @@ export function splitProductName(full: string): { name: string; weight: string; 
   return { name: rest, weight, spec, unit };
 }
 
+/**
+ * Dòng chưa có khối lượng (thêm trước khi có cột này, hoặc lấy từ Thư viện):
+ * tách khối lượng ở cuối tên hiển thị ra cột riêng — "Trân châu olong nhài 500gr" → "Trân châu olong nhài" + "500gr".
+ */
+export function splitWeight<T extends Pick<QuoteItem, "productName" | "weight">>(it: T): T {
+  if (it.weight) return it;
+  const { name, weight } = splitProductName(it.productName);
+  return weight && name ? { ...it, productName: name, weight } : it;
+}
+
 /** Tên in trên báo giá: tên hiển thị + khối lượng. */
 export const printName = (it: Pick<QuoteItem, "productName" | "weight">) =>
   [it.productName, it.weight].filter(Boolean).join(" ");

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Copy, Eye, FileDown, FileText, Info, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Copy, Eye, FileText, Info, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { CustomTooltip } from "@/components/ui/CustomTooltip";
 import { confirmAction } from "@/lib/chat/confirm";
 import { FilterMultiSelect } from "@/components/ui/filters";
@@ -37,6 +37,23 @@ const TABS: { key: QuoteFilters["tab"]; label: string }[] = [
   { key: "quotes", label: "Báo giá" },
   { key: "library", label: "Thư viện" },
 ];
+
+/** Ngày hôm nay theo giờ máy (YYYY-MM-DD). */
+const todayIso = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+/** Cảnh báo hiệu lực cho báo giá còn mở (Nháp / Đã gửi): đã quá hạn, hoặc còn ≤ 3 ngày. */
+function validityNote(q: QuoteListItem): { text: string; className: string } | null {
+  if (!q.validUntil || (q.status !== "draft" && q.status !== "sent")) return null;
+  const days = Math.round(
+    (new Date(`${q.validUntil}T00:00:00`).getTime() - new Date(`${todayIso()}T00:00:00`).getTime()) / 864e5
+  );
+  if (days < 0) return { text: "Quá hạn", className: "text-red-600" };
+  if (days <= 3) return { text: days === 0 ? "Hết hạn hôm nay" : `Còn ${days} ngày`, className: "text-amber-700" };
+  return null;
+}
 
 /** Nút biểu tượng + tooltip (hiện sau 200ms). */
 function IconButton({
@@ -77,6 +94,24 @@ export function QuotesTable({ filters, onChange }: Props) {
   const pageSize = filters.pageSize ?? 20;
   const page = filters.page ?? 1;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  // Gõ tìm kiếm: chờ 300ms mới gọi API (như trang Đặt hàng).
+  const [search, setSearch] = useState(filters.search ?? "");
+  useEffect(() => {
+    const next = search.trim() || undefined;
+    if (next === filters.search) return;
+    const t = setTimeout(() => onChange({ search: next, page: 1 }), 300);
+    return () => clearTimeout(t);
+  }, [search, filters.search, onChange]);
+  const filtered = Boolean(
+    filters.search ||
+      filters.status?.length ||
+      filters.templateId?.length ||
+      filters.createdById?.length ||
+      filters.fromDate ||
+      filters.category?.length ||
+      filters.region?.length
+  );
 
   const [previewId, setPreviewId] = useState<number | null>(null);
   const { data: preview } = useQuote(previewId);
@@ -141,8 +176,9 @@ export function QuotesTable({ filters, onChange }: Props) {
           <input
             type="text"
             placeholder={library ? "Tìm mã, tiêu đề mẫu..." : "Tìm mã báo giá, khách hàng..."}
-            value={filters.search ?? ""}
-            onChange={(e) => onChange({ search: e.target.value || undefined, page: 1 })}
+            aria-label={library ? "Tìm mẫu thư viện" : "Tìm báo giá"}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             className="w-64 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
           />
         </div>
@@ -215,21 +251,41 @@ export function QuotesTable({ filters, onChange }: Props) {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-10 text-center text-gray-400">
-                  Đang tải...
+                <td colSpan={columns.length} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-2 text-gray-400" role="status">
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-brand border-t-transparent" />
+                    <span className="text-xs">Đang tải...</span>
+                  </div>
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-10 text-center text-gray-400">
-                  <FileText className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                  {library ? "Không có mẫu phù hợp" : "Chưa có báo giá nào"}
+                <td colSpan={columns.length} className="px-4 py-16 text-center text-gray-400">
+                  <FileText className="w-8 h-8 mx-auto mb-2 opacity-40" aria-hidden="true" />
+                  <div className="text-sm">
+                    {library
+                      ? "Không có mẫu phù hợp"
+                      : filtered
+                        ? "Không tìm thấy báo giá phù hợp với bộ lọc"
+                        : "Chưa có báo giá nào"}
+                  </div>
+                  {!library && !filtered && (
+                    <button
+                      onClick={() => router.push("/khach-hang/bao-gia/new")}
+                      className="mt-3 px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium inline-flex items-center gap-1.5">
+                      <Plus className="w-4 h-4" /> Tạo báo giá đầu tiên
+                    </button>
+                  )}
                 </td>
               </tr>
             ) : (
               rows.map((q) => (
-                <tr key={q.id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-2">
+                <tr
+                  key={q.id}
+                  // Bấm dòng: báo giá → mở để sửa; mẫu thư viện → xem trước. Các nút trong dòng chặn lan sự kiện.
+                  onClick={() => (library ? setPreviewId(q.id) : router.push(`/khach-hang/bao-gia/${q.id}`))}
+                  className="border-b hover:bg-gray-50 cursor-pointer">
+                  <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => setPreviewId(q.id)}
                       className="text-brand font-medium hover:underline">
@@ -245,7 +301,7 @@ export function QuotesTable({ filters, onChange }: Props) {
                       <td className="px-4 py-2 whitespace-nowrap">{QUOTE_REGION_LABEL[q.region]}</td>
                       <td className="px-4 py-2">{q.itemCount}</td>
                       <td className="px-4 py-2 whitespace-nowrap">{formatDate(q.appliedFrom)}</td>
-                      <td className="px-4 py-2">
+                      <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
                           <IconButton title="Xem trước" onClick={() => setPreviewId(q.id)}>
                             <Eye className="w-4 h-4" />
@@ -279,6 +335,10 @@ export function QuotesTable({ filters, onChange }: Props) {
                       <td className="px-4 py-2 whitespace-nowrap">{formatDate(q.createdAt)}</td>
                       <td className="px-4 py-2 whitespace-nowrap">
                         {q.validUntil ? formatDate(q.validUntil) : "—"}
+                        {(() => {
+                          const note = validityNote(q);
+                          return note && <div className={`text-xs font-medium ${note.className}`}>{note.text}</div>;
+                        })()}
                       </td>
                       <td className="px-4 py-2">
                         <span
@@ -287,19 +347,19 @@ export function QuotesTable({ filters, onChange }: Props) {
                         </span>
                       </td>
                       <td className="px-4 py-2 whitespace-nowrap">{q.createdBy.name}</td>
-                      <td className="px-4 py-2">
+                      <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-0.5">
-                          <IconButton title="Xem" onClick={() => setPreviewId(q.id)}>
+                          <IconButton title="Xem / xuất PDF, ảnh" onClick={() => setPreviewId(q.id)}>
                             <Eye className="w-4 h-4" />
                           </IconButton>
                           <IconButton title="Sửa" onClick={() => router.push(`/khach-hang/bao-gia/${q.id}`)}>
                             <Pencil className="w-4 h-4" />
                           </IconButton>
-                          <IconButton title="Nhân bản" onClick={() => copyFrom(q)}>
+                          <IconButton
+                            title={duplicate.isPending ? "Đang nhân bản…" : "Nhân bản"}
+                            disabled={duplicate.isPending}
+                            onClick={() => copyFrom(q)}>
                             <Copy className="w-4 h-4" />
-                          </IconButton>
-                          <IconButton title="Xuất PDF / ảnh" onClick={() => setPreviewId(q.id)}>
-                            <FileDown className="w-4 h-4" />
                           </IconButton>
                           <IconButton
                             title={q.status === "draft" ? "Xoá" : "Chỉ xoá được báo giá Nháp"}

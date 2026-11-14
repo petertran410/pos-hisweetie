@@ -2,6 +2,7 @@
 
 import { forwardRef } from "react";
 import type { Quote, QuoteItem } from "@/lib/types/quote";
+import { ColdBadge } from "./ColdBadge";
 import { QUOTE_DEFAULT_LOGO } from "@/lib/types/quote";
 import { formatVnd, marginPct, printName, tierColumns, withSalePrice } from "@/lib/quotes/pricing";
 
@@ -131,7 +132,7 @@ function Thumb({ src, size }: { src: string | null; size: number }) {
     <img
       src={src}
       alt=""
-      style={{ width: size, height: size, borderRadius: 5, objectFit: "cover", flexShrink: 0, background: C.surface }}
+      style={{ width: size, height: size, borderRadius: 5, objectFit: "contain", flexShrink: 0, background: C.white, border: `1px solid ${C.border}` }}
     />
   ) : (
     <div style={{ width: size, height: size, borderRadius: 5, flexShrink: 0, background: C.surface }} />
@@ -206,12 +207,29 @@ function Cards({ quote }: { quote: BrandPreviewQuote }) {
               flexDirection: "column",
               pageBreakInside: "avoid",
             }}>
-            {it.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={it.imageUrl} alt="" style={{ width: "100%", height: 110, objectFit: "cover", display: "block", background: C.surface }} />
-            ) : (
-              <div style={{ height: 110, background: C.surface }} />
-            )}
+            <div style={{ position: "relative" }}>
+              {/* Khung ảnh vuông 1:1, ảnh giữ nguyên tỷ lệ (không cắt bao bì) */}
+              {it.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={it.imageUrl}
+                  alt=""
+                  style={{
+                    width: "100%",
+                    aspectRatio: "1 / 1",
+                    objectFit: "contain",
+                    display: "block",
+                    padding: 8,
+                    boxSizing: "border-box", // bản in PDF không có CSS reset của app
+                    background: C.white,
+                    borderBottom: `1px solid ${C.border}`,
+                  }}
+                />
+              ) : (
+                <div style={{ width: "100%", aspectRatio: "1 / 1", background: C.surface }} />
+              )}
+              {it.cold && <ColdBadge size={22} />}
+            </div>
             <div style={{ padding: "8px 12px 10px", display: "flex", flexDirection: "column", gap: 3, flexGrow: 1 }}>
               {it.productCode && <span style={{ fontSize: 12, color: C.navy }}>{it.productCode}</span>}
               <span style={{ fontSize: 13, lineHeight: "18px", fontWeight: 700 }}>{printName(it)}</span>
@@ -220,10 +238,15 @@ function Cards({ quote }: { quote: BrandPreviewQuote }) {
                 {it.comingSoon ? (
                   <span style={{ fontSize: 14, fontWeight: 800, color: C.navy }}>COMING SOON</span>
                 ) : (
-                  <>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: C.link }}>{formatVnd(firstPrice(it))}đ</span>
-                    <span style={{ fontSize: 12, color: C.navy }}>/{it.unit}</span>
-                  </>
+                  firstPrice(it) == null ? (
+                    // Chưa có giá: không in "đ" trống
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>Liên hệ</span>
+                  ) : (
+                    <>
+                      <span style={{ fontSize: 18, fontWeight: 800, color: C.link }}>{formatVnd(firstPrice(it))}đ</span>
+                      <span style={{ fontSize: 12, color: C.navy }}>/{it.unit}</span>
+                    </>
+                  )
                 )}
               </div>
             </div>
@@ -244,7 +267,10 @@ function ProductCell({ it }: { it: QuoteItem }) {
   return (
     <td style={{ ...td, textAlign: "left" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <Thumb src={it.imageUrl} size={38} />
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          <Thumb src={it.imageUrl} size={38} />
+          {it.cold && <ColdBadge size={14} />}
+        </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
           <span style={{ fontSize: 13, fontWeight: 700 }}>{printName(it)}</span>
           <span style={{ color: C.navy }}>

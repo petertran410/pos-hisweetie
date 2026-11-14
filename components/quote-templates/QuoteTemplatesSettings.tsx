@@ -20,7 +20,7 @@ import type {
   QuoteTemplatePayload,
   QuoteTierDef,
 } from "@/lib/types/quote";
-import { QUOTE_DEFAULT_LOGO, QUOTE_LAYOUT_LABEL, QUOTE_REGION_LABEL } from "@/lib/types/quote";
+import { QUOTE_DEFAULT_LOGO, QUOTE_LAYOUT_LABEL, QUOTE_LOGO_PRESETS, QUOTE_REGION_LABEL } from "@/lib/types/quote";
 import { quoteTemplatesApi } from "@/lib/api/quote-templates";
 import { QuotePreview } from "@/components/quotes/QuotePreview";
 import { QuotePreviewBrand } from "@/components/quotes/QuotePreviewBrand";
@@ -428,6 +428,27 @@ export function QuoteTemplatesSettings() {
                       <ImageOff className="w-4 h-4" /> Không logo
                     </button>
                   )}
+                </div>
+                {/* Logo có sẵn — bấm để chọn */}
+                <div className="flex flex-wrap gap-2 pt-1" role="group" aria-label="Chọn logo có sẵn">
+                  {QUOTE_LOGO_PRESETS.map((l) => {
+                    const on = form.logoUrl === l.url;
+                    return (
+                      <button
+                        key={l.url}
+                        type="button"
+                        title={l.label}
+                        aria-label={l.label}
+                        aria-pressed={on}
+                        onClick={() => patch({ logoUrl: l.url })}
+                        className={`w-12 h-12 rounded-lg border p-1 transition-colors ${
+                          l.light ? "bg-gray-700" : "bg-white"
+                        } ${on ? "ring-2 ring-brand border-brand" : "hover:border-brand"}`}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={l.url} alt="" className="w-full h-full object-contain" />
+                      </button>
+                    );
+                  })}
                 </div>
               </Field>
               <Field label="Tên công ty" hint="Xuống dòng để tách dòng như đầu trang Mẫu 1.">
