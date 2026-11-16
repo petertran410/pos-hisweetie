@@ -16,6 +16,7 @@ import {
   kpiTone,
   trend,
 } from "./dkFormat";
+import { formatDate } from "@/lib/utils";
 
 /** Khung có nhãn kiểu "● TÀI CHÍNH - DOANH THU". */
 export function DkSection({
@@ -138,7 +139,7 @@ export function DkPill({
   );
 }
 
-/** ▲ 12,3% / ▼ 4,5% */
+/** ▲ 12.3% / ▼ 4,5% */
 export function DkDelta({
   value,
   digits = 1,
@@ -316,7 +317,7 @@ export function DkUpdated({ at }: { at?: string }) {
     <div
       className="text-[11.5px] text-right"
       style={{ color: "var(--dt-text-muted)" }}>
-      Dữ liệu cập nhật vào lúc {new Date(at).toLocaleString("vi-VN")}
+      Dữ liệu cập nhật vào lúc {formatDate(at)}
     </div>
   );
 }

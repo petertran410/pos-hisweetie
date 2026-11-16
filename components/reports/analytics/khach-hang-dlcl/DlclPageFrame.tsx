@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Info, Loader2 } from "lucide-react";
 import type { DlclPeriod } from "@/lib/api/analytics-khach-hang-dlcl";
 import { periodText } from "./dlclFormat";
+import { formatDate } from "@/lib/utils";
 
 /** Phần "Kỳ: …" ở góc phải thanh tab (giống trang Tổng Quan). */
 export function DlclPeriodBadge({
@@ -70,8 +71,7 @@ export function DlclBody<
         <div
           className="text-[11.5px] text-right"
           style={{ color: "var(--dt-text-muted)" }}>
-          Dữ liệu cập nhật vào lúc{" "}
-          {new Date(data.updatedAt).toLocaleString("vi-VN")}
+          Dữ liệu cập nhật vào lúc {formatDate(data.updatedAt)}
         </div>
       )}
     </>

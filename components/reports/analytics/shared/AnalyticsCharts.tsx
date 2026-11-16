@@ -25,6 +25,7 @@ import {
   metricLabel,
   metricTitle,
 } from "../analyticsFormat";
+import { formatNumber } from "@/lib/utils";
 
 export const axisTick = { fontSize: 11.5, fill: "#5A8A92" };
 
@@ -307,8 +308,8 @@ export function DonutChart({
             <span
               className="dt-mono w-12 text-right"
               style={{ color: "var(--dt-text-muted)" }}>
-              {((r.value / total) * 100).toLocaleString("vi-VN", {
-                maximumFractionDigits: 1,
+              {formatNumber((r.value / total) * 100, "en-US", {
+                max: 1,
               })}
               %
             </span>

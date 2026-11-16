@@ -19,6 +19,7 @@ import {
 } from "@/lib/hooks/useAnalyticsDinhKi";
 import { useAnalyticsConfigMutation } from "@/lib/hooks/useAnalyticsReports";
 import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
+import { formatNumber, formatNumberInput, parseNumberInput } from "@/lib/utils";
 
 type Tab = "targets" | "jam" | "sellers";
 
@@ -121,16 +122,15 @@ function TargetsTab() {
   const save = () => {
     if (!editing) return;
     const existing = cell(editing.g, editing.m);
-    const raw = draft.replace(/[.,\s]/g, "");
-    if (!raw) {
+    if (!draft.trim()) {
       if (existing) remove.mutate(existing.id);
-    } else if (Number.isFinite(Number(raw))) {
+    } else {
       upsert.mutate({
         kind,
         groupName: editing.g,
         year,
         month: editing.m,
-        kpiValue: Number(raw),
+        kpiValue: parseNumberInput(draft),
       });
     }
     setEditing(null);
@@ -226,8 +226,11 @@ function TargetsTab() {
                         <input
                           autoFocus
                           className={`${inputCls} text-right min-w-[110px]`}
+                          inputMode="numeric"
                           value={draft}
-                          onChange={(e) => setDraft(e.target.value)}
+                          onChange={(e) =>
+                            setDraft(formatNumberInput(e.target.value))
+                          }
                           onBlur={save}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") save();
@@ -241,11 +244,13 @@ function TargetsTab() {
                           title="Bấm để sửa (để trống = xoá)"
                           onClick={() => {
                             setEditing({ g, m });
-                            setDraft(c ? String(c.kpiValue) : "");
+                            setDraft(
+                              c ? formatNumberInput(String(c.kpiValue)) : "",
+                            );
                           }}>
                           {c
-                            ? (c.kpiValue / 1e9).toLocaleString("vi-VN", {
-                                maximumFractionDigits: 3,
+                            ? formatNumber(c.kpiValue / 1e9, "en-US", {
+                                max: 3,
                               })
                             : "—"}
                         </button>
@@ -565,13 +570,14 @@ function SellersTab() {
                   </td>
                   <td className="px-2 py-1.5">
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       className={`${inputCls} max-w-[80px]`}
-                      value={draft.sortOrder}
+                      value={formatNumberInput(String(draft.sortOrder))}
                       onChange={(e) =>
                         setDraft((d) => ({
                           ...d,
-                          sortOrder: Number(e.target.value) || 0,
+                          sortOrder: parseNumberInput(e.target.value),
                         }))
                       }
                     />

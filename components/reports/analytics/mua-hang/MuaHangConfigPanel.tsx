@@ -18,6 +18,7 @@ import {
   useRebates,
 } from "@/lib/hooks/useAnalyticsMuaHang";
 import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
+import { formatNumber, formatNumberInput, parseNumberInput } from "@/lib/utils";
 
 /**
  * Cấu hình cho Phân tích › Chuyển Kho + Thu Mua (thay quy tắc viết cứng / bảng
@@ -127,11 +128,22 @@ interface ColDef<T> {
 
 type Draft = Record<string, string>;
 
+/** Cột năm (vd applyYear) giữ nguyên chữ số, không thêm dấu phân cách hàng nghìn. */
+const isYear = <T,>(c: ColDef<T>) => /year$/i.test(String(c.key));
+const isNum = <T,>(c: ColDef<T>) =>
+  (c.type === "int" || c.type === "float") && !isYear(c);
+/** Số chữ số thập phân được nhập (số nguyên: 0). */
+const fracDigits = <T,>(c: ColDef<T>) => (c.type === "float" ? 4 : 0);
+
 const toDraft = <T,>(row: T, cols: ColDef<T>[]): Draft =>
   Object.fromEntries(
     cols.map((c) => {
       const v = row[c.key];
-      return [c.key, v === null || v === undefined ? "" : String(v)];
+      if (v === null || v === undefined) return [c.key, ""];
+      return [
+        c.key,
+        isNum(c) ? formatNumberInput(String(v), fracDigits(c)) : String(v),
+      ];
     }),
   );
 
@@ -140,14 +152,8 @@ function parseCell<T>(c: ColDef<T>, s: string): unknown {
   const t = s.trim();
   if (c.type === "text" || c.type === "select") return t === "" ? null : t;
   if (t === "") return null;
-  // Số nguyên: bỏ dấu phân cách nghìn. Số thực: có dấu phẩy thì hiểu kiểu Việt
-  // (1.234,5), không có thì dấu chấm là phần thập phân (0.01).
-  const n =
-    c.type === "int"
-      ? Number(t.replace(/[.,\s]/g, ""))
-      : t.includes(",")
-        ? Number(t.replace(/[.\s]/g, "").replace(",", "."))
-        : Number(t.replace(/\s/g, ""));
+  // Ô số đã định dạng en-US khi gõ (formatNumberInput): "1,234.5".
+  const n = isNum(c) ? parseNumberInput(t) : Number(t);
   if (!Number.isFinite(n)) return undefined;
   return c.type === "int" ? Math.round(n) : n;
 }
@@ -158,7 +164,7 @@ const showCell = <T,>(c: ColDef<T>, row: T): ReactNode => {
   if (v === null || v === undefined || v === "")
     return <span className="text-gray-300">—</span>;
   if (typeof v === "number")
-    return v.toLocaleString("vi-VN", { maximumFractionDigits: 4 });
+    return isYear(c) ? String(v) : formatNumber(v, "en-US", { max: 4 });
   return c.options?.find((o) => o.value === v)?.label ?? String(v);
 };
 
@@ -219,7 +225,12 @@ function EditableTable<T extends { id: number }>({
         className={`${inputCls} ${c.type !== "text" ? "text-right" : ""}`}
         value={draft[c.key] ?? ""}
         inputMode={c.type === "text" ? undefined : "decimal"}
-        onChange={(e) => setDraft((d) => ({ ...d, [c.key]: e.target.value }))}
+        onChange={(e) => {
+          const v = isNum(c)
+            ? formatNumberInput(e.target.value, fracDigits(c))
+            : e.target.value;
+          setDraft((d) => ({ ...d, [c.key]: v }));
+        }}
       />
     );
 

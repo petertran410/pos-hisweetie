@@ -17,6 +17,7 @@ import { MuaHangPivot, type PivotMeasure } from "./MuaHangPivot";
 import { MuaHangSlicers, type SlicerSet } from "./MuaHangSlicers";
 import { fmtDate, fmtQty } from "./muaHangFormat";
 import { ErrorBox, LoadingBlock, UpdatedAt } from "./MuaHangCommon";
+import { formatNumber } from "@/lib/utils";
 
 // Báo cáo Chuyển Kho (Power BI "Báo Cáo Chuyển Kho"): 2 trang dùng chung slicer.
 const SLICERS: SlicerSet = {
@@ -62,7 +63,7 @@ export function ChuyenKhoView() {
       format: (v) =>
         v === null || v === undefined
           ? ""
-          : v.toLocaleString("vi-VN", { maximumFractionDigits: 2 }),
+          : formatNumber(v, "en-US", { max: 2 }),
     },
   ];
 

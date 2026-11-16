@@ -3,14 +3,24 @@ export function formatCurrency(amount: number | string): string {
   return new Intl.NumberFormat("en-US").format(num);
 }
 
+/**
+ * Hiển thị số (mặc định en-US, tối đa 2 chữ số thập phân).
+ * `digits` (tuỳ chọn): số chữ số thập phân tối thiểu / tối đa, vd `{ min: 2, max: 2 }` → "1,234.50".
+ */
 export function formatNumber(
   value: string | number | null | undefined,
-  locale: "vi-VN" | "en-US" = "en-US"
+  locale: "vi-VN" | "en-US" = "en-US",
+  digits?: { min?: number; max?: number }
 ): string {
   if (value == null || value === "") return "—";
   const num = Number(value);
   if (!Number.isFinite(num)) return "—";
-  return num.toLocaleString(locale, { maximumFractionDigits: 2 });
+  const min = digits?.min ?? 0;
+  const max = Math.max(min, digits?.max ?? 2);
+  return num.toLocaleString(locale, {
+    minimumFractionDigits: min,
+    maximumFractionDigits: max,
+  });
 }
 
 export function formatDate(date: string | Date | undefined): string {

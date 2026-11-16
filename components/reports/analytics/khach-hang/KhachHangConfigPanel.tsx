@@ -14,6 +14,7 @@ import {
   useKhSalePics,
   useKhSaleRepRules,
 } from "@/lib/hooks/useAnalyticsKhachHang";
+import { formatNumber, formatNumberInput, parseNumberInput } from "@/lib/utils";
 
 // Màn cấu hình của báo cáo Phân tích › Khách Hàng (thay Excel dim_customer_key và
 // các quy tắc viết cứng trong DAX). Tự gọi API; gắn vào trang Cấu hình.
@@ -227,7 +228,7 @@ function CustomerListTab({ listKey }: { listKey: KhListKey }) {
         </tbody>
       </TableBox>
       <p className="text-[12px]" style={{ color: "var(--dt-text-muted)" }}>
-        {rows.length} khách
+        {formatNumber(rows.length)} khách
       </p>
     </div>
   );
@@ -269,11 +270,12 @@ function SalePicsTab() {
     <>
       <td className="p-2 w-24">
         <input
-          type="number"
+          type="text"
+          inputMode="numeric"
           className={inputCls}
-          value={draft.sortOrder}
+          value={formatNumberInput(String(draft.sortOrder))}
           onChange={(e) =>
-            setDraft({ ...draft, sortOrder: Number(e.target.value) })
+            setDraft({ ...draft, sortOrder: parseNumberInput(e.target.value) })
           }
         />
       </td>
@@ -417,20 +419,27 @@ function SaleRepsTab() {
     else if (typeof editing === "number")
       update.mutate({ id: editing, d }, done);
   };
-  const field = (k: keyof RepDraft, placeholder: string, type = "text") => (
-    <input
-      type={type}
-      className={inputCls}
-      value={(draft[k] as string | number | null) ?? ""}
-      placeholder={placeholder}
-      onChange={(e) =>
-        setDraft({
-          ...draft,
-          [k]: type === "number" ? Number(e.target.value) : e.target.value,
-        })
-      }
-    />
-  );
+  const field = (k: keyof RepDraft, placeholder: string, type = "text") => {
+    const v = (draft[k] as string | number | null) ?? "";
+    return (
+      <input
+        type="text"
+        inputMode={type === "number" ? "numeric" : undefined}
+        className={inputCls}
+        value={type === "number" ? formatNumberInput(String(v)) : v}
+        placeholder={placeholder}
+        onChange={(e) =>
+          setDraft({
+            ...draft,
+            [k]:
+              type === "number"
+                ? parseNumberInput(e.target.value)
+                : e.target.value,
+          })
+        }
+      />
+    );
+  };
   const editCells = (
     <>
       <td className="p-2 w-24">{field("priority", "", "number")}</td>

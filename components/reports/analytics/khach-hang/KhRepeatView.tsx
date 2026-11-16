@@ -19,10 +19,10 @@ import type {
   KhRepeat,
   KhRepeatAction,
 } from "@/lib/api/analytics-khach-hang";
-import { vi } from "@/lib/dashboard/format";
 import { BLANK_LABEL, TOOLTIP_STYLE } from "../analyticsFormat";
 import { BarText, Empty, Panel, axisTick } from "../shared/AnalyticsCharts";
 import { fmtDate } from "./KhCharts";
+import { formatNumber } from "@/lib/utils";
 
 // Màu của các thẻ HTML Content "RC …" trong Power BI.
 const NAVY = "#133E87";
@@ -31,13 +31,13 @@ const PALE = "#CBDCEB";
 const CREAM = "#F3F3E0";
 
 const pct1 = (v: number) =>
-  `${(v * 100).toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+  `${formatNumber(v * 100, "en-US", { min: 1, max: 1 })}%`;
 const pctInt = (v: number) => `${Math.round(v * 100)}%`;
 /** "x,x tỷ" / "x,x triệu" như RC HTML Card - Care Customers. */
 const tyTrieu = (v: number) =>
   Math.abs(v) >= 1e9
-    ? `${(v / 1e9).toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} tỷ`
-    : `${(v / 1e6).toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} triệu`;
+    ? `${formatNumber(v / 1e9, "en-US", { min: 1, max: 1 })} tỷ`
+    : `${formatNumber(v / 1e6, "en-US", { min: 1, max: 1 })} triệu`;
 
 /** RC Retention Rate Color. */
 const rateColor = (r: number | null) =>
@@ -97,11 +97,14 @@ export function KhRepeatView({ data }: { data: KhRepeat }) {
       <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
         {c.retention !== null && (
           <RcCard title="Monthly Retention Rate" value={pct1(c.retention)} dark>
-            {vi(c.repeat)} / {vi(c.previousCustomers)} khách tháng trước tiếp
-            tục mua
+            {formatNumber(Math.round(c.repeat))} /{" "}
+            {formatNumber(Math.round(c.previousCustomers))} khách tháng trước
+            tiếp tục mua
           </RcCard>
         )}
-        <RcCard title="Repeat Customers" value={vi(c.repeat)}>
+        <RcCard
+          title="Repeat Customers"
+          value={formatNumber(Math.round(c.repeat))}>
           Khách mua liên tiếp 2 tháng
           {c.repeatMoM !== null && (
             <span
@@ -118,10 +121,14 @@ export function KhRepeatView({ data }: { data: KhRepeat }) {
             Repeat / Active customer tháng chọn
           </RcCard>
         )}
-        <RcCard title="Reacquired Customers" value={vi(c.reacquired)}>
+        <RcCard
+          title="Reacquired Customers"
+          value={formatNumber(Math.round(c.reacquired))}>
           Khách quay lại sau ít nhất 1 tháng không mua
         </RcCard>
-        <RcCard title="Khách cần chăm sóc" value={vi(c.care)}>
+        <RcCard
+          title="Khách cần chăm sóc"
+          value={formatNumber(Math.round(c.care))}>
           Mua tháng trước, chưa mua tháng này
           <br />
           <span className="font-extrabold" style={{ color: NAVY }}>
@@ -301,7 +308,8 @@ function ActionTable({ rows }: { rows: KhRepeatAction[] }) {
     <div className="space-y-2">
       <div className="flex items-center justify-between text-[12.5px]">
         <span style={{ color: "var(--dt-text-muted)" }}>
-          {vi(groups.length)} khách cha · {vi(rows.length)} dòng SKU
+          {formatNumber(Math.round(groups.length))} khách cha ·{" "}
+          {formatNumber(Math.round(rows.length))} dòng SKU
         </span>
         <button
           type="button"
@@ -360,9 +368,15 @@ function ActionTable({ rows }: { rows: KhRepeatAction[] }) {
                     </button>
                   </td>
                   <td className="px-2.5 py-1.5">{g.reps}</td>
-                  <td className={`${num} font-semibold`}>{vi(g.qty)}</td>
-                  <td className={`${num} font-semibold`}>{vi(g.rev)}</td>
-                  <td className={`${num} font-semibold`}>{vi(g.rev3m)}</td>
+                  <td className={`${num} font-semibold`}>
+                    {formatNumber(Math.round(g.qty))}
+                  </td>
+                  <td className={`${num} font-semibold`}>
+                    {formatNumber(Math.round(g.rev))}
+                  </td>
+                  <td className={`${num} font-semibold`}>
+                    {formatNumber(Math.round(g.rev3m))}
+                  </td>
                   <td className={`${num} font-semibold`}>
                     {g.last ? fmtDate(g.last) : ""}
                   </td>
@@ -375,9 +389,15 @@ function ActionTable({ rows }: { rows: KhRepeatAction[] }) {
                       style={{ borderColor: "var(--dt-border)" }}>
                       <td className="pl-8 pr-2.5 py-1.5">{x.productName}</td>
                       <td className="px-2.5 py-1.5">{x.saleRep}</td>
-                      <td className={num}>{vi(x.qtyPrev)}</td>
-                      <td className={num}>{vi(x.revPrev)}</td>
-                      <td className={num}>{vi(x.rev3m)}</td>
+                      <td className={num}>
+                        {formatNumber(Math.round(x.qtyPrev))}
+                      </td>
+                      <td className={num}>
+                        {formatNumber(Math.round(x.revPrev))}
+                      </td>
+                      <td className={num}>
+                        {formatNumber(Math.round(x.rev3m))}
+                      </td>
                       <td className={num}>
                         {x.lastDate ? fmtDate(x.lastDate) : ""}
                       </td>

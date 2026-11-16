@@ -3,9 +3,9 @@
 import { Fragment } from "react";
 import type { KhDemand, KhDemandCell } from "@/lib/api/analytics-khach-hang";
 import { Empty, Panel } from "../shared/AnalyticsCharts";
+import { formatNumber } from "@/lib/utils";
 
-const fmt = (v: number) =>
-  v.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
+const fmt = (v: number) => formatNumber(v, "en-US", { max: 2 });
 
 /** add_sub_demand: âm (bán thiếu so với demand) đỏ, dương xanh. */
 const diffColor = (v: number) =>

@@ -18,6 +18,7 @@ import type {
 } from "@/lib/api/analytics-kpi-sale";
 import { KpiMatrix, type MatrixMeasure, type MatrixRow } from "./KpiMatrix";
 import { BLANK, fmtDate, num } from "./kpiFormat";
+import { formatNumberInput, parseNumberInput } from "@/lib/utils";
 
 /** Trang Theo Ngày: nhóm hàng, tính thu nhập, thu nhập kỳ vọng, bảng dữ liệu tính KPI. */
 export function DailyView({
@@ -227,14 +228,16 @@ function PageInput({
   page: number;
   onGo: (p: number) => void;
 }) {
-  const [input, setInput] = useState(String(page));
+  const [input, setInput] = useState(formatNumberInput(String(page)));
+  const target = () => parseNumberInput(input) || 1;
   return (
     <input
       className="w-14 border rounded-md px-2 py-1 text-center"
+      inputMode="numeric"
       value={input}
-      onChange={(e) => setInput(e.target.value.replace(/\D/g, ""))}
-      onBlur={() => Number(input) !== page && onGo(Number(input) || 1)}
-      onKeyDown={(e) => e.key === "Enter" && onGo(Number(input) || 1)}
+      onChange={(e) => setInput(formatNumberInput(e.target.value))}
+      onBlur={() => target() !== page && onGo(target())}
+      onKeyDown={(e) => e.key === "Enter" && onGo(target())}
     />
   );
 }

@@ -8,6 +8,7 @@ import { BLANK_LABEL, metricLabel } from "../analyticsFormat";
 import { DonutChart, Panel } from "../shared/AnalyticsCharts";
 import { ErrorBox, Skeleton, ViewTabs } from "./KdUi";
 import { fmtDate, int } from "./kdFormat";
+import { formatNumber } from "@/lib/utils";
 
 const GROUPS = [
   { key: "1.Khách Churn", label: "Khách Churn" },
@@ -37,7 +38,7 @@ export function ChurnSection({ filters }: { filters: KdFilters }) {
         <div className="grid gap-3 xl:grid-cols-[3fr_1fr]">
           <Panel
             title="Danh Sách Khách Đã Lâu Chưa Mua Hàng"
-            subtitle={`${data.customerCount} khách có mua trong kỳ${data.customerCount > data.customers.length ? ` · hiện ${data.customers.length}` : ""}`}>
+            subtitle={`${formatNumber(data.customerCount)} khách có mua trong kỳ${data.customerCount > data.customers.length ? ` · hiện ${formatNumber(data.customers.length)}` : ""}`}>
             <div
               className="border rounded-lg overflow-auto max-h-[560px]"
               style={{ borderColor: "var(--dt-border)" }}>

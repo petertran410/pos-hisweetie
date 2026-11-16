@@ -1,10 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { formatNumber } from "@/lib/utils";
 
 /**
  * Bảng số liệu dùng chung (thay pivotTable / tableEx của Power BI).
- * - columns: định nghĩa cột; format(v, row) trả về chuỗi / ReactNode.
+ * - columns: định nghĩa cột; format(v, row) trả về chuỗi / ReactNode (không có format: số → formatNumber en-US).
  * - totals: dòng tổng (tuỳ chọn), hiển thị đậm ở cuối.
  * - color(v, row): màu chữ theo giá trị (định dạng có điều kiện của Power BI).
  * Header dính khi cuộn; cột đầu dính khi cuộn ngang.
@@ -42,7 +43,9 @@ export function AnalyticsTable<T>({
         ? c.format(v, row)
         : v === null || v === undefined
           ? ""
-          : String(v),
+          : typeof v === "number"
+            ? formatNumber(v)
+            : String(v),
       color: c.color?.(v, row),
       background: c.background?.(v, row),
     };

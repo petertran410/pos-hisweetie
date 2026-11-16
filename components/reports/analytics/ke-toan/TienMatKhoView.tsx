@@ -17,6 +17,7 @@ import {
   UpdatedAt,
   type KeToanColumn,
 } from "./KeToanShared";
+import { formatNumber } from "@/lib/utils";
 
 interface PivotRow {
   date: string;
@@ -123,7 +124,7 @@ export function TienMatKhoView() {
         {data && (
           <Panel
             title="Tiền Mặt - Kho"
-            subtitle={`${rows.length.toLocaleString("vi-VN")} phiếu báo đơn thu tiền mặt${
+            subtitle={`${formatNumber(rows.length)} phiếu báo đơn thu tiền mặt${
               data.dateRange.min
                 ? ` · dữ liệu từ ${fmtDate(data.dateRange.min)} đến ${fmtDate(data.dateRange.max)}`
                 : ""

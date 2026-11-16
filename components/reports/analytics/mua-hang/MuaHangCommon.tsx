@@ -3,6 +3,7 @@
 // Khối dùng chung nhỏ cho các trang Chuyển Kho / Thu Mua.
 
 import type { ReactNode } from "react";
+import { formatDate, formatNumber } from "@/lib/utils";
 
 export function ErrorBox({ error }: { error: unknown }) {
   return (
@@ -28,8 +29,8 @@ export function UpdatedAt({ at, count }: { at: string; count?: number }) {
     <div
       className="text-[11.5px] text-right mt-2"
       style={{ color: "var(--dt-text-muted)" }}>
-      {count !== undefined && <>{count.toLocaleString("vi-VN")} dòng · </>}
-      Dữ liệu cập nhật lúc {new Date(at).toLocaleString("vi-VN")}
+      {count !== undefined && <>{formatNumber(count)} dòng · </>}
+      Dữ liệu cập nhật lúc {formatDate(at)}
     </div>
   );
 }

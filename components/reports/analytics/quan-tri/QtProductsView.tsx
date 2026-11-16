@@ -4,12 +4,12 @@ import { useMemo } from "react";
 import { Banknote, Package, Percent, TrendingUp } from "lucide-react";
 import type { AnalyticsAxis } from "@/lib/api/analytics-reports";
 import type { QtMetric, QtProducts } from "@/lib/api/analytics-quan-tri";
-import { money, vi } from "@/lib/dashboard/format";
 import { Panel } from "../shared/AnalyticsCharts";
 import { QtHBar, QtLine } from "./QtCharts";
 import { QtMonthPivot, collectMonths, leavesFromRows } from "./QtMonthPivot";
 import { AxisSeg, QtKpi, TONES } from "./QtOverview";
 import { BLANK, pct2, qtAxis, qtLabel, qtMetricTitle } from "./qtFormat";
+import { money, intText } from "@/components/reports/analytics/analyticsFormat";
 
 const ico = (C: typeof Banknote) => <C className="w-[18px] h-[18px]" />;
 
@@ -80,7 +80,7 @@ export function QtProductsView({
           <QtKpi
             name="Sản Lượng Bán"
             card={c.quantity}
-            fmt={vi}
+            fmt={intText}
             compareLabel={data.compareLabel}
             icon={ico(Package)}
             tone={TONES.quantity}

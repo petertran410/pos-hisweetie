@@ -19,13 +19,14 @@ import type {
   MetricRow,
 } from "@/lib/api/analytics-reports";
 import type { KhMonthRow, KhOverview } from "@/lib/api/analytics-khach-hang";
-import { DT_COLORS, vi } from "@/lib/dashboard/format";
+import { DT_COLORS } from "@/lib/dashboard/format";
 import {
   BLANK_LABEL,
   growthDelta,
   metricLabel,
   metricTitle,
   metricValue,
+  intText,
 } from "../analyticsFormat";
 import { DonutChart, HBarChart, Panel } from "../shared/AnalyticsCharts";
 import { AXIS_OPTIONS, StackedPercentChart, TrendLineChart } from "./KhCharts";
@@ -131,7 +132,7 @@ export function KhOverviewView({
         {card(
           "Khách Mua Hàng",
           cards.activeCustomers,
-          vi,
+          intText,
           <Users className={ic} />,
           "#2E8B8F",
           "#E6F2F2",
@@ -158,7 +159,7 @@ export function KhOverviewView({
         {card(
           "Khách mới",
           cards.newCustomers,
-          vi,
+          intText,
           <UserPlus className={ic} />,
           "#00A5B5",
           "#E0F6F9",

@@ -24,8 +24,14 @@ import type {
   RepeatCell,
   PivotDim,
 } from "@/lib/api/analytics-kinh-doanh";
-import { DT_COLORS, money, vi } from "@/lib/dashboard/format";
-import { BLANK_LABEL, growthDelta, metricTitle } from "../analyticsFormat";
+import { DT_COLORS } from "@/lib/dashboard/format";
+import {
+  BLANK_LABEL,
+  growthDelta,
+  metricTitle,
+  money,
+  intText,
+} from "../analyticsFormat";
 import { DonutChart, HBarChart, Panel } from "../shared/AnalyticsCharts";
 import { AnalyticsTable } from "../shared/AnalyticsTable";
 import {
@@ -38,6 +44,7 @@ import {
 import { KdPivot } from "./KdPivot";
 import { BarCell, MiniTable } from "./KdUi";
 import { C, fmtDate, full, int, pbiGrowthColor, pct } from "./kdFormat";
+import { formatNumber } from "@/lib/utils";
 
 const kv = (list: KeyValue[] = []) =>
   list.map((r) => ({ name: r.key ?? BLANK_LABEL, value: r.value }));
@@ -105,14 +112,14 @@ export function OverviewSection({
         {card(
           "Khách Mua Hàng",
           c?.activeCustomers,
-          vi,
+          intText,
           <Users className="w-[18px] h-[18px]" />,
           "#2E8B8F",
         )}
         {card(
           "Khách mới",
           c?.newCustomers,
-          vi,
+          intText,
           <UserPlus className="w-[18px] h-[18px]" />,
           "#1A5F6A",
         )}
@@ -269,8 +276,8 @@ export function OverviewSection({
                 format: (v) =>
                   v === null
                     ? ""
-                    : Number(v).toLocaleString("vi-VN", {
-                        maximumFractionDigits: 2,
+                    : formatNumber(Number(v), "en-US", {
+                        max: 2,
                       }),
               },
               {
@@ -683,7 +690,7 @@ export function RepeatSection({ data }: { data: CustomerSectionData }) {
         subtitle={
           data.customerCount &&
           data.customerCount > (data.customers?.length ?? 0)
-            ? `Hiện ${data.customers?.length} / ${data.customerCount} khách (sắp theo doanh số năm nay)`
+            ? `Hiện ${formatNumber(data.customers?.length)} / ${formatNumber(data.customerCount)} khách (sắp theo doanh số năm nay)`
             : undefined
         }>
         <AnalyticsTable
@@ -742,7 +749,7 @@ export function DemandSection({ data }: { data: CustomerSectionData }) {
   return (
     <Panel
       title="Theo Dõi Demand Maycha"
-      subtitle={`Đang tính toán theo ${data.unit === "bulk" ? "Thùng" : "Gói"} · ${rows.length} sản phẩm · nguồn: nhu cầu khách (POS › Demand)`}>
+      subtitle={`Đang tính toán theo ${data.unit === "bulk" ? "Thùng" : "Gói"} · ${formatNumber(rows.length)} sản phẩm · nguồn: nhu cầu khách (POS › Demand)`}>
       <div
         className="border rounded-lg overflow-auto max-h-[560px]"
         style={{ borderColor: "var(--dt-border)" }}>
@@ -799,9 +806,7 @@ export function DemandSection({ data }: { data: CustomerSectionData }) {
                   const a = r.actual[m];
                   const diff = (a ?? 0) - (d ?? 0);
                   const fmt = (v: number | undefined) =>
-                    v === undefined
-                      ? ""
-                      : v.toLocaleString("vi-VN", { maximumFractionDigits: 1 });
+                    v === undefined ? "" : formatNumber(v, "en-US", { max: 1 });
                   return (
                     <Fragment key={m}>
                       <td className="px-2 py-1 text-right dt-mono border-l">
@@ -850,8 +855,8 @@ export function LineListingTable({
       title={title}
       subtitle={
         data.truncated
-          ? `Hiện ${data.rows.length} dòng mới nhất`
-          : `${data.rows.length} dòng`
+          ? `Hiện ${formatNumber(data.rows.length)} dòng mới nhất`
+          : `${formatNumber(data.rows.length)} dòng`
       }>
       <AnalyticsTable
         columns={[

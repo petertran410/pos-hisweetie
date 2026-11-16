@@ -25,6 +25,7 @@ import {
   useTeamMembers,
 } from "@/lib/hooks/useAnalyticsReports";
 import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
+import { formatNumberInput, parseNumberInput } from "@/lib/utils";
 
 type Tab =
   | "parent"
@@ -235,11 +236,12 @@ function ParentRulesTab() {
     <tr className="bg-[#F4FBFC]">
       <td className="p-2 w-24">
         <input
-          type="number"
+          type="text"
+          inputMode="numeric"
           className={inputCls}
-          value={draft.priority}
+          value={formatNumberInput(String(draft.priority))}
           onChange={(e) =>
-            setDraft({ ...draft, priority: Number(e.target.value) })
+            setDraft({ ...draft, priority: parseNumberInput(e.target.value) })
           }
         />
       </td>
@@ -496,11 +498,12 @@ function TeamsTab() {
       </td>
       <td className="p-2 w-24">
         <input
-          type="number"
+          type="text"
+          inputMode="numeric"
           className={inputCls}
-          value={draft.sortOrder}
+          value={formatNumberInput(String(draft.sortOrder))}
           onChange={(e) =>
-            setDraft({ ...draft, sortOrder: Number(e.target.value) })
+            setDraft({ ...draft, sortOrder: parseNumberInput(e.target.value) })
           }
         />
       </td>
