@@ -159,4 +159,30 @@ export const transfersApi = {
     apiClient.get<PromisedHNDrilldownResponse>(
       `/transfers/promised-sg-by-product?productId=${productId}`,
     ),
+
+  /**
+   * Cột "Đang đi đường" ở danh sách hàng hóa: tổng SL trên phiếu Đang chuyển
+   * tới chi nhánh (không truyền branchId → mọi tuyến). Trả về { [productId]: SL }.
+   */
+  getInTransitSummary: (
+    productIds: number[],
+    branchId?: number,
+  ): Promise<Record<number, number>> => {
+    if (!productIds.length) return Promise.resolve({});
+    const params: Record<string, string | number> = {
+      productIds: productIds.join(","),
+    };
+    if (branchId) params.branchId = branchId;
+    return apiClient.get(`/transfers/in-transit-summary`, params);
+  },
+
+  /** Danh sách phiếu Đang chuyển chứa sản phẩm (modal khi bấm số "Đang đi đường"). */
+  getInTransitDetail: (
+    productId: number,
+    branchId?: number,
+  ): Promise<TransferDrilldownResponse> => {
+    const params: Record<string, number> = { productId };
+    if (branchId) params.branchId = branchId;
+    return apiClient.get(`/transfers/in-transit-detail`, params);
+  },
 };

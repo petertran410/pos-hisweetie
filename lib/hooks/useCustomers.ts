@@ -90,6 +90,16 @@ export function useCustomerShippingFeeHistory(customerId: number | undefined) {
   });
 }
 
+/**
+ * Sale PIC đang gắn cho khách. Hàm thường (không phải hook) vì POS gọi đúng
+ * lúc bấm tạo đơn/hóa đơn, cần dữ liệu mới nhất chứ không dùng cache.
+ */
+export function fetchCustomerSalePic(customerId: number) {
+  return apiClient.get<{ salePicId: number | null }>(
+    `/customers/${customerId}/sale-pic`,
+  );
+}
+
 export function useCustomerGroups() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const hasHydrated = useAuthStore((state) => state._hasHydrated);
