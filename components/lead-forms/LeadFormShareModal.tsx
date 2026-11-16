@@ -7,6 +7,52 @@ import { Copy, Download, ExternalLink, Share2, X } from "lucide-react";
 import { toast } from "sonner";
 import type { LeadForm } from "@/lib/types/leadForm";
 
+/**
+ * Tải QR (SVG trong `container`) thành PNG 1024px có lề trắng — dùng để in.
+ * `logoUrl`: logo đặt giữa QR trên nền trắng (QR cần level "H" để vẫn quét được).
+ */
+export function downloadQrPng(container: HTMLElement | null, filename: string, logoUrl?: string) {
+  const svg = container?.querySelector("svg");
+  if (!svg) return;
+  const img = new Image();
+  img.onload = () => {
+    const size = 1024;
+    const pad = 64;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = size + pad * 2;
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, pad, pad, size, size);
+    const save = () => {
+      const a = document.createElement("a");
+      a.href = canvas.toDataURL("image/png");
+      a.download = filename;
+      a.click();
+    };
+    if (!logoUrl) return save();
+    const logo = new Image();
+    logo.onload = () => {
+      // Ô trắng bo góc ~24% cạnh QR, logo vừa trong ô (giữ tỷ lệ)
+      const box = size * 0.24;
+      const x = (canvas.width - box) / 2;
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.roundRect(x, x, box, box, box * 0.18);
+      ctx.fill();
+      const inner = box * 0.86;
+      const k = Math.min(inner / logo.width, inner / logo.height);
+      const w = logo.width * k;
+      const h = logo.height * k;
+      ctx.drawImage(logo, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+      save();
+    };
+    logo.onerror = save;
+    logo.src = logoUrl;
+  };
+  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
+}
+
 /** Chia sẻ form: link công khai, mã nhúng iframe, QR (tải PNG để in cho hội chợ / workshop). */
 export function LeadFormShareModal({ form, onClose }: { form: LeadForm; onClose: () => void }) {
   const qrRef = useRef<HTMLDivElement>(null);
@@ -19,26 +65,7 @@ export function LeadFormShareModal({ form, onClose }: { form: LeadForm; onClose:
       () => toast.error("Không copy được")
     );
 
-  const downloadQr = () => {
-    const svg = qrRef.current?.querySelector("svg");
-    if (!svg) return;
-    const img = new Image();
-    img.onload = () => {
-      const size = 1024;
-      const pad = 64;
-      const canvas = document.createElement("canvas");
-      canvas.width = canvas.height = size + pad * 2;
-      const ctx = canvas.getContext("2d")!;
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, pad, pad, size, size);
-      const a = document.createElement("a");
-      a.href = canvas.toDataURL("image/png");
-      a.download = `qr-${form.slug}.png`;
-      a.click();
-    };
-    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
-  };
+  const downloadQr = () => downloadQrPng(qrRef.current, `qr-${form.slug}.png`);
 
   const box = "flex items-start gap-2 rounded border bg-gray-50 px-2.5 py-2 text-xs font-mono break-all";
   const btn = "inline-flex shrink-0 items-center gap-1 rounded border bg-white px-2 py-1 text-xs hover:bg-gray-50";

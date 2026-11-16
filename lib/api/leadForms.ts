@@ -24,6 +24,9 @@ export const leadFormsApi = {
   create: (data: LeadFormInput): Promise<LeadForm> => apiClient.post("/lead-forms", data),
   update: (id: number, data: LeadFormInput): Promise<LeadForm> => apiClient.patch(`/lead-forms/${id}`, data),
   remove: (id: number) => apiClient.delete(`/lead-forms/${id}`),
+  /** Gắn / bỏ gắn form với QR chung — gắn form này thì form đang gắn tự bỏ. */
+  setQrTarget: (id: number, isQrTarget: boolean) =>
+    apiClient.patch<{ ok: boolean }>(`/lead-forms/${id}/qr-target`, { isQrTarget }),
   submissions: (
     id: number,
     page: number,
