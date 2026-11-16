@@ -80,6 +80,9 @@ export interface DraftTransferCandidate {
 export interface TransferDrilldownRecord {
   transferId: number;
   code: string;
+  /** Chỉ có ở /transfers/in-transit-detail (dùng gom SL đang về theo chi nhánh). */
+  fromBranchId?: number;
+  toBranchId?: number;
   fromBranchName: string;
   toBranchName: string;
   transferredDate: string | null;

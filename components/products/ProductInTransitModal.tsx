@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import Link from "next/link";
 import { useTransfersInTransitByProduct } from "@/lib/hooks/useTransfers";
+import { usePermission } from "@/lib/hooks/usePermissions";
 import { CodeLink } from "../shared/CodeLink";
 
 interface ProductInTransitModalProps {
@@ -30,6 +31,9 @@ export function ProductInTransitModal({
   onClose,
   zIndex = 50,
 }: ProductInTransitModalProps) {
+  // Ai có products:view đều xem được số liệu; chỉ người có quyền Chuyển hàng
+  // mới bấm mã phiếu sang trang chuyển hàng.
+  const canViewTransfers = usePermission("transfers", "view");
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const previousFocus = document.activeElement;
@@ -140,12 +144,17 @@ export function ProductInTransitModal({
               <tbody className="divide-y divide-gray-100">
                 {transfers.map((t) => (
                   <tr key={t.transferId} className="hover:bg-gray-50">
-                    <td className="px-4 py-2.5 font-medium text-brand whitespace-nowrap">
-                      <Link
-                        href={`/san-pham/chuyen-hang?Code=${t.code}`}
-                        target="_blank">
-                        {t.code}
-                      </Link>
+                    <td className="px-4 py-2.5 font-medium whitespace-nowrap">
+                      {canViewTransfers ? (
+                        <Link
+                          href={`/san-pham/chuyen-hang?Code=${t.code}`}
+                          target="_blank"
+                          className="text-brand hover:underline">
+                          {t.code}
+                        </Link>
+                      ) : (
+                        <span className="text-gray-900">{t.code}</span>
+                      )}
                     </td>
                     <td className="px-4 py-2.5 text-gray-700 whitespace-nowrap">
                       {formatDateTime(t.transferredDate || t.createdAt)}

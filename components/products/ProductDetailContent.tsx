@@ -16,7 +16,9 @@ import { ProductInventoryLogTab } from "./ProductInventoryLogTab";
 import { ProductConditionTab } from "./ProductConditionTab";
 import { ProductSupplierOrdersModal } from "./ProductSupplierOrdersModal";
 import { ProductCustomerOrdersModal } from "./ProductCustomerOrdersModal";
+import { ProductInTransitModal } from "./ProductInTransitModal";
 import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
+import { useTransfersInTransitSummary } from "@/lib/hooks/useTransfers";
 import { useOrdersPendingSummary } from "@/lib/hooks/useOrders";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import Link from "next/link";
@@ -112,6 +114,44 @@ function CustomerOrderCell({
   );
 }
 
+/**
+ * Cell hiển thị "Đang đi đường" cho từng dòng (mỗi chi nhánh) trong tab Tồn kho:
+ * SL trên phiếu chuyển hàng Đang chuyển TỚI chi nhánh đó. Đối xứng
+ * `SupplierOrderCell`; > 0 → button mở `ProductInTransitModal` lọc đúng chi nhánh.
+ */
+function InTransitCell({
+  productId,
+  branch,
+  onOpen,
+}: {
+  productId: number;
+  branch: { id: number; name: string };
+  onOpen: (branch: { id: number; name: string }) => void;
+}) {
+  const { data, isLoading } = useTransfersInTransitSummary(
+    [productId],
+    branch.id,
+  );
+  const total = data?.[productId] ?? 0;
+
+  if (isLoading) {
+    return <span className="text-gray-300">…</span>;
+  }
+
+  if (total <= 0) {
+    return <span>0</span>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(branch)}
+      className="text-brand hover:underline font-medium">
+      {total.toLocaleString()}
+    </button>
+  );
+}
+
 const getProductTypeLabel = (type: number) => {
   switch (type) {
     case 1:
@@ -168,6 +208,11 @@ export function ProductDetailContent({
   } | null>(null);
 
   const [customerOrdersBranch, setCustomerOrdersBranch] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
+
+  const [inTransitBranch, setInTransitBranch] = useState<{
     id: number;
     name: string;
   } | null>(null);
@@ -781,6 +826,9 @@ export function ProductDetailContent({
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
                         Đặt NCC
                       </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 whitespace-nowrap">
+                        Đang đi đường
+                      </th>
                       {canViewCostPrice && (
                         <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">
                           Giá vốn
@@ -873,6 +921,17 @@ export function ProductDetailContent({
                             />
                           </td>
 
+                          <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
+                            <InTransitCell
+                              productId={product.id}
+                              branch={{
+                                id: inv.branchId,
+                                name: inv.branchName,
+                              }}
+                              onOpen={(b) => setInTransitBranch(b)}
+                            />
+                          </td>
+
                           {canViewCostPrice && (
                             <td className="px-2 py-2.5 text-sm text-right whitespace-nowrap">
                               {Number(inv.cost).toLocaleString()}
@@ -951,6 +1010,18 @@ export function ProductDetailContent({
           branchName={customerOrdersBranch.name}
           zIndex={overlayZIndex}
           onClose={() => setCustomerOrdersBranch(null)}
+        />
+      )}
+
+      {inTransitBranch && (
+        <ProductInTransitModal
+          productId={product.id}
+          productName={product.name}
+          productCode={product.code}
+          branchId={inTransitBranch.id}
+          branchName={inTransitBranch.name}
+          zIndex={overlayZIndex}
+          onClose={() => setInTransitBranch(null)}
         />
       )}
 

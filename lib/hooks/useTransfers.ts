@@ -84,6 +84,21 @@ export function useTransfersInTransitByProduct(
   });
 }
 
+/**
+ * SL "Đang đi đường" của 1 sản phẩm theo chi nhánh nhận (modal tồn kho ở
+ * trang Bán hàng). Lấy phiếu Đang chuyển mọi tuyến rồi gom theo toBranchId.
+ */
+export function useTransfersInTransitByBranch(productId: number | null) {
+  const query = useTransfersInTransitByProduct(productId);
+  const byBranch: Record<number, number> = {};
+  for (const t of query.data?.data ?? []) {
+    if (t.toBranchId == null) continue;
+    byBranch[t.toBranchId] = (byBranch[t.toBranchId] ?? 0) + t.quantity;
+  }
+  // Tổng do component tự cộng theo các chi nhánh đang hiển thị (chỉ CN active).
+  return { byBranch, isLoading: query.isLoading };
+}
+
 export function useCreateTransfer() {
   const queryClient = useQueryClient();
 
