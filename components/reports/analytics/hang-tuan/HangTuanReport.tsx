@@ -27,6 +27,7 @@ import { TOOLTIP_STYLE, metricAxis, metricLabel } from "../analyticsFormat";
 import { BarText, Empty, Panel, axisTick } from "../shared/AnalyticsCharts";
 import { fmtDate, fmtNum, fmtPct, vnNow } from "../dinh-ki/dkFormat";
 import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
+import { formatDate, formatNumber } from "@/lib/utils";
 
 // Màu của các thẻ HTML (card_*) trong dataset_sale - version 2.
 const C = {
@@ -45,9 +46,9 @@ const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
 
 /** "#,##0.0" tỷ */
 const ty = (v: number) =>
-  (v / 1e9).toLocaleString("vi-VN", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
+  formatNumber(v / 1e9, "en-US", {
+    min: 1,
+    max: 1,
   });
 
 /**
@@ -195,8 +196,7 @@ export function HangTuanReport() {
           <div
             className="text-[11.5px] text-right"
             style={{ color: "var(--dt-text-muted)" }}>
-            Dữ liệu cập nhật vào lúc{" "}
-            {new Date(data.updatedAt).toLocaleString("vi-VN")}
+            Dữ liệu cập nhật vào lúc {formatDate(data.updatedAt)}
           </div>
         </>
       )}

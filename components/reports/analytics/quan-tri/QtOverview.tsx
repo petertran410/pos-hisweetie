@@ -18,8 +18,8 @@ import type {
   QtOverview,
   QtRow,
 } from "@/lib/api/analytics-quan-tri";
-import { DT_COLORS, money, vi } from "@/lib/dashboard/format";
-import { growthDelta } from "../analyticsFormat";
+import { DT_COLORS } from "@/lib/dashboard/format";
+import { growthDelta, money, intText } from "../analyticsFormat";
 import { Panel } from "../shared/AnalyticsCharts";
 import { QtColumn, QtDonut, QtHBar, QtLine } from "./QtCharts";
 import {
@@ -137,7 +137,7 @@ export function QtOverviewCards({
       <QtKpi
         name="Sản Lượng"
         card={cards.quantity}
-        fmt={vi}
+        fmt={intText}
         compareLabel={compareLabel}
         icon={ico(Package)}
         tone={TONES.quantity}

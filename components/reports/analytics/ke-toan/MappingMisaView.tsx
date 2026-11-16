@@ -20,6 +20,7 @@ import {
   UpdatedAt,
   type KeToanColumn,
 } from "./KeToanShared";
+import { formatNumber } from "@/lib/utils";
 
 const COLUMNS: KeToanColumn<MisaRow>[] = [
   { key: "code", label: "Mã hàng", sortable: true },
@@ -132,7 +133,7 @@ export function MappingMisaView() {
         {data && (
           <Panel
             title="Mapping Mã Misa"
-            subtitle={`${data.rows.length.toLocaleString("vi-VN")} mặt hàng có tồn ở Kho Hà Nội / Kho Sài Gòn`}
+            subtitle={`${formatNumber(data.rows.length)} mặt hàng có tồn ở Kho Hà Nội / Kho Sài Gòn`}
             right={
               <ExportButton
                 disabled={!data.rows.length}

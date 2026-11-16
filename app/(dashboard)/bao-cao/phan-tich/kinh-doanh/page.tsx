@@ -14,6 +14,7 @@ import {
   useAnalyticsFilterOptions,
   useBusinessOverview,
 } from "@/lib/hooks/useAnalyticsReports";
+import { formatDate } from "@/lib/utils";
 
 const fmtDate = (iso: string) => iso.split("-").reverse().join("/");
 
@@ -101,8 +102,7 @@ export default function AnalyticsBusinessPage() {
           <div
             className="text-[11.5px] text-right"
             style={{ color: "var(--dt-text-muted)" }}>
-            Dữ liệu cập nhật vào lúc{" "}
-            {new Date(data.updatedAt).toLocaleString("vi-VN")}
+            Dữ liệu cập nhật vào lúc {formatDate(data.updatedAt)}
           </div>
         </>
       )}

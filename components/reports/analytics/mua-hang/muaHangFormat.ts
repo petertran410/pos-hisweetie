@@ -1,22 +1,23 @@
 // Định dạng số cho Phân tích › Chuyển Kho + Thu Mua.
 
 import { metricLabel } from "../analyticsFormat";
+import { formatNumber } from "@/lib/utils";
 
 export const BLANK_LABEL = "(Trống)";
 
 /** Số lượng: tối đa 2 chữ số lẻ (tồn kho có số lẻ), BLANK → "". */
 export function fmtQty(v: number | null | undefined): string {
   if (v === null || v === undefined) return "";
-  return v.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
+  return formatNumber(v, "en-US", { max: 2 });
 }
 
-/** Tiền đầy đủ (ô pivot): 1.234.567. */
+/** Tiền đầy đủ (ô pivot): 1,234,567. */
 export function fmtMoney(v: number | null | undefined): string {
   if (v === null || v === undefined) return "";
-  return Math.round(v).toLocaleString("vi-VN");
+  return formatNumber(Math.round(v));
 }
 
-/** Tiền rút gọn "x,xx Tỷ / Triệu" như nhãn Power BI. */
+/** Tiền rút gọn "x.xx Tỷ / Triệu" như nhãn Power BI. */
 export function fmtMoneyShort(v: number | null | undefined): string {
   if (v === null || v === undefined) return "";
   return metricLabel(v, "amount");

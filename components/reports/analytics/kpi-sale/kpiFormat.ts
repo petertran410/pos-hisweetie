@@ -1,21 +1,22 @@
+import { formatNumber } from "@/lib/utils";
 // Định dạng số cho Phân tích › KPI Sale (theo format string của measure Power BI):
-//   tiền "#,0" (đủ số), phần trăm "0.00%", thẻ "x,xx Tỷ" (display units = tỷ).
+//   tiền "#,0" (đủ số), phần trăm "0.00%", thẻ "x.xx Tỷ" (display units = tỷ).
 
 export const BLANK = "(Trống)";
 
 /** "#,0" — để trống khi không có giá trị (BLANK của Power BI). */
 export function num(v: number | null | undefined): string {
   if (v === null || v === undefined) return "";
-  return Math.round(v).toLocaleString("vi-VN");
+  return formatNumber(Math.round(v));
 }
 
 /** "0.00%" */
 export function pct(v: number | null | undefined): string {
   if (v === null || v === undefined || !isFinite(v)) return "";
   return (
-    (v * 100).toLocaleString("vi-VN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+    formatNumber(v * 100, "en-US", {
+      min: 2,
+      max: 2,
     }) + "%"
   );
 }
@@ -24,24 +25,24 @@ export function pct(v: number | null | undefined): string {
 export function ty(v: number | null | undefined): string {
   if (v === null || v === undefined) return "—";
   return (
-    (v / 1e9).toLocaleString("vi-VN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+    formatNumber(v / 1e9, "en-US", {
+      min: 2,
+      max: 2,
     }) + " Tỷ"
   );
 }
 
-/** Nhãn biểu đồ: "x,xx Tỷ" / "x,xx Triệu". */
+/** Nhãn biểu đồ: "x.xx Tỷ" / "x.xx Triệu". */
 export function short(v: number): string {
   const abs = Math.abs(v);
   const two = (n: number) =>
-    n.toLocaleString("vi-VN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+    formatNumber(n, "en-US", {
+      min: 2,
+      max: 2,
     });
   if (abs >= 1e9) return `${two(v / 1e9)} Tỷ`;
   if (abs >= 1e6) return `${two(v / 1e6)} Triệu`;
-  return Math.round(v).toLocaleString("vi-VN");
+  return formatNumber(Math.round(v));
 }
 
 /** Màu % hiệu quả (measure "Color for Target … (%)"): < 100% đỏ, = 100% vàng, > 100% xanh. */

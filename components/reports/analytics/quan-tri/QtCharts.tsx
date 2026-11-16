@@ -1,7 +1,7 @@
 "use client";
 
 // Biểu đồ của báo cáo Quản Trị: như shared/AnalyticsCharts nhưng nhận hàm định
-// dạng số (để hiện được Lợi Nhuận "x,xx Tỷ" và % Lợi Nhuận "x,xx%").
+// dạng số (để hiện được Lợi Nhuận "x.xx Tỷ" và % Lợi Nhuận "x.xx%").
 
 import {
   Bar,
@@ -25,6 +25,7 @@ import {
 import { CATEGORY_PALETTE, DT_COLORS } from "@/lib/dashboard/format";
 import { TOOLTIP_STYLE } from "../analyticsFormat";
 import { BarText, Empty, axisTick } from "../shared/AnalyticsCharts";
+import { formatNumber } from "@/lib/utils";
 
 export type Fmt = (v: number) => string;
 
@@ -231,8 +232,8 @@ export function QtDonut({ rows, fmt }: { rows: BarRow[]; fmt: Fmt }) {
             <span
               className="dt-mono w-12 text-right"
               style={{ color: "var(--dt-text-muted)" }}>
-              {((r.value / total) * 100).toLocaleString("vi-VN", {
-                maximumFractionDigits: 1,
+              {formatNumber((r.value / total) * 100, "en-US", {
+                max: 1,
               })}
               %
             </span>
@@ -405,8 +406,8 @@ export function QtStacked100({
                 `__raw_${String(n)}`
               ];
               return [
-                `${fmt(raw ?? 0)} (${(Number(v) * 100).toLocaleString("vi-VN", {
-                  maximumFractionDigits: 1,
+                `${fmt(raw ?? 0)} (${formatNumber(Number(v) * 100, "en-US", {
+                  max: 1,
                 })}%)`,
                 String(n),
               ];

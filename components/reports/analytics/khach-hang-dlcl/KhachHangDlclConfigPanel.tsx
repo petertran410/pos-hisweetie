@@ -14,6 +14,7 @@ import {
   useStrategicDistributors,
   useStrategicPrograms,
 } from "@/lib/hooks/useAnalyticsKhachHangDlcl";
+import { formatNumberInput, parseNumberInput } from "@/lib/utils";
 
 const inputCls =
   "w-full border rounded-lg px-2.5 py-1.5 text-[13px] outline-none focus:border-[var(--dt-primary)]";
@@ -251,11 +252,15 @@ function DistributorTable({
       {!single && (
         <td className="p-2 w-20">
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
             className={inputCls}
-            value={draft.sortOrder}
+            value={formatNumberInput(String(draft.sortOrder))}
             onChange={(e) =>
-              setDraft({ ...draft, sortOrder: Number(e.target.value) })
+              setDraft({
+                ...draft,
+                sortOrder: parseNumberInput(e.target.value),
+              })
             }
           />
         </td>

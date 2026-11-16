@@ -14,13 +14,14 @@ import type {
   QtCustomerTypeValues,
   QtMetric,
 } from "@/lib/api/analytics-quan-tri";
-import { money, vi } from "@/lib/dashboard/format";
 import { AnalyticsTable, type AnalyticsColumn } from "../shared/AnalyticsTable";
 import { Panel } from "../shared/AnalyticsCharts";
 import { QtDonut, QtHBar, QtStacked100 } from "./QtCharts";
 import { QtMonthPivot, collectMonths, leavesFromRows } from "./QtMonthPivot";
 import { TONES } from "./QtOverview";
 import { BLANK, num, pct2, qtLabel, qtMetricTitle } from "./qtFormat";
+import { formatNumber } from "@/lib/utils";
+import { money, intText } from "@/components/reports/analytics/analyticsFormat";
 
 const STATUS_COLORS: Record<string, string> = {
   "New Customer": "#00B7CC",
@@ -94,7 +95,7 @@ export function QtCustomersView({
       format: (v) =>
         v === null || v === undefined
           ? "—"
-          : (v as number).toLocaleString("vi-VN", { maximumFractionDigits: 2 }),
+          : formatNumber(v as number, "en-US", { max: 2 }),
     },
     {
       key: "arpc",
@@ -155,7 +156,7 @@ export function QtCustomersView({
         <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(190px,1fr))]">
           <KpiCard
             name="Khách mua hàng"
-            value={vi(c.activeCustomers)}
+            value={formatNumber(Math.round(c.activeCustomers))}
             icon={ico(Users)}
             iconBg={TONES.arpc[0]}
             iconColor={TONES.arpc[1]}
@@ -163,7 +164,7 @@ export function QtCustomersView({
           />
           <KpiCard
             name="Khách mới"
-            value={vi(c.newCustomers)}
+            value={formatNumber(Math.round(c.newCustomers))}
             icon={ico(UserPlus)}
             iconBg={TONES.revenue[0]}
             iconColor={TONES.revenue[1]}
@@ -204,7 +205,7 @@ export function QtCustomersView({
             groups={monthGroups}
             series={TYPE_ORDER}
             value={stacked(data.byMonthType)}
-            fmt={vi}
+            fmt={intText}
           />
         </Panel>
         <Panel
@@ -214,7 +215,7 @@ export function QtCustomersView({
             groups={monthGroups}
             series={statuses}
             value={stacked(data.byMonthStatus)}
-            fmt={vi}
+            fmt={intText}
             colors={STATUS_COLORS}
           />
         </Panel>

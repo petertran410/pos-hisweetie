@@ -11,6 +11,7 @@ import { useAnalyticsConfigMutation } from "@/lib/hooks/useAnalyticsReports";
 import { VISUAL_GROUPS } from "./kdConstants";
 import { ViewTabs } from "./KdUi";
 import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
+import { formatNumberInput, parseNumberInput } from "@/lib/utils";
 
 const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
   value: i + 1,
@@ -140,11 +141,12 @@ function TargetsTab() {
           className="w-32"
         />
         <input
-          className={`${inputCls} w-40`}
+          className={`${inputCls} w-40 text-right`}
+          inputMode="numeric"
           placeholder="Chỉ tiêu (VNĐ)"
           value={f.kpiValue}
           onChange={(e) =>
-            setF({ ...f, kpiValue: e.target.value.replace(/[^\d]/g, "") })
+            setF({ ...f, kpiValue: formatNumberInput(e.target.value) })
           }
         />
         <button
@@ -157,7 +159,7 @@ function TargetsTab() {
               visualProductGroup: f.visualProductGroup,
               year,
               month: f.month,
-              kpiValue: Number(f.kpiValue),
+              kpiValue: parseNumberInput(f.kpiValue),
             })
           }>
           <Plus className="w-3.5 h-3.5" /> Lưu
@@ -173,9 +175,13 @@ function TargetsTab() {
             <td className="px-2.5 py-1">
               <input
                 className={`${inputCls} w-40 text-right`}
-                defaultValue={t.kpiValue.toLocaleString("vi-VN")}
+                inputMode="numeric"
+                defaultValue={formatNumberInput(String(t.kpiValue))}
+                onChange={(e) => {
+                  e.target.value = formatNumberInput(e.target.value);
+                }}
                 onBlur={(e) => {
-                  const v = Number(e.target.value.replace(/[^\d]/g, ""));
+                  const v = parseNumberInput(e.target.value);
                   if (v !== t.kpiValue) upd.mutate({ id: t.id, v });
                 }}
               />
@@ -320,14 +326,18 @@ function DlclTab() {
           <tr key={c.id} className="border-t">
             <td className="px-2.5 py-1">
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 className={`${inputCls} w-16`}
-                defaultValue={c.sortOrder}
+                defaultValue={formatNumberInput(String(c.sortOrder))}
+                onChange={(e) => {
+                  e.target.value = formatNumberInput(e.target.value);
+                }}
                 onBlur={(e) =>
-                  Number(e.target.value) !== c.sortOrder &&
+                  parseNumberInput(e.target.value) !== c.sortOrder &&
                   upd.mutate({
                     id: c.id,
-                    d: { sortOrder: Number(e.target.value) },
+                    d: { sortOrder: parseNumberInput(e.target.value) },
                   })
                 }
               />

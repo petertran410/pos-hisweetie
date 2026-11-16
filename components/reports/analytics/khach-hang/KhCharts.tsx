@@ -28,6 +28,7 @@ import {
   metricLabel,
 } from "../analyticsFormat";
 import { Empty, axisTick } from "../shared/AnalyticsCharts";
+import { formatDate, formatNumber } from "@/lib/utils";
 
 export const fmtDate = (iso: string) => iso.split("-").reverse().join("/");
 
@@ -113,7 +114,7 @@ export function UpdatedAt({ at }: { at: string }) {
     <div
       className="text-[11.5px] text-right"
       style={{ color: "var(--dt-text-muted)" }}>
-      Dữ liệu cập nhật vào lúc {new Date(at).toLocaleString("vi-VN")}
+      Dữ liệu cập nhật vào lúc {formatDate(at)}
     </div>
   );
 }
@@ -256,10 +257,7 @@ export function StackedPercentChart({
               );
               const share = total ? (Number(v) / total) * 100 : 0;
               return [
-                `${metricLabel(Number(v), metric)} (${share.toLocaleString(
-                  "vi-VN",
-                  { maximumFractionDigits: 1 },
-                )}%)`,
+                `${metricLabel(Number(v), metric)} (${formatNumber(share, "en-US", { max: 1 })}%)`,
                 String(n),
               ];
             }}
@@ -316,8 +314,8 @@ export function PercentBarList({
             />
           </span>
           <span className="dt-mono w-[78px] text-right font-semibold">
-            {(r.value * 100).toLocaleString("vi-VN", {
-              maximumFractionDigits: 2,
+            {formatNumber(r.value * 100, "en-US", {
+              max: 2,
             })}
             %
           </span>

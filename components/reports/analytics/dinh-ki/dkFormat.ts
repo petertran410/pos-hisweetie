@@ -1,13 +1,14 @@
+import { formatNumber } from "@/lib/utils";
 // Định dạng số + màu theo điều kiện cho các trang Định Kì / Hằng Tuần
 // (chép từ các measure HTML của Power BI: FORMAT(...,"#,0.0") & " tỷ", ▲/▼, màu %KPI).
 
 const nf = (v: number, digits: number) =>
-  v.toLocaleString("vi-VN", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
+  formatNumber(v, "en-US", {
+    min: digits,
+    max: digits,
   });
 
-/** "12,3 tỷ" */
+/** "12.3 tỷ" */
 export function fmtTy(v: number | null | undefined, digits = 1): string {
   if (v === null || v === undefined || !Number.isFinite(v)) return "—";
   return `${nf(v / 1e9, digits)} tỷ`;
@@ -19,7 +20,7 @@ export function fmtTr(v: number | null | undefined, digits = 0): string {
   return `${nf(v / 1e6, digits)} tr`;
 }
 
-/** 0.123 → "12,3%" ; null → "—" */
+/** 0.123 → "12.3%" ; null → "—" */
 export function fmtPct(v: number | null | undefined, digits = 1): string {
   if (v === null || v === undefined || !Number.isFinite(v)) return "—";
   return `${nf(v * 100, digits)}%`;
@@ -27,7 +28,7 @@ export function fmtPct(v: number | null | undefined, digits = 1): string {
 
 export function fmtNum(v: number | null | undefined): string {
   if (v === null || v === undefined || !Number.isFinite(v)) return "—";
-  return Math.round(v).toLocaleString("vi-VN");
+  return formatNumber(Math.round(v));
 }
 
 /** Tăng trưởng (a - b) / b; null nếu b = 0 (DIVIDE của DAX). */

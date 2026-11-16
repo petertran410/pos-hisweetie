@@ -1,9 +1,10 @@
+import { formatNumber } from "@/lib/utils";
 // Định dạng số / màu cho các trang Kinh Doanh (theo các measure HTML & màu của Power BI).
 
 const nf = (v: number, min: number, max: number) =>
-  v.toLocaleString("vi-VN", {
-    minimumFractionDigits: min,
-    maximumFractionDigits: max,
+  formatNumber(v, "en-US", {
+    min: min,
+    max: max,
   });
 
 /** FORMAT(x/1e9, "#,0.00") & " tỷ" */
@@ -22,10 +23,10 @@ export const signedPct = (v: number | null | undefined, digits = 1) =>
   v === null || v === undefined || !Number.isFinite(v)
     ? "—"
     : `${v >= 0 ? "+" : ""}${nf(v * 100, digits, digits)}%`;
-/** Số đầy đủ kiểu Power BI (x.xxx.xxx). */
+/** Số đầy đủ kiểu Power BI (x,xxx,xxx). */
 export const full = (v: number | null | undefined) =>
   v === null || v === undefined ? "" : nf(Math.round(v), 0, 0);
-/** "x,xx Tỷ" / "x,xx Triệu" (switch_dynamics_metrics_label). */
+/** "x.xx Tỷ" / "x.xx Triệu" (switch_dynamics_metrics_label). */
 export const tyTrieu = (v: number) => {
   const a = Math.abs(v);
   if (a >= 1e9) return `${nf(v / 1e9, 2, 2)} Tỷ`;

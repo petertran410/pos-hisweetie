@@ -4,13 +4,13 @@ import { Fragment, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { AnalyticsMetric } from "@/lib/api/analytics-reports";
 import type { KhWeekCells, KhWeekly } from "@/lib/api/analytics-khach-hang";
-import { vi } from "@/lib/dashboard/format";
 import { metricTitle } from "../analyticsFormat";
 import { Panel } from "../shared/AnalyticsCharts";
 import { PercentBarList } from "./KhCharts";
+import { formatNumber } from "@/lib/utils";
 
 const pct = (v: number) =>
-  `${(v * 100).toLocaleString("vi-VN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+  `${formatNumber(v * 100, "en-US", { min: 2, max: 2 })}%`;
 
 /** Màu chữ % WoW như Power BI: < 0 đỏ, 0 – 1000 xanh. */
 const wowColor = (w: number | null) =>
@@ -85,7 +85,7 @@ function WeekPivot({ data }: { data: KhWeekly }) {
           <td
             className={`px-2.5 py-1.5 text-right dt-mono whitespace-nowrap ${bold ? "font-semibold" : ""}`}
             style={{ background: c.v === null ? "#efb5b9" : undefined }}>
-            {c.v === null ? "" : vi(c.v)}
+            {c.v === null ? "" : formatNumber(Math.round(c.v))}
           </td>
           <td
             className={`px-2.5 py-1.5 text-right dt-mono whitespace-nowrap ${bold ? "font-semibold" : ""}`}

@@ -21,6 +21,7 @@ import {
 } from "@/lib/hooks/useAnalyticsKpiSale";
 import { fmtDate, num } from "./kpiFormat";
 import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
+import { formatNumber, formatNumberInput, parseNumberInput } from "@/lib/utils";
 
 // Cấu hình Phân tích › KPI Sale (quyền reports:analytics_config): chỉ tiêu
 // doanh số / nhóm hàng, người đại diện của khách, điều kiện tính thu nhập,
@@ -134,17 +135,25 @@ function FieldInput({
         className={`${inputCls} text-right`}
       />
     );
-  if (f.kind === "int")
+  if (f.kind === "int") {
+    // Năm giữ nguyên chữ số (không có dấu phân cách hàng nghìn).
+    const year = f.key === "year";
+    const text = value === null || value === undefined ? "" : String(value);
     return (
       <input
-        type="number"
+        type="text"
+        inputMode="numeric"
         className={inputCls}
-        value={value === null || value === undefined ? "" : String(value)}
-        onChange={(e) =>
-          onChange(e.target.value === "" ? null : Number(e.target.value))
-        }
+        value={year ? text : formatNumberInput(text)}
+        onChange={(e) => {
+          const raw = year
+            ? e.target.value.replace(/\D/g, "")
+            : formatNumberInput(e.target.value);
+          onChange(raw === "" ? null : parseNumberInput(raw));
+        }}
       />
     );
+  }
   if (f.kind === "date")
     return (
       <input
@@ -272,7 +281,7 @@ function ConfigTable<T extends { id: number }>({
         {toolbar}
         <div className="flex-1" />
         <span className="text-[12px]" style={{ color: "var(--dt-text-muted)" }}>
-          {rows.length} dòng
+          {formatNumber(rows.length)} dòng
         </span>
         <button
           type="button"

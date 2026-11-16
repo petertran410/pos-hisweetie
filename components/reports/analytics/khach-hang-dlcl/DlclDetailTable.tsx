@@ -7,6 +7,7 @@ import type {
 } from "@/lib/api/analytics-khach-hang-dlcl";
 import { AnalyticsTable, type AnalyticsColumn } from "../shared/AnalyticsTable";
 import { downloadCsv, numText } from "./dlclFormat";
+import { formatNumber } from "@/lib/utils";
 
 /** Cột có thể hiện của bảng chi tiết (tableEx), theo thứ tự phần tử trong DetailRow. */
 export type DetailField =
@@ -116,8 +117,8 @@ export function DlclDetailTable({
         style={{ color: "var(--dt-text-muted)" }}>
         <span>
           {detail.truncated
-            ? `Hiển thị ${detail.rows.length.toLocaleString("vi-VN")} / ${detail.count.toLocaleString("vi-VN")} dòng mới nhất — thu hẹp bộ lọc để xem hết.`
-            : `${detail.count.toLocaleString("vi-VN")} dòng`}
+            ? `Hiển thị ${formatNumber(detail.rows.length)} / ${formatNumber(detail.count)} dòng mới nhất — thu hẹp bộ lọc để xem hết.`
+            : `${formatNumber(detail.count)} dòng`}
         </span>
         <div className="flex-1" />
         <button
