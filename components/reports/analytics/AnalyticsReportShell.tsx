@@ -6,6 +6,7 @@ import { ShieldOff } from "lucide-react";
 import { useReportAccess } from "@/lib/permissions/reportPermissions";
 import { AnalyticsTabs } from "./AnalyticsTabs";
 import { findReport, reportHref } from "./reportRegistry";
+import { usePrefetchAnalyticsReport } from "./useAnalyticsEntry";
 
 /**
  * Khung chung cho mọi trang Phân tích:
@@ -27,6 +28,7 @@ export function AnalyticsReportShell({
   const pathname = usePathname();
   const router = useRouter();
   const { has } = useReportAccess();
+  const prefetchReport = usePrefetchAnalyticsReport();
 
   if (!def || !has(def.perm)) {
     return (
@@ -62,7 +64,10 @@ export function AnalyticsReportShell({
                 <button
                   key={p.slug || "root"}
                   type="button"
-                  onClick={() => router.push(reportHref(def.slug, p.slug))}
+                  onClick={() => {
+                    if (!p.slug) prefetchReport(def.slug);
+                    router.push(reportHref(def.slug, p.slug));
+                  }}
                   className={`px-3 py-2 text-[13px] font-semibold border-b-2 -mb-px whitespace-nowrap ${
                     on
                       ? "border-[var(--dt-primary)] text-[var(--dt-primary)]"

@@ -11,6 +11,7 @@ import type {
   AnalyticsMetric,
 } from "@/lib/api/analytics-reports";
 import {
+  defaultBusinessFilters,
   useAnalyticsFilterOptions,
   useBusinessOverview,
 } from "@/lib/hooks/useAnalyticsReports";
@@ -20,10 +21,9 @@ const fmtDate = (iso: string) => iso.split("-").reverse().join("/");
 
 /** Phân tích › Kinh Doanh › Tổng Quan — thay trang "Tổng Quan" của Power BI. */
 export default function AnalyticsBusinessPage() {
-  const [filters, setFilters] = useState<AnalyticsBusinessFilters>({
-    year: new Date().getFullYear(),
-    axis: "month",
-  });
+  const [filters, setFilters] = useState<AnalyticsBusinessFilters>(
+    defaultBusinessFilters,
+  );
   const [metric, setMetric] = useState<AnalyticsMetric>("amount");
 
   const { data: options } = useAnalyticsFilterOptions();

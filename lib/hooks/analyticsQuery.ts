@@ -12,7 +12,8 @@ import {
 //   • Không tự gửi lại khi lỗi/timeout — báo cáo nặng, gửi lại chỉ làm DB tải gấp 3.
 
 const DEBOUNCE_MS = 400;
-const STALE_MS = 5 * 60_000;
+/** Số liệu Phân tích được coi là còn mới trong 5 phút (khớp cache backend). */
+export const ANALYTICS_STALE_MS = 5 * 60_000;
 
 /**
  * Trả về cặp (queryKey, queryFn) chỉ đổi sau khi key đứng yên DEBOUNCE_MS.
@@ -46,7 +47,7 @@ export function useAnalyticsQuery<TData>(
     ...options,
     staleTime: Math.max(
       typeof options.staleTime === "number" ? options.staleTime : 0,
-      STALE_MS,
+      ANALYTICS_STALE_MS,
     ),
     queryKey,
     queryFn,
