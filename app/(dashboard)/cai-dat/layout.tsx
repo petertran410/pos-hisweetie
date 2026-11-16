@@ -16,6 +16,7 @@ import {
   MonitorSmartphone,
   MessageCircle,
   FileSpreadsheet,
+  Bell,
 } from "lucide-react";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import "@/app/dashboard.css";
@@ -98,6 +99,12 @@ export default function SettingsLayout({
       href: "/cai-dat/smax",
       label: "Smax",
       icon: MessageCircle,
+      permission: { resource: "settings", action: "update" },
+    },
+    {
+      href: "/cai-dat/thong-bao-lark",
+      label: "Thông báo Lark",
+      icon: Bell,
       permission: { resource: "settings", action: "update" },
     },
     {
