@@ -6,6 +6,7 @@ import { X, CheckCircle2, Loader2, Package } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { productsApi } from "@/lib/api/products";
 import { useBranchStore } from "@/lib/store/branch";
+import { useTransfersInTransitByBranch } from "@/lib/hooks/useTransfers";
 
 interface ProductInventoryMobileSheetProps {
   product: any;
@@ -44,6 +45,11 @@ export function ProductInventoryMobileSheet({
     staleTime: 30_000,
   });
 
+  // Phiếu chuyển hàng Đang chuyển, gom theo chi nhánh nhận
+  const { byBranch: inTransitByBranch } = useTransfersInTransitByBranch(
+    product.id
+  );
+
   // Lọc chỉ chi nhánh isActive
   const inventories: any[] = (fullProduct?.inventories ?? [])
     .filter((inv: any) => inv.branch?.isActive !== false)
@@ -64,11 +70,12 @@ export function ProductInventoryMobileSheet({
       return {
         onHand: acc.onHand + onHand,
         onOrder: acc.onOrder + onOrder,
+        inTransit: acc.inTransit + (inTransitByBranch[inv.branchId] ?? 0),
         reserved: acc.reserved + reserved,
         canSell: acc.canSell + Math.max(0, onHand - reserved),
       };
     },
-    { onHand: 0, onOrder: 0, reserved: 0, canSell: 0 }
+    { onHand: 0, onOrder: 0, inTransit: 0, reserved: 0, canSell: 0 }
   );
 
   if (!mounted) return null;
@@ -118,10 +125,11 @@ export function ProductInventoryMobileSheet({
           <p className="text-xs font-medium text-gray-500 mb-1.5">
             Tổng tất cả chi nhánh
           </p>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-5 gap-2">
             {[
               { label: "Tồn", value: totals.onHand },
               { label: "Đặt NCC", value: totals.onOrder },
+              { label: "Đi đường", value: totals.inTransit },
               { label: "KH đặt", value: totals.reserved },
               { label: "Có thể bán", value: totals.canSell, highlight: true },
             ].map((col) => (
@@ -182,7 +190,7 @@ export function ProductInventoryMobileSheet({
                     </div>
 
                     {/* Stats grid */}
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-5 gap-2">
                       <div className="bg-white rounded-lg px-2 py-1.5 border border-gray-100 text-center">
                         <p
                           className={`text-sm font-bold ${
@@ -198,6 +206,14 @@ export function ProductInventoryMobileSheet({
                         </p>
                         <p className="text-[10px] text-gray-400 mt-0.5">
                           Đặt NCC
+                        </p>
+                      </div>
+                      <div className="bg-white rounded-lg px-2 py-1.5 border border-gray-100 text-center">
+                        <p className="text-sm font-bold text-gray-800">
+                          {inTransitByBranch[inv.branchId] ?? 0}
+                        </p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">
+                          Đi đường
                         </p>
                       </div>
                       <div className="bg-white rounded-lg px-2 py-1.5 border border-gray-100 text-center">

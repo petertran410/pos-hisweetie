@@ -24,6 +24,7 @@ import { useOrdersPendingSummary } from "@/lib/hooks/useOrders";
 import { useConditionSummaryBatch } from "@/lib/hooks/useProducts";
 import { useCan } from "@/lib/hooks/useCan";
 import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
+import { useTransfersInTransitSummary } from "@/lib/hooks/useTransfers";
 import { useInventoryByBranch } from "@/lib/hooks/useInventoryByBranch";
 import { NoteDropdown } from "./NoteDropdown";
 import { ItemConditionSelector } from "./ItemConditionSelector";
@@ -152,6 +153,13 @@ export function OrderItemsList({
     selectedBranch?.id
   );
   const supplierMap = supplierSummary || {};
+  // "Đang đi đường": phiếu chuyển hàng Đang chuyển tới chi nhánh đang chọn
+  const { data: inTransitSummary } = useTransfersInTransitSummary(
+    cartProductIds,
+    selectedBranch?.id,
+    { silentForbidden: true }
+  );
+  const inTransitMap = inTransitSummary || {};
 
   // Tồn kho realtime theo (productIds, branchId). Refetch khi:
   //  - reload trang (cache reset)
@@ -232,6 +240,9 @@ export function OrderItemsList({
 
   const getSupplierOrdered = (item: CartItem): number =>
     supplierMap[item.product.id] ?? 0;
+
+  const getInTransit = (item: CartItem): number =>
+    inTransitMap[item.product.id] ?? 0;
 
   const getCartItemKey = (item: CartItem): string => item.rowId;
 
@@ -880,7 +891,8 @@ export function OrderItemsList({
                             Tồn: {getOnHandRealtime(item)} | KH Đặt:{" "}
                             {getCustomerOrdered(item).toLocaleString()} | Đặt
                             NCC: {getSupplierOrdered(item).toLocaleString()} |
-                            Tồn KM:{" "}
+                            Đang đi đường:{" "}
+                            {getInTransit(item).toLocaleString()} | Tồn KM:{" "}
                             {getPromoInventoryRealtime(item).toLocaleString()}
                           </div>
                         )}
@@ -996,7 +1008,8 @@ export function OrderItemsList({
                               Tồn: {getOnHandRealtime(item)} | KH Đặt:{" "}
                               {getCustomerOrdered(item).toLocaleString()} | Đặt
                               NCC: {getSupplierOrdered(item).toLocaleString()} |
-                              Tồn KM:{" "}
+                              Đang đi đường:{" "}
+                              {getInTransit(item).toLocaleString()} | Tồn KM:{" "}
                               {getPromoInventoryRealtime(item).toLocaleString()}
                             </div>
                           )}

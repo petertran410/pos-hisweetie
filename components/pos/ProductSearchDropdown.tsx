@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useProducts, useConditionSummaryBatch } from "@/lib/hooks/useProducts";
 import { useOrdersPendingSummary } from "@/lib/hooks/useOrders";
 import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
+import { useTransfersInTransitSummary } from "@/lib/hooks/useTransfers";
 import { useBranchStore } from "@/lib/store/branch";
 import { Search, Barcode } from "lucide-react";
 import { usePriceBook } from "@/lib/hooks/usePriceBooks";
@@ -87,6 +88,14 @@ export function ProductSearchDropdown({
     selectedBranch?.id
   );
   const supplierMap = supplierSummary || {};
+
+  // "Đang đi đường": phiếu chuyển hàng Đang chuyển tới chi nhánh đang chọn
+  const { data: inTransitSummary } = useTransfersInTransitSummary(
+    productIds,
+    selectedBranch?.id,
+    { silentForbidden: true }
+  );
+  const inTransitMap = inTransitSummary || {};
 
   // Tồn 3 bucket (bục rách / cận date / KM) lấy TỪ SỔ CÁI cho toàn bộ sản phẩm
   // đang hiển thị — 1 request batch, tránh N+1 và tránh lệch với thẻ kho.
@@ -347,6 +356,11 @@ export function ProductSearchDropdown({
                         <span className="text-gray-300">|</span>
                         <span>
                           Đặt NCC: {(supplierMap[product.id] ?? 0).toLocaleString()}
+                        </span>
+                        <span className="text-gray-300">|</span>
+                        <span>
+                          Đang đi đường:{" "}
+                          {(inTransitMap[product.id] ?? 0).toLocaleString()}
                         </span>
                         <span className="text-gray-300">|</span>
                         <span>

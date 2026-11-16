@@ -6,6 +6,7 @@ import { X, CheckCircle2, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { productsApi } from "@/lib/api/products";
 import { useBranchStore } from "@/lib/store/branch";
+import { useTransfersInTransitByBranch } from "@/lib/hooks/useTransfers";
 
 interface ProductInventoryModalProps {
   product: any;
@@ -38,6 +39,11 @@ export function ProductInventoryModal({
     staleTime: 30_000,
   });
 
+  // Phiếu chuyển hàng Đang chuyển, gom theo chi nhánh nhận
+  const { byBranch: inTransitByBranch } = useTransfersInTransitByBranch(
+    product.id
+  );
+
   // Lọc chỉ các chi nhánh đang active
   const inventories: any[] = (fullProduct?.inventories ?? [])
     .filter((inv: any) => inv.branch?.isActive !== false)
@@ -51,11 +57,12 @@ export function ProductInventoryModal({
       return {
         onHand: acc.onHand + onHand,
         onOrder: acc.onOrder + onOrder,
+        inTransit: acc.inTransit + (inTransitByBranch[inv.branchId] ?? 0),
         reserved: acc.reserved + reserved,
         canSell: acc.canSell + Math.max(0, onHand - reserved),
       };
     },
-    { onHand: 0, onOrder: 0, reserved: 0, canSell: 0 }
+    { onHand: 0, onOrder: 0, inTransit: 0, reserved: 0, canSell: 0 }
   );
 
   if (!mounted) return null;
@@ -70,7 +77,7 @@ export function ProductInventoryModal({
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[80vh] overflow-hidden">
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[80vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <h3 className="font-semibold text-gray-900 text-sm truncate pr-4">
@@ -92,6 +99,9 @@ export function ProductInventoryModal({
                 <th className="text-right px-3 py-2 font-medium">Tồn</th>
                 <th className="text-right px-3 py-2 font-medium">Đặt NCC</th>
                 <th className="text-right px-3 py-2 font-medium whitespace-nowrap">
+                  Đang đi đường
+                </th>
+                <th className="text-right px-3 py-2 font-medium whitespace-nowrap">
                   Tổng KH đặt
                 </th>
                 <th className="text-right px-3 py-2 font-medium whitespace-nowrap">
@@ -112,6 +122,9 @@ export function ProductInventoryModal({
                   {totals.onOrder}
                 </td>
                 <td className="text-right px-3 py-2 font-semibold">
+                  {totals.inTransit}
+                </td>
+                <td className="text-right px-3 py-2 font-semibold">
                   {totals.reserved}
                 </td>
                 <td className="text-right px-3 py-2 font-semibold">
@@ -121,7 +134,7 @@ export function ProductInventoryModal({
 
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-8 text-gray-400">
+                  <td colSpan={6} className="text-center py-8 text-gray-400">
                     <Loader2 className="w-5 h-5 animate-spin mx-auto mb-1" />
                     <span className="text-xs">Đang tải...</span>
                   </td>
@@ -129,7 +142,7 @@ export function ProductInventoryModal({
               ) : inventories.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="text-center py-8 text-gray-400 text-xs">
                     Không có dữ liệu tồn kho
                   </td>
@@ -165,6 +178,9 @@ export function ProductInventoryModal({
                       </td>
                       <td className="text-right px-3 py-2 text-gray-600">
                         {onOrder}
+                      </td>
+                      <td className="text-right px-3 py-2 text-gray-600">
+                        {inTransitByBranch[inv.branchId] ?? 0}
                       </td>
                       <td className="text-right px-3 py-2 text-gray-600">
                         {reserved}
