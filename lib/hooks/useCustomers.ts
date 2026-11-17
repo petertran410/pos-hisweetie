@@ -11,6 +11,7 @@ import {
 import { toast } from "sonner";
 import { useAuthStore } from "../store/auth";
 import { useBranchStore } from "../store/branch";
+import type { DebtPolicySummary } from "@/lib/api/debt-tracking";
 
 export function useCustomers(filters?: CustomerFilters) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -85,6 +86,27 @@ export function useCustomerShippingFeeHistory(customerId: number | undefined) {
         `/customers/${customerId}/shipping-fee-history`,
       );
     },
+    enabled: !!customerId && hasHydrated && isAuthenticated,
+    staleTime: 60_000,
+  });
+}
+
+/**
+ * Hình thức + quy tắc công nợ của khách (cạnh "Nợ hiện tại" ở giỏ bán hàng).
+ * Lấy theo id thay vì đọc từ object khách trong giỏ, vì khách có thể đến từ
+ * đơn/hóa đơn cũ hoặc tab lưu sẵn không có đủ trường. Key nằm dưới
+ * "customers" nên tự làm mới khi sửa khách / lưu công nợ.
+ */
+export function useCustomerDebtPolicy(customerId: number | undefined) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const hasHydrated = useAuthStore((state) => state._hasHydrated);
+
+  return useQuery({
+    queryKey: ["customers", customerId, "debt-policy"],
+    queryFn: () =>
+      apiClient.get<{ policy: DebtPolicySummary | null }>(
+        `/customers/${customerId}/debt-policy`,
+      ),
     enabled: !!customerId && hasHydrated && isAuthenticated,
     staleTime: 60_000,
   });
