@@ -135,12 +135,17 @@ interface ProductItem {
   factorySubTotal: number;
   factorySubTotalManual?: boolean;
   /**
-   * true khi BE đã bỏ giá vốn (user thiếu products:view_cost_price) và user
-   * chưa nhập giá cho dòng này. Khác phiếu đặt hàng, giá nhập là giá NCC nên
-   * BE không tự suy ra được → chặn lưu, buộc user nhập đơn giá (trước đây
-   * dòng này là NaN và BE trả lỗi 400).
+   * true khi BE đã bỏ giá vốn (user thiếu products:view_cost_price). Đơn giá
+   * bị khóa và hiện "—"; payload KHÔNG gửi price/totalPrice → BE tự lấy giá
+   * vốn hiện tại theo chi nhánh (phiếu luôn lưu theo giá vốn).
    */
   priceUnknown?: boolean;
+  /**
+   * Dòng nạp từ phiếu nhập đã lưu (sửa phiếu) hoặc sao chép phiếu nhập. Với
+   * user thiếu cả quyền xem giá vốn lẫn purchase_orders:view_price, đơn giá
+   * các dòng này bị che + khóa (giá đã lưu vẫn gửi nguyên khi lưu lại).
+   */
+  fromSavedPo?: boolean;
 }
 
 interface PurchaseOrderFormProps {
@@ -418,9 +423,20 @@ export function PurchaseOrderForm({
   // bảng NM/¥ và logic ghi giá vốn.
   const isCurrencyCNY = currency === "CNY";
 
-  // Thiếu products:view_cost_price → chỉ ẩn 2 cột "ĐG trước thuế" và
+  // Thiếu products:view_cost_price → ẩn 2 cột "ĐG trước thuế" và
   // "TT trước thuế" trên bảng. Giá trị vẫn được tính và lưu như bình thường.
   const canViewCostPrice = useCan("products", "view_cost_price");
+  // Quyền xem giá phiếu nhập (danh sách / chi tiết PN cũng ẩn theo quyền này).
+  const canViewPoPrice = useCan("purchase_orders", "view_price");
+  // Dòng bị che + khóa đơn giá: giá vốn bị ẩn (BE tự điền khi lưu), hoặc dòng
+  // của phiếu đã lưu mà user không có quyền xem giá nào.
+  const isPriceLocked = (p: ProductItem) =>
+    !!p.priceUnknown ||
+    (!!p.fromSavedPo && !canViewCostPrice && !canViewPoPrice);
+  // Có dòng bị che → các ô tổng tiền VND không xác định / không được xem →
+  // hiện "—". Phiếu CNY tổng theo giá nhà máy (¥) nên không ảnh hưởng.
+  const hasMaskedPrice = !isCurrencyCNY && products.some(isPriceLocked);
+  const hasUnknownPrice = products.some((p) => p.priceUnknown);
 
   // Tiền tệ đã được snapshot trên từng PDN/PN. Nhóm NCC chỉ dùng để chọn mặc
   // định khi tạo phiếu mới; không được biến phiếu VND lịch sử thành CNY.
@@ -537,6 +553,7 @@ export function PurchaseOrderForm({
           factorySubTotalManual:
             (item as any).factorySubTotal != null &&
             Number((item as any).factorySubTotal) !== Number((item as any).factoryPrice ?? 0) * quantity,
+          fromSavedPo: true,
         };
       });
       setProducts(loadedProducts);
@@ -585,6 +602,7 @@ export function PurchaseOrderForm({
           factorySubTotalManual:
             (item as any).factorySubTotal != null &&
             Number((item as any).factorySubTotal) !== Number((item as any).factoryPrice ?? 0) * quantity,
+          fromSavedPo: true,
         };
       });
       setProducts(loadedProducts);
@@ -838,6 +856,7 @@ export function PurchaseOrderForm({
         factorySubTotal: source.factorySubTotal,
         factorySubTotalManual: source.factorySubTotalManual,
         priceUnknown: source.priceUnknown,
+        fromSavedPo: source.fromSavedPo,
       };
       const next = [...prev];
       next.splice(index + 1, 0, newItem);
@@ -1003,7 +1022,9 @@ export function PurchaseOrderForm({
       // Auto-compute VND price & subTotal
       item.price = roundTo(factoryPrice * (effectiveRate || 1), 2);
       item.manualSubTotal = false;
+      // Đơn giá giờ suy từ giá nhà máy user nhập → hết che / khóa.
       item.priceUnknown = false;
+      item.fromSavedPo = false;
         item.subTotal = roundTo((item.price - item.discount) * item.quantity, 2);
 
       updated[index] = item;
@@ -1033,6 +1054,7 @@ export function PurchaseOrderForm({
       item.price = roundTo(item.factoryPrice * (effectiveRate || 1), 2);
       item.manualSubTotal = false;
       item.priceUnknown = false;
+      item.fromSavedPo = false;
         item.subTotal = roundTo((item.price - item.discount) * item.quantity, 2);
 
       updated[index] = item;
@@ -1073,6 +1095,7 @@ export function PurchaseOrderForm({
           ...p,
           price: expectedPrice,
           priceUnknown: false,
+          fromSavedPo: false,
           subTotal: roundTo((expectedPrice - p.discount) * p.quantity, 2),
         };
       });
@@ -1180,18 +1203,6 @@ export function PurchaseOrderForm({
       return null;
     }
 
-    // Dòng chưa có đơn giá do giá vốn bị ẩn (thiếu quyền) → buộc nhập giá
-    // trước khi lưu, tránh lưu đơn giá 0 làm sai tổng phiếu và công nợ NCC.
-    const unpricedCodes = products
-      .filter((p) => p.priceUnknown)
-      .map((p) => p.productCode);
-    if (unpricedCodes.length > 0) {
-      toast.error(
-        `Vui lòng nhập đơn giá cho: ${[...new Set(unpricedCodes)].join(", ")}`
-      );
-      return null;
-    }
-
     if (availableDiscount !== null && discount > availableDiscount) {
       toast.error(
         `Giảm giá không được vượt quá ${formatCurrency(availableDiscount)}`
@@ -1223,11 +1234,14 @@ export function PurchaseOrderForm({
           productCode: p.productCode,
           productName: p.productName,
           quantity: Number(p.quantity),
-          price: Number(p.price),
+          // Giá vốn bị ẩn → không gửi price/totalPrice, BE tự lấy giá vốn.
+          price: p.priceUnknown ? undefined : Number(p.price),
           discount: Number(p.discount) || 0,
           discountRatio: 0,
           // Gửi thành tiền (2 số thập phân) đã chốt trên form làm nguồn sự thật.
-          totalPrice: roundTo(Number(p.subTotal), 2),
+          totalPrice: p.priceUnknown
+            ? undefined
+            : roundTo(Number(p.subTotal), 2),
           description: p.note,
           // Số thứ tự dòng (index+1) — đảm bảo cùng 1 SP có thể lặp lại
           // nhiều dòng với lineNumber khác nhau. BE generate nếu thiếu, nhưng
@@ -1279,11 +1293,14 @@ export function PurchaseOrderForm({
       items: products.map((p, index) => ({
         productId: Number(p.productId),
         quantity: Number(p.quantity),
-        price: Number(p.price),
+        // Giá vốn bị ẩn → không gửi price/totalPrice, BE tự lấy giá vốn.
+        price: p.priceUnknown ? undefined : Number(p.price),
         discount: Number(p.discount) || 0,
         // Gửi thành tiền (2 số thập phân) đã chốt trên form. BE lưu thẳng giá trị
         // này thay vì recompute từ đơn giá (tránh lệch do đơn giá 2 số thập phân).
-        totalPrice: roundTo(Number(p.subTotal), 2),
+        totalPrice: p.priceUnknown
+          ? undefined
+          : roundTo(Number(p.subTotal), 2),
         description: p.note,
         // Số thứ tự dòng. Khi tạo mới (không có purchaseOrder), luôn dùng
         // index+1 — đảm bảo unique key (purchaseOrderId, lineNumber) không
@@ -1604,13 +1621,20 @@ export function PurchaseOrderForm({
                             </td>
                           )}
                           <td className="px-[10px] py-2 align-middle">
-                            <NumericInput
-                              value={item.price}
-                              onValueChange={(v) => handlePriceChange(index, v)}
-                              maxFractionDigits={2}
-                              disabled={isFormDisabled ? true : false}
-                              className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
-                            />
+                            {isPriceLocked(item) ? (
+                              // Giá vốn bị ẩn: che + khóa, BE tự lấy giá vốn.
+                              <div className="text-right text-sm text-gray-400 px-2 py-1">
+                                —
+                              </div>
+                            ) : (
+                              <NumericInput
+                                value={item.price}
+                                onValueChange={(v) => handlePriceChange(index, v)}
+                                maxFractionDigits={2}
+                                disabled={isFormDisabled ? true : false}
+                                className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
+                              />
+                            )}
                           </td>
                           <td className="px-[10px] py-2 align-middle text-center text-sm text-gray-900 whitespace-nowrap">
                             {item.vatRate ?? 8}%
@@ -1620,7 +1644,9 @@ export function PurchaseOrderForm({
                               value={item.discount}
                               onValueChange={(v) => handleDiscountChange(index, v)}
                               maxFractionDigits={0}
-                              disabled={isFormDisabled ? true : false}
+                              // Đơn giá bị khóa → khóa luôn giảm giá để phiếu
+                              // lưu đúng giá vốn × SL.
+                              disabled={!!isFormDisabled || isPriceLocked(item)}
                               className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                             />
                           </td>
@@ -1630,13 +1656,19 @@ export function PurchaseOrderForm({
                             </td>
                           )}
                           <td className="px-[10px] py-2 align-middle">
-                            <NumericInput
-                              value={item.subTotal}
-                              onValueChange={(v) => handleSubTotalChange(index, v)}
-                              maxFractionDigits={2}
-                              disabled={isFormDisabled ? true : false}
-                              className="w-full text-right border rounded px-2 py-1 text-sm font-medium disabled:bg-gray-100"
-                            />
+                            {isPriceLocked(item) ? (
+                              <div className="text-right text-sm text-gray-400 px-2 py-1">
+                                —
+                              </div>
+                            ) : (
+                              <NumericInput
+                                value={item.subTotal}
+                                onValueChange={(v) => handleSubTotalChange(index, v)}
+                                maxFractionDigits={2}
+                                disabled={isFormDisabled ? true : false}
+                                className="w-full text-right border rounded px-2 py-1 text-sm font-medium disabled:bg-gray-100"
+                              />
+                            )}
                           </td>
                         </>
                       ) : (
@@ -2100,11 +2132,18 @@ export function PurchaseOrderForm({
                 <div className="flex gap-2">
                   <div className="text-sm text-gray-600">Tổng tiền hàng:</div>
                   <div className="text-sm">
-                    {formatCurrency(
-                      products.reduce((sum, p) => sum + p.subTotal, 0)
-                    )}
+                    {hasMaskedPrice
+                      ? "—"
+                      : formatCurrency(
+                          products.reduce((sum, p) => sum + p.subTotal, 0)
+                        )}
                   </div>
                 </div>
+                {hasUnknownPrice && (
+                  <div className="text-xs text-gray-500">
+                    Có dòng chưa có đơn giá — hệ thống tính khi lưu phiếu.
+                  </div>
+                )}
                 {(() => {
                   // Tách thuế giống trang Hóa đơn VAT: cộng dồn từng dòng qua
                   // computeInvoiceVat (giá nhập là số ĐÃ GỒM thuế, %VAT theo dòng).
@@ -2123,19 +2162,25 @@ export function PurchaseOrderForm({
                           Tiền trước thuế:
                         </div>
                         <div className="text-sm">
-                          {formatCurrency(vatSummary.totalPreTax)}
+                          {hasMaskedPrice
+                            ? "—"
+                            : formatCurrency(vatSummary.totalPreTax)}
                         </div>
                       </div>
                       <div className="flex gap-2">
                         <div className="text-sm text-gray-600">Thuế VAT:</div>
                         <div className="text-sm">
-                          {formatCurrency(vatSummary.totalVat)}
+                          {hasMaskedPrice
+                            ? "—"
+                            : formatCurrency(vatSummary.totalVat)}
                         </div>
                       </div>
                       <div className="flex gap-2">
                         <div className="text-sm text-gray-600">Tổng sau thuế:</div>
                         <div className="text-sm font-semibold">
-                          {formatCurrency(vatSummary.totalAfterTax)}
+                          {hasMaskedPrice
+                            ? "—"
+                            : formatCurrency(vatSummary.totalAfterTax)}
                         </div>
                       </div>
                     </>
@@ -2237,7 +2282,9 @@ export function PurchaseOrderForm({
                         (paymentAmount > 0 ? (paymentForeignAmount || 0) : 0)
                     )
                   ) + ` ${currency}`
-                : formatCurrency(calculateTotal())}
+                : hasMaskedPrice
+                  ? "—"
+                  : formatCurrency(calculateTotal())}
             </div>
           </div>
 
@@ -2268,9 +2315,11 @@ export function PurchaseOrderForm({
                       }).format(
                         Math.max(0, calculateTotalCNY() - previouslyPaidCNY)
                       ) + ` ${currency}`
-                    : formatCurrency(
-                        Math.max(0, calculateTotal() - previouslyPaid)
-                      )}
+                    : hasMaskedPrice
+                      ? "—"
+                      : formatCurrency(
+                          Math.max(0, calculateTotal() - previouslyPaid)
+                        )}
                 </div>
               </div>
             </>
@@ -2334,9 +2383,14 @@ export function PurchaseOrderForm({
                         calculateTotalCNY()
                     )
                   ) + ` ${currency}`
-                : formatCurrency(
-                    Math.max(0, paymentAmount + previouslyPaid - calculateTotal())
-                  )}
+                : hasMaskedPrice
+                  ? "—"
+                  : formatCurrency(
+                      Math.max(
+                        0,
+                        paymentAmount + previouslyPaid - calculateTotal()
+                      )
+                    )}
             </div>
           </div>
 
@@ -2380,6 +2434,7 @@ export function PurchaseOrderForm({
         foreignTotalAmount={isCurrencyCNY ? calculateTotalCNY() : undefined}
         defaultExchangeRate={effectiveRate}
         currency={currency}
+        totalUnknown={hasMaskedPrice}
         onConfirm={handlePaymentConfirm}
       />
     </div>
