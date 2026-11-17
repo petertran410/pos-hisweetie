@@ -50,6 +50,8 @@ import Swal from "sweetalert2";
 
 interface HoaDonVatTableProps {
   filters: any;
+  /** false = bộ lọc chưa sẵn sàng (sidebar chưa đẩy lần đầu) → chưa gọi API. */
+  enabled?: boolean;
 }
 
 // ─── Trạng thái đồng bộ Misa ──────────────────────────────────────────────────
@@ -307,7 +309,10 @@ const DEFAULT_COLUMNS: ColumnConfig<InvoiceVat>[] = [
   },
 ];
 
-export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
+export function HoaDonVatTable({
+  filters,
+  enabled = true,
+}: HoaDonVatTableProps) {
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<number | null>(
     null
   );
@@ -595,7 +600,12 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
     [page, limit, debouncedSearch, effectiveFilters, sortBy, sortDir, advancedSearch]
   );
 
-  const { data, isLoading } = useInvoicesVat(queryParams);
+  const { data, isLoading: isListLoading } = useInvoicesVat(queryParams, {
+    enabled,
+  });
+  // React Query v5: query đang tắt thì isLoading = false → vẫn hiện "Đang tải..."
+  // trong lúc chờ bộ lọc, tránh nháy "Không có dữ liệu".
+  const isLoading = isListLoading || !enabled;
 
   // Tổng các cột VAT của TOÀN BỘ hóa đơn match filter — không phụ thuộc page/limit/sort.
   const totalsParams = useMemo(() => {
@@ -603,7 +613,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
       queryParams as any;
     return rest;
   }, [queryParams]);
-  const { data: totals } = useInvoicesVatTotals(totalsParams);
+  const { data: totals } = useInvoicesVatTotals(totalsParams, { enabled });
 
   const invoices = data?.data || [];
   const total = data?.total ?? 0;
