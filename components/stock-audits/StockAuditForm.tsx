@@ -11,7 +11,7 @@ import {
 import { Search, Trash2, Loader2, X, Upload } from "lucide-react";
 import { StockAudit } from "@/lib/types/stock-audit";
 import { stockAuditsApi } from "@/lib/api/stock-audits";
-import { formatNumberInput } from "@/lib/utils";
+import { formatCurrency, formatNumber, formatNumberInput } from "@/lib/utils";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import {
   StockAuditImportModal,
@@ -386,7 +386,10 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
                       )}
                     </div>
                     <span className="text-xs text-gray-500">
-                      Tồn: {inv ? Number(inv.onHand).toLocaleString() : 0}
+                      Tồn:{" "}
+                      {inv
+                        ? formatNumber(Number(inv.onHand), "en-US", { max: 3 })
+                        : 0}
                     </span>
                   </button>
                 );
@@ -431,17 +434,20 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
                           {item.unit || "-"}
                         </td>
                         <td className="px-3 py-2 text-right">
-                          {item.onHand.toLocaleString()}
+                          {formatNumber(item.onHand, "en-US", { max: 3 })}
                         </td>
                         <td className="px-3 py-2 text-center">
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={formatNumberInput(item.actualQuantity)}
+                            value={formatNumberInput(item.actualQuantity, 3)}
                             onChange={(e) => {
                               // Strip dấu phẩy trước khi validate
                               const raw = e.target.value.replace(/,/g, "");
-                              if (raw === "" || /^\d*\.?\d*$/.test(raw)) {
+                              if (
+                                raw === "" ||
+                                /^\d*(?:\.\d{0,3})?$/.test(raw)
+                              ) {
                                 updateItem(
                                   item.productId,
                                   "actualQuantity",
@@ -462,8 +468,8 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
                                 : ""
                           }`}>
                           {diff > 0
-                            ? `+${diff.toLocaleString()}`
-                            : diff.toLocaleString()}
+                            ? `+${formatNumber(diff, "en-US", { max: 3 })}`
+                            : formatNumber(diff, "en-US", { max: 3 })}
                         </td>
                         {canViewCostPrice && (
                           <td
@@ -476,7 +482,7 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
                             }`}>
                             {diffValue !== 0
                               ? (diffValue > 0 ? "+" : "") +
-                                diffValue.toLocaleString() +
+                                formatCurrency(diffValue) +
                                 " đ"
                               : "-"}
                           </td>
@@ -517,7 +523,7 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
                             : ""
                       }`}>
                       {totals.totalDiff > 0 ? "+" : ""}
-                      {totals.totalDiff.toLocaleString()}
+                      {formatNumber(totals.totalDiff, "en-US", { max: 3 })}
                     </td>
                     {canViewCostPrice && (
                       <td
@@ -530,7 +536,7 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
                         }`}>
                         {totals.totalDiffValue !== 0
                           ? (totals.totalDiffValue > 0 ? "+" : "") +
-                            totals.totalDiffValue.toLocaleString() +
+                            formatCurrency(totals.totalDiffValue) +
                             " đ"
                           : "-"}
                       </td>

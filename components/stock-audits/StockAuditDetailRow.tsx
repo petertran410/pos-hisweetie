@@ -8,10 +8,8 @@ import {
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { StockAudit } from "@/lib/types/stock-audit";
 import { StockAuditForm } from "./StockAuditForm";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, formatNumber } from "@/lib/utils";
 import { CodeLink } from "@/components/shared/CodeLink";
-
-const formatMoney = (n: number) => n.toLocaleString("vi-VN") + " đ";
 
 interface Props {
   audit: StockAudit;
@@ -169,10 +167,14 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                           {d.unit || "-"}
                         </td>
                         <td className="px-3 py-2 text-right">
-                          {Number(d.systemQuantity).toLocaleString()}
+                          {formatNumber(Number(d.systemQuantity), "en-US", {
+                            max: 3,
+                          })}
                         </td>
                         <td className="px-3 py-2 text-right font-medium">
-                          {Number(d.actualQuantity).toLocaleString()}
+                          {formatNumber(Number(d.actualQuantity), "en-US", {
+                            max: 3,
+                          })}
                         </td>
                         <td
                           className={`px-3 py-2 text-right font-medium ${
@@ -183,8 +185,8 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                                 : ""
                           }`}>
                           {diff > 0
-                            ? `+${diff.toLocaleString()}`
-                            : diff.toLocaleString()}
+                            ? `+${formatNumber(diff, "en-US", { max: 3 })}`
+                            : formatNumber(diff, "en-US", { max: 3 })}
                         </td>
                         {canViewCostPrice && (
                           <td
@@ -213,14 +215,14 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                     <td></td>
                     <td></td>
                     <td className={`px-3 py-2 text-right text-brand`}>
-                      {totalSystemQuantityValue > 0
-                        ? `${totalSystemQuantityValue.toLocaleString()}`
-                        : totalSystemQuantityValue.toLocaleString()}
+                      {formatNumber(totalSystemQuantityValue, "en-US", {
+                        max: 3,
+                      })}
                     </td>
                     <td className={`px-3 py-2 text-right text-green-600`}>
-                      {totalActualQuantityValue > 0
-                        ? `${totalActualQuantityValue.toLocaleString()}`
-                        : totalActualQuantityValue.toLocaleString()}
+                      {formatNumber(totalActualQuantityValue, "en-US", {
+                        max: 3,
+                      })}
                     </td>
                     <td
                       className={`px-3 py-2 text-right ${
@@ -231,8 +233,8 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                             : ""
                       }`}>
                       {totalDiff > 0
-                        ? `+${totalDiff.toLocaleString()}`
-                        : totalDiff.toLocaleString()}
+                        ? `+${formatNumber(totalDiff, "en-US", { max: 3 })}`
+                        : formatNumber(totalDiff, "en-US", { max: 3 })}
                     </td>
                     {canViewCostPrice && (
                       <td

@@ -11,12 +11,12 @@ import { RecommendationPagination } from "@/components/purchasing-planning/Recom
 import { RecommendationDetailPanel } from "@/components/purchasing-planning/RecommendationDetailPanel";
 import {
   ExportExcelModal,
-  type ExportExcelOptions
+  type ExportExcelOptions,
 } from "@/components/purchasing-planning/ExportExcelModal";
 import { buildColumns } from "@/components/purchasing-planning/columns";
 import {
   useRecommendations,
-  useRunPurchasingCalculation
+  useRunPurchasingCalculation,
 } from "@/lib/hooks/usePurchasingPlanning";
 import { usePurchasingPlanningFilters } from "@/lib/hooks/usePurchasingPlanningTableState";
 import { useColumnVisibility } from "@/lib/hooks/useColumnVisibility";
@@ -27,11 +27,11 @@ import { useCan } from "@/lib/hooks/useCan";
 import { purchasingPlanningApi } from "@/lib/api/purchasing-planning";
 import {
   exportRecommendationsToExcel,
-  getExportableColumns
+  getExportableColumns,
 } from "@/lib/utils/purchasing-planning-export";
 import {
   buildExportFilters,
-  fetchAllForExport
+  fetchAllForExport,
 } from "@/lib/utils/purchasing-planning-fetch-all";
 import type { ViewMode } from "@/lib/types/purchasing-planning";
 
@@ -57,10 +57,10 @@ export default function PurchasingPlanningPage() {
   const handleRunCalculation = useCallback(async () => {
     try {
       const result = await runCalculation.mutateAsync({
-        snapshotDate: filters.date
+        snapshotDate: filters.date,
       });
       toast.success(
-        `Đã tính xong ${result.skuTotal.toLocaleString("vi-VN")} sản phẩm` +
+        `Đã tính xong ${result.skuTotal.toLocaleString("en-US")} sản phẩm` +
           (result.skuBlocked > 0
             ? ` · ${result.skuBlocked} sản phẩm thiếu dữ liệu`
             : "")
@@ -152,7 +152,7 @@ export default function PurchasingPlanningPage() {
         const cols = exportableColumns.filter((c) => selected.has(c.key));
 
         const count = exportRecommendationsToExcel(rows, cols);
-        toast.success(`Đã xuất ${count.toLocaleString("vi-VN")} dòng`);
+        toast.success(`Đã xuất ${count.toLocaleString("en-US")} dòng`);
         setExportOpen(false);
       } catch (e) {
         toast.error(

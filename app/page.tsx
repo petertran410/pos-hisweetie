@@ -247,7 +247,7 @@ function HomeContent() {
             minute: "2-digit",
           })
         : "--:--",
-    [stats.dataUpdatedAt],
+    [stats.dataUpdatedAt]
   );
 
   // ── Guards ──
@@ -309,7 +309,7 @@ function HomeContent() {
               value={branchId ?? "all"}
               onChange={(e) =>
                 setBranchId(
-                  e.target.value === "all" ? undefined : Number(e.target.value),
+                  e.target.value === "all" ? undefined : Number(e.target.value)
                 )
               }>
               <option value="all">Tất cả chi nhánh</option>
@@ -453,7 +453,7 @@ function HomeContent() {
               accent="#C0392B"
               name="Tồn cảnh báo"
               value={vi(
-                (s?.lowStockProducts ?? 0) + (s?.outOfStockProducts ?? 0),
+                (s?.lowStockProducts ?? 0) + (s?.outOfStockProducts ?? 0)
               )}
               valueSuffix="mã"
               delta={
@@ -546,7 +546,7 @@ function HomeContent() {
                     Tỷ trọng doanh thu ·{" "}
                     {rangeSubtitle(range, rangeCustom).replace(
                       /^Theo (giờ|ngày) · /,
-                      "",
+                      ""
                     )}
                   </div>
                 </div>
@@ -580,7 +580,7 @@ function HomeContent() {
                   <DashSelect
                     ariaLabel="Tiêu chí xếp hạng"
                     options={TOP_METRICS.filter(
-                      (m) => m.key !== "profit" || canSeeProfit,
+                      (m) => m.key !== "profit" || canSeeProfit
                     )}
                     value={topMetric}
                     onChange={(v) => {

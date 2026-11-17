@@ -70,7 +70,9 @@ const toYmd = (d: Date) =>
   ).padStart(2, "0")}`;
 
 /** Trả { dateFrom, dateTo } (yyyy-mm-dd) từ preset. all_time/custom → rỗng/giữ nguyên. */
-const getPresetRange = (preset: string): { dateFrom: string; dateTo: string } => {
+const getPresetRange = (
+  preset: string
+): { dateFrom: string; dateTo: string } => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const day = 86400000;
@@ -94,7 +96,10 @@ const getPresetRange = (preset: string): { dateFrom: string; dateTo: string } =>
       return { dateFrom: toYmd(s), dateTo: toYmd(e) };
     }
     case "last_7_days":
-      return { dateFrom: toYmd(new Date(today.getTime() - 7 * day)), dateTo: toYmd(today) };
+      return {
+        dateFrom: toYmd(new Date(today.getTime() - 7 * day)),
+        dateTo: toYmd(today),
+      };
     case "this_month":
       return {
         dateFrom: toYmd(new Date(now.getFullYear(), now.getMonth(), 1)),
@@ -106,7 +111,10 @@ const getPresetRange = (preset: string): { dateFrom: string; dateTo: string } =>
         dateTo: toYmd(new Date(now.getFullYear(), now.getMonth(), 0)),
       };
     case "last_30_days":
-      return { dateFrom: toYmd(new Date(today.getTime() - 30 * day)), dateTo: toYmd(today) };
+      return {
+        dateFrom: toYmd(new Date(today.getTime() - 30 * day)),
+        dateTo: toYmd(today),
+      };
     case "this_quarter": {
       const q = Math.floor(now.getMonth() / 3);
       return {
@@ -151,7 +159,7 @@ const EMPTY_FILTERS: Filters = {
 // Chỉ giữ chữ số (state lưu raw digits, hiển thị có phân tách hàng nghìn).
 const onlyDigits = (v: string) => v.replace(/\D/g, "");
 const formatAmountInput = (v: string) =>
-  v ? Number(v).toLocaleString("vi-VN") : "";
+  v ? Number(v).toLocaleString("en-US") : "";
 
 export default function BienDongSoDuPage() {
   const searchParams = useSearchParams();
@@ -233,7 +241,10 @@ export default function BienDongSoDuPage() {
   useEffect(() => {
     if (!openCal) return;
     const handler = (e: MouseEvent) => {
-      if (dateBoxRef.current && !dateBoxRef.current.contains(e.target as Node)) {
+      if (
+        dateBoxRef.current &&
+        !dateBoxRef.current.contains(e.target as Node)
+      ) {
         setOpenCal(null);
       }
     };
@@ -334,7 +345,9 @@ export default function BienDongSoDuPage() {
           </div>
 
           <div className="flex flex-col">
-            <label className="text-xs text-gray-500 mb-1">Tài khoản ngân hàng</label>
+            <label className="text-xs text-gray-500 mb-1">
+              Tài khoản ngân hàng
+            </label>
             <select
               value={draft.accountNumber}
               onChange={(e) =>
@@ -402,7 +415,9 @@ export default function BienDongSoDuPage() {
           </div>
 
           <div className="flex flex-col">
-            <label className="text-xs text-gray-500 mb-1">Khoảng thời gian</label>
+            <label className="text-xs text-gray-500 mb-1">
+              Khoảng thời gian
+            </label>
             <select
               value={draft.datePreset}
               onChange={(e) => handlePresetChange(e.target.value)}
@@ -452,7 +467,9 @@ export default function BienDongSoDuPage() {
                 <div className="relative">
                   <button
                     type="button"
-                    onClick={() => setOpenCal((c) => (c === "to" ? null : "to"))}
+                    onClick={() =>
+                      setOpenCal((c) => (c === "to" ? null : "to"))
+                    }
                     className={`w-40 flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
                       draft.dateTo
                         ? "border-brand bg-brand-soft text-[var(--dt-text)]"
@@ -549,14 +566,18 @@ export default function BienDongSoDuPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-gray-400">
+                  <td
+                    colSpan={9}
+                    className="px-4 py-10 text-center text-gray-400">
                     <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
                     Đang tải...
                   </td>
                 </tr>
               ) : transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-gray-400">
+                  <td
+                    colSpan={9}
+                    className="px-4 py-10 text-center text-gray-400">
                     Không có giao dịch nào
                   </td>
                 </tr>
@@ -573,15 +594,21 @@ export default function BienDongSoDuPage() {
                           {formatDateParts(tx.transactionDate).date}
                         </div>
                       </td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">{tx.bankBrandName || "-"}</td>
-                      <td className="px-3 py-2.5 whitespace-nowrap dt-mono">{tx.accountNumber || "-"}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        {tx.bankBrandName || "-"}
+                      </td>
+                      <td className="px-3 py-2.5 whitespace-nowrap dt-mono">
+                        {tx.accountNumber || "-"}
+                      </td>
                       <td className="px-3 py-2.5 text-left font-medium text-green-600 whitespace-nowrap dt-mono">
                         +{formatCurrency(amountIn)}
                       </td>
                       <td className="px-3 py-2.5 min-w-[160px] max-w-[280px] break-words whitespace-normal align-middle">
                         {tx.transactionContent || "-"}
                       </td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">{tx.referenceNumber || "-"}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        {tx.referenceNumber || "-"}
+                      </td>
                       <td className="px-3 py-2.5 min-w-[160px] max-w-[220px] break-words whitespace-normal align-middle">
                         <SepayCustomerCell tx={tx} />
                       </td>
@@ -608,7 +635,7 @@ export default function BienDongSoDuPage() {
             {isFetching && (
               <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
             )}
-            Tổng {total.toLocaleString("vi-VN")} giao dịch
+            Tổng {total.toLocaleString("en-US")} giao dịch
           </div>
           <div className="flex items-center gap-2">
             <button

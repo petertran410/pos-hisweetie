@@ -13,7 +13,11 @@ import {
   Check,
   Clock,
 } from "lucide-react";
-import { formatNumberInput, parseNumberInput } from "@/lib/utils";
+import {
+  formatNumber,
+  formatNumberInput,
+  parseNumberInput,
+} from "@/lib/utils";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useProducts, useProduct } from "@/lib/hooks/useProducts";
 import {
@@ -991,11 +995,11 @@ export function ProductionForm({
                 <label className="block text-sm font-medium mb-1">
                   Số lượng
                 </label>
-                <input
-                  type="text"
+                <NumericInput
                   value={quantity}
-                  onChange={(e) => setQuantity(Number(e.target.value))}
-                  min="0"
+                  onValueChange={setQuantity}
+                  formatWhileTyping
+                  maxFractionDigits={3}
                   className="text-sm w-full px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100 disabled:cursor-not-allowed"
                   disabled={isFormDisabled}
                 />
@@ -1092,6 +1096,7 @@ export function ProductionForm({
                         value={feeForeignAmount}
                         onValueChange={setFeeForeignAmount}
                         maxFractionDigits={2}
+                        formatWhileTyping
                         disabled={isFormDisabled}
                         className="text-sm flex-1 min-w-0 px-2 py-1 border rounded text-right focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100 disabled:cursor-not-allowed"
                       />
@@ -1120,11 +1125,12 @@ export function ProductionForm({
                       value={feeExchangeRate}
                       onValueChange={setFeeExchangeRate}
                       maxFractionDigits={2}
+                      formatWhileTyping
                       disabled={isFormDisabled}
                       className="text-sm w-full px-2 py-1 border rounded text-right focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Phí quy đổi: {feeInVnd.toLocaleString("vi-VN")} đ
+                      Phí quy đổi: {formatNumber(feeInVnd)} đ
                     </p>
                   </div>
                 ) : (
@@ -1137,14 +1143,14 @@ export function ProductionForm({
                         Giá vốn nguyên liệu gửi đi
                       </div>
                       <div className="font-medium">
-                        {Math.round(materialValue).toLocaleString("vi-VN")} đ
+                        {formatNumber(Math.round(materialValue))} đ
                       </div>
                     </div>
                   )}
                   <div className="px-3 py-2 border rounded bg-white">
                     <div className="text-xs text-gray-500">Phí sản xuất</div>
                     <div className="font-medium">
-                      {feeInVnd.toLocaleString("vi-VN")} đ
+                      {formatNumber(feeInVnd)} đ
                     </div>
                   </div>
                   {canViewCostPrice && (
@@ -1153,7 +1159,7 @@ export function ProductionForm({
                         Giá thành dự kiến / sp
                       </div>
                       <div className="font-semibold text-brand">
-                        {Math.round(estimatedUnitCost).toLocaleString("vi-VN")} đ
+                        {formatNumber(Math.round(estimatedUnitCost))} đ
                       </div>
                     </div>
                   )}
@@ -1215,14 +1221,18 @@ export function ProductionForm({
                             {req.productName}
                           </td>
                           <td className="px-3 py-2 text-sm text-right">
-                            {req.requiredGramsPerUnit.toLocaleString("vi-VN")}
+                            {formatNumber(req.requiredGramsPerUnit, "en-US", {
+                              max: 3,
+                            })}
                           </td>
                           <td className="px-3 py-2 text-sm text-right">
-                            {req.totalRequiredGrams.toLocaleString("vi-VN")}
+                            {formatNumber(req.totalRequiredGrams, "en-US", {
+                              max: 3,
+                            })}
                           </td>
                           <td className="px-3 py-2 text-sm text-right text-gray-500">
-                            {req.unitsToDeduct.toLocaleString("vi-VN", {
-                              maximumFractionDigits: 3,
+                            {formatNumber(req.unitsToDeduct, "en-US", {
+                              max: 3,
                             })}
                             {req.unit && (
                               <span className="text-gray-400 ml-1 text-xs">
@@ -1268,25 +1278,31 @@ export function ProductionForm({
                                   actualUnitInputs[req.componentProductId] !==
                                   undefined
                                     ? actualUnitInputs[req.componentProductId]
-                                    : (req.weightInGrams > 0
-                                        ? req.actualUnitsToDeduct
-                                        : req.actualG
-                                      ).toLocaleString("vi-VN", {
-                                        maximumFractionDigits: 3,
-                                      })
+                                    : formatNumber(
+                                        req.weightInGrams > 0
+                                          ? req.actualUnitsToDeduct
+                                          : req.actualG,
+                                        "en-US",
+                                        { max: 3 },
+                                      )
                                 }
                                 onChange={(e) =>
+                                  // Gõ đến đâu thêm dấu phẩy ngăn cách đến đó.
                                   setActualUnitInputs((prev) => ({
                                     ...prev,
-                                    [req.componentProductId]: e.target.value,
+                                    [req.componentProductId]: formatNumberInput(
+                                      e.target.value,
+                                      3,
+                                    ),
                                   }))
                                 }
                                 onBlur={(e) => {
-                                  // Parse cả "," lẫn "." làm dấu thập phân
-                                  const raw = e.target.value
-                                    .replace(/\./g, "")
-                                    .replace(",", ".");
-                                  const parsed = parseFloat(raw);
+                                  // "," là dấu ngăn cách hàng nghìn, "." là
+                                  // dấu thập phân. Ô rỗng → giữ giá trị cũ.
+                                  const raw = e.target.value;
+                                  const parsed = /\d/.test(raw)
+                                    ? parseNumberInput(raw)
+                                    : NaN;
                                   if (!isNaN(parsed) && parsed >= 0) {
                                     const newGrams =
                                       req.weightInGrams > 0
@@ -1344,15 +1360,17 @@ export function ProductionForm({
                             {req.weightInGrams > 0 && (
                               <div className="text-xs text-gray-400 text-right mt-0.5 pr-7">
                                 ≈{" "}
-                                {req.actualG.toLocaleString("vi-VN", {
-                                  maximumFractionDigits: 0,
+                                {formatNumber(req.actualG, "en-US", {
+                                  max: 0,
                                 })}{" "}
                                 g
                               </div>
                             )}
                           </td>
                           <td className="px-3 py-2 text-sm text-right">
-                            {req.availableStock.toLocaleString("vi-VN")}
+                            {formatNumber(req.availableStock, "en-US", {
+                              max: 3,
+                            })}
                             {req.unit && (
                               <span className="text-gray-400 ml-1 text-xs">
                                 {req.unit}

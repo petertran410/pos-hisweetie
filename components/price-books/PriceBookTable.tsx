@@ -26,7 +26,7 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import { formatNumberInput } from "@/lib/utils";
+import { formatNumber, formatNumberInput } from "@/lib/utils";
 
 interface TableProduct {
   id: number;
@@ -451,7 +451,7 @@ export function PriceBookTable({
                     <td className="p-3">{product.name}</td>
                     {canViewCostPrice && (
                       <td className="p-3 text-right whitespace-nowrap">
-                        {cost.toLocaleString()}
+                        {formatNumber(cost)}
                       </td>
                     )}
                     {selectedPriceBooks.map((pb) => {
@@ -500,7 +500,7 @@ export function PriceBookTable({
                           ) : canViewProduct ? (
                             <span>
                               {displayPrice !== undefined
-                                ? displayPrice.toLocaleString()
+                                ? formatNumber(displayPrice)
                                 : "-"}
                             </span>
                           ) : (

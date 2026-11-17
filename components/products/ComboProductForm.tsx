@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import type { Product } from "@/lib/api/products";
 import {
   useCreateProduct,
@@ -20,6 +20,12 @@ import { MisaItemDropdown } from "./MisaItemDropdown";
 import { MisaInventoryItem } from "@/lib/api/misa";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { API_URL } from "@/lib/config/api";
+import { NumericInput } from "@/components/ui/NumericInput";
+import {
+  formatNumber,
+  formatNumberInput,
+  parseNumberInput,
+} from "@/lib/utils";
 import { usePublication } from "./publication/usePublication";
 import { PublicationSection } from "./publication/PublicationSection";
 import {
@@ -96,7 +102,7 @@ export function ComboProductForm({
     });
   }, [product]);
 
-  const { register, handleSubmit, watch, setValue } = useForm({
+  const { register, handleSubmit, watch, setValue, control } = useForm({
     defaultValues: {
       code: product?.code || "",
       name: product?.name || "",
@@ -506,7 +512,7 @@ export function ComboProductForm({
                           </span>
                           <span className="flex-1">{product.name}</span>
                           <span className="text-sm text-gray-500">
-                            {Number(product.basePrice).toLocaleString()} đ
+                            {formatNumber(Number(product.basePrice))} đ
                           </span>
                         </button>
                       ))}
@@ -556,13 +562,13 @@ export function ComboProductForm({
                         {canViewCostPrice && (
                           <>
                             <td className="px-4 py-2 text-right">
-                              {calculateTotalPurchasePrice().toLocaleString()}
+                              {formatNumber(calculateTotalPurchasePrice())}
                             </td>
                             <td></td>
                           </>
                         )}
                         <td className="px-4 py-2 text-right">
-                          {calculateTotalRetailPrice().toLocaleString()}
+                          {formatNumber(calculateTotalRetailPrice())}
                         </td>
                         <td></td>
                       </tr>
@@ -596,34 +602,31 @@ export function ComboProductForm({
                             {comp.componentProduct?.name}
                           </td>
                           <td className="px-4 py-2">
-                            <input
-                              type="number"
-                              min="1"
+                            <NumericInput
                               value={comp.quantity}
-                              onChange={(e) =>
-                                updateComponentQuantity(
-                                  actualIndex,
-                                  Number(e.target.value)
-                                )
+                              onValueChange={(qty) =>
+                                updateComponentQuantity(actualIndex, qty)
                               }
+                              formatWhileTyping
+                              maxFractionDigits={0}
                               className="w-20 border rounded px-2 py-1 text-center"
                             />
                           </td>
                           {canViewCostPrice && (
                             <>
                               <td className="px-4 py-2 text-right">
-                                {purchasePrice.toLocaleString()}
+                                {formatNumber(purchasePrice)}
                               </td>
                               <td className="px-4 py-2 text-right">
-                                {totalPurchase.toLocaleString()}
+                                {formatNumber(totalPurchase)}
                               </td>
                             </>
                           )}
                           <td className="px-4 py-2 text-right">
-                            {retailPrice.toLocaleString()}
+                            {formatNumber(retailPrice)}
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {totalRetail.toLocaleString()}
+                            {formatNumber(totalRetail)}
                           </td>
                           <td className="px-4 py-2">
                             <button
@@ -704,11 +707,19 @@ export function ComboProductForm({
                       Giá bán
                     </label>
                     <span className="pf-suffix" data-suffix="đ">
-                      <input
-                        {...register("basePrice", { valueAsNumber: true })}
-                        type="number"
-                        className="w-full border rounded px-3 py-2"
-                        placeholder="0"
+                      <Controller
+                        control={control}
+                        name="basePrice"
+                        render={({ field }) => (
+                          <NumericInput
+                            value={Number(field.value) || 0}
+                            onValueChange={field.onChange}
+                            formatWhileTyping
+                            maxFractionDigits={0}
+                            className="w-full border rounded px-3 py-2"
+                            placeholder="0"
+                          />
+                        )}
                       />
                     </span>
                   </div>
@@ -723,11 +734,37 @@ export function ComboProductForm({
                     Khối lượng tịnh
                   </label>
                   <div className="flex gap-2">
-                    <input
-                      {...register("weight", { valueAsNumber: true })}
-                      type="number"
-                      className="flex-1 border rounded px-3 py-2"
-                      placeholder="550"
+                    <Controller
+                      control={control}
+                      name="weight"
+                      render={({ field }) => (
+                        // Gõ đến đâu thêm dấu phẩy ngăn cách đến đó; ô rỗng →
+                        // NaN như valueAsNumber cũ.
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={
+                            field.value == null ||
+                            Number.isNaN(Number(field.value))
+                              ? ""
+                              : formatNumber(field.value, "en-US", { max: 3 })
+                          }
+                          onChange={(e) => {
+                            const formatted = formatNumberInput(
+                              e.target.value,
+                              3
+                            );
+                            field.onChange(
+                              formatted === ""
+                                ? NaN
+                                : parseNumberInput(formatted)
+                            );
+                          }}
+                          onBlur={field.onBlur}
+                          className="flex-1 border rounded px-3 py-2"
+                          placeholder="550"
+                        />
+                      )}
                     />
                     <select
                       {...register("weightUnit")}
@@ -742,11 +779,35 @@ export function ComboProductForm({
                     Trọng lượng vận chuyển
                   </label>
                   <div className="flex gap-2">
-                    <input
-                      {...register("shippingWeight", { valueAsNumber: true })}
-                      type="number"
-                      className="flex-1 border rounded px-3 py-2"
-                      placeholder="0"
+                    <Controller
+                      control={control}
+                      name="shippingWeight"
+                      render={({ field }) => (
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={
+                            field.value == null ||
+                            Number.isNaN(Number(field.value))
+                              ? ""
+                              : formatNumber(field.value, "en-US", { max: 3 })
+                          }
+                          onChange={(e) => {
+                            const formatted = formatNumberInput(
+                              e.target.value,
+                              3
+                            );
+                            field.onChange(
+                              formatted === ""
+                                ? NaN
+                                : parseNumberInput(formatted)
+                            );
+                          }}
+                          onBlur={field.onBlur}
+                          className="flex-1 border rounded px-3 py-2"
+                          placeholder="0"
+                        />
+                      )}
                     />
                     <select
                       {...register("shippingWeightUnit")}
@@ -762,13 +823,19 @@ export function ComboProductForm({
                   <label className="block text-sm font-medium mb-1">
                     Định lượng đóng gói
                   </label>
-                  <input
-                    {...register("conversionValue", { valueAsNumber: true })}
-                    type="number"
-                    min={1}
-                    step={1}
-                    className="w-full border rounded px-3 py-2"
-                    placeholder="1"
+                  <Controller
+                    control={control}
+                    name="conversionValue"
+                    render={({ field }) => (
+                      <NumericInput
+                        value={Number(field.value) || 0}
+                        onValueChange={field.onChange}
+                        formatWhileTyping
+                        maxFractionDigits={0}
+                        className="w-full border rounded px-3 py-2"
+                        placeholder="1"
+                      />
+                    )}
                   />
                   <p className="mt-1 text-xs text-gray-500">
                     Ví dụ: 12 nghĩa là 1 thùng gồm 12 đơn vị sản phẩm.

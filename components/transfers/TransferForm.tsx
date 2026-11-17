@@ -22,8 +22,9 @@ import { useBranchStore } from "@/lib/store/branch";
 import type { Transfer } from "@/lib/api/transfers";
 import { productsApi, type Product } from "@/lib/api/products";
 import { toast } from "sonner";
-import { formatCurrency, parseNumberInput } from "@/lib/utils";
+import { formatCurrency, formatNumber, parseNumberInput } from "@/lib/utils";
 import { useCan } from "@/lib/hooks/useCan";
+import { NumericInput } from "@/components/ui/NumericInput";
 
 // Làm tròn về `digits` số thập phân, tránh sai số dấu phẩy động (vd 0.1+0.2).
 // Mirror pattern PurchaseOrderForm / OrderSupplierForm — SL tối đa 2 chữ số
@@ -33,66 +34,11 @@ function roundTo(value: number, digits = 2): number {
   return Math.round((value + Number.EPSILON) * f) / f;
 }
 
-// Định dạng số lượng: tối đa 2 chữ số thập phân, bỏ trailing zeros.
-// `1 → "1"`, `1.5 → "1.5"`, `1.25 → "1.25"`.
+// Định dạng số lượng: tối đa 2 chữ số thập phân, bỏ trailing zeros, có dấu
+// phẩy ngăn cách hàng nghìn. `1 → "1"`, `1.5 → "1.5"`, `1234.25 → "1,234.25"`.
 function formatQuantity(value: number): string {
   if (!isFinite(value) || value === 0) return "0";
-  const fixed = roundTo(value, 2).toFixed(2);
-  return fixed.replace(/\.?0+$/, "");
-}
-
-// Validate chuỗi nhập SL: cho phép số thập phân tối đa 2 chữ số. Phải chấp
-// nhận cả các trạng thái gõ dở như "1." (đã gõ dấu chấm nhưng chưa gõ chữ
-// số sau), "" (đang xóa), "0", "0.01".
-const QUANTITY_INPUT_PATTERN = /^\d*(?:\.\d{0,2})?$/;
-
-/**
- * Ô nhập SỐ LƯỢNG cho phép gõ số thập phân mượt (tối đa 2 chữ số thập phân).
- * Giữ raw string trong lúc focus để không bị mất dấu "." khi đang gõ "1." —
- * đây là lý do input controlled thuần (value=number) không gõ được "1.5":
- * onChange "1." → parse ra 1 → re-render "1" → xóa mất dấu chấm.
- * Khi blur mới normalize hiển thị qua formatQuantity.
- */
-function QuantityInput({
-  value,
-  onValueChange,
-  disabled,
-  className,
-}: {
-  value: number;
-  onValueChange: (next: number) => void;
-  disabled?: boolean;
-  className?: string;
-}) {
-  const [focused, setFocused] = useState(false);
-  const [raw, setRaw] = useState("");
-
-  const display = focused ? raw : formatQuantity(value);
-
-  return (
-    <input
-      type="text"
-      inputMode="decimal"
-      value={display}
-      disabled={disabled}
-      className={className}
-      onFocus={(e) => {
-        setFocused(true);
-        setRaw(value ? String(value) : "");
-        e.target.select();
-      }}
-      onChange={(e) => {
-        const cleaned = e.target.value.replace(/,/g, "");
-        if (cleaned === "" || QUANTITY_INPUT_PATTERN.test(cleaned)) {
-          setRaw(cleaned);
-          onValueChange(
-            cleaned === "" ? 0 : roundTo(parseFloat(cleaned) || 0, 2)
-          );
-        }
-      }}
-      onBlur={() => setFocused(false)}
-    />
-  );
+  return formatNumber(roundTo(value, 2), "en-US", { max: 2 });
 }
 
 interface TransferFormProps {
@@ -497,7 +443,7 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
     const newQuantity = roundTo(currentProduct.sendQuantity + delta, 2);
 
     // Cho phép xuống 0 khi bấm − (validate > 0 lúc submit). Thập phân
-    // (vd 0.5) được gõ tay qua QuantityInput.
+    // (vd 0.5) được gõ tay qua NumericInput.
     if (newQuantity < 0) {
       toast.error("Số lượng chuyển không được nhỏ hơn 0");
       return;
@@ -793,26 +739,30 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                                 <span>
                                   Tồn chuyển:{" "}
                                   <span className="font-medium text-gray-700">
-                                    {Number(
-                                      fromInv?.onHand ?? 0
-                                    ).toLocaleString()}
+                                    {formatNumber(
+                                      Number(fromInv?.onHand ?? 0),
+                                      "en-US",
+                                      { max: 3 }
+                                    )}
                                   </span>
                                 </span>
                                 <span>
                                   Tồn nhận:{" "}
                                   <span className="font-medium text-gray-700">
-                                    {Number(
-                                      toInv?.onHand ?? 0
-                                    ).toLocaleString()}
+                                    {formatNumber(
+                                      Number(toInv?.onHand ?? 0),
+                                      "en-US",
+                                      { max: 3 }
+                                    )}
                                   </span>
                                 </span>
                                 {canViewPrice && (
                                   <span>
                                     Giá:{" "}
                                     <span className="font-medium text-brand">
-                                      {Number(
-                                        fromInv?.cost ?? 0
-                                      ).toLocaleString()}{" "}
+                                      {formatCurrency(
+                                        Number(fromInv?.cost ?? 0)
+                                      )}{" "}
                                       đ
                                     </span>
                                   </span>
@@ -905,7 +855,11 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                                 ? "text-red-600 font-semibold"
                                 : "text-gray-600"
                             }`}>
-                            {Number(item.fromInventory ?? 0).toLocaleString()}
+                            {formatNumber(
+                              Number(item.fromInventory ?? 0),
+                              "en-US",
+                              { max: 3 }
+                            )}
                             {isOverStock && (
                               <div className="text-[11px] font-normal text-red-500">
                                 Vượt tồn, kho sẽ âm
@@ -913,7 +867,11 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                             )}
                           </td>
                           <td className="px-4 py-3 text-right text-gray-600">
-                            {Number(item.toInventory ?? 0).toLocaleString()}
+                            {formatNumber(
+                              Number(item.toInventory ?? 0),
+                              "en-US",
+                              { max: 3 }
+                            )}
                           </td>
                           <td className="px-4 py-3">
                             {canEditProducts ? (
@@ -932,11 +890,13 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                                   className="w-7 h-7 border rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 flex items-center justify-center">
                                   <Minus className="w-3 h-3" />
                                 </button>
-                                <QuantityInput
+                                <NumericInput
                                   value={item.sendQuantity}
                                   onValueChange={(next) =>
                                     handleChangeQuantity(index, next)
                                   }
+                                  formatWhileTyping
+                                  maxFractionDigits={2}
                                   disabled={isReadOnly || isReceived}
                                   className="w-16 border rounded-lg px-2 py-1 text-center text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                                 />
@@ -976,11 +936,13 @@ export function TransferForm({ transfer, copyMode, onClose }: TransferFormProps)
                                     className="w-7 h-7 border rounded-lg hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed text-gray-600 flex items-center justify-center">
                                     <Minus className="w-3 h-3" />
                                   </button>
-                                  <QuantityInput
+                                  <NumericInput
                                     value={item.receivedQuantity}
                                     onValueChange={(next) =>
                                       handleChangeReceivedQuantity(index, next)
                                     }
+                                    formatWhileTyping
+                                    maxFractionDigits={2}
                                     disabled={isReadOnly}
                                     className="w-16 border rounded-lg px-2 py-1 text-center text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                                   />

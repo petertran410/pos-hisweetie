@@ -7,7 +7,7 @@ import type {
   Destruction,
   DestructionQueryParams,
 } from "@/lib/api/destructions";
-import { formatCurrency } from "../../lib/utils";
+import { formatCurrency, formatNumber } from "../../lib/utils";
 import {
   Plus,
   Search,
@@ -485,7 +485,7 @@ export function DestructionsTable({
 
         <span className="text-xs text-gray-400">
           Trang {page}/{totalPages}
-          {total > 0 ? ` · ${total.toLocaleString("vi-VN")} phiếu` : ""}
+          {total > 0 ? ` · ${formatNumber(total)} phiếu` : ""}
         </span>
       </div>
     </div>

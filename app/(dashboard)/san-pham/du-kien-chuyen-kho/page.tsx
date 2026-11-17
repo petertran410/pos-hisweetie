@@ -66,7 +66,7 @@ export default function TransferPlanningPage() {
   // ── Column visibility with local storage persistence ──
   const { columns, visibleColumns, toggleColumn } = useColumnVisibility(
     "transferPlanningColumns",
-    buildTransferPlanningColumns(),
+    buildTransferPlanningColumns()
   );
 
   // Backend chưa hỗ trợ availabilityFilter nên chỉ dùng filter này phía client.
@@ -88,7 +88,7 @@ export default function TransferPlanningPage() {
     return raw.filter((item) =>
       key === "under"
         ? item.stockHN < item.computed.suggestedQuantity
-        : item.stockHN >= item.computed.suggestedQuantity,
+        : item.stockHN >= item.computed.suggestedQuantity
     );
   }, [data, filters.availabilityFilter]);
 
@@ -96,7 +96,7 @@ export default function TransferPlanningPage() {
   // để đảm bảo 100% đồng nhất với cột hiển thị, tránh lệch do dữ liệu tĩnh cũ.
   const selectedItem = useMemo(
     () => items.find((i) => i.id === selectedItemId) ?? null,
-    [items, selectedItemId],
+    [items, selectedItemId]
   );
   const total = filters.availabilityFilter ? items.length : (data?.total ?? 0);
   const summary = data?.summary;
@@ -108,7 +108,7 @@ export default function TransferPlanningPage() {
         ...newFilters,
       }));
     },
-    [],
+    []
   );
 
   const handleResetFilters = useCallback(() => {
@@ -151,10 +151,10 @@ export default function TransferPlanningPage() {
 
       const count = exportTransferPlanningToExcel(
         allResponse.data,
-        visibleColumns,
+        visibleColumns
       );
       toast.success(
-        `Đã xuất ${count.toLocaleString("vi-VN")} dòng ra file Excel`,
+        `Đã xuất ${count.toLocaleString("en-US")} dòng ra file Excel`
       );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Không thể xuất file Excel");

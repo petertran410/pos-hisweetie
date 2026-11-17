@@ -11,7 +11,8 @@ import {
 import { useBranchStore } from "@/lib/store/branch";
 import type { Destruction } from "@/lib/api/destructions";
 import { productsApi, type Product } from "@/lib/api/products";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatNumber } from "@/lib/utils";
+import { NumericInput } from "@/components/ui/NumericInput";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -324,7 +325,11 @@ export function DestructionForm({
                                 </>
                               )}
                               Tồn:{" "}
-                              {Number(inventory?.onHand || 0).toLocaleString()}{" "}
+                              {formatNumber(
+                                Number(inventory?.onHand || 0),
+                                "en-US",
+                                { max: 3 }
+                              )}{" "}
                               • Đặt NCC: 0 • Khách đặt: 0
                             </div>
                           </div>
@@ -392,16 +397,15 @@ export function DestructionForm({
                           Hộp
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <input
-                            type="number"
+                          <NumericInput
                             value={item.quantity}
-                            onChange={(e) =>
-                              handleQuantityChange(index, e.target.value)
+                            onValueChange={(next) =>
+                              handleQuantityChange(index, String(next))
                             }
+                            formatWhileTyping
+                            maxFractionDigits={3}
                             disabled={isFormDisabled}
                             className="w-20 px-2 py-1 border rounded text-center focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100"
-                            min="0"
-                            step="1"
                           />
                         </td>
                         {canViewCostPrice && (
@@ -465,7 +469,9 @@ export function DestructionForm({
               <div className="flex justify-between items-center">
                 <input
                   type="text"
-                  value={calculateTotalQuantity()}
+                  value={formatNumber(calculateTotalQuantity(), "en-US", {
+                    max: 3,
+                  })}
                   disabled
                   className="flex-1 px-3 py-2 border rounded bg-gray-50 text-right"
                 />

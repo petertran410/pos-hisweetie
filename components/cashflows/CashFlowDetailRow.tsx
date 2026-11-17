@@ -241,7 +241,10 @@ export function CashFlowDetailRow({
       <tr>
         <td colSpan={colSpan} className="p-0">
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-5 h-5 animate-spin" style={{ color: "var(--dt-text-muted)" }} />
+            <Loader2
+              className="w-5 h-5 animate-spin"
+              style={{ color: "var(--dt-text-muted)" }}
+            />
           </div>
         </td>
       </tr>
@@ -253,7 +256,10 @@ export function CashFlowDetailRow({
   return (
     <>
       <tr style={{ borderBottom: "2px solid var(--dt-primary)" }}>
-        <td colSpan={colSpan} className="p-0" style={{ background: "var(--dt-bg-soft)" }}>
+        <td
+          colSpan={colSpan}
+          className="p-0"
+          style={{ background: "var(--dt-bg-soft)" }}>
           <div ref={wrapperRef} className="overflow-hidden">
             <div
               className="bg-white border overflow-hidden"
@@ -284,7 +290,9 @@ export function CashFlowDetailRow({
                             {partnerName}
                           </Link>
                         ) : (
-                          <span className="text-lg font-semibold" style={{ color: "var(--dt-text)" }}>
+                          <span
+                            className="text-lg font-semibold"
+                            style={{ color: "var(--dt-text)" }}>
                             {partnerName}
                           </span>
                         )}
@@ -301,7 +309,9 @@ export function CashFlowDetailRow({
                         )}
                       </>
                     ) : (
-                      <span className="text-lg font-semibold" style={{ color: "var(--dt-text)" }}>
+                      <span
+                        className="text-lg font-semibold"
+                        style={{ color: "var(--dt-text)" }}>
                         Không xác định
                       </span>
                     )}
@@ -314,13 +324,17 @@ export function CashFlowDetailRow({
                 </div>
 
                 {/* Right: mã phiếu + chi nhánh */}
-                <span className="text-sm font-medium" style={{ color: "var(--dt-text-secondary)" }}>
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: "var(--dt-text-secondary)" }}>
                   {cashFlow.branchName || cashFlow.branch?.name || "-"}
                 </span>
               </div>
 
               {/* ── Tabs ── */}
-              <div className="flex gap-1 px-6 border-b" style={{ borderColor: "var(--dt-border)" }}>
+              <div
+                className="flex gap-1 px-6 border-b"
+                style={{ borderColor: "var(--dt-border)" }}>
                 {[
                   { key: "info", label: "Thông tin" },
                   {
@@ -334,8 +348,14 @@ export function CashFlowDetailRow({
                     className="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors"
                     style={
                       activeTab === t.key
-                        ? { borderColor: "var(--dt-primary)", color: "var(--dt-primary)" }
-                        : { borderColor: "transparent", color: "var(--dt-text-muted)" }
+                        ? {
+                            borderColor: "var(--dt-primary)",
+                            color: "var(--dt-primary)",
+                          }
+                        : {
+                            borderColor: "transparent",
+                            color: "var(--dt-text-muted)",
+                          }
                     }>
                     {t.label}
                   </button>
@@ -362,25 +382,19 @@ export function CashFlowDetailRow({
                         </span>
                       </div>
                       <div className="flex flex-col gap-2 mb-2 dt-field-divider">
-                        <label className="dt-field-label">
-                          Thời gian:
-                        </label>
+                        <label className="dt-field-label">Thời gian:</label>
                         <span className="dt-field-value">
                           {formatDateTime(cashFlow.transDate)}
                         </span>
                       </div>
                       <div className="flex flex-col gap-2 mb-2 dt-field-divider">
-                        <label className="dt-field-label">
-                          Chi nhánh:
-                        </label>
+                        <label className="dt-field-label">Chi nhánh:</label>
                         <span className="dt-field-value">
                           {cashFlow.branchName || cashFlow.branch?.name || "-"}
                         </span>
                       </div>
                       <div className="flex flex-col gap-2 mb-2 dt-field-divider">
-                        <label className="dt-field-label">
-                          Loại phiếu:
-                        </label>
+                        <label className="dt-field-label">Loại phiếu:</label>
                         <span className="dt-field-value">
                           {cashFlow.isReceipt ? "Phiếu thu" : "Phiếu chi"}
                         </span>
@@ -390,9 +404,7 @@ export function CashFlowDetailRow({
                     {/* Row 2: Số tiền | Loại thu/chi | Phương thức | Tài khoản NH */}
                     <div className="grid grid-cols-4 gap-x-5">
                       <div className="flex flex-col gap-2 mb-2 dt-field-divider">
-                        <label className="dt-field-label">
-                          Số tiền:
-                        </label>
+                        <label className="dt-field-label">Số tiền:</label>
                         <span className="dt-field-value">
                           {cashFlow.isReceipt ? "+" : "-"}
                           {formatCurrency(Number(cashFlow.amount))}
@@ -423,9 +435,7 @@ export function CashFlowDetailRow({
                         </span>
                       </div>
                       <div className="flex flex-col gap-2 mb-2 dt-field-divider">
-                        <label className="dt-field-label">
-                          Phương thức:
-                        </label>
+                        <label className="dt-field-label">Phương thức:</label>
                         <span className="dt-field-value">
                           {getMethodText(cashFlow.method)}
                         </span>
@@ -478,7 +488,7 @@ export function CashFlowDetailRow({
                             <span className="dt-field-value">
                               {Number(
                                 cashFlow.exchangeRate || 1
-                              ).toLocaleString("vi-VN")}
+                              ).toLocaleString("en-US")}
                             </span>
                           </div>
                           {cashFlow.foreignAmount != null && (
@@ -507,9 +517,7 @@ export function CashFlowDetailRow({
                               ? "Đối tượng nộp:"
                               : "Đối tượng nhận:"}
                           </label>
-                          <span className="dt-field-value">
-                            {partnerName}
-                          </span>
+                          <span className="dt-field-value">{partnerName}</span>
                         </div>
                         {(cashFlow.customer?.contactNumber ||
                           cashFlow.supplier?.contactNumber ||
@@ -527,9 +535,7 @@ export function CashFlowDetailRow({
                         )}
                         {cashFlow.address && (
                           <div className="flex flex-col gap-2 mb-2 dt-field-divider">
-                            <label className="dt-field-label">
-                              Địa chỉ:
-                            </label>
+                            <label className="dt-field-label">Địa chỉ:</label>
                             <span className="dt-field-value">
                               {cashFlow.customer?.invoiceAddress} -{" "}
                               {cashFlow.customer?.invoiceCityName} -{" "}
@@ -542,13 +548,16 @@ export function CashFlowDetailRow({
 
                     {/* Ghi chú */}
                     <div>
-                      <label className="dt-field-label">
-                        Ghi chú:
-                      </label>
+                      <label className="dt-field-label">Ghi chú:</label>
                       <div
                         className="w-full px-3 py-2 lg:text-sm border rounded min-h-[60px]"
-                        style={{ background: "var(--dt-bg-soft)", borderColor: "var(--dt-border)" }}>
-                        <p className="lg:text-sm" style={{ color: "var(--dt-text)" }}>
+                        style={{
+                          background: "var(--dt-bg-soft)",
+                          borderColor: "var(--dt-border)",
+                        }}>
+                        <p
+                          className="lg:text-sm"
+                          style={{ color: "var(--dt-text)" }}>
                           {cashFlow.description || "Chưa có ghi chú"}
                         </p>
                       </div>
@@ -559,15 +568,23 @@ export function CashFlowDetailRow({
                 {activeTab === "invoices" && (
                   <div className="space-y-4">
                     {!hasInvoicePayments ? (
-                      <div className="flex items-center justify-center py-10 text-sm" style={{ color: "var(--dt-text-muted)" }}>
+                      <div
+                        className="flex items-center justify-center py-10 text-sm"
+                        style={{ color: "var(--dt-text-muted)" }}>
                         Không có hóa đơn hay đơn hàng liên quan
                       </div>
                     ) : (
                       <>
                         {mergedInvoices.length > 0 && (
-                          <div className="border rounded-xl overflow-hidden" style={{ borderColor: "var(--dt-border)" }}>
+                          <div
+                            className="border rounded-xl overflow-hidden"
+                            style={{ borderColor: "var(--dt-border)" }}>
                             <table className="w-full">
-                              <thead style={{ background: "var(--dt-bg-soft)", borderBottom: "1px solid var(--dt-border)" }}>
+                              <thead
+                                style={{
+                                  background: "var(--dt-bg-soft)",
+                                  borderBottom: "1px solid var(--dt-border)",
+                                }}>
                                 <tr>
                                   <th className="px-4 py-3 text-left lg:text-sm font-semibold dt-th w-[120px]">
                                     Hóa đơn
@@ -624,7 +641,8 @@ export function CashFlowDetailRow({
                                       {/* Hóa đơn */}
                                       <td className="px-4 py-3">
                                         <Link
-                                          className="lg:text-sm hover:underline" style={{ color: "var(--dt-primary)" }}
+                                          className="lg:text-sm hover:underline"
+                                          style={{ color: "var(--dt-primary)" }}
                                           href={`/don-hang/hoa-don?Code=${row.invoiceCode}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
@@ -634,12 +652,16 @@ export function CashFlowDetailRow({
                                       </td>
 
                                       {/* Thời gian */}
-                                      <td className="px-4 py-3 lg:text-sm" style={{ color: "var(--dt-text)" }}>
+                                      <td
+                                        className="px-4 py-3 lg:text-sm"
+                                        style={{ color: "var(--dt-text)" }}>
                                         {formatDateTime(row.latestDate)}
                                       </td>
 
                                       {/* Giá trị HĐ */}
-                                      <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
+                                      <td
+                                        className="px-4 py-3 text-right lg:text-sm"
+                                        style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(row.grandTotal)}
                                       </td>
 
@@ -663,14 +685,26 @@ export function CashFlowDetailRow({
                                             </span>
                                             {visibleTooltipId ===
                                               `ctn-${row.invoiceId}` && (
-                                              <div className="absolute z-10 bottom-full right-0 mb-1 px-2.5 py-1.5 text-white text-xs rounded shadow-lg whitespace-nowrap" style={{ background: "var(--dt-primary-dark)" }}>
+                                              <div
+                                                className="absolute z-10 bottom-full right-0 mb-1 px-2.5 py-1.5 text-white text-xs rounded shadow-lg whitespace-nowrap"
+                                                style={{
+                                                  background:
+                                                    "var(--dt-primary-dark)",
+                                                }}>
                                                 {offsetCodes}
-                                                <div className="absolute top-full right-3 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent" style={{ borderTopColor: "var(--dt-primary-dark)" }} />
+                                                <div
+                                                  className="absolute top-full right-3 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent"
+                                                  style={{
+                                                    borderTopColor:
+                                                      "var(--dt-primary-dark)",
+                                                  }}
+                                                />
                                               </div>
                                             )}
                                           </div>
                                         ) : (
-                                          <span style={{ color: "var(--dt-text)" }}>
+                                          <span
+                                            style={{ color: "var(--dt-text)" }}>
                                             {formatCurrency(daThutruoc)}
                                           </span>
                                         )}
@@ -696,21 +730,37 @@ export function CashFlowDetailRow({
                                             </span>
                                             {visibleTooltipId ===
                                               `ip-${row.invoiceId}` && (
-                                              <div className="absolute z-10 bottom-full right-0 mb-1 px-2.5 py-1.5 text-white text-xs rounded shadow-lg whitespace-nowrap" style={{ background: "var(--dt-primary-dark)" }}>
+                                              <div
+                                                className="absolute z-10 bottom-full right-0 mb-1 px-2.5 py-1.5 text-white text-xs rounded shadow-lg whitespace-nowrap"
+                                                style={{
+                                                  background:
+                                                    "var(--dt-primary-dark)",
+                                                }}>
                                                 {paymentCodes}
-                                                <div className="absolute top-full right-3 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent" style={{ borderTopColor: "var(--dt-primary-dark)" }} />
+                                                <div
+                                                  className="absolute top-full right-3 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent"
+                                                  style={{
+                                                    borderTopColor:
+                                                      "var(--dt-primary-dark)",
+                                                  }}
+                                                />
                                               </div>
                                             )}
                                           </div>
                                         ) : (
-                                          <span style={{ color: "var(--dt-text-muted)" }}>
+                                          <span
+                                            style={{
+                                              color: "var(--dt-text-muted)",
+                                            }}>
                                             -
                                           </span>
                                         )}
                                       </td>
 
                                       {/* Còn cần thu */}
-                                      <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
+                                      <td
+                                        className="px-4 py-3 text-right lg:text-sm"
+                                        style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(row.debtAmount)}
                                       </td>
 
@@ -738,12 +788,20 @@ export function CashFlowDetailRow({
                         {/* Bảng đơn hàng liên quan */}
                         {orderPayments.length > 0 && (
                           <div>
-                            <p className="text-sm font-semibold mb-2" style={{ color: "var(--dt-text-secondary)" }}>
+                            <p
+                              className="text-sm font-semibold mb-2"
+                              style={{ color: "var(--dt-text-secondary)" }}>
                               Đơn hàng liên quan
                             </p>
-                            <div className="border rounded-xl overflow-hidden" style={{ borderColor: "var(--dt-border)" }}>
+                            <div
+                              className="border rounded-xl overflow-hidden"
+                              style={{ borderColor: "var(--dt-border)" }}>
                               <table className="w-full">
-                                <thead style={{ background: "var(--dt-bg-soft)", borderBottom: "1px solid var(--dt-border)" }}>
+                                <thead
+                                  style={{
+                                    background: "var(--dt-bg-soft)",
+                                    borderBottom: "1px solid var(--dt-border)",
+                                  }}>
                                   <tr>
                                     <th className="px-4 py-3 text-left lg:text-sm font-semibold dt-th">
                                       Mã đơn hàng
@@ -770,12 +828,11 @@ export function CashFlowDetailRow({
                                 </thead>
                                 <tbody className="bg-white dt-divide">
                                   {orderPayments.map((payment: any) => (
-                                    <tr
-                                      key={payment.id}
-                                      className="dt-row">
+                                    <tr key={payment.id} className="dt-row">
                                       <td className="px-4 py-3">
                                         <Link
-                                          className="lg:text-sm font-medium hover:underline" style={{ color: "var(--dt-primary)" }}
+                                          className="lg:text-sm font-medium hover:underline"
+                                          style={{ color: "var(--dt-primary)" }}
                                           href={`/don-hang/dat-hang?Code=${payment.order?.code}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
@@ -783,15 +840,21 @@ export function CashFlowDetailRow({
                                           {payment.order?.code}
                                         </Link>
                                       </td>
-                                      <td className="px-4 py-3 lg:text-sm" style={{ color: "var(--dt-text)" }}>
+                                      <td
+                                        className="px-4 py-3 lg:text-sm"
+                                        style={{ color: "var(--dt-text)" }}>
                                         {formatDateTime(payment.paymentDate)}
                                       </td>
-                                      <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
+                                      <td
+                                        className="px-4 py-3 text-right lg:text-sm"
+                                        style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(payment.order?.grandTotal || 0)
                                         )}
                                       </td>
-                                      <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
+                                      <td
+                                        className="px-4 py-3 text-right lg:text-sm"
+                                        style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(
                                             payment.order?.paidAmount || 0
@@ -801,7 +864,9 @@ export function CashFlowDetailRow({
                                       <td className="px-4 py-3 text-right lg:text-sm font-medium text-green-600">
                                         {formatCurrency(Number(payment.amount))}
                                       </td>
-                                      <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
+                                      <td
+                                        className="px-4 py-3 text-right lg:text-sm"
+                                        style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(payment.order?.debtAmount || 0)
                                         )}
@@ -836,27 +901,77 @@ export function CashFlowDetailRow({
 
                         {/* Bảng phiếu nhập hàng (PN) liên quan — đối xứng
                             "Hóa đơn liên quan" của KH. */}
-                        {payableAllocations.length > 0 && <div>
-                          <p className="mb-2 text-sm font-semibold">Phiếu gửi sản xuất liên quan</p>
-                          <div className="overflow-x-auto border"><table className="w-full min-w-[480px] text-sm">
-                            <thead className="bg-gray-50 text-left"><tr><th className="p-2">Phiếu</th><th className="p-2">Nguồn</th><th className="p-2 text-right">Tiền phân bổ</th><th className="p-2 text-right">Còn nợ</th><th className="p-2">Trạng thái</th></tr></thead>
-                            <tbody>{payableAllocations.map((row) => <tr key={row.id} className="border-t">
-                              <td className="p-2"><Link className="text-brand" href={`/san-pham/san-xuat?Code=${row.targetCode}`}>{row.targetCode}</Link></td>
-                              <td className="p-2">{row.source === "credit" ? "Cấn ứng trước" : "Tiền mới"}</td>
-                              <td className="p-2 text-right">{formatCurrency(Number(row.amount))}</td>
-                              <td className="p-2 text-right">{formatCurrency(Number(row.production?.debtAmount ?? 0))}</td>
-                              <td className="p-2">{row.status === 2 ? "Đã hủy" : "Đã phân bổ"}</td>
-                            </tr>)}</tbody>
-                          </table></div>
-                        </div>}
+                        {payableAllocations.length > 0 && (
+                          <div>
+                            <p className="mb-2 text-sm font-semibold">
+                              Phiếu gửi sản xuất liên quan
+                            </p>
+                            <div className="overflow-x-auto border">
+                              <table className="w-full min-w-[480px] text-sm">
+                                <thead className="bg-gray-50 text-left">
+                                  <tr>
+                                    <th className="p-2">Phiếu</th>
+                                    <th className="p-2">Nguồn</th>
+                                    <th className="p-2 text-right">
+                                      Tiền phân bổ
+                                    </th>
+                                    <th className="p-2 text-right">Còn nợ</th>
+                                    <th className="p-2">Trạng thái</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {payableAllocations.map((row) => (
+                                    <tr key={row.id} className="border-t">
+                                      <td className="p-2">
+                                        <Link
+                                          className="text-brand"
+                                          href={`/san-pham/san-xuat?Code=${row.targetCode}`}>
+                                          {row.targetCode}
+                                        </Link>
+                                      </td>
+                                      <td className="p-2">
+                                        {row.source === "credit"
+                                          ? "Cấn ứng trước"
+                                          : "Tiền mới"}
+                                      </td>
+                                      <td className="p-2 text-right">
+                                        {formatCurrency(Number(row.amount))}
+                                      </td>
+                                      <td className="p-2 text-right">
+                                        {formatCurrency(
+                                          Number(
+                                            row.production?.debtAmount ?? 0
+                                          )
+                                        )}
+                                      </td>
+                                      <td className="p-2">
+                                        {row.status === 2
+                                          ? "Đã hủy"
+                                          : "Đã phân bổ"}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
                         {purchaseOrderPayments.length > 0 && (
                           <div>
-                            <p className="text-sm font-semibold mb-2" style={{ color: "var(--dt-text-secondary)" }}>
+                            <p
+                              className="text-sm font-semibold mb-2"
+                              style={{ color: "var(--dt-text-secondary)" }}>
                               Phiếu nhập hàng liên quan
                             </p>
-                            <div className="border rounded-xl overflow-hidden" style={{ borderColor: "var(--dt-border)" }}>
+                            <div
+                              className="border rounded-xl overflow-hidden"
+                              style={{ borderColor: "var(--dt-border)" }}>
                               <table className="w-full">
-                                <thead style={{ background: "var(--dt-bg-soft)", borderBottom: "1px solid var(--dt-border)" }}>
+                                <thead
+                                  style={{
+                                    background: "var(--dt-bg-soft)",
+                                    borderBottom: "1px solid var(--dt-border)",
+                                  }}>
                                   <tr>
                                     <th className="px-4 py-3 text-left lg:text-sm font-semibold dt-th">
                                       Mã phiếu nhập
@@ -889,7 +1004,8 @@ export function CashFlowDetailRow({
                                       payment.foreignAmount != null &&
                                       payment.exchangeRate != null;
                                     const formatAmount = (vnd: number) => {
-                                      if (!isForeignPO) return formatCurrency(vnd);
+                                      if (!isForeignPO)
+                                        return formatCurrency(vnd);
                                       const rate = Number(payment.exchangeRate);
                                       const cny = vnd / rate;
                                       return (
@@ -907,23 +1023,30 @@ export function CashFlowDetailRow({
                                       );
                                     };
                                     return (
-                                      <tr
-                                        key={payment.id}
-                                        className="dt-row">
+                                      <tr key={payment.id} className="dt-row">
                                         <td className="px-4 py-3">
                                           <Link
-                                            className="lg:text-sm font-medium hover:underline" style={{ color: "var(--dt-primary)" }}
+                                            className="lg:text-sm font-medium hover:underline"
+                                            style={{
+                                              color: "var(--dt-primary)",
+                                            }}
                                             href={`/san-pham/nhap-hang?Code=${payment.purchaseOrder?.code}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            onClick={(e) => e.stopPropagation()}>
+                                            onClick={(e) =>
+                                              e.stopPropagation()
+                                            }>
                                             {payment.purchaseOrder?.code}
                                           </Link>
                                         </td>
-                                        <td className="px-4 py-3 lg:text-sm" style={{ color: "var(--dt-text)" }}>
+                                        <td
+                                          className="px-4 py-3 lg:text-sm"
+                                          style={{ color: "var(--dt-text)" }}>
                                           {formatDateTime(payment.paymentDate)}
                                         </td>
-                                        <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
+                                        <td
+                                          className="px-4 py-3 text-right lg:text-sm"
+                                          style={{ color: "var(--dt-text)" }}>
                                           {formatAmount(
                                             Number(
                                               payment.purchaseOrder?.subTotal ||
@@ -932,58 +1055,79 @@ export function CashFlowDetailRow({
                                             )
                                           )}
                                         </td>
-                                        <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
+                                        <td
+                                          className="px-4 py-3 text-right lg:text-sm"
+                                          style={{ color: "var(--dt-text)" }}>
                                           {formatAmount(
                                             Number(
-                                              payment.purchaseOrder?.paidAmount ||
-                                                0
+                                              payment.purchaseOrder
+                                                ?.paidAmount || 0
                                             ) - Number(payment.amount)
                                           )}
                                         </td>
                                         <td className="px-4 py-3 text-right lg:text-sm font-medium text-red-600">
                                           <div className="flex flex-col items-end">
-                                            {isForeignPO && payment.foreignAmount != null ? (
+                                            {isForeignPO &&
+                                            payment.foreignAmount != null ? (
                                               <>
                                                 <span>
-                                                  {new Intl.NumberFormat("vi-VN", {
-                                                    maximumFractionDigits: 2,
-                                                  }).format(Number(payment.foreignAmount))}{" "}
+                                                  {new Intl.NumberFormat(
+                                                    "vi-VN",
+                                                    {
+                                                      maximumFractionDigits: 2,
+                                                    }
+                                                  ).format(
+                                                    Number(
+                                                      payment.foreignAmount
+                                                    )
+                                                  )}{" "}
                                                   CNY
                                                 </span>
                                                 <span className="text-xs text-gray-400 font-normal">
-                                                  ({formatCurrency(Number(payment.amount))})
+                                                  (
+                                                  {formatCurrency(
+                                                    Number(payment.amount)
+                                                  )}
+                                                  )
                                                 </span>
                                               </>
                                             ) : (
-                                              formatCurrency(Number(payment.amount))
+                                              formatCurrency(
+                                                Number(payment.amount)
+                                              )
                                             )}
                                           </div>
                                         </td>
-                                        <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
+                                        <td
+                                          className="px-4 py-3 text-right lg:text-sm"
+                                          style={{ color: "var(--dt-text)" }}>
                                           {formatAmount(
                                             Number(
-                                              payment.purchaseOrder?.debtAmount ||
-                                                0
+                                              payment.purchaseOrder
+                                                ?.debtAmount || 0
                                             )
                                           )}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                           <span
                                             className={`px-2 py-1 rounded text-xs font-medium ${
-                                              payment.purchaseOrder?.status === 1
+                                              payment.purchaseOrder?.status ===
+                                              1
                                                 ? "bg-green-100 text-green-700"
                                                 : payment.purchaseOrder
                                                       ?.status === 2
-                                                ? "bg-red-100 text-red-700"
-                                                : "bg-yellow-100 text-yellow-700"
+                                                  ? "bg-red-100 text-red-700"
+                                                  : "bg-yellow-100 text-yellow-700"
                                             }`}>
-                                            {payment.purchaseOrder?.statusValue ||
-                                              (payment.purchaseOrder?.status === 1
+                                            {payment.purchaseOrder
+                                              ?.statusValue ||
+                                              (payment.purchaseOrder?.status ===
+                                              1
                                                 ? "Đã nhập hàng"
                                                 : payment.purchaseOrder
                                                       ?.status === 2
-                                                ? "Đã hủy"
-                                                : "Phiếu tạm")}
+                                                  ? "Đã hủy"
+                                                  : "Phiếu tạm")}
                                           </span>
                                         </td>
                                       </tr>
@@ -999,12 +1143,20 @@ export function CashFlowDetailRow({
                             "Đơn hàng liên quan" của KH. */}
                         {orderSupplierPayments.length > 0 && (
                           <div>
-                            <p className="text-sm font-semibold mb-2" style={{ color: "var(--dt-text-secondary)" }}>
+                            <p
+                              className="text-sm font-semibold mb-2"
+                              style={{ color: "var(--dt-text-secondary)" }}>
                               Phiếu đặt hàng nhập liên quan
                             </p>
-                            <div className="border rounded-xl overflow-hidden" style={{ borderColor: "var(--dt-border)" }}>
+                            <div
+                              className="border rounded-xl overflow-hidden"
+                              style={{ borderColor: "var(--dt-border)" }}>
                               <table className="w-full">
-                                <thead style={{ background: "var(--dt-bg-soft)", borderBottom: "1px solid var(--dt-border)" }}>
+                                <thead
+                                  style={{
+                                    background: "var(--dt-bg-soft)",
+                                    borderBottom: "1px solid var(--dt-border)",
+                                  }}>
                                   <tr>
                                     <th className="px-4 py-3 text-left lg:text-sm font-semibold dt-th">
                                       Mã PDN
@@ -1031,12 +1183,11 @@ export function CashFlowDetailRow({
                                 </thead>
                                 <tbody className="bg-white dt-divide">
                                   {orderSupplierPayments.map((payment: any) => (
-                                    <tr
-                                      key={payment.id}
-                                      className="dt-row">
+                                    <tr key={payment.id} className="dt-row">
                                       <td className="px-4 py-3">
                                         <Link
-                                          className="lg:text-sm font-medium hover:underline" style={{ color: "var(--dt-primary)" }}
+                                          className="lg:text-sm font-medium hover:underline"
+                                          style={{ color: "var(--dt-primary)" }}
                                           href={`/san-pham/dat-hang-nhap?Code=${payment.orderSupplier?.code}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
@@ -1044,10 +1195,14 @@ export function CashFlowDetailRow({
                                           {payment.orderSupplier?.code}
                                         </Link>
                                       </td>
-                                      <td className="px-4 py-3 lg:text-sm" style={{ color: "var(--dt-text)" }}>
+                                      <td
+                                        className="px-4 py-3 lg:text-sm"
+                                        style={{ color: "var(--dt-text)" }}>
                                         {formatDateTime(payment.paymentDate)}
                                       </td>
-                                      <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
+                                      <td
+                                        className="px-4 py-3 text-right lg:text-sm"
+                                        style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(
                                             payment.orderSupplier?.subTotal ||
@@ -1056,7 +1211,9 @@ export function CashFlowDetailRow({
                                           )
                                         )}
                                       </td>
-                                      <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
+                                      <td
+                                        className="px-4 py-3 text-right lg:text-sm"
+                                        style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(
                                             payment.orderSupplier?.paidAmount ||
@@ -1067,7 +1224,9 @@ export function CashFlowDetailRow({
                                       <td className="px-4 py-3 text-right lg:text-sm font-medium text-red-600">
                                         {formatCurrency(Number(payment.amount))}
                                       </td>
-                                      <td className="px-4 py-3 text-right lg:text-sm" style={{ color: "var(--dt-text)" }}>
+                                      <td
+                                        className="px-4 py-3 text-right lg:text-sm"
+                                        style={{ color: "var(--dt-text)" }}>
                                         {formatCurrency(
                                           Number(
                                             payment.orderSupplier

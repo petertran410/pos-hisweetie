@@ -21,7 +21,7 @@ import {
   Printer,
 } from "lucide-react";
 import { toast } from "sonner";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatNumber } from "@/lib/utils";
 import { useCan } from "@/lib/hooks/useCan";
 import {
   getStatusLabel,
@@ -632,7 +632,7 @@ export function PurchaseOrderDetailRow({
                                     )}
                                   </td>
                                   <td className="px-3 py-2 text-center text-sm text-gray-700">
-                                    {Number(item.quantity)}
+                                    {formatNumber(Number(item.quantity))}
                                   </td>
                                   <td className="px-3 py-2 text-center">
                                     {(() => {
@@ -711,9 +711,7 @@ export function PurchaseOrderDetailRow({
                             <span className="font-semibold text-gray-900">
                               {isImport ? (
                                 <>
-                                  {new Intl.NumberFormat("vi-VN", {
-                                    maximumFractionDigits: 2,
-                                  }).format(totalCNY)}{" "}
+                                  {formatNumber(totalCNY)}{" "}
                                   CNY
                                 </>
                               ) : (
@@ -729,9 +727,7 @@ export function PurchaseOrderDetailRow({
                             <span className="font-semibold text-red-600">
                               - {isImport ? (
                                 <>
-                                  {new Intl.NumberFormat("vi-VN", {
-                                    maximumFractionDigits: 2,
-                                  }).format(discountCNY)}{" "}
+                                  {formatNumber(discountCNY)}{" "}
                                   CNY
                                 </>
                               ) : (
@@ -745,9 +741,7 @@ export function PurchaseOrderDetailRow({
                               <span>Tỉ giá:</span>
                               <span>
                                 1 CNY ={" "}
-                                {new Intl.NumberFormat("vi-VN", {
-                                  maximumFractionDigits: 4,
-                                }).format(purchaseOrder.exchangeRate || 0)}{" "}
+                                {formatNumber(purchaseOrder.exchangeRate || 0, "en-US", { max: 4 })}{" "}
                                 VND
                               </span>
                             </div>
@@ -760,9 +754,7 @@ export function PurchaseOrderDetailRow({
                             <span className="font-bold text-brand">
                               {isImport ? (
                                 <>
-                                  {new Intl.NumberFormat("vi-VN", {
-                                    maximumFractionDigits: 2,
-                                  }).format(totalCNY - discountCNY)}{" "}
+                                  {formatNumber(totalCNY - discountCNY)}{" "}
                                   CNY
                                 </>
                               ) : (
@@ -778,9 +770,7 @@ export function PurchaseOrderDetailRow({
                             <span className="font-semibold text-green-600">
                               {isImport ? (
                                 <>
-                                  {new Intl.NumberFormat("vi-VN", {
-                                    maximumFractionDigits: 2,
-                                  }).format(paidAmountCNY)}{" "}
+                                  {formatNumber(paidAmountCNY)}{" "}
                                   CNY
                                 </>
                               ) : (
@@ -796,9 +786,7 @@ export function PurchaseOrderDetailRow({
                             <span className="text-base font-bold text-red-600">
                               {isImport ? (
                                 <>
-                                  {new Intl.NumberFormat("vi-VN", {
-                                    maximumFractionDigits: 2,
-                                  }).format(supplierDebtCNY)}{" "}
+                                  {formatNumber(supplierDebtCNY)}{" "}
                                   CNY
                                 </>
                               ) : (
@@ -926,9 +914,7 @@ export function PurchaseOrderDetailRow({
                                   {canViewPrice && (
                                     <td className="px-3 py-2 text-right text-sm font-medium text-gray-900">
                                       {isImport && payment.foreignAmount != null ? (
-                                        new Intl.NumberFormat("vi-VN", {
-                                          maximumFractionDigits: 2,
-                                        }).format(payment.foreignAmount) + " CNY"
+                                        formatNumber(payment.foreignAmount) + " CNY"
                                       ) : (
                                         formatCurrency(payment.amount)
                                       )}

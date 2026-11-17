@@ -18,7 +18,7 @@ import {
 import { StockAuditDetailRow } from "./StockAuditDetailRow";
 import { StockAuditForm } from "./StockAuditForm";
 import { usePermission } from "@/lib/hooks/usePermissions";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatNumber } from "@/lib/utils";
 import { CodeLink } from "@/components/shared/CodeLink";
 
 const formatDateTime = (d?: string) =>
@@ -29,8 +29,6 @@ const STATUS_MAP: Record<number, { label: string; cls: string }> = {
   2: { label: "Hoàn thành", cls: "bg-green-100 text-green-700" },
   3: { label: "Đã hủy", cls: "bg-red-100 text-red-700" },
 };
-
-const formatMoney = (n: number) => n.toLocaleString("vi-VN") + " đ";
 
 export function StockAuditsTable({ filters }: { filters?: any }) {
   const { selectedBranch } = useBranchStore();
@@ -381,7 +379,7 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
 
         <span className="text-xs text-gray-400">
           Trang {page}/{totalPages}
-          {total > 0 ? ` · ${total} phiếu` : ""}
+          {total > 0 ? ` · ${formatNumber(total)} phiếu` : ""}
         </span>
       </div>
 
