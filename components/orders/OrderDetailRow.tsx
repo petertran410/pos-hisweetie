@@ -17,6 +17,7 @@ import {
   Loader2,
   MapPin,
   Printer,
+  Truck,
 } from "lucide-react";
 import * as XLSX from "xlsx-js-style";
 import { styleDetailExportSheet } from "@/lib/utils/detail-export-style";
@@ -29,6 +30,8 @@ import {
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { INVOICE_STATUS } from "@/lib/types/invoice";
 import { CancelOrderModal } from "./CancelOrderModal";
+import { DeliveryBookingModal } from "../invoices/DeliveryBookingModal";
+import { MoreActionsMenu } from "../shared/MoreActionsMenu";
 import { printDeliverySlip, printEntity } from "@/lib/utils/print";
 import Link from "next/link";
 import { DeliveryInfoCard } from "../shared/DeliveryInfoSection";
@@ -77,6 +80,7 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showDeliveryBooking, setShowDeliveryBooking] = useState(false);
   const cancelOrder = useCancelOrder();
 
   const hasPermCancel = useCan("orders", "cancel");
@@ -992,6 +996,17 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
                           <Printer className="w-3.5 h-3.5" />
                           In
                         </button>
+                        <MoreActionsMenu
+                          actions={[
+                            // Đặt xe từ đơn đặt hàng: quyền orders:update (hóa đơn dùng invoices:update)
+                            hasPermUpdate &&
+                              order.status !== ORDER_STATUS.CANCELLED && {
+                                label: "Đặt Xe Giao Hàng",
+                                icon: Truck,
+                                onClick: () => setShowDeliveryBooking(true),
+                              },
+                          ]}
+                        />
                       </div>
                     </div>
                   </div>
@@ -999,6 +1014,12 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
               </div>
             </div>
           </div>
+          {showDeliveryBooking && (
+            <DeliveryBookingModal
+              orders={[order]}
+              onClose={() => setShowDeliveryBooking(false)}
+            />
+          )}
         </td>
       </tr>
       <CancelOrderModal

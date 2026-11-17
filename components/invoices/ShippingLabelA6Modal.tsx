@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { packingSlipsApi } from "@/lib/api/packing-slips";
 import { apiClient } from "@/lib/config/api";
 import type { Invoice } from "@/lib/types/invoice";
+import type { Order } from "@/lib/types/order";
 import {
   PRINT_FONT_FAMILY,
   printFontCss,
@@ -109,7 +110,8 @@ function latestPackages(groups: any[][]): number | null {
   return null;
 }
 
-export function buildDefaults(invoice: Invoice, packages: number | null): LabelFields {
+// Đơn đặt hàng có cùng các trường khách / giao hàng / chi nhánh → Đặt xe giao hàng dùng chung
+export function buildDefaults(invoice: Invoice | Order, packages: number | null): LabelFields {
   const inv: any = invoice;
   const customer = inv.customer || {};
   const delivery = inv.delivery || {};

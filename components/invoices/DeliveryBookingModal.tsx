@@ -11,12 +11,13 @@ import { useUsers } from "@/lib/hooks/useUsers";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useAuthStore } from "@/lib/store/auth";
 import type { Invoice } from "@/lib/types/invoice";
+import type { Order } from "@/lib/types/order";
 import { buildDefaults, formatPhone } from "./ShippingLabelA6Modal";
 
 /**
- * Đặt xe giao hàng: soạn tin từ hóa đơn (sửa được), gửi vào nhóm Zalo đặt xe qua kênh
- * cố định của công ty (backend cấu hình). Người gửi mặc định là nhân viên đang thao tác.
- * Nhiều hóa đơn: 1 tin với Người nhận 1, 2… theo thứ tự sắp xếp được (thứ tự giao).
+ * Đặt xe giao hàng: soạn tin từ hóa đơn hoặc đơn đặt hàng (sửa được), gửi vào nhóm Zalo
+ * đặt xe qua kênh cố định của công ty (backend cấu hình). Người gửi mặc định là nhân viên
+ * đang thao tác. Nhiều chứng từ: 1 tin với Người nhận 1, 2… theo thứ tự sắp xếp được (thứ tự giao).
  */
 
 type Payer = "sender" | "receiver";
@@ -42,8 +43,11 @@ const block = (...lines: string[]) => lines.map((l) => l.trim()).filter(Boolean)
 // Giới hạn độ dài tin (backend MaxLength 2000)
 const MAX_TEXT = 2000;
 
+// Chứng từ đặt xe: hóa đơn hoặc đơn đặt hàng (không gộp 2 loại trong 1 tin)
+type BookingDoc = Invoice | Order;
+
 interface Receiver {
-  invoiceId: number;
+  docId: number;
   code: string;
   name: string;
   phone: string;
@@ -51,22 +55,31 @@ interface Receiver {
   note: string;
 }
 
-const toReceiver = (invoice: Invoice): Receiver => {
-  const d = buildDefaults(invoice, null);
+const toReceiver = (doc: BookingDoc): Receiver => {
+  const d = buildDefaults(doc, null);
   return {
-    invoiceId: invoice.id,
-    code: invoice.code || "",
+    docId: doc.id,
+    code: doc.code || "",
     name: cleanName(d.receiverName),
     phone: cleanPhone(d.receiverPhone),
     address: d.address,
-    note: invoice.code || "",
+    note: doc.code || "",
   };
 };
 
-export function DeliveryBookingModal({ invoices, onClose }: { invoices: Invoice[]; onClose: () => void }) {
-  // Người gửi / chi nhánh theo hóa đơn đầu tiên
-  const invoice = invoices[0];
-  const multi = invoices.length > 1;
+type DeliveryBookingModalProps = { onClose: () => void } & (
+  | { invoices: Invoice[]; orders?: never }
+  | { orders: Order[]; invoices?: never }
+);
+
+export function DeliveryBookingModal(props: DeliveryBookingModalProps) {
+  const { onClose } = props;
+  const isOrder = !!props.orders;
+  const docs: BookingDoc[] = props.orders ?? props.invoices ?? [];
+  const docLabel = isOrder ? "đơn đặt hàng" : "hóa đơn";
+  // Người gửi / chi nhánh theo chứng từ đầu tiên
+  const doc = docs[0];
+  const multi = docs.length > 1;
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const { data: users } = useUsers();
   const { data: branches } = useBranches();
@@ -81,7 +94,7 @@ export function DeliveryBookingModal({ invoices, onClose }: { invoices: Invoice[
   const [senderName, setSenderName] = useState("Diệp Trà");
   const [senderPhone, setSenderPhone] = useState("");
   const [branchAddress, setBranchAddress] = useState("");
-  const [receivers, setReceivers] = useState<Receiver[]>(() => invoices.map(toReceiver));
+  const [receivers, setReceivers] = useState<Receiver[]>(() => docs.map(toReceiver));
   const [payer, setPayer] = useState<Payer | null>(null);
 
   const updateReceiver = (i: number, patch: Partial<Receiver>) =>
@@ -95,9 +108,9 @@ export function DeliveryBookingModal({ invoices, onClose }: { invoices: Invoice[
     });
   const removeReceiver = (i: number) => setReceivers((rs) => rs.filter((_, j) => j !== i));
 
-  const branchId = invoice.branch?.id ?? invoice.branchId;
-  const branchIdOf = (inv: Invoice) => inv.branch?.id ?? inv.branchId;
-  const mixedBranches = invoices.some((inv) => branchIdOf(inv) !== branchId);
+  const branchIdOf = (d: BookingDoc) => d.branch?.id ?? d.branchId;
+  const branchId = branchIdOf(doc);
+  const mixedBranches = docs.some((d) => branchIdOf(d) !== branchId);
   // Kho Hà Nội / Kho Sài Gòn: chỉ nhân sự phòng ban Lark tương ứng; chi nhánh khác: mọi nhân sự
   const senders = useQuery({
     queryKey: ["deliveryBookingSenders", branchId],
@@ -114,7 +127,7 @@ export function DeliveryBookingModal({ invoices, onClose }: { invoices: Invoice[
   useEffect(() => {
     setSenderPhone(formatPhone(sender?.phone));
   }, [sender?.id, sender?.phone]);
-  // Địa chỉ chi nhánh của hóa đơn (Cài đặt → Chi nhánh)
+  // Địa chỉ chi nhánh của chứng từ (Cài đặt → Chi nhánh)
   const branchSaved = branches?.find((b) => b.id === branchId)?.address ?? "";
   useEffect(() => {
     setBranchAddress(branchSaved);
@@ -133,14 +146,17 @@ export function DeliveryBookingModal({ invoices, onClose }: { invoices: Invoice[
     .join("\n\n");
 
   const send = useMutation({
-    mutationFn: () =>
-      smaxChatApi.bookDelivery({
-        ...(receivers.length > 1
-          ? { invoiceIds: receivers.map((r) => r.invoiceId) }
-          : { invoiceId: receivers[0].invoiceId }),
-        text,
-        confirmed: true,
-      }),
+    mutationFn: () => {
+      const ids = receivers.map((r) => r.docId);
+      const docIds = isOrder
+        ? ids.length > 1
+          ? { orderIds: ids }
+          : { orderId: ids[0] }
+        : ids.length > 1
+          ? { invoiceIds: ids }
+          : { invoiceId: ids[0] };
+      return smaxChatApi.bookDelivery({ ...docIds, text, confirmed: true });
+    },
     onSuccess: () => {
       toast.success(`Đã gửi tin đặt xe vào nhóm ${target.data?.groupName ?? "đặt xe"}`);
       onClose();
@@ -191,7 +207,7 @@ export function DeliveryBookingModal({ invoices, onClose }: { invoices: Invoice[
           <div className="min-w-0">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <Truck className="w-5 h-5 text-brand" />
-              Đặt xe giao hàng — {multi ? `${invoices.length} hóa đơn` : invoice.code}
+              Đặt xe giao hàng — {multi ? `${docs.length} ${docLabel}` : doc.code}
             </h2>
             <p className="text-xs text-gray-500 truncate">
               {target.data
@@ -233,7 +249,7 @@ export function DeliveryBookingModal({ invoices, onClose }: { invoices: Invoice[
               </div>
               <div>
                 <label className={label}>
-                  Địa chỉ chi nhánh{invoice.branch?.name ? ` (${invoice.branch.name})` : ""}
+                  Địa chỉ chi nhánh{doc.branch?.name ? ` (${doc.branch.name})` : ""}
                 </label>
                 <textarea
                   value={branchAddress}
@@ -246,12 +262,12 @@ export function DeliveryBookingModal({ invoices, onClose }: { invoices: Invoice[
 
             {mixedBranches && (
               <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                Các hóa đơn thuộc nhiều chi nhánh — người gửi và địa chỉ lấy theo chi nhánh của {invoice.code}.
+                Các {docLabel} thuộc nhiều chi nhánh — người gửi và địa chỉ lấy theo chi nhánh của {doc.code}.
               </p>
             )}
             {receivers.map((r, i) => (
               <fieldset
-                key={r.invoiceId}
+                key={r.docId}
                 className={`space-y-2 ${receivers.length > 1 ? "rounded-lg border p-3" : ""}`}>
                 <legend className="text-sm font-semibold mb-1 flex items-center gap-1.5 px-1">
                   Người nhận{receiverNo(i)}
@@ -278,7 +294,7 @@ export function DeliveryBookingModal({ invoices, onClose }: { invoices: Invoice[
                         <button
                           type="button"
                           onClick={() => removeReceiver(i)}
-                          title="Bỏ hóa đơn này khỏi chuyến"
+                          title={`Bỏ ${docLabel} này khỏi chuyến`}
                           className="rounded p-0.5 text-gray-500 hover:bg-red-50 hover:text-red-600">
                           <X className="h-3.5 w-3.5" />
                         </button>
