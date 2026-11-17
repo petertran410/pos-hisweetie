@@ -6,7 +6,6 @@ import { useCustomer } from "@/lib/hooks/useCustomers";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   Pencil,
-  Trash2,
   Loader2,
   Store,
   CalendarDays,
@@ -14,7 +13,7 @@ import {
   Link2,
   Power,
 } from "lucide-react";
-import { useDeleteCustomer, useUpdateCustomer } from "@/lib/hooks/useCustomers";
+import { useUpdateCustomerStatus } from "@/lib/hooks/useCustomers";
 import { CustomerInvoicesTab } from "./CustomerInvoicesTab";
 import { CustomerOrdersTab } from "./CustomerOrdersTab";
 import { CustomerConsignmentsTab } from "./CustomerConsignmentsTab";
@@ -42,8 +41,7 @@ export function CustomerDetailRow({
   onEditClick,
 }: CustomerDetailRowProps) {
   const { data: customer, isLoading } = useCustomer(customerId);
-  const updateCustomer = useUpdateCustomer();
-  const deleteCustomer = useDeleteCustomer();
+  const updateStatus = useUpdateCustomerStatus();
   const [activeTab, setActiveTab] = useState<
     | "info"
     | "addresses"
@@ -59,7 +57,8 @@ export function CustomerDetailRow({
   >("info");
 
   const canUpdateCustomer = useCan("customers", "update");
-  const canDeleteCustomer = useCan("customers", "delete");
+  // Quyền customers:delete hiển thị là "Ngừng hoạt động" (không xóa thật)
+  const canChangeStatus = useCan("customers", "delete");
   const canViewDebt = useCan("customers", "view_debt");
   const canViewZalo = useCan("smax_chat", "view");
   // Lead nguồn của khách (dòng "Từ lead" + tab "Hành trình")
@@ -114,25 +113,7 @@ export function CustomerDetailRow({
     if (!customer) return;
     const action = customer.isActive ? "ngừng hoạt động" : "kích hoạt";
     if (confirm(`Bạn có chắc chắn muốn ${action} khách hàng này?`)) {
-      updateCustomer.mutate({
-        id: customer.id,
-        data: { isActive: !customer.isActive },
-      });
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!customer) return;
-    if (
-      confirm(
-        "Bạn có chắc chắn muốn xóa khách hàng này? Hành động này không thể hoàn tác!",
-      )
-    ) {
-      try {
-        await deleteCustomer.mutateAsync(customer.id);
-      } catch (error) {
-        // handled by hook
-      }
+      updateStatus.mutate({ id: customer.id, isActive: !customer.isActive });
     }
   };
 
@@ -449,22 +430,13 @@ export function CustomerDetailRow({
             </div>
 
             {/* ===== Action footer ===== */}
-            {(canDeleteCustomer || canUpdateCustomer) && (
+            {(canChangeStatus || canUpdateCustomer) && (
               <div className="flex items-center justify-between gap-2 border-t px-5 py-3">
                 <div className="flex gap-2">
-                  {canDeleteCustomer && (
-                    <button
-                      onClick={handleDelete}
-                      disabled={deleteCustomer.isPending}
-                      className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-red-200 px-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50">
-                      <Trash2 className="h-4 w-4" />
-                      Xóa
-                    </button>
-                  )}
-                  {canUpdateCustomer && (
+                  {canChangeStatus && (
                     <button
                       onClick={handleStatusToggle}
-                      disabled={updateCustomer.isPending}
+                      disabled={updateStatus.isPending}
                       className="inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50">
                       <Power className="h-4 w-4" />
                       {customer.isActive ? "Ngừng hoạt động" : "Kích hoạt"}

@@ -77,7 +77,12 @@ export const ordersApi = {
 
   createOrder: (
     data: CreateOrderRequest
-  ): Promise<{ order: Order; warnings: any[] }> => {
+  ): Promise<{
+    order: Order;
+    warnings: any[];
+    /** Khách cũ chưa thiết lập quy tắc công nợ (chỉ nhắc, không chặn). */
+    debtPolicyUnset?: boolean;
+  }> => {
     return apiClient.post("/orders", data);
   },
 
