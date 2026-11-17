@@ -67,6 +67,8 @@ export default function HoaDonVatPage() {
             showMisaEmployeeFilter
             showUpdatedTimeFilter
             showMisaSyncedTimeFilter
+            showPriceWarningFilter
+            showColdCargoFilter
           />
           <HoaDonVatTable filters={filters} enabled={filtersReady} />
         </div>
