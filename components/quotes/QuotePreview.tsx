@@ -3,6 +3,7 @@
 import { forwardRef } from "react";
 import type { Quote } from "@/lib/types/quote";
 import { ColdBadge } from "./ColdBadge";
+import { PRINT_FONT_FAMILY, printFontFaceCss } from "@/lib/utils/print-font";
 import { QUOTE_DEFAULT_LOGO } from "@/lib/types/quote";
 import { formatVnd, marginPct, printName, tierColumns, withSalePrice } from "@/lib/quotes/pricing";
 
@@ -31,7 +32,8 @@ type PreviewQuote = Pick<
   | "department"
 >;
 
-const FONT = "'Times New Roman', Times, serif";
+// Báo giá in/xuất ảnh từ chính khung này → dùng font in (Be Vietnam Pro).
+const FONT = PRINT_FONT_FAMILY;
 const cell: React.CSSProperties = {
   border: "1px solid #000",
   padding: "4px 6px",
@@ -79,6 +81,8 @@ export const QuotePreview = forwardRef<HTMLDivElement, { quote: PreviewQuote }>(
           fontSize: 14,
           lineHeight: 1.35,
         }}>
+        {/* @font-face đi kèm khung: bản in (outerHTML) mang theo luôn */}
+        <style data-print-font="">{printFontFaceCss("")}</style>
         {/* Đầu trang: công ty bên trái, quốc hiệu bên phải */}
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <tbody>

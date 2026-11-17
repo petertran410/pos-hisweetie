@@ -23,6 +23,8 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
   const completeAudit = useCompleteStockAudit();
   const cancelAudit = useCancelStockAudit();
   const canUpdate = usePermission("stock_audits", "update");
+  // Giá trị lệch = SL lệch × giá vốn → ẩn khi thiếu quyền xem giá vốn.
+  const canViewCostPrice = usePermission("products", "view_cost_price");
   const [showEditForm, setShowEditForm] = useState(false);
 
   const isDraft = audit.status === 1;
@@ -143,7 +145,9 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                     <th className="px-3 py-2 text-right">Tồn kho hiện tại</th>
                     <th className="px-3 py-2 text-right">Tồn kho thực tế</th>
                     <th className="px-3 py-2 text-right">Số lượng lệch</th>
-                    <th className="px-3 py-2 text-right">Giá trị lệch tổng</th>
+                    {canViewCostPrice && (
+                      <th className="px-3 py-2 text-right">Giá trị lệch tổng</th>
+                    )}
                     <th className="px-3 py-2 text-left">Ghi chú</th>
                   </tr>
                 </thead>
@@ -182,16 +186,18 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                             ? `+${diff.toLocaleString()}`
                             : diff.toLocaleString()}
                         </td>
-                        <td
-                          className={`px-3 py-2 text-right ${
-                            diffValue < 0
-                              ? "text-red-600"
-                              : diffValue > 0
-                                ? "text-green-600"
-                                : ""
-                          }`}>
-                          {diffValue !== 0 ? formatCurrency(diffValue) : "-"}
-                        </td>
+                        {canViewCostPrice && (
+                          <td
+                            className={`px-3 py-2 text-right ${
+                              diffValue < 0
+                                ? "text-red-600"
+                                : diffValue > 0
+                                  ? "text-green-600"
+                                  : ""
+                            }`}>
+                            {diffValue !== 0 ? formatCurrency(diffValue) : "-"}
+                          </td>
+                        )}
                         <td className="px-3 py-2 text-gray-500">
                           {d.note || "-"}
                         </td>
@@ -228,18 +234,20 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                         ? `+${totalDiff.toLocaleString()}`
                         : totalDiff.toLocaleString()}
                     </td>
-                    <td
-                      className={`px-3 py-2 text-right ${
-                        totalDiffValue < 0
-                          ? "text-red-600"
-                          : totalDiffValue > 0
-                            ? "text-green-600"
-                            : ""
-                      }`}>
-                      {totalDiffValue !== 0
-                        ? formatCurrency(totalDiffValue)
-                        : "-"}
-                    </td>
+                    {canViewCostPrice && (
+                      <td
+                        className={`px-3 py-2 text-right ${
+                          totalDiffValue < 0
+                            ? "text-red-600"
+                            : totalDiffValue > 0
+                              ? "text-green-600"
+                              : ""
+                        }`}>
+                        {totalDiffValue !== 0
+                          ? formatCurrency(totalDiffValue)
+                          : "-"}
+                      </td>
+                    )}
                     <td></td>
                   </tr>
                 </tfoot>

@@ -6,6 +6,7 @@ import { printTemplatesApi } from "@/lib/api/print-templates";
 import { invoicesApi } from "@/lib/api/invoices";
 import { X, Printer } from "lucide-react";
 import { buildPrintDocumentHtml } from "@/lib/utils/print";
+import { waitForPrintFonts } from "@/lib/utils/print-font";
 
 export function PrintPreviewModal({ template, onClose }: any) {
   const [invoiceId, setInvoiceId] = useState("");
@@ -24,7 +25,7 @@ export function PrintPreviewModal({ template, onClose }: any) {
     enabled: !!invoiceId,
   });
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
@@ -32,6 +33,7 @@ export function PrintPreviewModal({ template, onClose }: any) {
       buildPrintDocumentHtml(preview?.content || "")
     );
     printWindow.document.close();
+    await waitForPrintFonts(printWindow.document);
     printWindow.print();
   };
 

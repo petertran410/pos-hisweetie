@@ -5,6 +5,7 @@ import { Search, Barcode } from "lucide-react";
 import { useProducts } from "@/lib/hooks/useProducts";
 import { useSupplierProductIdsWithFactory } from "@/lib/hooks/useSupplierProductIds";
 import { formatCurrency } from "@/lib/utils";
+import { useCan } from "@/lib/hooks/useCan";
 
 interface ProductPickerDropdownProps {
   branchId?: number;
@@ -37,6 +38,10 @@ export function ProductPickerDropdown({
   const [showQuantityInput, setShowQuantityInput] = useState(false);
   const [quantityDisplay, setQuantityDisplay] = useState("1");
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
+
+  // BE bỏ `cost` khi thiếu quyền xem giá vốn → ẩn giá ở danh sách gợi ý
+  // thay vì hiện "NaN".
+  const canViewCostPrice = useCan("products", "view_cost_price");
 
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -289,11 +294,13 @@ export function ProductPickerDropdown({
                         )}
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <div className="text-brand font-medium text-sm">
-                        {formatCurrency(cost)}
+                    {canViewCostPrice && (
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-brand font-medium text-sm">
+                          {formatCurrency(cost)}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 );
               })}

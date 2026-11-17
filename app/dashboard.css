@@ -26,15 +26,14 @@
 
   background: var(--dt-color-canvas);
   color: var(--dt-text);
-  font-family: var(--font-be-vietnam), "Inter", -apple-system, "Segoe UI",
-    sans-serif;
+  font-family: var(--font-sans);
 }
 
 .dt-dash h1,
 .dt-dash h2,
 .dt-dash h3,
 .dt-dash h4 {
-  font-family: var(--font-montserrat), "Manrope", "Inter", sans-serif;
+  font-family: var(--font-sans);
 }
 
 .dt-dash .dt-mono {
@@ -425,7 +424,7 @@
   box-shadow: 0 0 0 3px rgba(158, 240, 201, 0.25);
 }
 .dt-m-hero .big {
-  font-family: var(--font-montserrat), sans-serif;
+  font-family: var(--font-sans);
   font-weight: 800;
   font-size: 32px;
   letter-spacing: -0.01em;
@@ -502,7 +501,7 @@
   font-weight: 500;
 }
 .dt-m-kpi .v {
-  font-family: var(--font-montserrat), sans-serif;
+  font-family: var(--font-sans);
   font-weight: 700;
   font-size: 21px;
   letter-spacing: -0.01em;

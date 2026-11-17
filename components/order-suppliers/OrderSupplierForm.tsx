@@ -192,6 +192,12 @@ interface ProductItem {
    * máy của cùng NCC nên phải chọn theo dòng, không suy ra được từ sản phẩm.
    */
   factoryId?: number | null;
+  /**
+   * true khi BE đã bỏ giá vốn (user thiếu products:view_cost_price) và chưa
+   * có ai nhập giá cho dòng này. UI hiện 0 thay vì NaN; payload KHÔNG gửi
+   * price để BE tự lấy giá vốn hiện tại theo chi nhánh.
+   */
+  priceUnknown?: boolean;
 }
 
 interface OrderSupplierFormProps {
@@ -843,6 +849,7 @@ export function OrderSupplierForm({
         changed = true;
         return {
           ...p,
+          priceUnknown: false,
           price: roundTo(lp, 2),
           subTotal: roundTo((lp - p.discount) * p.quantity, 2),
         };
@@ -954,7 +961,12 @@ export function OrderSupplierForm({
       (inv: any) => inv.branchId === branchId
     );
 
-    const cost = inventory ? Number(inventory.cost) : 0;
+    // BE bỏ `cost` khỏi inventory khi user thiếu quyền xem giá vốn
+    // (products.controller stripProduct). Không để Number(undefined) = NaN
+    // lên màn hình: hiện 0 và đánh dấu priceUnknown để payload vẫn bỏ trống
+    // price như trước (BE tự lấy giá vốn).
+    const priceUnknown = !!inventory && inventory.cost == null;
+    const cost = Number(inventory?.cost) || 0;
     const qty = quantity > 0 ? quantity : 1;
 
     const newProduct: ProductItem = {
@@ -969,6 +981,7 @@ export function OrderSupplierForm({
       factorySubTotal: 0,
       factorySubTotalManual: false,
       inventory: Number(inventory?.onHand || 0),
+      priceUnknown,
     };
 
     setProducts((prev) => [newProduct, ...prev]);
@@ -1042,6 +1055,8 @@ export function OrderSupplierForm({
     setProducts((prev) => {
       const updated = [...prev];
       updated[index].price = price;
+      // User đã nhập giá → gửi giá này lên BE.
+      updated[index].priceUnknown = false;
       updated[index].subTotal = roundTo(
         (price - updated[index].discount) * updated[index].quantity,
         2
@@ -1164,6 +1179,10 @@ export function OrderSupplierForm({
     );
   };
 
+  // Có dòng chưa có đơn giá (giá vốn bị ẩn, BE tự lấy khi lưu) → tổng tiền
+  // VND trên form chưa xác định. Hiện "—" thay vì một con số thiếu.
+  const hasUnknownPrice = products.some((p) => p.priceUnknown);
+
   const calculateTotalValue = () => {
     const subtotal = products.reduce((sum, p) => sum + p.subTotal, 0);
     const discountAmount =
@@ -1241,10 +1260,10 @@ export function OrderSupplierForm({
           // Nhà máy theo dòng. Gửi null khi chưa chọn — backend cho phép trống.
           factoryId: p.factoryId ?? null,
         };
-        // Chỉ gửi price khi là số hợp lệ. Nếu user không có quyền xem giá vốn
-        // thì cost bị strip ở backend → price = NaN; bỏ qua để backend tự
+        // Chỉ gửi price khi đã biết giá. Nếu user không có quyền xem giá vốn
+        // thì cost bị strip ở backend (priceUnknown) → bỏ qua để backend tự
         // resolve giá vốn hiện tại của sản phẩm theo chi nhánh.
-        if (Number.isFinite(priceNum)) {
+        if (!p.priceUnknown && Number.isFinite(priceNum)) {
           item.price = priceNum;
         }
         return item;
@@ -1491,10 +1510,15 @@ export function OrderSupplierForm({
                           {formatCurrency(item.subTotal)}
                         </td>
                         <td className="px-[10px] py-2 align-middle text-right whitespace-nowrap">
-                          <PriceDiffCell
-                            actualPrice={item.price}
-                            reference={referenceByProduct[item.productId]}
-                          />
+                          {item.priceUnknown ? (
+                            // Chưa có đơn giá (giá vốn bị ẩn) → không so sánh.
+                            <span className="text-xs text-gray-400">—</span>
+                          ) : (
+                            <PriceDiffCell
+                              actualPrice={item.price}
+                              reference={referenceByProduct[item.productId]}
+                            />
+                          )}
                         </td>
                       </>
                     )}
@@ -1895,10 +1919,18 @@ export function OrderSupplierForm({
                       Tổng tiền hàng:
                     </div>
                     <div>
-                      {formatCurrency(
-                        products.reduce((sum, p) => sum + p.subTotal, 0)
-                      )}
+                      {hasUnknownPrice
+                        ? "—"
+                        : formatCurrency(
+                            products.reduce((sum, p) => sum + p.subTotal, 0)
+                          )}
                     </div>
+                  </div>
+                )}
+                {!isCurrencyCNY && hasUnknownPrice && (
+                  <div className="text-xs text-gray-500">
+                    Có dòng chưa có đơn giá — tổng tiền được tính khi lưu
+                    phiếu.
                   </div>
                 )}
 
@@ -1984,9 +2016,11 @@ export function OrderSupplierForm({
                                 : 0)
                           )
                         ) + ` ${currency}`
-                      : formatCurrency(
-                          Math.max(0, calculateTotalValue() - previouslyPaid)
-                        )}
+                      : hasUnknownPrice
+                        ? "—"
+                        : formatCurrency(
+                            Math.max(0, calculateTotalValue() - previouslyPaid)
+                          )}
                   </div>
                 </div>
 
@@ -2067,7 +2101,8 @@ export function OrderSupplierForm({
                         </div>
                       </div>
                     )
-                  : previouslyPaid + paymentAmount - calculateTotalValue() >
+                  : !hasUnknownPrice &&
+                    previouslyPaid + paymentAmount - calculateTotalValue() >
                       0 && (
                       <div className="flex gap-2 items-center text-sm text-green-700 bg-green-50/60 px-2 py-1.5 rounded border border-green-100">
                         <div className="whitespace-nowrap">
@@ -2131,6 +2166,7 @@ export function OrderSupplierForm({
         foreignTotalAmount={isCurrencyCNY ? calculateTotalCNY() : undefined}
         defaultExchangeRate={effectiveRate}
         currency={currency}
+        totalUnknown={!isCurrencyCNY && hasUnknownPrice}
         onConfirm={handlePaymentConfirm}
       />
     </div>

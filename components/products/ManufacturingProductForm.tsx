@@ -1216,9 +1216,13 @@ export function ManufacturingProductForm({
                         <th className="px-3 py-2 text-left text-sm font-medium">
                           Định lượng / 1 {watchedUnit || "sp"}
                         </th>
-                        <th className="px-3 py-2 text-left text-sm font-medium">
-                          Giá vốn theo định lượng
-                        </th>
+                        {/* Thiếu quyền giá vốn → BE bỏ cost thành phần, ẩn cột
+                            thay vì hiện NaN. */}
+                        {canViewCostPrice && (
+                          <th className="px-3 py-2 text-left text-sm font-medium">
+                            Giá vốn theo định lượng
+                          </th>
+                        )}
                         <th className="px-3 py-2"></th>
                       </tr>
                     </thead>
@@ -1389,9 +1393,11 @@ export function ManufacturingProductForm({
                               })()}
                             </td>
 
-                            <td className="px-3 py-2 text-sm">
-                              {costByQuantity.toLocaleString()} đ
-                            </td>
+                            {canViewCostPrice && (
+                              <td className="px-3 py-2 text-sm">
+                                {costByQuantity.toLocaleString()} đ
+                              </td>
+                            )}
                             <td className="px-3 py-2">
                               <button
                                 type="button"
@@ -1433,7 +1439,7 @@ export function ManufacturingProductForm({
                               )}
                             </span>
                           </td>
-                          <td colSpan={2} />
+                          <td colSpan={canViewCostPrice ? 2 : 1} />
                         </tr>
                       )}
                     </tbody>

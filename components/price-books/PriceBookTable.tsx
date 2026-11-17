@@ -78,6 +78,9 @@ export function PriceBookTable({
   const canCreateProduct = usePermission("products", "create");
   const canViewProduct = usePermission("products", "view");
   const canUpdatePrice = usePermission("products", "update");
+  // Thiếu quyền giá vốn → ẩn cột "Giá vốn". Bảng giá chung lấy từ API
+  // products (cost bị bỏ → NaN); bảng giá riêng thì API vẫn trả cost.
+  const canViewCostPrice = usePermission("products", "view_cost_price");
 
   const updateRetailPrice = useUpdateProductRetailPrice();
   const updateProductPrice = useUpdateProductPrice();
@@ -399,9 +402,11 @@ export function PriceBookTable({
                 <th className="p-3 text-left font-medium text-gray-700 whitespace-nowrap">
                   Tên hàng
                 </th>
-                <th className="p-3 text-right font-medium text-gray-700 whitespace-nowrap">
-                  Giá vốn
-                </th>
+                {canViewCostPrice && (
+                  <th className="p-3 text-right font-medium text-gray-700 whitespace-nowrap">
+                    Giá vốn
+                  </th>
+                )}
                 {selectedPriceBooks.map((pb) => (
                   <th
                     key={pb.id}
@@ -444,9 +449,11 @@ export function PriceBookTable({
                     </td>
                     <td className="p-3 whitespace-nowrap">{product.code}</td>
                     <td className="p-3">{product.name}</td>
-                    <td className="p-3 text-right whitespace-nowrap">
-                      {cost.toLocaleString()}
-                    </td>
+                    {canViewCostPrice && (
+                      <td className="p-3 text-right whitespace-nowrap">
+                        {cost.toLocaleString()}
+                      </td>
+                    )}
                     {selectedPriceBooks.map((pb) => {
                       const isEditing =
                         editingCell?.productId === product.id &&

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useProduct } from "@/lib/hooks/useProducts";
 import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
 import { useBranchStore } from "@/lib/store/branch";
+import { usePermission } from "@/lib/hooks/usePermissions";
 import { formatCurrency } from "@/lib/utils";
 import { CodeLink } from "@/components/shared/CodeLink";
 import {
@@ -109,6 +110,9 @@ export function ProductMobileDetailSheet({
     product ? { type: "product", id: product.id, code: product.code, name: product.name } : null
   );
   const { selectedBranch } = useBranchStore();
+  // Thiếu quyền giá vốn → BE bỏ `cost` (NaN nếu hiển thị) → ẩn các ô giá vốn,
+  // giống ProductDetailContent bản desktop.
+  const canViewCostPrice = usePermission("products", "view_cost_price");
   const [activeTab, setActiveTab] = useState<
     "info" | "description" | "inventory"
   >("info");
@@ -279,14 +283,16 @@ export function ProductMobileDetailSheet({
                       value={`${formatCurrency(Number(product.basePrice))} đ`}
                       highlight
                     />
-                    <InfoCard
-                      label="Giá vốn"
-                      value={
-                        currentBranchInventory
-                          ? `${formatCurrency(Number(currentBranchInventory.cost))} đ`
-                          : "0 đ"
-                      }
-                    />
+                    {canViewCostPrice && (
+                      <InfoCard
+                        label="Giá vốn"
+                        value={
+                          currentBranchInventory
+                            ? `${formatCurrency(Number(currentBranchInventory.cost))} đ`
+                            : "0 đ"
+                        }
+                      />
+                    )}
                     <InfoCard
                       label="Tồn kho"
                       value={
@@ -391,9 +397,11 @@ export function ProductMobileDetailSheet({
                                     | SL: {Number(comp.quantity)}
                                   </p>
                                 </div>
-                                <span className="text-xs font-medium text-gray-600">
-                                  {cost.toLocaleString()} đ
-                                </span>
+                                {canViewCostPrice && (
+                                  <span className="text-xs font-medium text-gray-600">
+                                    {cost.toLocaleString()} đ
+                                  </span>
+                                )}
                               </div>
                             );
                           })}
@@ -517,14 +525,16 @@ export function ProductMobileDetailSheet({
                                   {Number(inv.reserved).toLocaleString()}
                                 </p>
                               </div>
-                              <div>
-                                <p className="text-[10px] text-gray-400">
-                                  Giá vốn
-                                </p>
-                                <p className="text-xs font-medium text-gray-600">
-                                  {Number(inv.cost).toLocaleString()}
-                                </p>
-                              </div>
+                              {canViewCostPrice && (
+                                <div>
+                                  <p className="text-[10px] text-gray-400">
+                                    Giá vốn
+                                  </p>
+                                  <p className="text-xs font-medium text-gray-600">
+                                    {Number(inv.cost).toLocaleString()}
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           </div>
                         );

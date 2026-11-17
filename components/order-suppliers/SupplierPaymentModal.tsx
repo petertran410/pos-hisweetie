@@ -42,6 +42,12 @@ interface SupplierPaymentModalProps {
    * luôn trả amount=VND + foreignAmount=CNY + exchangeRate.
    */
   currency?: "VND" | "CNY";
+  /**
+   * true khi tổng tiền chưa xác định (phiếu đặt hàng có dòng chưa có đơn giá
+   * vì giá vốn bị ẩn — BE tự lấy giá vốn khi lưu). Khi đó "Cần trả" / "Còn
+   * nợ" (VND) hiện "—" thay vì một con số thiếu.
+   */
+  totalUnknown?: boolean;
   onConfirm: (
     amount: number,
     method: "cash" | "transfer" | "card",
@@ -82,6 +88,7 @@ export function SupplierPaymentModal({
   previouslyPaidForeign,
   defaultExchangeRate,
   currency = "VND",
+  totalUnknown = false,
   onConfirm,
 }: SupplierPaymentModalProps) {
   const needToPay = totalAmount - previouslyPaid;
@@ -503,7 +510,9 @@ export function SupplierPaymentModal({
                   ? new Intl.NumberFormat("vi-VN", {
                       maximumFractionDigits: 2,
                     }).format(foreignNeedToPay) + " CNY"
-                  : formatCurrency(needToPay)}
+                  : totalUnknown
+                    ? "—"
+                    : formatCurrency(needToPay)}
               </span>
             </div>
             <div className="flex justify-between text-base">
@@ -513,7 +522,9 @@ export function SupplierPaymentModal({
                   ? new Intl.NumberFormat("vi-VN", {
                       maximumFractionDigits: 2,
                     }).format(foreignRemaining) + " CNY"
-                  : formatCurrency(Math.max(0, remaining))}
+                  : totalUnknown
+                    ? "—"
+                    : formatCurrency(Math.max(0, remaining))}
               </span>
             </div>
           </div>

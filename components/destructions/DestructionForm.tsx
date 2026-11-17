@@ -12,6 +12,7 @@ import { useBranchStore } from "@/lib/store/branch";
 import type { Destruction } from "@/lib/api/destructions";
 import { productsApi, type Product } from "@/lib/api/products";
 import { formatCurrency } from "@/lib/utils";
+import { usePermission } from "@/lib/hooks/usePermissions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -30,6 +31,11 @@ interface ProductItem {
   totalValue: number;
   inventory: number;
   note?: string;
+  /**
+   * true khi BE đã bỏ giá vốn (user thiếu products:view_cost_price). Payload
+   * không gửi price → BE tự lấy giá vốn hiện tại, tránh ghi giá trị hủy = 0.
+   */
+  priceUnknown?: boolean;
 }
 
 export function DestructionForm({
@@ -41,6 +47,8 @@ export function DestructionForm({
   const { data: branches } = useBranches();
   const createDestruction = useCreateDestruction();
   const updateDestruction = useUpdateDestruction();
+  // Thiếu quyền giá vốn → ẩn giá vốn / giá trị hủy trên màn hình.
+  const canViewCostPrice = usePermission("products", "view_cost_price");
 
   const [branchId, setBranchId] = useState<number>(
     destruction?.branchId || selectedBranch?.id || 0
@@ -133,6 +141,8 @@ export function DestructionForm({
       price: Number(inventory.cost || 0),
       totalValue: Number(inventory.cost || 0),
       inventory: Number(inventory.onHand || 0),
+      // BE bỏ `cost` khi thiếu quyền → không gửi 0, để BE tự lấy giá vốn.
+      priceUnknown: inventory.cost == null,
     };
 
     setProducts((prev) => [newProduct, ...prev]);
@@ -201,7 +211,7 @@ export function DestructionForm({
         productCode: p.productCode,
         productName: p.productName,
         quantity: p.quantity,
-        price: p.price,
+        price: p.priceUnknown ? undefined : p.price,
       })),
     };
 
@@ -306,8 +316,13 @@ export function DestructionForm({
                               {product.code}
                             </div>
                             <div className="text-xs text-gray-500 mt-1">
-                              Giá:{" "}
-                              {formatCurrency(Number(inventory?.cost || 0))} •
+                              {canViewCostPrice && (
+                                <>
+                                  Giá:{" "}
+                                  {formatCurrency(Number(inventory?.cost || 0))}{" "}
+                                  •{" "}
+                                </>
+                              )}
                               Tồn:{" "}
                               {Number(inventory?.onHand || 0).toLocaleString()}{" "}
                               • Đặt NCC: 0 • Khách đặt: 0
@@ -343,12 +358,16 @@ export function DestructionForm({
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
                         SL hủy
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                        Giá vốn
-                      </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                        Giá trị hủy
-                      </th>
+                      {canViewCostPrice && (
+                        <>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                            Giá vốn
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap">
+                            Giá trị hủy
+                          </th>
+                        </>
+                      )}
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap"></th>
                     </tr>
                   </thead>
@@ -385,12 +404,16 @@ export function DestructionForm({
                             step="1"
                           />
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
-                          {formatCurrency(item.price)}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-gray-900">
-                          {formatCurrency(item.totalValue)}
-                        </td>
+                        {canViewCostPrice && (
+                          <>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
+                              {formatCurrency(item.price)}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-gray-900">
+                              {formatCurrency(item.totalValue)}
+                            </td>
+                          </>
+                        )}
                         <td className="px-4 py-3 whitespace-nowrap text-center">
                           {!isFormDisabled && (
                             <button
@@ -436,7 +459,7 @@ export function DestructionForm({
 
           <div>
             <label className="block text-sm text-gray-600 mb-2">
-              Tổng giá trị hủy
+              {canViewCostPrice ? "Tổng giá trị hủy" : "Tổng số lượng hủy"}
             </label>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
@@ -447,14 +470,16 @@ export function DestructionForm({
                   className="flex-1 px-3 py-2 border rounded bg-gray-50 text-right"
                 />
               </div>
-              <div className="flex justify-between items-center">
-                <input
-                  type="text"
-                  value={formatCurrency(calculateTotalValue())}
-                  disabled
-                  className="flex-1 px-3 py-2 border rounded bg-brand-soft text-right text-brand font-semibold"
-                />
-              </div>
+              {canViewCostPrice && (
+                <div className="flex justify-between items-center">
+                  <input
+                    type="text"
+                    value={formatCurrency(calculateTotalValue())}
+                    disabled
+                    className="flex-1 px-3 py-2 border rounded bg-brand-soft text-right text-brand font-semibold"
+                  />
+                </div>
+              )}
             </div>
           </div>
 

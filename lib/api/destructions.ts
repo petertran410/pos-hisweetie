@@ -47,7 +47,8 @@ export interface CreateDestructionData {
     productCode: string;
     productId: number;
     quantity: number;
-    price: number;
+    // Bỏ trống → BE tự lấy giá vốn hiện tại (user thiếu quyền xem giá vốn).
+    price?: number;
   }[];
 }
 
