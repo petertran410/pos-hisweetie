@@ -218,6 +218,8 @@ const RESOURCE_ACTION_LABELS: Record<string, string> = {
   "warehouse_expense:request_review": "Ghi chú & tag người xem lại",
   "warehouse_expense:export": "Xuất file Excel",
   "warehouse_cash:confirm_amount": "Xác nhận số tiền thực nhận",
+  // Khách hàng không xóa thật, chỉ ngừng hoạt động (isActive = false)
+  "customers:delete": "Ngừng hoạt động",
 };
 
 /** Nhãn action, có xét nhãn riêng theo resource (RESOURCE_ACTION_LABELS). */

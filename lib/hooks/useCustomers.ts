@@ -205,17 +205,25 @@ export function useUpdateCustomerComments() {
   });
 }
 
-export function useDeleteCustomer() {
+/** Ngừng hoạt động / kích hoạt — cần quyền customers:delete (hiển thị "Ngừng hoạt động"). */
+export function useUpdateCustomerStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: number) => {
-      return await apiClient.delete(`/customers/${id}`);
+    mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
+      return await apiClient.patch<{ id: number; isActive: boolean }>(
+        `/customers/${id}/status`,
+        { isActive },
+      );
     },
-    onSuccess: () => {
+    onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       queryClient.invalidateQueries({ queryKey: ["customers-search"] });
-      toast.success("Xóa khách hàng thành công");
+      toast.success(
+        variables.isActive
+          ? "Đã kích hoạt khách hàng"
+          : "Đã ngừng hoạt động khách hàng",
+      );
     },
     onError: (error: Error) => {
       toast.error(error.message || "Có lỗi xảy ra");
