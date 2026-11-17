@@ -13,7 +13,7 @@ import {
   Receipt,
   StickyNote,
 } from "lucide-react";
-import { DEBT_FORM_LABELS } from "@/lib/api/debt-tracking";
+import { DEBT_FORM_LABELS, describeDebtRule } from "@/lib/api/debt-tracking";
 import { useUpdateCustomerComments } from "@/lib/hooks/useCustomers";
 import { useCan } from "@/lib/hooks/useCan";
 import type { Customer } from "@/lib/types/customer";
@@ -57,6 +57,7 @@ export function CustomerInfoPanel({
 
   const isOrg = Number(customer.type) === 1;
   const debtForm = customer.debtPolicy?.debtForm;
+  const debtRule = describeDebtRule(customer.debtPolicy);
 
   const addresses = customer.addresses ?? [];
   const defaultAddress =
@@ -107,12 +108,31 @@ export function CustomerInfoPanel({
             />
             <InfoItem label="SĐT phụ" value={customer.phone} />
             <InfoItem icon={Mail} label="Email" value={customer.email} />
-            {/* Chỉ hiện khi API chi tiết có trả debtPolicy */}
-            {canViewDebt && debtForm && (
-              <InfoItem
-                label="Hình thức công nợ"
-                value={DEBT_FORM_LABELS[debtForm]}
-              />
+            {canViewDebt && (
+              <>
+                <InfoItem
+                  label="Hình thức công nợ"
+                  value={debtForm ? DEBT_FORM_LABELS[debtForm] : undefined}
+                />
+                <InfoItem
+                  label="Quy tắc công nợ"
+                  value={
+                    debtRule.unset ? (
+                      <span className="text-gray-400">{debtRule.label}</span>
+                    ) : (
+                      <>
+                        {debtRule.label}
+                        {debtRule.detail && (
+                          <span className="text-gray-500">
+                            {" "}
+                            · {debtRule.detail}
+                          </span>
+                        )}
+                      </>
+                    )
+                  }
+                />
+              </>
             )}
             {customer.misaEmployeeName && (
               <InfoItem

@@ -1,6 +1,7 @@
 "use client";
 
 import { CustomerSearch } from "./CustomerSearch";
+import { CustomerDebtLine } from "./CustomerDebtLine";
 import { CartItem, DeliveryInfo } from "@/app/(dashboard)/ban-hang/page";
 import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
@@ -545,17 +546,10 @@ export function OrderCart({
 
         {selectedCustomer && (
           <div className="pl-2 lg:pl-3 pr-2 lg:pr-3 pb-2 lg:pb-3 space-y-1.5 lg:space-y-2 flex-1">
-            <div className="flex items-center gap-1.5 pl-1 text-xs">
-              <span className="text-gray-500">Nợ hiện tại:</span>
-              <span
-                className={`font-semibold tabular-nums ${
-                  Number(selectedCustomer.totalDebt) > 0
-                    ? "text-red-600"
-                    : "text-gray-400"
-                }`}>
-                {Number(selectedCustomer.totalDebt).toLocaleString("vi-VN")}
-              </span>
-            </div>
+            <CustomerDebtLine
+              customerId={selectedCustomer.id}
+              totalDebt={selectedCustomer.totalDebt}
+            />
             {selectedCustomer.addresses &&
               selectedCustomer.addresses.length > 1 && (
                 <DeliveryAddressDropdown
