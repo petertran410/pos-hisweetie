@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle, Boxes, X } from "lucide-react";
 import { useEscapeClose } from "@/lib/hooks/useEscapeClose";
 import type { InvoiceListWarnings } from "@/lib/types/invoice";
 
@@ -18,32 +18,47 @@ interface Props {
   hasPriceBookWarning?: boolean;
 }
 
-/** Icon ⚠ trên danh sách hóa đơn; bấm mở hộp thoại liệt kê lý do (lệch giá bảng giá, lệch SL so với đơn đặt). */
+/**
+ * Icon cảnh báo trên danh sách: ⚠ vàng = lệch giá bảng giá, hộp cam = lệch SL so với đơn đặt
+ * (cùng icon/màu với nhóm lọc "Cảnh báo hóa đơn"). Bấm icon nào cũng mở hộp thoại liệt kê lý do.
+ */
 export function InvoiceWarningIcon({ invoiceCode, documentLabel = "hóa đơn", warnings, hasPriceBookWarning }: Props) {
   const [open, setOpen] = useState(false);
   const price = warnings?.price ?? [];
   const quantity = warnings?.quantity ?? [];
   const hasPrice = price.length > 0 || !!hasPriceBookWarning;
-  if (!hasPrice && quantity.length === 0) return null;
+  const hasQuantity = quantity.length > 0;
+  if (!hasPrice && !hasQuantity) return null;
 
-  const reasons = [hasPrice ? "bán thấp hơn giá bảng giá" : null, quantity.length > 0 ? "số lượng khác đơn đặt hàng" : null]
-    .filter(Boolean)
-    .join(", ");
+  const trigger = (reason: string, hoverClass: string, icon: React.ReactNode) => (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        setOpen(true);
+      }}
+      title={`${reason} — xem chi tiết`}
+      aria-label={`Cảnh báo: ${reason}. Xem chi tiết`}
+      aria-haspopup="dialog"
+      className={`inline-flex rounded p-0.5 ${hoverClass} focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand`}>
+      {icon}
+    </button>
+  );
 
   return (
     <>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen(true);
-        }}
-        title="Xem lý do cảnh báo"
-        aria-label={`Cảnh báo: ${reasons}. Xem chi tiết`}
-        aria-haspopup="dialog"
-        className="inline-flex rounded p-0.5 hover:bg-yellow-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
-        <AlertTriangle className="h-4 w-4 text-yellow-500 fill-yellow-100" aria-hidden />
-      </button>
+      {hasPrice &&
+        trigger(
+          "Bán thấp hơn giá bảng giá",
+          "hover:bg-yellow-50",
+          <AlertTriangle className="h-4 w-4 text-yellow-500 fill-yellow-100" aria-hidden />
+        )}
+      {hasQuantity &&
+        trigger(
+          "Số lượng khác đơn đặt hàng",
+          "hover:bg-orange-50",
+          <Boxes className="h-4 w-4 text-orange-500" aria-hidden />
+        )}
       {open &&
         createPortal(
           <WarningModal

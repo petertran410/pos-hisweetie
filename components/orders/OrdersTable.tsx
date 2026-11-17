@@ -26,7 +26,7 @@ import { getDebtRuleTypeLabel } from "@/lib/api/debt-tracking";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { CodeLink } from "../shared/CodeLink";
-import { InvoiceWarningIcon } from "../invoices/InvoiceWarningIcon";
+import { InvoiceAlertIcons } from "../invoices/InvoiceAlertIcons";
 import { ColumnToggle } from "../shared/ColumnToggle";
 import {
   useColumnVisibility,
@@ -701,17 +701,12 @@ export function OrdersTable({
                           className="cursor-pointer"
                         />
                       </td>
-                      {/* Cột ngầm cảnh báo: lệch giá bảng giá 2/3 */}
+                      {/* Cột ngầm "Cảnh báo đơn hàng": lệch giá bảng giá 2/3, phí ship, hàng lạnh */}
                       <td
                         className={`w-8 px-2 py-2.5 text-center ${
                           expandedOrderId === order.id ? "border-t-2 border-brand" : ""
                         }`}>
-                        <InvoiceWarningIcon
-                          invoiceCode={order.code}
-                          documentLabel="đơn đặt hàng"
-                          warnings={order.warnings}
-                          hasPriceBookWarning={order.hasPriceBookWarning}
-                        />
+                        <InvoiceAlertIcons invoice={order} documentLabel="đơn đặt hàng" />
                       </td>
                       {visibleColumns.map((col) => (
                         <td
