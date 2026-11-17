@@ -530,12 +530,18 @@ export function ComboProductForm({
                       <th className="px-4 py-2 text-center text-sm font-medium">
                         Số lượng
                       </th>
-                      <th className="px-4 py-2 text-right text-sm font-medium">
-                        Giá vốn
-                      </th>
-                      <th className="px-4 py-2 text-right text-sm font-medium">
-                        Tổng giá vốn
-                      </th>
+                      {/* Thiếu quyền giá vốn → BE bỏ cost thành phần, ẩn cột
+                          thay vì hiện NaN. */}
+                      {canViewCostPrice && (
+                        <>
+                          <th className="px-4 py-2 text-right text-sm font-medium">
+                            Giá vốn
+                          </th>
+                          <th className="px-4 py-2 text-right text-sm font-medium">
+                            Tổng giá vốn
+                          </th>
+                        </>
+                      )}
                       <th className="px-4 py-2 text-right text-sm font-medium">
                         Giá bán
                       </th>
@@ -547,10 +553,14 @@ export function ComboProductForm({
                     {components.length > 0 && (
                       <tr className="bg-gray-100 font-semibold">
                         <td colSpan={5}></td>
-                        <td className="px-4 py-2 text-right">
-                          {calculateTotalPurchasePrice().toLocaleString()}
-                        </td>
-                        <td></td>
+                        {canViewCostPrice && (
+                          <>
+                            <td className="px-4 py-2 text-right">
+                              {calculateTotalPurchasePrice().toLocaleString()}
+                            </td>
+                            <td></td>
+                          </>
+                        )}
                         <td className="px-4 py-2 text-right">
                           {calculateTotalRetailPrice().toLocaleString()}
                         </td>
@@ -599,12 +609,16 @@ export function ComboProductForm({
                               className="w-20 border rounded px-2 py-1 text-center"
                             />
                           </td>
-                          <td className="px-4 py-2 text-right">
-                            {purchasePrice.toLocaleString()}
-                          </td>
-                          <td className="px-4 py-2 text-right">
-                            {totalPurchase.toLocaleString()}
-                          </td>
+                          {canViewCostPrice && (
+                            <>
+                              <td className="px-4 py-2 text-right">
+                                {purchasePrice.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {totalPurchase.toLocaleString()}
+                              </td>
+                            </>
+                          )}
                           <td className="px-4 py-2 text-right">
                             {retailPrice.toLocaleString()}
                           </td>
@@ -636,7 +650,7 @@ export function ComboProductForm({
                     {components.length === 0 && (
                       <tr>
                         <td
-                          colSpan={9}
+                          colSpan={canViewCostPrice ? 9 : 7}
                           className="px-4 py-8 text-center text-gray-500">
                           Chưa có hàng thành phần. Tìm kiếm và thêm sản phẩm ở
                           trên.

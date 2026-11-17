@@ -23,6 +23,7 @@ import { CreditCard } from "lucide-react";
 import { SupplierPaymentModal } from "../order-suppliers/SupplierPaymentModal";
 import { useUsers, useUsersForFilter } from "@/lib/hooks/useUsers";
 import { useAuthStore } from "@/lib/store/auth";
+import { useCan } from "@/lib/hooks/useCan";
 import { ProductPickerDropdown } from "@/components/products/ProductPickerDropdown";
 import { ItemNoteField } from "@/components/shared/ItemNoteField";
 import { useExchangeRate, useRefreshExchangeRate } from "@/lib/hooks/useExchangeRate";
@@ -133,6 +134,13 @@ interface ProductItem {
   factoryPrice: number;
   factorySubTotal: number;
   factorySubTotalManual?: boolean;
+  /**
+   * true khi BE đã bỏ giá vốn (user thiếu products:view_cost_price) và user
+   * chưa nhập giá cho dòng này. Khác phiếu đặt hàng, giá nhập là giá NCC nên
+   * BE không tự suy ra được → chặn lưu, buộc user nhập đơn giá (trước đây
+   * dòng này là NaN và BE trả lỗi 400).
+   */
+  priceUnknown?: boolean;
 }
 
 interface PurchaseOrderFormProps {
@@ -409,6 +417,10 @@ export function PurchaseOrderForm({
   // phiếu cũ mở lại vẫn nhận đúng CNY. isImportSupplier chỉ dùng cho cột
   // bảng NM/¥ và logic ghi giá vốn.
   const isCurrencyCNY = currency === "CNY";
+
+  // Thiếu products:view_cost_price → chỉ ẩn 2 cột "ĐG trước thuế" và
+  // "TT trước thuế" trên bảng. Giá trị vẫn được tính và lưu như bình thường.
+  const canViewCostPrice = useCan("products", "view_cost_price");
 
   // Tiền tệ đã được snapshot trên từng PDN/PN. Nhóm NCC chỉ dùng để chọn mặc
   // định khi tạo phiếu mới; không được biến phiếu VND lịch sử thành CNY.
@@ -763,7 +775,10 @@ export function PurchaseOrderForm({
       (inv: any) => inv.branchId === branchId
     );
 
-    const cost = inventory ? Number(inventory.cost) : 0;
+    // BE bỏ `cost` khỏi inventory khi user thiếu quyền xem giá vốn
+    // (products.controller stripProduct) → Number(undefined) = NaN. Khi đó
+    // đơn giá mặc định 0 để user tự nhập, tổng tiền không bị NaN.
+    const cost = Number(inventory?.cost) || 0;
     const qty = quantity > 0 ? quantity : 1;
     const price = roundTo(cost, 2);
 
@@ -784,6 +799,7 @@ export function PurchaseOrderForm({
       factoryPrice: 0,
       factorySubTotal: 0,
       factorySubTotalManual: false,
+      priceUnknown: !!inventory && inventory.cost == null,
     };
 
     setProducts((prev) => [newProduct, ...prev]);
@@ -821,6 +837,7 @@ export function PurchaseOrderForm({
         factoryPrice: source.factoryPrice,
         factorySubTotal: source.factorySubTotal,
         factorySubTotalManual: source.factorySubTotalManual,
+        priceUnknown: source.priceUnknown,
       };
       const next = [...prev];
       next.splice(index + 1, 0, newItem);
@@ -903,6 +920,7 @@ export function PurchaseOrderForm({
       // User chỉnh đơn giá → đơn giá thành nguồn chính, thành tiền tự tính
       // (2 số thập phân).
       item.manualSubTotal = false;
+      item.priceUnknown = false;
         item.subTotal = roundTo((item.price - item.discount) * item.quantity, 2);
       updated[index] = item;
       return updated;
@@ -954,6 +972,8 @@ export function PurchaseOrderForm({
         ...updated[index],
         subTotal: roundedSubTotal,
         manualSubTotal: true,
+        // Đơn giá suy ra từ thành tiền user nhập → đã có giá.
+        priceUnknown: false,
       };
       item.price =
         item.quantity > 0
@@ -983,6 +1003,7 @@ export function PurchaseOrderForm({
       // Auto-compute VND price & subTotal
       item.price = roundTo(factoryPrice * (effectiveRate || 1), 2);
       item.manualSubTotal = false;
+      item.priceUnknown = false;
         item.subTotal = roundTo((item.price - item.discount) * item.quantity, 2);
 
       updated[index] = item;
@@ -1011,6 +1032,7 @@ export function PurchaseOrderForm({
       // Auto-compute VND price & subTotal
       item.price = roundTo(item.factoryPrice * (effectiveRate || 1), 2);
       item.manualSubTotal = false;
+      item.priceUnknown = false;
         item.subTotal = roundTo((item.price - item.discount) * item.quantity, 2);
 
       updated[index] = item;
@@ -1050,6 +1072,7 @@ export function PurchaseOrderForm({
         return {
           ...p,
           price: expectedPrice,
+          priceUnknown: false,
           subTotal: roundTo((expectedPrice - p.discount) * p.quantity, 2),
         };
       });
@@ -1154,6 +1177,18 @@ export function PurchaseOrderForm({
     const hasInvalidQuantity = products.some((p) => p.quantity <= 0);
     if (hasInvalidQuantity) {
       toast.error("Vui lòng nhập số lượng hợp lệ cho tất cả sản phẩm");
+      return null;
+    }
+
+    // Dòng chưa có đơn giá do giá vốn bị ẩn (thiếu quyền) → buộc nhập giá
+    // trước khi lưu, tránh lưu đơn giá 0 làm sai tổng phiếu và công nợ NCC.
+    const unpricedCodes = products
+      .filter((p) => p.priceUnknown)
+      .map((p) => p.productCode);
+    if (unpricedCodes.length > 0) {
+      toast.error(
+        `Vui lòng nhập đơn giá cho: ${[...new Set(unpricedCodes)].join(", ")}`
+      );
       return null;
     }
 
@@ -1426,9 +1461,11 @@ export function PurchaseOrderForm({
                   </th>
                   {!isCurrencyCNY ? (
                     <>
-                      <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider whitespace-nowrap">
-                        ĐG trước thuế
-                      </th>
+                      {canViewCostPrice && (
+                        <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider whitespace-nowrap">
+                          ĐG trước thuế
+                        </th>
+                      )}
                       <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[120px]">
                         ĐG sau thuế
                       </th>
@@ -1438,9 +1475,11 @@ export function PurchaseOrderForm({
                       <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[110px]">
                         Giảm giá
                       </th>
-                      <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider whitespace-nowrap">
-                        TT trước thuế
-                      </th>
+                      {canViewCostPrice && (
+                        <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider whitespace-nowrap">
+                          TT trước thuế
+                        </th>
+                      )}
                       <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider w-[140px]">
                         TT sau thuế
                       </th>
@@ -1559,9 +1598,11 @@ export function PurchaseOrderForm({
                       </td>
                       {!isCurrencyCNY ? (
                         <>
-                          <td className="px-[10px] py-2 align-middle text-right text-sm text-gray-600 whitespace-nowrap">
-                            {formatCurrency(lineVat.unitPriceBeforeTax)}
-                          </td>
+                          {canViewCostPrice && (
+                            <td className="px-[10px] py-2 align-middle text-right text-sm text-gray-600 whitespace-nowrap">
+                              {formatCurrency(lineVat.unitPriceBeforeTax)}
+                            </td>
+                          )}
                           <td className="px-[10px] py-2 align-middle">
                             <NumericInput
                               value={item.price}
@@ -1583,9 +1624,11 @@ export function PurchaseOrderForm({
                               className="w-full text-right border rounded px-2 py-1 text-sm disabled:bg-gray-100"
                             />
                           </td>
-                          <td className="px-[10px] py-2 align-middle text-right text-sm text-gray-600 whitespace-nowrap">
-                            {formatCurrency(lineVat.amountBeforeTax)}
-                          </td>
+                          {canViewCostPrice && (
+                            <td className="px-[10px] py-2 align-middle text-right text-sm text-gray-600 whitespace-nowrap">
+                              {formatCurrency(lineVat.amountBeforeTax)}
+                            </td>
+                          )}
                           <td className="px-[10px] py-2 align-middle">
                             <NumericInput
                               value={item.subTotal}

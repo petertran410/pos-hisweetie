@@ -1,5 +1,12 @@
 import { API_URL, getAuthHeaders } from "@/lib/config/api";
 import { printTemplatesApi } from "@/lib/api/print-templates";
+import {
+  PRINT_FONT_ENFORCE_CSS,
+  printFontCss,
+  printFontEmbeddedFaceCss,
+  waitForPrintFonts,
+  warmUpEmbeddedPrintFonts,
+} from "@/lib/utils/print-font";
 
 const ITEM_TABLE_HEADER_GROUPS = [
   ["san pham", "ten hang", "hang hoa", "ma hang"],
@@ -142,7 +149,12 @@ export function addPrintSerialNumberColumn(
 
 export function buildPrintDocumentHtml(
   content: string,
-  pageSize?: string
+  pageSize?: string,
+  /**
+   * Mọi bản in dùng Be Vietnam Pro (lib/utils/print-font.ts). `fontCss` thay
+   * CSS font mặc định — ảnh SVG cần bản nhúng data: (renderPrintImage).
+   */
+  options?: { fontCss?: string }
 ): string {
   return `<!DOCTYPE html>
 <html>
@@ -158,7 +170,6 @@ export function buildPrintDocumentHtml(
       padding: 0;
     }
     body {
-      font-family: Arial, sans-serif;
       font-size: 13px;
       color: #000;
       overflow-wrap: anywhere;
@@ -180,6 +191,7 @@ export function buildPrintDocumentHtml(
     }
     * { box-sizing: border-box; }
   </style>
+  <style>${options?.fontCss ?? printFontCss()}</style>
 </head>
 <body><div class="print-content">${content}</div></body>
 </html>`;
@@ -258,13 +270,14 @@ export async function printEntity(
       }, 100);
     };
 
-    iframe.onload = () => {
+    iframe.onload = async () => {
       const win = iframe.contentWindow;
       if (!win) {
         cleanup();
         resolve();
         return;
       }
+      await waitForPrintFonts(doc);
       win.focus();
       win.print(); // blocking trên hầu hết browser — chờ user đóng print dialog
       cleanup();
@@ -363,12 +376,13 @@ export async function printDeliverySlip(
 
   const cleanup = () =>
     setTimeout(() => iframe.parentNode?.removeChild(iframe), 100);
-  iframe.onload = () => {
+  iframe.onload = async () => {
     const win = iframe.contentWindow;
     if (!win) {
       cleanup();
       return;
     }
+    await waitForPrintFonts(doc);
     win.focus();
     win.print();
     cleanup();
@@ -412,12 +426,13 @@ export async function printConsignmentReturn(returnId: number): Promise<void> {
 
   const cleanup = () =>
     setTimeout(() => iframe.parentNode?.removeChild(iframe), 100);
-  iframe.onload = () => {
+  iframe.onload = async () => {
     const win = iframe.contentWindow;
     if (!win) {
       cleanup();
       return;
     }
+    await waitForPrintFonts(doc);
     win.focus();
     win.print();
     cleanup();
@@ -466,12 +481,13 @@ export async function printWarehouseExport(invoiceId: number): Promise<void> {
 
   const cleanup = () =>
     setTimeout(() => iframe.parentNode?.removeChild(iframe), 100);
-  iframe.onload = () => {
+  iframe.onload = async () => {
     const win = iframe.contentWindow;
     if (!win) {
       cleanup();
       return;
     }
+    await waitForPrintFonts(doc);
     win.focus();
     win.print();
     cleanup();
@@ -606,9 +622,12 @@ export async function renderPrintImage(
       iframe.onload = resolve;
       setTimeout(resolve, 3000);
     });
+    // Ảnh SVG không tải font ngoài → nhúng font dạng data: (cả khi đo trang).
+    const faceCss = await printFontEmbeddedFaceCss();
+    const fontCss = `${faceCss}\n${PRINT_FONT_ENFORCE_CSS}`;
     doc.open();
     doc.write(
-      buildPrintDocumentHtml(parsed.body.innerHTML).replace(
+      buildPrintDocumentHtml(parsed.body.innerHTML, undefined, { fontCss }).replace(
         "</head>",
         // Lề giấy như khi in (@page margin) + nền trắng
         "<style>body{padding:8mm;background:#fff}</style></head>"
@@ -616,6 +635,9 @@ export async function renderPrintImage(
     );
     doc.close();
     await loaded;
+    await waitForPrintFonts(doc);
+    // Mồi font cho ảnh SVG, nếu không trang chụp đầu có thể mất chữ.
+    await warmUpEmbeddedPrintFonts(faceCss);
     const pageHeight = Math.round(pageH * PX_PER_MM);
     // Lề trên/dưới mỗi trang = padding của body (8mm)
     const margin = Math.round(8 * PX_PER_MM);

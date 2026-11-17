@@ -29,6 +29,7 @@ import type { Product } from "@/lib/api/products";
 import { FactorySelect } from "@/components/factories/FactorySelect";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { NumericInput } from "@/components/ui/NumericInput";
+import { usePermission } from "@/lib/hooks/usePermissions";
 import { CancelConfirmationModal } from "./CancelConfirmationModal";
 
 interface ProductionFormProps {
@@ -292,6 +293,9 @@ export function ProductionForm({
   onClose,
 }: ProductionFormProps) {
   const external = isExternal || !!production?.isExternal;
+  // Giá vốn nguyên liệu lấy từ inventories trong API products — thiếu quyền
+  // thì BE bỏ cost (ra NaN) → ẩn 2 ô giá vốn/giá thành, giữ ô phí sản xuất.
+  const canViewCostPrice = usePermission("products", "view_cost_price");
   const [code, setCode] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   // Công thức thành phần đã chọn (undefined → công thức mặc định).
@@ -1127,28 +1131,32 @@ export function ProductionForm({
                   <div />
                 )}
                 <div className="col-span-2 grid grid-cols-3 gap-2 text-sm">
-                  <div className="px-3 py-2 border rounded bg-white">
-                    <div className="text-xs text-gray-500">
-                      Giá vốn nguyên liệu gửi đi
+                  {canViewCostPrice && (
+                    <div className="px-3 py-2 border rounded bg-white">
+                      <div className="text-xs text-gray-500">
+                        Giá vốn nguyên liệu gửi đi
+                      </div>
+                      <div className="font-medium">
+                        {Math.round(materialValue).toLocaleString("vi-VN")} đ
+                      </div>
                     </div>
-                    <div className="font-medium">
-                      {Math.round(materialValue).toLocaleString("vi-VN")} đ
-                    </div>
-                  </div>
+                  )}
                   <div className="px-3 py-2 border rounded bg-white">
                     <div className="text-xs text-gray-500">Phí sản xuất</div>
                     <div className="font-medium">
                       {feeInVnd.toLocaleString("vi-VN")} đ
                     </div>
                   </div>
-                  <div className="px-3 py-2 border rounded bg-brand-soft">
-                    <div className="text-xs text-gray-500">
-                      Giá thành dự kiến / sp
+                  {canViewCostPrice && (
+                    <div className="px-3 py-2 border rounded bg-brand-soft">
+                      <div className="text-xs text-gray-500">
+                        Giá thành dự kiến / sp
+                      </div>
+                      <div className="font-semibold text-brand">
+                        {Math.round(estimatedUnitCost).toLocaleString("vi-VN")} đ
+                      </div>
                     </div>
-                    <div className="font-semibold text-brand">
-                      {Math.round(estimatedUnitCost).toLocaleString("vi-VN")} đ
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             )}

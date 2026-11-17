@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { printFontCss, waitForPrintFonts } from "@/lib/utils/print-font";
 
 interface Props {
   html: string;
@@ -26,7 +27,6 @@ export function PrintPreviewPane({ html, paperSize = "A5" }: Props) {
           <style>
             html, body { margin: 0; padding: 0; }
             body {
-              font-family: Arial, sans-serif;
               font-size: 13px;
               padding: 16px;
               color: #000;
@@ -37,6 +37,7 @@ export function PrintPreviewPane({ html, paperSize = "A5" }: Props) {
             * { box-sizing: border-box; }
             @page { size: ${paperSize}; margin: 0; }
           </style>
+          <style>${printFontCss()}</style>
         </head>
         <body>${html}</body>
       </html>
@@ -50,8 +51,9 @@ export function PrintPreviewPane({ html, paperSize = "A5" }: Props) {
       setHeight(Math.max(newHeight, 600));
     };
 
-    // Đợi render xong
+    // Đợi render xong; đo lại khi font in tải xong (chữ đổi kích thước)
     setTimeout(resize, 50);
+    waitForPrintFonts(doc).then(resize);
   }, [html, paperSize]);
 
   return (

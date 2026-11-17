@@ -3,6 +3,7 @@
 import { forwardRef } from "react";
 import type { Quote, QuoteItem } from "@/lib/types/quote";
 import { ColdBadge } from "./ColdBadge";
+import { PRINT_FONT_FAMILY, printFontFaceCss } from "@/lib/utils/print-font";
 import { QUOTE_DEFAULT_LOGO } from "@/lib/types/quote";
 import { formatVnd, marginPct, printName, tierColumns, withSalePrice } from "@/lib/quotes/pricing";
 
@@ -40,7 +41,8 @@ const C = {
   border: "#dbdbdb",
   white: "#ffffff",
 };
-const FONT = "Montserrat, 'Segoe UI', Arial, sans-serif";
+// Báo giá in/xuất ảnh từ chính khung này → dùng font in (Be Vietnam Pro).
+const FONT = PRINT_FONT_FAMILY;
 /** Tên công ty trên 1 dòng (mẫu lưu xuống dòng cho Mẫu 1). */
 const company = (q: BrandPreviewQuote) => q.companyName.split("\n").join(" ").trim();
 
@@ -345,6 +347,8 @@ export const QuotePreviewBrand = forwardRef<HTMLDivElement, { quote: BrandPrevie
     const quote = { ...raw, items: raw.items.map(withSalePrice) };
     return (
       <div ref={ref}>
+        {/* @font-face đi kèm khung: bản in (outerHTML) mang theo luôn */}
+        <style data-print-font="">{printFontFaceCss("")}</style>
         {tierColumns(quote.items).length > 1 ? <PriceTable quote={quote} /> : <Cards quote={quote} />}
       </div>
     );

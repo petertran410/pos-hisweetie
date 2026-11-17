@@ -1,24 +1,12 @@
 import type { Metadata } from "next";
-import { Montserrat, Be_Vietnam_Pro } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
+import "./fonts.css";
 import { Providers } from "./providers";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { PALETTE_INIT_SCRIPT } from "@/lib/constants/palette";
-
-const montserrat = Montserrat({
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
-  variable: "--font-montserrat",
-  display: "swap",
-});
-
-const beVietnam = Be_Vietnam_Pro({
-  subsets: ["latin", "vietnamese"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-be-vietnam",
-  display: "swap",
-});
+// Font giao diện Inter lưu trong public/fonts — xem app/fonts.ts, app/fonts.css.
+import { fontVariables } from "./fonts";
 
 const jetbrainsMono = localFont({
   src: [
@@ -52,7 +40,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      className={`${montserrat.variable} ${beVietnam.variable} ${jetbrainsMono.variable}`}
+      className={`${fontVariables} ${jetbrainsMono.variable}`}
       suppressHydrationWarning>
       <head>
         {/* Set bảng màu trước khi vẽ trang — tránh nháy màu khi tải. */}

@@ -13,6 +13,7 @@ import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import { toast } from "sonner";
 import Link from "next/link";
 import { CodeLink } from "@/components/shared/CodeLink";
+import { usePermission } from "@/lib/hooks/usePermissions";
 
 interface DestructionDetailRowProps {
   destructionId: number;
@@ -56,6 +57,8 @@ export function DestructionDetailRow({
   const updateDestruction = useUpdateDestruction();
   const { data: users } = useUsersForFilter();
   const { data: destruction, isLoading } = useDestruction(destructionId);
+  // Giá vốn / giá trị hủy → ẩn khi thiếu quyền xem giá vốn.
+  const canViewCostPrice = usePermission("products", "view_cost_price");
 
   const [searchCode, setSearchCode] = useState("");
   const [searchName, setSearchName] = useState("");
@@ -249,14 +252,16 @@ export function DestructionDetailRow({
                   />
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <label className="block text-sm text-gray-500">
-                    Tổng giá trị hủy:
-                  </label>
-                  <span className="block text-sm font-semibold text-gray-900 py-1.5">
-                    {formatCurrency(Number(destruction.totalValue))}
-                  </span>
-                </div>
+                {canViewCostPrice && (
+                  <div className="flex flex-col gap-1">
+                    <label className="block text-sm text-gray-500">
+                      Tổng giá trị hủy:
+                    </label>
+                    <span className="block text-sm font-semibold text-gray-900 py-1.5">
+                      {formatCurrency(Number(destruction.totalValue))}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Product search */}
@@ -307,19 +312,23 @@ export function DestructionDetailRow({
                         <th className="px-[10px] py-2 text-center text-sm font-semibold text-gray-700 tracking-wider">
                           Số lượng
                         </th>
-                        <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
-                          Giá vốn
-                        </th>
-                        <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
-                          Giá trị hủy
-                        </th>
+                        {canViewCostPrice && (
+                          <>
+                            <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
+                              Giá vốn
+                            </th>
+                            <th className="px-[10px] py-2 text-right text-sm font-semibold text-gray-700 tracking-wider">
+                              Giá trị hủy
+                            </th>
+                          </>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {filteredDetails.length === 0 ? (
                         <tr>
                           <td
-                            colSpan={5}
+                            colSpan={canViewCostPrice ? 5 : 3}
                             className="px-4 py-8 text-center text-sm text-gray-400">
                             Không tìm thấy sản phẩm
                           </td>
@@ -350,12 +359,16 @@ export function DestructionDetailRow({
                             <td className="px-[10px] py-2 text-center text-sm font-medium text-gray-900">
                               {detail.quantity}
                             </td>
-                            <td className="px-[10px] py-2 text-right text-sm text-gray-900">
-                              {formatCurrency(Number(detail.price))}
-                            </td>
-                            <td className="px-[10px] py-2 text-right text-sm font-semibold text-brand">
-                              {formatCurrency(Number(detail.totalValue))}
-                            </td>
+                            {canViewCostPrice && (
+                              <>
+                                <td className="px-[10px] py-2 text-right text-sm text-gray-900">
+                                  {formatCurrency(Number(detail.price))}
+                                </td>
+                                <td className="px-[10px] py-2 text-right text-sm font-semibold text-brand">
+                                  {formatCurrency(Number(detail.totalValue))}
+                                </td>
+                              </>
+                            )}
                           </tr>
                         ))
                       )}

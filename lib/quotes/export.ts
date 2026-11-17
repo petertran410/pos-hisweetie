@@ -4,6 +4,11 @@
  * - Ảnh: vẽ HTML qua SVG foreignObject lên canvas → PNG → clipboard (gửi Zalo).
  */
 import { API_URL, getAuthHeaders } from "@/lib/config/api";
+import {
+  printFontEmbeddedFaceCss,
+  waitForPrintFonts,
+  warmUpEmbeddedPrintFonts,
+} from "@/lib/utils/print-font";
 
 const PAGE_CSS =
   "@page{size:A4;margin:0}html,body{margin:0;background:#fff}" +
@@ -28,6 +33,7 @@ export async function printQuote(node: HTMLElement, title: string) {
       img.complete ? null : new Promise((r) => ((img.onload = r), (img.onerror = r)))
     )
   );
+  await waitForPrintFonts(doc);
   iframe.contentWindow!.focus();
   iframe.contentWindow!.print();
   setTimeout(() => iframe.remove(), 1000);
@@ -69,12 +75,18 @@ export async function renderQuotePng(node: HTMLElement): Promise<Blob> {
       else img.remove();
     })
   );
+  // Ảnh SVG không tải font ngoài → thay @font-face URL bằng bản nhúng data:.
+  clone.querySelectorAll("style[data-print-font]").forEach((el) => el.remove());
+  const fontCss = await printFontEmbeddedFaceCss();
+  await warmUpEmbeddedPrintFonts(fontCss);
   const width = node.offsetWidth;
   const height = node.offsetHeight;
   const xhtml = new XMLSerializer().serializeToString(clone);
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
-    `<foreignObject width="100%" height="100%">${xhtml}</foreignObject></svg>`;
+    `<foreignObject width="100%" height="100%">` +
+    `<div xmlns="http://www.w3.org/1999/xhtml"><style>${fontCss}</style>${xhtml}</div>` +
+    `</foreignObject></svg>`;
   const image = new Image();
   image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   await image.decode();

@@ -8,6 +8,7 @@ import {
   addPrintSerialNumberColumn,
   buildPrintDocumentHtml,
 } from "@/lib/utils/print";
+import { waitForPrintFonts } from "@/lib/utils/print-font";
 
 interface MobilePrintPreviewModalProps {
   templateFor: string;
@@ -136,7 +137,13 @@ export function MobilePrintPreviewModal({
             <iframe
               ref={iframeRef}
               srcDoc={srcDoc}
-              onLoad={() => setIframeLoaded(true)}
+              onLoad={async () => {
+                // Mobile chỉ cho in ngay trong thao tác bấm, nên chờ font in
+                // tải xong trước khi bật nút In.
+                const doc = iframeRef.current?.contentDocument;
+                if (doc) await waitForPrintFonts(doc);
+                setIframeLoaded(true);
+              }}
               className="w-full bg-white border rounded shadow"
               style={{
                 height: "100%",
