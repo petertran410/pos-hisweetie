@@ -9,7 +9,7 @@ import type {
 } from "@/lib/api/analytics-kpi-sale";
 import { MONTH_OPTIONS } from "./kpiFormat";
 import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatNumber } from "@/lib/utils";
 
 /**
  * Bộ lọc chung của KPI Sale (slicer Power BI): Năm, Tháng, Nhân viên
@@ -74,7 +74,7 @@ export function KpiSaleFilters<F extends KpiSaleFilters>({
             values={filters.users ?? []}
             onChange={(vals) => set({ users: vals } as Partial<F>)}
             placeholder={`${userLabel}: Tất cả`}
-            multiLabel={(n) => `${userLabel}: ${n} người`}
+            multiLabel={(n) => `${userLabel}: ${formatNumber(n)} người`}
           />
         </div>
         {options?.restricted && (

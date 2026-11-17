@@ -78,6 +78,7 @@ export interface Order {
       hasCreditLimit?: boolean;
       hasTermDays?: boolean;
       isActive?: boolean;
+      requireFullPaymentForInvoice?: boolean;
     } | null;
   };
   branch?: {

@@ -14,7 +14,10 @@ export interface InvoiceCustomer {
   identificationNumber?: string | null;
   invoiceBuyerName?: string | null;
   invoiceAddress?: string | null;
-  debtPolicy?: { debtRuleType: DebtRuleType } | null;
+  debtPolicy?: {
+    debtRuleType: DebtRuleType;
+    requireFullPaymentForInvoice?: boolean;
+  } | null;
   [key: string]: unknown;
 }
 

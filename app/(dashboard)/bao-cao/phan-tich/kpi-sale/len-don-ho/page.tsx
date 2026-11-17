@@ -15,6 +15,7 @@ import {
   useKpiSaleOptions,
   useKpiSaleOrder,
 } from "@/lib/hooks/useAnalyticsKpiSale";
+import { formatNumber } from "@/lib/utils";
 
 const NO_SALE_PIC = "__none__";
 
@@ -55,7 +56,7 @@ export default function Page() {
             values={filters.salePics ?? []}
             onChange={(v) => change({ salePics: v })}
             placeholder="Sale PIC: Tất cả"
-            multiLabel={(n) => `Sale PIC: ${n}`}
+            multiLabel={(n) => `Sale PIC: ${formatNumber(n)}`}
           />
         }
       />

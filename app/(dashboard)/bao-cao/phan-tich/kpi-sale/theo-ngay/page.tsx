@@ -16,6 +16,7 @@ import {
   useKpiSaleDaily,
   useKpiSaleOptions,
 } from "@/lib/hooks/useAnalyticsKpiSale";
+import { formatNumber } from "@/lib/utils";
 
 // Phân tích › KPI Sale › Theo Ngày (thay trang Power BI cùng tên).
 export default function Page() {
@@ -89,7 +90,7 @@ export default function Page() {
               values={(filters.sellers ?? []).map(String)}
               onChange={(v) => change({ sellers: v.map(Number) })}
               placeholder="Người Bán: Tất cả"
-              multiLabel={(n) => `Người Bán: ${n} người`}
+              multiLabel={(n) => `Người Bán: ${formatNumber(n)} người`}
             />
             <FilterMultiSelect
               options={(options?.productGroups ?? []).map((g) => ({
@@ -99,7 +100,7 @@ export default function Page() {
               values={filters.groups ?? []}
               onChange={(v) => change({ groups: v })}
               placeholder="Nhóm Hàng: Tất cả"
-              multiLabel={(n) => `Nhóm Hàng: ${n} nhóm`}
+              multiLabel={(n) => `Nhóm Hàng: ${formatNumber(n)} nhóm`}
             />
             <div className="relative">
               <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />

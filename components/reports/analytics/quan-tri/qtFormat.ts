@@ -79,7 +79,7 @@ export function qtAxis(v: number, m: QtMetric): string {
   const abs = Math.abs(v);
   if (m === "amount" || m === "profit") {
     if (abs >= 1e9) return `${formatNumber(v / 1e9, "en-US", { max: 1 })} tỷ`;
-    if (abs >= 1e6) return `${Math.round(v / 1e6)}tr`;
+    if (abs >= 1e6) return `${formatNumber(Math.round(v / 1e6))}tr`;
     return formatNumber(Math.round(v));
   }
   if (abs >= 1e6) return `${formatNumber(v / 1e6, "en-US", { max: 1 })}tr`;

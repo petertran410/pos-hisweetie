@@ -17,6 +17,7 @@ import {
   UpdatedAt,
   type KeToanColumn,
 } from "./KeToanShared";
+import { formatNumber } from "@/lib/utils";
 
 /** Định dạng có điều kiện của Power BI: nền cột Mã Hàng theo [LÝ DO CẢNH BÁO]. */
 const REASON_BG: Record<string, string> = {
@@ -114,7 +115,7 @@ export function ChuyenHangView() {
             }
             placeholder="Tên Hàng: Tất cả"
             searchPlaceholder="Tìm tên hàng..."
-            multiLabel={(n) => `Tên Hàng: ${n} mặt hàng`}
+            multiLabel={(n) => `Tên Hàng: ${formatNumber(n)} mặt hàng`}
             panelWidth={440}
           />
         </div>

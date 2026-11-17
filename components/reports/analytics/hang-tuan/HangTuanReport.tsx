@@ -117,7 +117,7 @@ export function HangTuanReport() {
             values={(filters.saleTeamIds ?? []).map(String)}
             onChange={(v) => set({ saleTeamIds: v.map(Number) })}
             placeholder="Nhóm Bán: Tất cả"
-            multiLabel={(n) => `${n} nhóm bán`}
+            multiLabel={(n) => `${formatNumber(n)} nhóm bán`}
           />
           <FilterMultiSelect
             options={(opts?.sellerGroups ?? []).map((g) => ({
@@ -127,7 +127,7 @@ export function HangTuanReport() {
             values={filters.sellerGroups ?? []}
             onChange={(v) => set({ sellerGroups: v })}
             placeholder="Người Bán: Tất cả"
-            multiLabel={(n) => `${n} người bán`}
+            multiLabel={(n) => `${formatNumber(n)} người bán`}
           />
           <FilterMultiSelect
             options={MONTH_OPTIONS.map((m) => ({

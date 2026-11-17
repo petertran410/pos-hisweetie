@@ -14,7 +14,7 @@ import {
   useStrategicDistributors,
   useStrategicPrograms,
 } from "@/lib/hooks/useAnalyticsKhachHangDlcl";
-import { formatNumberInput, parseNumberInput } from "@/lib/utils";
+import { formatNumber, formatNumberInput, parseNumberInput } from "@/lib/utils";
 
 const inputCls =
   "w-full border rounded-lg px-2.5 py-1.5 text-[13px] outline-none focus:border-[var(--dt-primary)]";
@@ -360,7 +360,9 @@ function DistributorTable({
                 <tr
                   key={r.id}
                   className={`border-t align-top ${r.isActive ? "" : "opacity-50"}`}>
-                  {!single && <td className="p-2 dt-mono">{r.sortOrder}</td>}
+                  {!single && (
+                    <td className="p-2 dt-mono">{formatNumber(r.sortOrder)}</td>
+                  )}
                   <td className="p-2 font-medium">{r.name}</td>
                   <td className="p-2">
                     {r.matchAll ? (

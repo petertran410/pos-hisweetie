@@ -261,7 +261,7 @@ const DEFAULT_COLUMNS: ColumnConfig<Order>[] = [
     label: "Loại công nợ",
     visible: true,
     width: "210px",
-    render: (o) => getDebtRuleTypeLabel(o.customer?.debtPolicy?.debtRuleType),
+    render: (o) => getDebtRuleTypeLabel(o.customer?.debtPolicy),
   },
   // {
   //   key: "waitingDays",

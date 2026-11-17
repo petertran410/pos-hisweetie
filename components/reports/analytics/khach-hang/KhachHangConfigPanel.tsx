@@ -345,7 +345,7 @@ function SalePicsTab() {
               </tr>
             ) : (
               <tr key={r.id} className="border-t">
-                <td className="px-2.5 py-1.5">{r.sortOrder}</td>
+                <td className="px-2.5 py-1.5">{formatNumber(r.sortOrder)}</td>
                 <td className="px-2.5 py-1.5 font-medium">{r.groupName}</td>
                 <td className="px-2.5 py-1.5">{r.teamName ?? ""}</td>
                 <td className="px-2 py-1 text-right whitespace-nowrap">
@@ -501,7 +501,7 @@ function SaleRepsTab() {
               </tr>
             ) : (
               <tr key={r.id} className="border-t">
-                <td className="px-2.5 py-1.5">{r.priority}</td>
+                <td className="px-2.5 py-1.5">{formatNumber(r.priority)}</td>
                 <td className="px-2.5 py-1.5 font-medium">{r.salePic}</td>
                 <td className="px-2.5 py-1.5">{r.customerType ?? "(mọi)"}</td>
                 <td className="px-2.5 py-1.5">{r.region ?? "(mọi)"}</td>

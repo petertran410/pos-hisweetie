@@ -408,7 +408,7 @@ const DEFAULT_COLUMNS: ColumnConfig<Invoice>[] = [
     visible: true,
     width: "210px",
     render: (inv) =>
-      getDebtRuleTypeLabel(inv.customer?.debtPolicy?.debtRuleType),
+      getDebtRuleTypeLabel(inv.customer?.debtPolicy),
   },
   // {
   //   key: "codAmount",

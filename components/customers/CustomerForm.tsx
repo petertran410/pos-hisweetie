@@ -35,6 +35,8 @@ import { usePermission } from "@/lib/hooks/usePermissions";
 import {
   DebtPolicyFields,
   EMPTY_DEBT_POLICY_FORM,
+  UNSET_DEBT_POLICY_FORM,
+  policyToFormValue,
   toDebtPolicyPayload,
   validateDebtPolicyForm,
   type DebtPolicyFormValue,
@@ -231,9 +233,17 @@ export function CustomerForm({
   );
   const { data: usersForPic } = useUsersForFilter();
   const upsertDebtPolicy = useUpsertDebtPolicy();
+  // Khách mới mặc định "Không công nợ"; khách đang sửa mà chưa có policy là
+  // khách cũ → "Chưa thiết lập".
+  const initialDebtPolicyForm = customer
+    ? UNSET_DEBT_POLICY_FORM
+    : EMPTY_DEBT_POLICY_FORM;
   const [debtPolicyForm, setDebtPolicyForm] = useState<DebtPolicyFormValue>(
-    EMPTY_DEBT_POLICY_FORM
+    initialDebtPolicyForm
   );
+  // Giá trị lúc nạp — chỉ lưu policy khi người dùng thực sự đổi phần công nợ.
+  const [debtPolicyBaseline, setDebtPolicyBaseline] =
+    useState<DebtPolicyFormValue>(initialDebtPolicyForm);
   const [loadedDebtPolicyId, setLoadedDebtPolicyId] = useState<number | null>(
     null
   );
@@ -243,33 +253,9 @@ export function CustomerForm({
   const loadedPolicy = debtPolicyData?.policy;
   if (loadedPolicy && loadedDebtPolicyId !== loadedPolicy.id) {
     setLoadedDebtPolicyId(loadedPolicy.id);
-    setDebtPolicyForm({
-      debtRuleType:
-        loadedPolicy.debtRuleType ??
-        (loadedPolicy.hasCreditLimit
-          ? "CREDIT_LIMIT"
-          : loadedPolicy.hasTermDays
-            ? "TERM_DAYS"
-            : "NONE"),
-      hasCreditLimit: loadedPolicy.hasCreditLimit,
-      creditLimit:
-        loadedPolicy.creditLimit != null
-          ? String(Number(loadedPolicy.creditLimit))
-          : "",
-      hasTermDays: loadedPolicy.hasTermDays,
-      termDays:
-        loadedPolicy.termDays != null ? String(loadedPolicy.termDays) : "",
-      paymentFrequency:
-        loadedPolicy.paymentFrequency != null
-          ? String(loadedPolicy.paymentFrequency)
-          : "",
-      debtForm: loadedPolicy.debtForm ?? "",
-      salePicId: loadedPolicy.salePicId ?? "",
-      requireFullPaymentForInvoice:
-        loadedPolicy.requireFullPaymentForInvoice ?? false,
-      paymentScheduleType: loadedPolicy.paymentScheduleType ?? "",
-      paymentScheduleDays: loadedPolicy.paymentScheduleDays ?? [],
-    });
+    const loadedForm = policyToFormValue(loadedPolicy);
+    setDebtPolicyForm(loadedForm);
+    setDebtPolicyBaseline(loadedForm);
   }
 
   // Portal mount guard — render modal lên document.body để overlay luôn phủ
@@ -813,7 +799,12 @@ export function CustomerForm({
         { id: customer.id, data: formattedData },
         {
           onSuccess: async () => {
-            if (canManageDebtPolicy) {
+            // Sửa thông tin chung không được đụng tới policy (trước đây lưu
+            // lại làm khách cũ bị gán "Không công nợ").
+            const debtPolicyChanged =
+              JSON.stringify(toDebtPolicyPayload(debtPolicyForm)) !==
+              JSON.stringify(toDebtPolicyPayload(debtPolicyBaseline));
+            if (canManageDebtPolicy && debtPolicyChanged) {
               try {
                 await upsertDebtPolicy.mutateAsync({
                   customerId: customer.id,

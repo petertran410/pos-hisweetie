@@ -634,7 +634,8 @@ function PurchaseProductsTab() {
       />
       <div className="flex items-center justify-end gap-2 text-[12.5px] text-gray-500">
         <span>
-          {data?.total ?? 0} mã · trang {page}/{totalPages}
+          {formatNumber(data?.total ?? 0)} mã · trang {formatNumber(page)}/
+          {formatNumber(totalPages)}
         </span>
         <button
           type="button"
