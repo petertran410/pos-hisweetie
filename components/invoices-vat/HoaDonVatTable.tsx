@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import type { InvoiceVat } from "@/lib/api/invoices";
 import { HoaDonVatDetailRow } from "@/components/invoices-vat/HoaDonVatDetailRow";
+import { InvoiceAlertIcons } from "@/components/invoices/InvoiceAlertIcons";
 import type { InvoiceBuyerInfoValue } from "@/components/invoices-vat/InvoiceBuyerTaxInfo";
 import type { MisaBuyerOverride } from "@/lib/api/misa";
 import { formatCurrency } from "@/lib/utils";
@@ -789,7 +790,8 @@ export function HoaDonVatTable({
         : EXPORT_VAT_DETAIL_COLUMNS.map((c) => c.key)
     );
 
-  const colSpan = visibleColumns.length + 2;
+  // checkbox + cột icon cảnh báo + cột thao tác
+  const colSpan = visibleColumns.length + 3;
 
   const renderTotalCell = (key: string): React.ReactNode => {
     if (!totals) return null;
@@ -1098,6 +1100,8 @@ export function HoaDonVatTable({
                     className="cursor-pointer accent-brand"
                   />
                 </th>
+                {/* Cột ngầm "Cảnh báo hóa đơn" — luôn giữ chỗ để không thụt mã hóa đơn */}
+                <th className="w-8 px-2 py-2.5" />
                 {visibleColumns.map((col) => (
                   <th
                     key={col.key}
@@ -1131,6 +1135,7 @@ export function HoaDonVatTable({
               {hasTotalRow && (
                 <tr className="bg-gray-50/60 border-b">
                   <td className="px-4 py-2.5 sticky left-0 bg-gray-50/60" />
+                  <td className="w-8 px-2 py-2.5" />
                   {visibleColumns.map((col) => (
                     <td
                       key={col.key}
@@ -1186,6 +1191,15 @@ export function HoaDonVatTable({
                           onChange={() => toggleSelect(invoice.id)}
                     className="cursor-pointer accent-brand"
                         />
+                      </td>
+                      {/* Cột ngầm "Cảnh báo hóa đơn": lệch giá, lệch SL, hủy còn giao hàng, phí ship, hàng lạnh */}
+                      <td
+                        className={`w-8 px-2 py-2.5 text-center ${
+                          expandedInvoiceId === invoice.id
+                            ? "border-t-2 border-brand"
+                            : ""
+                        }`}>
+                        <InvoiceAlertIcons invoice={invoice} />
                       </td>
                       {visibleColumns.map((col) => (
                         <td
