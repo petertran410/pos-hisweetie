@@ -39,8 +39,22 @@ export const DEBT_RULE_TYPE_LABELS: Record<DebtRuleType, string> = {
   WEEKLY_SCHEDULE: "Thanh toán cố định theo tuần",
 };
 
-export function getDebtRuleTypeLabel(type?: DebtRuleType | null): string {
-  return type ? DEBT_RULE_TYPE_LABELS[type] ?? "—" : "—";
+/**
+ * Nhãn quy tắc công nợ của khách. NONE mà không bắt trả đủ là khách cũ chưa
+ * thiết lập — không phải "Không công nợ".
+ */
+export function getDebtRuleTypeLabel(
+  policy?: {
+    debtRuleType?: DebtRuleType | null;
+    requireFullPaymentForInvoice?: boolean;
+  } | null
+): string {
+  const type = policy?.debtRuleType;
+  if (!type) return "—";
+  if (type === "NONE" && policy?.requireFullPaymentForInvoice === false) {
+    return "Chưa thiết lập";
+  }
+  return DEBT_RULE_TYPE_LABELS[type] ?? "—";
 }
 
 export type PaymentHistory =

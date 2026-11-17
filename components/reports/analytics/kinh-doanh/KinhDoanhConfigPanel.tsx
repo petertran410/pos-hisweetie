@@ -11,7 +11,7 @@ import { useAnalyticsConfigMutation } from "@/lib/hooks/useAnalyticsReports";
 import { VISUAL_GROUPS } from "./kdConstants";
 import { ViewTabs } from "./KdUi";
 import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
-import { formatNumberInput, parseNumberInput } from "@/lib/utils";
+import { formatNumber, formatNumberInput, parseNumberInput } from "@/lib/utils";
 
 const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
   value: i + 1,
@@ -121,11 +121,14 @@ function TargetsTab() {
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
+        {/* Năm giữ nguyên chữ số (không có dấu phân cách hàng nghìn). */}
         <input
-          type="number"
+          type="text"
+          inputMode="numeric"
+          maxLength={4}
           className={`${inputCls} w-24`}
           value={year}
-          onChange={(e) => setYear(Number(e.target.value))}
+          onChange={(e) => setYear(Number(e.target.value.replace(/\D/g, "")))}
         />
         <span className="text-[12px] text-gray-500">Thêm / sửa:</span>
         <AnalyticsSelect
@@ -241,7 +244,9 @@ function KeysTab() {
           onClick={() => add.mutate({ customerCode: code.trim(), isVip: vip })}>
           <Plus className="w-3.5 h-3.5" /> Thêm
         </button>
-        <span className="text-[12px] text-gray-500">{data.length} khách</span>
+        <span className="text-[12px] text-gray-500">
+          {formatNumber(data.length)} khách
+        </span>
       </div>
       <Table head={["Mã khách", "Tên khách", "VIP", ""]}>
         {data.map((k) => (

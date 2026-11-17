@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import {
   DebtForm,
+  DebtPolicy,
   DEBT_FORM_LABELS,
   DEBT_GRACE_DAYS,
   COMMON_TERM_DAYS,
@@ -34,7 +35,8 @@ import {
  * Chuyển đổi sang số chỉ thực hiện lúc submit.
  */
 export interface DebtPolicyFormValue {
-  debtRuleType: DebtRuleType;
+  /** "" = Chưa thiết lập (khách cũ, chưa áp ràng buộc thanh toán đủ). */
+  debtRuleType: DebtRuleType | "";
   hasCreditLimit: boolean;
   creditLimit: string;
   hasTermDays: boolean;
@@ -60,6 +62,45 @@ export const EMPTY_DEBT_POLICY_FORM: DebtPolicyFormValue = {
   paymentScheduleType: "",
   paymentScheduleDays: [],
 };
+
+/** Khách đã tồn tại mà chưa có policy: quy tắc ở trạng thái "Chưa thiết lập". */
+export const UNSET_DEBT_POLICY_FORM: DebtPolicyFormValue = {
+  ...EMPTY_DEBT_POLICY_FORM,
+  debtRuleType: "",
+};
+
+/**
+ * Nạp policy đã lưu vào form. NONE mà không bắt trả đủ là khách cũ chưa
+ * thiết lập → hiển thị "Chưa thiết lập", không phải "Không công nợ".
+ */
+export function policyToFormValue(
+  policy: DebtPolicy | null | undefined,
+): DebtPolicyFormValue {
+  if (!policy) return UNSET_DEBT_POLICY_FORM;
+  const rule: DebtRuleType =
+    policy.debtRuleType ??
+    (policy.hasCreditLimit
+      ? "CREDIT_LIMIT"
+      : policy.hasTermDays
+        ? "TERM_DAYS"
+        : "NONE");
+  return {
+    debtRuleType:
+      rule === "NONE" && !policy.requireFullPaymentForInvoice ? "" : rule,
+    hasCreditLimit: policy.hasCreditLimit,
+    creditLimit:
+      policy.creditLimit != null ? String(Number(policy.creditLimit)) : "",
+    hasTermDays: policy.hasTermDays,
+    termDays: policy.termDays != null ? String(policy.termDays) : "",
+    paymentFrequency:
+      policy.paymentFrequency != null ? String(policy.paymentFrequency) : "",
+    debtForm: policy.debtForm ?? "",
+    salePicId: policy.salePicId ?? "",
+    requireFullPaymentForInvoice: policy.requireFullPaymentForInvoice ?? false,
+    paymentScheduleType: policy.paymentScheduleType ?? "",
+    paymentScheduleDays: policy.paymentScheduleDays ?? [],
+  };
+}
 
 /**
  * Kiểm tra trước khi submit. Trả về thông báo lỗi đầu tiên, null nếu hợp lệ.
@@ -108,11 +149,10 @@ export function toDebtPolicyPayload(
           : null,
     debtForm: v.debtForm || null,
     salePicId: v.salePicId || null,
-    // Quy tắc mới là nguồn chân lý của chính sách thanh toán. Cờ này vẫn
-    // được gửi để tương thích với policy cũ, nhưng không còn do người dùng
-    // chỉnh trực tiếp trên giao diện.
+    // Cờ suy ra từ quy tắc, người dùng không chỉnh trực tiếp. "Chưa thiết
+    // lập" lưu thành NONE + false để khách cũ không bị bắt trả đủ.
     requireFullPaymentForInvoice: v.debtRuleType === "NONE",
-    debtRuleType: v.debtRuleType,
+    debtRuleType: v.debtRuleType || "NONE",
     paymentScheduleType: (v.debtRuleType === "MONTHLY_SCHEDULE"
       ? "MONTHLY"
       : v.debtRuleType === "WEEKLY_SCHEDULE"
@@ -225,7 +265,7 @@ export function DebtPolicyFields({ value, onChange }: Props) {
     value.debtRuleType === "WEEKLY_SCHEDULE";
   const activeRule = DEBT_RULES.find((r) => r.value === value.debtRuleType);
 
-  const selectRule = (debtRuleType: DebtRuleType) =>
+  const selectRule = (debtRuleType: DebtRuleType | "") =>
     onChange({
       debtRuleType,
       hasCreditLimit: debtRuleType === "CREDIT_LIMIT",
@@ -307,6 +347,18 @@ export function DebtPolicyFields({ value, onChange }: Props) {
         <SectionHead
           title="Quy tắc công nợ"
           hint="Mỗi khách hàng chỉ áp dụng một quy tắc"
+          action={
+            value.debtRuleType ? (
+              <button
+                type="button"
+                onClick={() => selectRule("")}
+                className="text-xs font-medium text-gray-500 transition-colors hover:text-brand">
+                Bỏ chọn
+              </button>
+            ) : (
+              <span className="text-xs text-gray-400">Chưa thiết lập</span>
+            )
+          }
         />
         <div
           role="radiogroup"
@@ -349,7 +401,15 @@ export function DebtPolicyFields({ value, onChange }: Props) {
         </div>
 
         {/* ── Cấu hình chi tiết theo quy tắc ── */}
-        {value.debtRuleType === "NONE" ? (
+        {value.debtRuleType === "" ? (
+          <div className="mt-3 flex items-start gap-2 rounded-lg border bg-gray-50 px-3 py-2.5 text-xs text-gray-600">
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>
+              Chưa thiết lập quy tắc công nợ — khách chưa bị bắt thanh toán đủ
+              trước khi xuất hóa đơn.
+            </span>
+          </div>
+        ) : value.debtRuleType === "NONE" ? (
           <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>

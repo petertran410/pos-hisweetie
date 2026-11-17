@@ -132,6 +132,7 @@ function FieldInput({
         value={Number(value ?? 0)}
         onValueChange={onChange}
         maxFractionDigits={0}
+        formatWhileTyping
         className={`${inputCls} text-right`}
       />
     );
@@ -181,7 +182,7 @@ function FieldInput({
         onChange={onChange}
         placeholder="— Chọn —"
         searchable
-        multiLabel={(n) => `${n} mục`}
+        multiLabel={(n) => `${formatNumber(n)} mục`}
       />
     );
   return (

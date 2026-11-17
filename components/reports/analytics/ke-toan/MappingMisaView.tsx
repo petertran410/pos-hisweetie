@@ -91,7 +91,7 @@ export function MappingMisaView() {
               }))
             }
             placeholder="Loại Hàng: Tất cả"
-            multiLabel={(n) => `Loại Hàng: ${n} loại`}
+            multiLabel={(n) => `Loại Hàng: ${formatNumber(n)} loại`}
           />
         </div>
         <div className="w-80">
@@ -106,7 +106,7 @@ export function MappingMisaView() {
             }
             placeholder="Tên Hàng: Tất cả"
             searchPlaceholder="Tìm tên hàng..."
-            multiLabel={(n) => `Tên Hàng: ${n} mặt hàng`}
+            multiLabel={(n) => `Tên Hàng: ${formatNumber(n)} mặt hàng`}
             panelWidth={420}
           />
         </div>

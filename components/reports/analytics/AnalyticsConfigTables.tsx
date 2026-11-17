@@ -349,7 +349,7 @@ function ParentRulesTab() {
                   <tr
                     key={r.id}
                     className={`border-t ${r.isActive ? "" : "opacity-50"}`}>
-                    <td className="p-2 dt-mono">{r.priority}</td>
+                    <td className="p-2 dt-mono">{formatNumber(r.priority)}</td>
                     <td className="p-2">
                       {r.matchType === "code"
                         ? "Mã khách là"
@@ -575,8 +575,10 @@ function TeamsTab() {
                   <td className="p-2 dt-mono">{t.code}</td>
                   <td className="p-2 font-medium">{t.name}</td>
                   <td className="p-2">{t.isSale ? "Có" : "Không"}</td>
-                  <td className="p-2 dt-mono">{t.sortOrder}</td>
-                  <td className="p-2 dt-mono">{t._count?.members ?? 0}</td>
+                  <td className="p-2 dt-mono">{formatNumber(t.sortOrder)}</td>
+                  <td className="p-2 dt-mono">
+                    {formatNumber(t._count?.members ?? 0)}
+                  </td>
                   <td className="p-2 text-right whitespace-nowrap">
                     <button
                       type="button"
@@ -823,7 +825,8 @@ function ProductGroupsTab() {
       </div>
       <div className="flex items-center justify-end gap-2 text-[12.5px] text-gray-500">
         <span>
-          {formatNumber(data?.total ?? 0)} mã · trang {page}/{totalPages}
+          {formatNumber(data?.total ?? 0)} mã · trang {formatNumber(page)}/
+          {formatNumber(totalPages)}
         </span>
         <button
           type="button"
@@ -1103,7 +1106,7 @@ function VisualGroupRulesTab() {
                       title="Xoá"
                       onClick={() =>
                         window.confirm(
-                          `Xoá quy tắc thứ tự ${r.priority} (→ ${r.visualGroup})?`,
+                          `Xoá quy tắc thứ tự ${formatNumber(r.priority)} (→ ${r.visualGroup})?`,
                         ) && remove.mutate(r.id)
                       }>
                       <Trash2 className="w-4 h-4" />

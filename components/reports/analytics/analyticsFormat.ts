@@ -52,7 +52,7 @@ export function metricAxis(v: number, m: AnalyticsMetric): string {
   }
   if (Math.abs(v) >= 1e9)
     return `${formatNumber(v / 1e9, "en-US", { max: 1 })} tỷ`;
-  if (Math.abs(v) >= 1e6) return `${Math.round(v / 1e6)}tr`;
+  if (Math.abs(v) >= 1e6) return `${formatNumber(Math.round(v / 1e6))}tr`;
   return formatNumber(Math.round(v));
 }
 

@@ -167,7 +167,7 @@ export function PagedTable<T>({
             <ChevronLeft className="w-3.5 h-3.5" />
           </button>
           <span>
-            Trang {cur + 1}/{pages}
+            Trang {formatNumber(cur + 1)}/{formatNumber(pages)}
           </span>
           <button
             type="button"

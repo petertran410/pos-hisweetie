@@ -10,6 +10,7 @@ import type {
 } from "@/lib/api/analytics-khach-hang-dlcl";
 import { BLANK_LABEL } from "../analyticsFormat";
 import { measureLabel, measureText, momColor } from "./dlclFormat";
+import { formatNumber } from "@/lib/utils";
 
 /**
  * Bảng matrix nhiều cấp (thay pivotTable của Power BI):
@@ -337,7 +338,7 @@ export function DlclPivotTable({
             onClick={() => setShown((n) => n + pageSize)}
             className="text-[12.5px] font-medium px-3 py-1.5 rounded-lg border hover:bg-gray-50"
             style={{ borderColor: "var(--dt-border)" }}>
-            Xem thêm ({rows.length - shown} dòng còn lại)
+            Xem thêm ({formatNumber(rows.length - shown)} dòng còn lại)
           </button>
         </div>
       )}
