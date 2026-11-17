@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useLayoutEffect, useRef } from "react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatNumber } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { ExternalLink, Loader2 } from "lucide-react";
 import {
@@ -357,7 +357,9 @@ export function DestructionDetailRow({
                               {detail.productName}
                             </td>
                             <td className="px-[10px] py-2 text-center text-sm font-medium text-gray-900">
-                              {detail.quantity}
+                              {formatNumber(detail.quantity, "en-US", {
+                                max: 3,
+                              })}
                             </td>
                             {canViewCostPrice && (
                               <>

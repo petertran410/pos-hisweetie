@@ -14,7 +14,7 @@ import {
   getStatusLabel,
   ORDER_SUPPLIER_STATUS,
 } from "@/lib/types/order-supplier";
-import { formatCurrency, formatNumberInput } from "@/lib/utils";
+import { formatCurrency, formatNumber, formatNumberInput } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { CodeLink } from "../shared/CodeLink";
@@ -54,10 +54,7 @@ const STATUS_COLOR: Record<number, string> = {
 
 const fmtDateTime = (d?: string) =>
   d ? new Date(d).toLocaleString("vi-VN") : "-";
-const fmtNum = (n?: number) =>
-  n == null
-    ? "-"
-    : Number(n).toLocaleString("vi-VN", { maximumFractionDigits: 2 });
+const fmtNum = (n?: number) => (n == null ? "-" : formatNumber(Number(n)));
 
 type FactoryField = "factoryPrice" | "factorySubTotal";
 
@@ -171,7 +168,7 @@ const DEFAULT_COLUMNS: ColumnConfig<OrderSupplierDetailItem, EditCtx>[] = [
     label: "SL đặt",
     visible: true,
     width: "90px",
-    render: (r) => r.orderedQty,
+    render: (r) => fmtNum(r.orderedQty),
   },
   {
     key: "price",
@@ -291,7 +288,7 @@ const DEFAULT_COLUMNS: ColumnConfig<OrderSupplierDetailItem, EditCtx>[] = [
               ? "text-yellow-600 font-medium"
               : "text-gray-400"
         }>
-        {r.receivedQty}
+        {fmtNum(r.receivedQty)}
       </span>
     ),
   },
@@ -301,7 +298,7 @@ const DEFAULT_COLUMNS: ColumnConfig<OrderSupplierDetailItem, EditCtx>[] = [
     visible: true,
     width: "90px",
     render: (r) => (
-      <span className="font-medium text-gray-700">{r.remainingQty}</span>
+      <span className="font-medium text-gray-700">{fmtNum(r.remainingQty)}</span>
     ),
   },
   {
@@ -720,7 +717,7 @@ export function OrderSupplierDetailItemsTable({ filters }: Props) {
           </div>
 
           <span className="text-xs text-gray-400">
-            {total > 0 ? `${total.toLocaleString("vi-VN")} dòng` : ""}
+            {total > 0 ? `${formatNumber(total)} dòng` : ""}
           </span>
         </div>
       </div>

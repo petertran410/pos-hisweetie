@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { UnitSelect } from "./UnitSelect";
 import { useUnits } from "@/lib/hooks/useUnits";
 import { CARTON_UNIT_CODE, normalizeUnitKey } from "@/lib/api/units";
@@ -41,7 +41,7 @@ import { MisaInventoryItem } from "@/lib/api/misa";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { useFormattedNumber } from "@/lib/hooks/useFormattedNumber";
 import { API_URL } from "@/lib/config/api";
-import { formatNumberInput } from "@/lib/utils";
+import { formatNumber, formatNumberInput } from "@/lib/utils";
 import { usePublication } from "./publication/usePublication";
 import { PublicationSection } from "./publication/PublicationSection";
 import {
@@ -313,7 +313,7 @@ export function ManufacturingProductForm({
   const justLoadedFromProduct = useRef(false);
   const hasLoadedFromProduct = useRef(false);
 
-  const { register, handleSubmit, watch, setValue } = useForm({
+  const { register, handleSubmit, watch, setValue, control } = useForm({
     defaultValues: {
       code: product?.code || "",
       name: product?.name || "",
@@ -1155,11 +1155,13 @@ export function ManufacturingProductForm({
                       !active.isExternal && (
                         <span className="text-gray-500">
                           Giá vốn theo công thức này:{" "}
-                          {calculateFormulaCost({
-                            ...active,
-                            components,
-                            inputModes,
-                          }).toLocaleString("vi-VN")}{" "}
+                          {formatNumber(
+                            calculateFormulaCost({
+                              ...active,
+                              components,
+                              inputModes,
+                            })
+                          )}{" "}
                           đ
                         </span>
                       )}
@@ -1250,7 +1252,7 @@ export function ManufacturingProductForm({
 
                             {/* ← Sửa cell tồn kho: thêm đơn vị */}
                             <td className="px-3 py-2 text-sm">
-                              {stock.toLocaleString()}
+                              {formatNumber(stock, "en-US", { max: 3 })}
                               {comp.componentProduct?.unit && (
                                 <span className="text-gray-400 ml-1 text-xs">
                                   {comp.componentProduct.unit}
@@ -1263,12 +1265,16 @@ export function ManufacturingProductForm({
                               <div className="flex items-center gap-1">
                                 <input
                                   type="text"
-                                  value={
+                                  // Chuỗi lưu không có dấu phẩy; chỉ thêm dấu
+                                  // phẩy ngăn cách khi hiển thị (onChange đã
+                                  // lọc bỏ ký tự không phải số / ".").
+                                  value={formatNumberInput(
                                     quantityInputs[comp.componentProductId] !==
-                                    undefined
+                                      undefined
                                       ? quantityInputs[comp.componentProductId]
-                                      : comp.quantity.toString()
-                                  }
+                                      : comp.quantity.toString(),
+                                    6
+                                  )}
                                   onChange={(e) =>
                                     handleQuantityChange(
                                       comp.componentProductId,
@@ -1369,9 +1375,7 @@ export function ManufacturingProductForm({
                                   comp.componentProduct?.unit || "đv";
                                 const units = getUnitsPerProduct(comp, mode);
                                 const fmt = (v: number, digits = 3) =>
-                                  v.toLocaleString("vi-VN", {
-                                    maximumFractionDigits: digits,
-                                  });
+                                  formatNumber(v, "en-US", { max: digits });
                                 if (mode === "carton") {
                                   const cartons = units / getPackSize(comp);
                                   return (
@@ -1395,7 +1399,7 @@ export function ManufacturingProductForm({
 
                             {canViewCostPrice && (
                               <td className="px-3 py-2 text-sm">
-                                {costByQuantity.toLocaleString()} đ
+                                {formatNumber(costByQuantity)} đ
                               </td>
                             )}
                             <td className="px-3 py-2">
@@ -1429,12 +1433,15 @@ export function ManufacturingProductForm({
                                     ? "text-green-600"
                                     : "text-red-500"
                               }>
-                              {totalComponentGrams.toLocaleString()} g
+                              {formatNumber(totalComponentGrams, "en-US", {
+                                max: 3,
+                              })}{" "}
+                              g
                               {productWeightInGrams > 0 && (
                                 <span className="ml-2 text-xs font-normal">
                                   {isWeightMatch
                                     ? "✓ khớp trọng lượng"
-                                    : `(cần ${productWeightInGrams.toLocaleString()} g)`}
+                                    : `(cần ${formatNumber(productWeightInGrams, "en-US", { max: 3 })} g)`}
                                 </span>
                               )}
                             </span>
@@ -1544,9 +1551,7 @@ export function ManufacturingProductForm({
                         <span>
                           Hàng mình / 1 {outputUnit}:{" "}
                           <b className="text-gray-800">
-                            {ownCost.toLocaleString("vi-VN", {
-                              maximumFractionDigits: 2,
-                            })}{" "}
+                            {formatNumber(ownCost, "en-US", { max: 2 })}{" "}
                             đ
                           </b>
                         </span>
@@ -1554,17 +1559,15 @@ export function ManufacturingProductForm({
                       <span>
                         Nguyên liệu NSX / 1 {outputUnit}:{" "}
                         <b className="text-gray-800">
-                          {nsxCost.toLocaleString("vi-VN", {
-                            maximumFractionDigits: 4,
-                          })}{" "}
+                          {formatNumber(nsxCost, "en-US", { max: 4 })}{" "}
                           {sym}
                         </b>
                       </span>
                       <span>
                         Phí gia công / 1 {outputUnit}:{" "}
                         <b className="text-gray-800">
-                          {active.processingFeePerUnit.toLocaleString("vi-VN", {
-                            maximumFractionDigits: 6,
+                          {formatNumber(active.processingFeePerUnit, "en-US", {
+                            max: 6,
                           })}{" "}
                           {sym}
                         </b>
@@ -1608,7 +1611,7 @@ export function ManufacturingProductForm({
                           const autoCost = calculateTotalPurchasePrice();
                           return autoCost == null
                             ? "Chưa có công thức nội bộ mặc định — giá vốn không tự tính"
-                            : `Tự động tính (công thức mặc định): ${autoCost.toLocaleString("vi-VN")} đ`;
+                            : `Tự động tính (công thức mặc định): ${formatNumber(autoCost)} đ`;
                         })()}
                       </p>
                     </div>
@@ -1741,13 +1744,19 @@ export function ManufacturingProductForm({
                   <label className="block text-sm font-medium mb-1">
                     Định lượng đóng gói
                   </label>
-                  <input
-                    {...register("conversionValue", { valueAsNumber: true })}
-                    type="number"
-                    min={1}
-                    step={1}
-                    className="w-full border rounded px-3 py-2"
-                    placeholder="1"
+                  <Controller
+                    control={control}
+                    name="conversionValue"
+                    render={({ field }) => (
+                      <NumericInput
+                        value={Number(field.value) || 0}
+                        onValueChange={field.onChange}
+                        formatWhileTyping
+                        maxFractionDigits={0}
+                        className="w-full border rounded px-3 py-2"
+                        placeholder="1"
+                      />
+                    )}
                   />
                   <p className="mt-1 text-xs text-gray-500">
                     Ví dụ: 12 nghĩa là 1 thùng gồm 12 đơn vị sản phẩm.
