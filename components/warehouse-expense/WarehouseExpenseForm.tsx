@@ -26,6 +26,7 @@ import { WAREHOUSE_EXPENSE_ITEMS } from "@/lib/internal-finance/vehicle-constant
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import {
   isOfficeBranch,
+  isVpsgBranch,
   OFFICE_BRANCH_IDS,
 } from "@/lib/internal-finance/office";
 import { useAuthStore } from "@/lib/store/auth";
@@ -225,9 +226,11 @@ export function WarehouseExpenseForm({
     <FinanceFormSheet
       title={expense ? "Sửa khoản chi" : "Tạo khoản chi khác"}
       subtitle={
-        isOfficeBranch(selectedBranchId)
-          ? "Bấm Đã chi trên danh sách để trừ quỹ văn phòng."
-          : "Khoản chi sẽ được tổng hợp tuần và gửi Approval Lark."
+        isVpsgBranch(selectedBranchId)
+          ? "Kế toán duyệt trên danh sách là Đã chi và trừ quỹ VPSG."
+          : isOfficeBranch(selectedBranchId)
+            ? "Bấm Đã chi trên danh sách để trừ quỹ văn phòng."
+            : "Khoản chi sẽ được tổng hợp tuần và gửi Approval Lark."
       }
       onClose={onClose}
       onSubmit={submit}

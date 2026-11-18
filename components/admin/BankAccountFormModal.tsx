@@ -101,6 +101,7 @@ export function BankAccountFormModal({
     note: "",
     scope: "all",
     branchIds: [] as number[],
+    vpsgCashFund: false,
   });
 
   useEffect(() => {
@@ -113,6 +114,7 @@ export function BankAccountFormModal({
         note: bankAccount.note || "",
         scope: bankAccount.scope || "all",
         branchIds: bankAccount.branchIds || [],
+        vpsgCashFund: Boolean(bankAccount.vpsgCashFund),
       });
     }
   }, [bankAccount]);
@@ -130,7 +132,7 @@ export function BankAccountFormModal({
       toast.success(
         bankAccount
           ? "Cập nhật tài khoản thành công"
-          : "Tạo tài khoản thành công"
+          : "Tạo tài khoản thành công",
       );
       onClose();
     },
@@ -239,7 +241,7 @@ export function BankAccountFormModal({
                     searchPlaceholder="Tìm kiếm ngân hàng..."
                     renderOption={(option) => {
                       const bank = VIETNAM_BANKS.find(
-                        (b) => b.code === option.value
+                        (b) => b.code === option.value,
                       );
                       return (
                         <>
@@ -285,6 +287,30 @@ export function BankAccountFormModal({
                     placeholder="Nhập ghi chú"
                   />
                 </div>
+
+                <label className="flex items-start gap-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={formData.vpsgCashFund}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        vpsgCashFund: e.target.checked,
+                      })
+                    }
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium">
+                      Dùng cho quỹ tiền mặt VPSG
+                    </span>
+                    <span className="block text-xs text-gray-500">
+                      Tiền vào tài khoản này không phải tiền khách: trên Biến
+                      động số dư chỉ người có quyền quỹ VPSG thấy và ghi vào quỹ
+                      nội bộ VPSG.
+                    </span>
+                  </span>
+                </label>
               </>
             )}
 

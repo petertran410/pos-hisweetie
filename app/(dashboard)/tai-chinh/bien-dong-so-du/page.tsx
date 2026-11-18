@@ -12,6 +12,12 @@ import {
   SepayCustomerCell,
   SepayMatchActions,
 } from "@/components/sepay/SepayMatchControls";
+import {
+  VpsgFundAction,
+  VpsgFundStatus,
+  isVpsgTransaction,
+} from "@/components/sepay/VpsgFundAction";
+import { useVpsgCashAccess, useVpsgCashRecords } from "@/lib/hooks/useVpsgCash";
 import { CustomerLookup } from "@/components/sepay/CustomerLookup";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -230,12 +236,18 @@ export default function BienDongSoDuPage() {
 
   // Danh sách tài khoản ngân hàng cho dropdown filter
   const { data: bankAccountsData } = useBankAccountsForPayment();
+  // Tài khoản quỹ tiền mặt VPSG chỉ hiện với người có quyền quỹ VPSG.
+  const { data: vpsgAccess } = useVpsgCashAccess();
   const bankAccounts: Array<{
     id: number;
     accountNumber: string;
     bankCode?: string;
     bankName?: string;
-  }> = Array.isArray(bankAccountsData) ? bankAccountsData : [];
+    vpsgCashFund?: boolean;
+  }> = (Array.isArray(bankAccountsData) ? bankAccountsData : []).filter(
+    (account: { vpsgCashFund?: boolean }) =>
+      !account.vpsgCashFund || vpsgAccess?.canView
+  );
 
   // Đóng lịch khi click ra ngoài
   useEffect(() => {
@@ -267,6 +279,18 @@ export default function BienDongSoDuPage() {
 
   const transactions = data?.data ?? [];
   const total = data?.total ?? 0;
+  // Tài khoản quỹ tiền mặt VPSG: không phải tiền khách, hàng có nút ghi quỹ
+  // riêng thay cho luồng khách hàng (chỉ người có quyền quỹ VPSG thấy).
+  const vpsgAccounts = vpsgAccess?.accountNumbers ?? [];
+  const vpsgIds = transactions
+    .filter((tx) => isVpsgTransaction(tx, vpsgAccounts))
+    .map((tx) => tx.id);
+  const { data: vpsgRecords } = useVpsgCashRecords(
+    vpsgIds,
+    Boolean(vpsgAccess?.canView)
+  );
+  const vpsgRecordOf = (id: number) =>
+    vpsgRecords?.find((record) => record.transactionId === id);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const applyFilters = () => {
@@ -584,6 +608,10 @@ export default function BienDongSoDuPage() {
               ) : (
                 transactions.map((tx) => {
                   const amountIn = Number(tx.amountIn);
+                  const vpsg =
+                    vpsgAccess && isVpsgTransaction(tx, vpsgAccounts)
+                      ? vpsgAccess
+                      : null;
                   return (
                     <tr
                       key={tx.id}
@@ -610,16 +638,34 @@ export default function BienDongSoDuPage() {
                         {tx.referenceNumber || "-"}
                       </td>
                       <td className="px-3 py-2.5 min-w-[160px] max-w-[220px] break-words whitespace-normal align-middle">
-                        <SepayCustomerCell tx={tx} />
+                        {vpsg ? (
+                          <span className="text-xs text-gray-500">
+                            Quỹ tiền mặt VPSG
+                          </span>
+                        ) : (
+                          <SepayCustomerCell tx={tx} />
+                        )}
                       </td>
                       <td className="pl-2 pr-1 py-2.5 whitespace-nowrap align-middle">
-                        <SepayStatusBadge status={tx.match?.status} />
+                        {vpsg ? (
+                          <VpsgFundStatus record={vpsgRecordOf(tx.id)} />
+                        ) : (
+                          <SepayStatusBadge status={tx.match?.status} />
+                        )}
                       </td>
                       <td className="pl-1 pr-3 py-2.5 whitespace-nowrap align-middle">
-                        <SepayMatchActions
-                          tx={tx}
-                          isHidden={applied.showHidden}
-                        />
+                        {vpsg ? (
+                          <VpsgFundAction
+                            tx={tx}
+                            record={vpsgRecordOf(tx.id)}
+                            access={vpsg}
+                          />
+                        ) : (
+                          <SepayMatchActions
+                            tx={tx}
+                            isHidden={applied.showHidden}
+                          />
+                        )}
                       </td>
                     </tr>
                   );

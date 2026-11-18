@@ -86,6 +86,11 @@ export function BankAccountsTable({
             </td>
             <td className="px-6 py-4 whitespace-nowrap text-sm">
               {account.scope === "all" ? "Toàn hệ thống" : "Chi nhánh cụ thể"}
+              {account.vpsgCashFund && (
+                <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                  Quỹ tiền mặt VPSG
+                </span>
+              )}
             </td>
             <td className="px-6 py-4 text-sm">{account.note || "-"}</td>
             <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
