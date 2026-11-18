@@ -13,6 +13,8 @@ export function BulkCheckBar({
   onTick,
   onClear,
   floating = false,
+  managerLabel = "Tick Quản lý kho",
+  accountantLabel = "Tick Kế toán kho",
 }: {
   count: number;
   amount: number;
@@ -23,6 +25,9 @@ export function BulkCheckBar({
   onClear: () => void;
   /** Điện thoại: ghim ở đáy màn hình. */
   floating?: boolean;
+  /** Nhãn nút theo nơi dùng (VPSG: "Kế toán duyệt"). */
+  managerLabel?: string;
+  accountantLabel?: string;
 }) {
   const button =
     "inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-50";
@@ -59,7 +64,7 @@ export function BulkCheckBar({
             ) : (
               <CheckCheck className="h-4 w-4" />
             )}
-            Tick Quản lý kho
+            {managerLabel}
           </button>
         )}
         {canAccountant && (
@@ -73,7 +78,7 @@ export function BulkCheckBar({
             ) : (
               <CheckCheck className="h-4 w-4" />
             )}
-            Tick Kế toán kho
+            {accountantLabel}
           </button>
         )}
       </div>

@@ -83,10 +83,16 @@ const labels: Record<string, string> = {
 const sourceLabels: Record<string, string> = {
   WAREHOUSE_CASH_RECEIPT: "Thu tiền khách",
   LARK_PAYMENT_VOUCHER: "Phiếu chi theo đơn duyệt",
+  SEPAY_VPSG: "Thu từ tài khoản VPSG",
+  OPENING_BALANCE: "Số dư đầu kỳ",
 };
 // Các nguồn này phải hủy tại màn hình gốc để hai bên không lệch nhau;
 // bút toán lịch sử thì chỉ đọc.
-const originOwnedSources = ["WAREHOUSE_CASH_RECEIPT", "LEDGER_HISTORY"];
+const originOwnedSources = [
+  "WAREHOUSE_CASH_RECEIPT",
+  "LEDGER_HISTORY",
+  "SEPAY_VPSG",
+];
 // Tên hiển thị của loại giao dịch; chuyển quỹ lịch sử vẫn hiện "Chuyển đến/đi".
 const typeLabel = (row: { sourceType: string; transactionType: string }) =>
   row.sourceType === "LEDGER_HISTORY"
@@ -370,9 +376,11 @@ function FundScreen() {
             searchPlaceholder="Tìm mã, mã phiếu, nội dung..."
             activeFilterCount={activeFilterCount}
             onOpenFilter={() => setShowFilters(true)}
-            actions={view === "transactions" ? (
-              <InternalFundExportMenu filters={query} disabled={!ready} />
-            ) : undefined}
+            actions={
+              view === "transactions" ? (
+                <InternalFundExportMenu filters={query} disabled={!ready} />
+              ) : undefined
+            }
             summary={
               summary.data?.[0] ? (
                 <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs">

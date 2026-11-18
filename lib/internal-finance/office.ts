@@ -1,18 +1,32 @@
 import type { InternalFinanceEntry } from "@/lib/api/internal-finance";
 
 /**
- * Văn phòng HN (4) và Văn phòng SG (7): không có báo đơn, xe, tick kiểm tra hay
- * Approval tuần. Phiếu chi văn phòng sinh từ đơn PHIẾU CHI Lark đã duyệt, hoặc
- * phiếu tay trừ quỹ khi bấm Đã chi.
+ * Văn phòng HN (4) và Văn phòng SG (7): không có báo đơn, xe hay Approval tuần.
+ * Phiếu chi văn phòng sinh từ đơn PHIẾU CHI Lark đã duyệt, hoặc phiếu tay: VPHN
+ * bấm Đã chi là trừ quỹ, VPSG Kế toán duyệt là Đã chi.
  */
 export const OFFICE_BRANCH_IDS = [4, 7];
 
 export const isOfficeBranch = (branchId?: number | null) =>
   branchId != null && OFFICE_BRANCH_IDS.includes(branchId);
 
-/** Phiếu chi tay của văn phòng còn chờ Đã chi. */
+/** Văn phòng SG: phiếu chi tay chỉ cần Kế toán duyệt, duyệt là Đã chi. */
+export const VPSG_BRANCH_ID = 7;
+
+export const isVpsgBranch = (branchId?: number | null) =>
+  branchId === VPSG_BRANCH_ID;
+
+/** Phiếu chi tay VPSG còn hiệu lực: Kế toán tick duyệt / bỏ duyệt được. */
+export const isVpsgManualOpen = (row: InternalFinanceEntry) =>
+  isVpsgBranch(row.branchId) &&
+  row.sourceType === "MANUAL_EXPENSE" &&
+  !row.cashFlow &&
+  !["CANCELLED", "REJECTED"].includes(row.status);
+
+/** Phiếu chi tay VPHN còn chờ Đã chi (bấm Đã chi là trừ quỹ, không qua duyệt). */
 export const isOfficeManualOpen = (row: InternalFinanceEntry) =>
   isOfficeBranch(row.branchId) &&
+  !isVpsgBranch(row.branchId) &&
   row.sourceType === "MANUAL_EXPENSE" &&
   !row.cashIssued &&
   !row.cashFlow &&

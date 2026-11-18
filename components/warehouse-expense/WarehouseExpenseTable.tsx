@@ -19,6 +19,7 @@ import {
 } from "@/lib/internal-finance/display";
 import {
   isOfficeBranch,
+  isVpsgManualOpen,
   officeVoucherDetails,
 } from "@/lib/internal-finance/office";
 import { formatCurrency } from "@/lib/utils";
@@ -94,6 +95,26 @@ export const OFFICE_EXPENSE_COLUMNS = [
   { key: "amount", label: "Tiền mặt", width: "130px" },
   { key: "evidence", label: "Chứng từ", width: "90px" },
   { key: "approvalStatus", label: "Trạng thái duyệt", width: "140px" },
+  { key: "cashIssued", label: "Đã chi", width: "150px" },
+];
+
+/**
+ * Văn phòng SG: như văn phòng, thêm cột Kế toán duyệt cho phiếu chi tay (duyệt
+ * là Đã chi, trừ quỹ VPSG).
+ */
+export const VPSG_EXPENSE_COLUMNS = [
+  { key: "code", label: "Mã phiếu", width: "190px" },
+  { key: "date", label: "Ngày chi", width: "110px" },
+  { key: "source", label: "Nguồn", width: "170px" },
+  { key: "content", label: "Nội dung", width: "250px" },
+  { key: "department", label: "Phòng ban", width: "170px" },
+  { key: "item", label: "Khoản mục", width: "200px" },
+  { key: "payer", label: "Người đề xuất", width: "150px" },
+  { key: "method", label: "Phương thức", width: "170px" },
+  { key: "amount", label: "Số tiền", width: "130px" },
+  { key: "evidence", label: "Chứng từ", width: "90px" },
+  { key: "approvalStatus", label: "Trạng thái duyệt", width: "150px" },
+  { key: "accountant", label: "Kế toán duyệt", width: "140px" },
   { key: "cashIssued", label: "Đã chi", width: "150px" },
 ];
 
@@ -202,7 +223,8 @@ export function WarehouseExpenseTable({
     row: InternalFinanceEntry,
     role: WarehouseExpenseCheckRole,
   ) => {
-    if (!WAREHOUSE_BRANCH_IDS.includes(row.branchId)) {
+    const vpsgReview = role === "accountant" && isVpsgManualOpen(row);
+    if (!WAREHOUSE_BRANCH_IDS.includes(row.branchId) && !vpsgReview) {
       return <span className="text-gray-400">-</span>;
     }
     const reviewer =
@@ -340,13 +362,17 @@ export function WarehouseExpenseTable({
             rows.map((row) => {
               // Phiếu văn phòng từ đơn Lark: còn hiệu lực là đã duyệt, hủy là thu hồi.
               const fromLark = row.sourceType === "LARK_APPROVAL";
+              // Phiếu chi tay VPSG: Kế toán duyệt là xong.
+              const vpsgManual = isVpsgManualOpen(row);
               const approvalStatus =
                 row.weeklyBatch?.approvalRequest?.status ??
                 (fromLark
                   ? row.status === "CANCELLED"
                     ? "REVERTED"
                     : "APPROVED"
-                  : undefined);
+                  : vpsgManual && row.accountantReviewedAt
+                    ? "APPROVED"
+                    : undefined);
               const snapshot = row.sourceSnapshot || {};
               const details = officeVoucherDetails(row.sourceSnapshot);
               const vehicleName =
@@ -599,6 +625,10 @@ export function WarehouseExpenseTable({
                           }`}>
                           {APPROVAL_STATUS_LABELS[approvalStatus] ||
                             approvalStatus}
+                        </span>
+                      ) : vpsgManual ? (
+                        <span className="inline-flex whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                          Chờ kế toán duyệt
                         </span>
                       ) : isOfficeBranch(row.branchId) ? (
                         <span className="text-xs text-gray-400">

@@ -34,6 +34,7 @@ import {
   isExpenseCancellable,
   isExpenseCheckOpen,
   OFFICE_EXPENSE_COLUMNS,
+  VPSG_EXPENSE_COLUMNS,
   WarehouseExpenseTable,
   WAREHOUSE_EXPENSE_COLUMNS,
 } from "@/components/warehouse-expense/WarehouseExpenseTable";
@@ -58,6 +59,8 @@ import { isExpenseOpenForEdit } from "@/lib/internal-finance/vehicle-constants";
 import {
   isOfficeBranch,
   isOfficeManualOpen,
+  isVpsgBranch,
+  isVpsgManualOpen,
 } from "@/lib/internal-finance/office";
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { useBranchStore } from "@/lib/store/branch";
@@ -74,9 +77,10 @@ function WarehouseExpenseScreen() {
     loadWarehouseExpenseFilters(selectedBranch?.id),
   );
   const branchId = filters.branchId || selectedBranch?.id || 6;
-  // Văn phòng: phiếu từ đơn PHIẾU CHI Lark, không tạo tay, không tick, không
-  // Approval tuần; bộ cột riêng (lưu ẩn / hiện riêng với kho).
+  // Văn phòng: phiếu từ đơn PHIẾU CHI Lark và phiếu tay, không Approval tuần;
+  // bộ cột riêng (lưu ẩn / hiện riêng với kho). VPSG thêm cột Kế toán duyệt.
   const office = isOfficeBranch(filters.branchId);
+  const vpsg = isVpsgBranch(filters.branchId);
   const warehouseColumns = useColumnToggle(
     "warehouseExpenseTableColumns",
     WAREHOUSE_EXPENSE_COLUMNS,
@@ -85,12 +89,20 @@ function WarehouseExpenseScreen() {
     "officeExpenseTableColumns",
     OFFICE_EXPENSE_COLUMNS,
   );
-  const { columns, toggleColumn, shows } = office
-    ? officeColumns
-    : warehouseColumns;
-  const columnDefs = office
-    ? OFFICE_EXPENSE_COLUMNS
-    : WAREHOUSE_EXPENSE_COLUMNS;
+  const vpsgColumns = useColumnToggle(
+    "vpsgExpenseTableColumns",
+    VPSG_EXPENSE_COLUMNS,
+  );
+  const { columns, toggleColumn, shows } = vpsg
+    ? vpsgColumns
+    : office
+      ? officeColumns
+      : warehouseColumns;
+  const columnDefs = vpsg
+    ? VPSG_EXPENSE_COLUMNS
+    : office
+      ? OFFICE_EXPENSE_COLUMNS
+      : WAREHOUSE_EXPENSE_COLUMNS;
   const [search, setSearch] = useState(codeParam);
   const [debouncedSearch, setDebouncedSearch] = useState(codeParam);
   const [page, setPage] = useState(1);
@@ -234,10 +246,14 @@ function WarehouseExpenseScreen() {
     setPage(1);
   };
 
+  // Phiếu chi tay VPSG: chỉ Kế toán duyệt, tick / bỏ tick được cả khi Đã chi.
   const canCheckRow = (
     row: InternalFinanceEntry,
     role: "manager" | "accountant",
-  ) => isExpenseCheckOpen(row) && canAction(`check_${role}`, row.branchId);
+  ) =>
+    isVpsgManualOpen(row)
+      ? role === "accountant" && canAction("check_accountant", row.branchId)
+      : isExpenseCheckOpen(row) && canAction(`check_${role}`, row.branchId);
   const canMarkIssuedRow = (row: InternalFinanceEntry) =>
     canAction("mark_issued", row.branchId) &&
     !row.cashIssued &&
@@ -248,9 +264,16 @@ function WarehouseExpenseScreen() {
     isExpenseCancellable(row) && canAction("cancel", row.branchId);
   // Tick hàng loạt: chọn phiếu còn tick được và user có quyền tick ở kho đó.
   const canCheckAny = (row: InternalFinanceEntry) =>
-    canAction("check_manager", row.branchId) ||
-    canAction("check_accountant", row.branchId);
+    isVpsgManualOpen(row)
+      ? canAction("check_accountant", row.branchId)
+      : canAction("check_manager", row.branchId) ||
+        canAction("check_accountant", row.branchId);
   const selectBlockReason = (row: InternalFinanceEntry) => {
+    if (isVpsgManualOpen(row)) {
+      if (!canAction("check_accountant", row.branchId))
+        return "Không có quyền Kế toán duyệt";
+      return row.accountantReviewedAt ? "Đã duyệt" : null;
+    }
     if (!isExpenseCheckOpen(row))
       return "Phiếu đã chi, đã hủy hoặc đã gửi Approval tuần";
     if (!canCheckAny(row)) return "Không có quyền tick ở kho này";
@@ -274,8 +297,34 @@ function WarehouseExpenseScreen() {
       else next.add(id);
       return next;
     });
+  // Tick một phiếu. Phiếu chi tay VPSG: duyệt là Đã chi và trừ quỹ, nên hỏi lại.
+  const handleCheck = async (
+    row: InternalFinanceEntry,
+    role: "manager" | "accountant",
+    checked: boolean,
+  ) => {
+    if (isVpsgManualOpen(row)) {
+      const result = await Swal.fire({
+        title: checked ? "Kế toán duyệt phiếu chi?" : "Bỏ duyệt phiếu chi?",
+        html: checked
+          ? `<p class="text-sm text-gray-600">Phiếu <strong>${row.code}</strong> thành Đã chi và trừ quỹ VPSG <strong>${formatCurrency(row.amount)}</strong>.</p>`
+          : `<p class="text-sm text-gray-600">Phiếu <strong>${row.code}</strong> quay về chờ duyệt, hoàn lại quỹ VPSG <strong>${formatCurrency(row.amount)}</strong>.</p>`,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: checked ? "Duyệt" : "Bỏ duyệt",
+        cancelButtonText: "Hủy bỏ",
+        confirmButtonColor: "#0f766e",
+      });
+      if (!result.isConfirmed) return;
+    }
+    check.mutate({ id: row.id, role, checked });
+  };
   const handleBulkTick = async (role: "manager" | "accountant") => {
-    const label = role === "manager" ? "Quản lý kho" : "Kế toán kho";
+    const label = vpsg
+      ? "Kế toán duyệt"
+      : role === "manager"
+        ? "Quản lý kho"
+        : "Kế toán kho";
     const ids = selectedRows.map((row) => row.id);
     const amount = selectedRows.reduce(
       (sum, row) => sum + Number(row.amount || 0),
@@ -283,7 +332,9 @@ function WarehouseExpenseScreen() {
     );
     const confirm = await Swal.fire({
       title: `Tick ${label} cho ${ids.length} phiếu?`,
-      html: `<p class="text-sm text-gray-600">Tổng tiền <strong>${formatCurrency(amount)}</strong>. Phiếu đã tick ${label} sẵn được giữ nguyên.</p>`,
+      html: vpsg
+        ? `<p class="text-sm text-gray-600">Tổng tiền <strong>${formatCurrency(amount)}</strong>. Các phiếu thành Đã chi và trừ quỹ VPSG.</p>`
+        : `<p class="text-sm text-gray-600">Tổng tiền <strong>${formatCurrency(amount)}</strong>. Phiếu đã tick ${label} sẵn được giữ nguyên.</p>`,
       icon: "question",
       showCancelButton: true,
       confirmButtonText: `Tick ${label}`,
@@ -329,12 +380,14 @@ function WarehouseExpenseScreen() {
         (sum, row) => sum + Number(row.amount || 0),
         0,
       )}
-      canManager={selectedRows.some((row) =>
-        canAction("check_manager", row.branchId),
-      )}
+      canManager={
+        !vpsg &&
+        selectedRows.some((row) => canAction("check_manager", row.branchId))
+      }
       canAccountant={selectedRows.some((row) =>
         canAction("check_accountant", row.branchId),
       )}
+      accountantLabel={vpsg ? "Kế toán duyệt" : undefined}
       pending={bulkCheck.isPending}
       onTick={(role) => void handleBulkTick(role)}
       onClear={() => setSelected(new Set())}
@@ -483,7 +536,7 @@ function WarehouseExpenseScreen() {
             busyId={markingId}
             highlightId={linkedRow?.id}
             onCheck={(row, role, checked) =>
-              check.mutate({ id: row.id, role, checked })
+              void handleCheck(row, role, checked)
             }
             onOpenAttachments={setAttachmentRow}
             onEdit={setEditingExpense}
@@ -617,7 +670,7 @@ function WarehouseExpenseScreen() {
                   canCheck={canCheckRow}
                   canMarkIssued={canMarkIssuedRow}
                   onCheck={(row, role, checked) =>
-                    check.mutate({ id: row.id, role, checked })
+                    void handleCheck(row, role, checked)
                   }
                   canEdit={canEditRow}
                   canCancel={canCancelRow}

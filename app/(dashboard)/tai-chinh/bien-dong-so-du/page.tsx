@@ -12,6 +12,12 @@ import {
   SepayCustomerCell,
   SepayMatchActions,
 } from "@/components/sepay/SepayMatchControls";
+import {
+  VpsgFundAction,
+  VpsgFundStatus,
+  isVpsgTransaction,
+} from "@/components/sepay/VpsgFundAction";
+import { useVpsgCashAccess, useVpsgCashRecords } from "@/lib/hooks/useVpsgCash";
 import { CustomerLookup } from "@/components/sepay/CustomerLookup";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -66,11 +72,13 @@ const DATE_PRESETS: { label: string; value: string }[] = [
 // yyyy-mm-dd (local) — khớp định dạng MiniCalendar + backend parseFilterDate.
 const toYmd = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
+    d.getDate(),
   ).padStart(2, "0")}`;
 
 /** Trả { dateFrom, dateTo } (yyyy-mm-dd) từ preset. all_time/custom → rỗng/giữ nguyên. */
-const getPresetRange = (preset: string): { dateFrom: string; dateTo: string } => {
+const getPresetRange = (
+  preset: string,
+): { dateFrom: string; dateTo: string } => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const day = 86400000;
@@ -94,7 +102,10 @@ const getPresetRange = (preset: string): { dateFrom: string; dateTo: string } =>
       return { dateFrom: toYmd(s), dateTo: toYmd(e) };
     }
     case "last_7_days":
-      return { dateFrom: toYmd(new Date(today.getTime() - 7 * day)), dateTo: toYmd(today) };
+      return {
+        dateFrom: toYmd(new Date(today.getTime() - 7 * day)),
+        dateTo: toYmd(today),
+      };
     case "this_month":
       return {
         dateFrom: toYmd(new Date(now.getFullYear(), now.getMonth(), 1)),
@@ -106,7 +117,10 @@ const getPresetRange = (preset: string): { dateFrom: string; dateTo: string } =>
         dateTo: toYmd(new Date(now.getFullYear(), now.getMonth(), 0)),
       };
     case "last_30_days":
-      return { dateFrom: toYmd(new Date(today.getTime() - 30 * day)), dateTo: toYmd(today) };
+      return {
+        dateFrom: toYmd(new Date(today.getTime() - 30 * day)),
+        dateTo: toYmd(today),
+      };
     case "this_quarter": {
       const q = Math.floor(now.getMonth() / 3);
       return {
@@ -222,18 +236,27 @@ export default function BienDongSoDuPage() {
 
   // Danh sách tài khoản ngân hàng cho dropdown filter
   const { data: bankAccountsData } = useBankAccountsForPayment();
+  // Tài khoản quỹ tiền mặt VPSG chỉ hiện với người có quyền quỹ VPSG.
+  const { data: vpsgAccess } = useVpsgCashAccess();
   const bankAccounts: Array<{
     id: number;
     accountNumber: string;
     bankCode?: string;
     bankName?: string;
-  }> = Array.isArray(bankAccountsData) ? bankAccountsData : [];
+    vpsgCashFund?: boolean;
+  }> = (Array.isArray(bankAccountsData) ? bankAccountsData : []).filter(
+    (account: { vpsgCashFund?: boolean }) =>
+      !account.vpsgCashFund || vpsgAccess?.canView,
+  );
 
   // Đóng lịch khi click ra ngoài
   useEffect(() => {
     if (!openCal) return;
     const handler = (e: MouseEvent) => {
-      if (dateBoxRef.current && !dateBoxRef.current.contains(e.target as Node)) {
+      if (
+        dateBoxRef.current &&
+        !dateBoxRef.current.contains(e.target as Node)
+      ) {
         setOpenCal(null);
       }
     };
@@ -256,6 +279,18 @@ export default function BienDongSoDuPage() {
 
   const transactions = data?.data ?? [];
   const total = data?.total ?? 0;
+  // Tài khoản quỹ tiền mặt VPSG: không phải tiền khách, hàng có nút ghi quỹ
+  // riêng thay cho luồng khách hàng (chỉ người có quyền quỹ VPSG thấy).
+  const vpsgAccounts = vpsgAccess?.accountNumbers ?? [];
+  const vpsgIds = transactions
+    .filter((tx) => isVpsgTransaction(tx, vpsgAccounts))
+    .map((tx) => tx.id);
+  const { data: vpsgRecords } = useVpsgCashRecords(
+    vpsgIds,
+    Boolean(vpsgAccess?.canView),
+  );
+  const vpsgRecordOf = (id: number) =>
+    vpsgRecords?.find((record) => record.transactionId === id);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const applyFilters = () => {
@@ -334,7 +369,9 @@ export default function BienDongSoDuPage() {
           </div>
 
           <div className="flex flex-col">
-            <label className="text-xs text-gray-500 mb-1">Tài khoản ngân hàng</label>
+            <label className="text-xs text-gray-500 mb-1">
+              Tài khoản ngân hàng
+            </label>
             <select
               value={draft.accountNumber}
               onChange={(e) =>
@@ -402,7 +439,9 @@ export default function BienDongSoDuPage() {
           </div>
 
           <div className="flex flex-col">
-            <label className="text-xs text-gray-500 mb-1">Khoảng thời gian</label>
+            <label className="text-xs text-gray-500 mb-1">
+              Khoảng thời gian
+            </label>
             <select
               value={draft.datePreset}
               onChange={(e) => handlePresetChange(e.target.value)}
@@ -452,7 +491,9 @@ export default function BienDongSoDuPage() {
                 <div className="relative">
                   <button
                     type="button"
-                    onClick={() => setOpenCal((c) => (c === "to" ? null : "to"))}
+                    onClick={() =>
+                      setOpenCal((c) => (c === "to" ? null : "to"))
+                    }
                     className={`w-40 flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
                       draft.dateTo
                         ? "border-brand bg-brand-soft text-[var(--dt-text)]"
@@ -549,20 +590,28 @@ export default function BienDongSoDuPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-gray-400">
+                  <td
+                    colSpan={9}
+                    className="px-4 py-10 text-center text-gray-400">
                     <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
                     Đang tải...
                   </td>
                 </tr>
               ) : transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-gray-400">
+                  <td
+                    colSpan={9}
+                    className="px-4 py-10 text-center text-gray-400">
                     Không có giao dịch nào
                   </td>
                 </tr>
               ) : (
                 transactions.map((tx) => {
                   const amountIn = Number(tx.amountIn);
+                  const vpsg =
+                    vpsgAccess && isVpsgTransaction(tx, vpsgAccounts)
+                      ? vpsgAccess
+                      : null;
                   return (
                     <tr
                       key={tx.id}
@@ -573,26 +622,50 @@ export default function BienDongSoDuPage() {
                           {formatDateParts(tx.transactionDate).date}
                         </div>
                       </td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">{tx.bankBrandName || "-"}</td>
-                      <td className="px-3 py-2.5 whitespace-nowrap dt-mono">{tx.accountNumber || "-"}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        {tx.bankBrandName || "-"}
+                      </td>
+                      <td className="px-3 py-2.5 whitespace-nowrap dt-mono">
+                        {tx.accountNumber || "-"}
+                      </td>
                       <td className="px-3 py-2.5 text-left font-medium text-green-600 whitespace-nowrap dt-mono">
                         +{formatCurrency(amountIn)}
                       </td>
                       <td className="px-3 py-2.5 min-w-[160px] max-w-[280px] break-words whitespace-normal align-middle">
                         {tx.transactionContent || "-"}
                       </td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">{tx.referenceNumber || "-"}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        {tx.referenceNumber || "-"}
+                      </td>
                       <td className="px-3 py-2.5 min-w-[160px] max-w-[220px] break-words whitespace-normal align-middle">
-                        <SepayCustomerCell tx={tx} />
+                        {vpsg ? (
+                          <span className="text-xs text-gray-500">
+                            Quỹ tiền mặt VPSG
+                          </span>
+                        ) : (
+                          <SepayCustomerCell tx={tx} />
+                        )}
                       </td>
                       <td className="pl-2 pr-1 py-2.5 whitespace-nowrap align-middle">
-                        <SepayStatusBadge status={tx.match?.status} />
+                        {vpsg ? (
+                          <VpsgFundStatus record={vpsgRecordOf(tx.id)} />
+                        ) : (
+                          <SepayStatusBadge status={tx.match?.status} />
+                        )}
                       </td>
                       <td className="pl-1 pr-3 py-2.5 whitespace-nowrap align-middle">
-                        <SepayMatchActions
-                          tx={tx}
-                          isHidden={applied.showHidden}
-                        />
+                        {vpsg ? (
+                          <VpsgFundAction
+                            tx={tx}
+                            record={vpsgRecordOf(tx.id)}
+                            access={vpsg}
+                          />
+                        ) : (
+                          <SepayMatchActions
+                            tx={tx}
+                            isHidden={applied.showHidden}
+                          />
+                        )}
                       </td>
                     </tr>
                   );

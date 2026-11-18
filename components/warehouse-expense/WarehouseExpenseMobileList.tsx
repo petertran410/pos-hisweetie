@@ -16,7 +16,10 @@ import {
   displaySource,
   displayDescription,
 } from "@/lib/internal-finance/display";
-import { officeVoucherDetails } from "@/lib/internal-finance/office";
+import {
+  isVpsgManualOpen,
+  officeVoucherDetails,
+} from "@/lib/internal-finance/office";
 import { formatCurrency } from "@/lib/utils";
 import {
   CardAction,
@@ -308,6 +311,7 @@ export function WarehouseExpenseMobileList({
             amountTone="negative">
             {warehouse && tick(row, "manager", "Quản lý kho")}
             {warehouse && tick(row, "accountant", "Kế toán kho")}
+            {isVpsgManualOpen(row) && tick(row, "accountant", "Kế toán duyệt")}
             {!row.cashIssued && canMarkIssued(row) && (
               <CardAction tone="primary" onClick={() => onMarkIssued(row)}>
                 {busyId === row.id ? (
