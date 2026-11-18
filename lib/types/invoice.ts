@@ -14,7 +14,10 @@ export interface InvoiceCustomer {
   identificationNumber?: string | null;
   invoiceBuyerName?: string | null;
   invoiceAddress?: string | null;
-  debtPolicy?: { debtRuleType: DebtRuleType } | null;
+  debtPolicy?: {
+    debtRuleType: DebtRuleType;
+    requireFullPaymentForInvoice?: boolean;
+  } | null;
   [key: string]: unknown;
 }
 
@@ -60,6 +63,12 @@ export interface Invoice {
   hasPriceBookWarning?: boolean;
   /** SL theo sản phẩm (quy về đơn vị cơ bản) khác đơn đặt hàng gốc. */
   hasQuantityWarning?: boolean;
+  /** Hóa đơn đã hủy nhưng còn phiếu giao hàng chưa sang bản kế tiếp. */
+  hasOrphanedPacking?: boolean;
+  /** shippingFee > 0. */
+  hasShippingFee?: boolean;
+  /** Có sản phẩm hàng lạnh (cargoType = COLD). */
+  hasColdItems?: boolean;
   /** Chi tiết lý do cảnh báo cho tooltip; null khi không có cảnh báo. */
   warnings?: InvoiceListWarnings | null;
   /** Số phiếu cùng loại từng có liên kết với hóa đơn. */

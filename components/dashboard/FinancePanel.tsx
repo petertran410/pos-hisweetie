@@ -141,7 +141,7 @@ export function FinancePanel({
               </div>
               <div
                 className="text-[22px] font-bold tracking-tight dt-mono"
-                style={{ fontFamily: "var(--font-montserrat), sans-serif" }}>
+                style={{ fontFamily: "var(--font-sans)" }}>
                 {c.value}
               </div>
               <div

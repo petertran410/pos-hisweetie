@@ -9,7 +9,7 @@ import { Toaster, toast } from "sonner";
 import { useEffect, useState } from "react";
 import { initBranchCrossTabSync } from "@/lib/store/branch";
 import { initNotificationPrefsCrossTabSync } from "@/lib/store/notificationPrefs";
-import { initPaletteCrossTabSync } from "@/lib/store/palette";
+import { initPaletteCrossTabSync, usePaletteStore } from "@/lib/store/palette";
 import { LeadExtensionBridge } from "@/components/leads/LeadExtensionBridge";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -68,12 +68,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
   // Đồng bộ trạng thái "tắt thông báo" (mute chuông) giữa các tab.
   useEffect(() => initNotificationPrefsCrossTabSync(), []);
   useEffect(() => initPaletteCrossTabSync(), []);
+  const palette = usePaletteStore((s) => s.palette);
 
   return (
     <QueryClientProvider client={queryClient}>
       {/* Extension Chrome "Tạo lead nhanh" gọi API qua tab POS (mọi trang, kể cả Tổng quan) */}
       <LeadExtensionBridge />
       <Toaster
+        theme={palette === "dark" ? "dark" : "light"}
         // Giữ các toast trong stack cùng chiều rộng, không thu nhỏ khi hover.
         expand
         offset={64}

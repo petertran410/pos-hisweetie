@@ -198,12 +198,15 @@ export interface KhChurn {
   updatedAt: string;
   bySalePic: { key: string | null; value: number }[];
   totalCustomers: number;
+  /** Mã sản phẩm → tên (gửi 1 lần thay vì lặp ở mọi khách). */
+  productNames: Record<string, string>;
   rows: {
     name: string;
     lastOrder: string;
     churnDay: number;
     value: MetricValues;
-    products: { code: string; name: string; value: MetricValues }[];
+    /** [mã, doanh số, hoá đơn, khách, sản lượng] */
+    products: [string, number, number, number, number][];
   }[];
 }
 

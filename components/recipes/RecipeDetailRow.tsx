@@ -157,7 +157,7 @@ export function RecipeDetailRow({ recipeId, colSpan, onDeleted }: Props) {
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="font-mono text-xs text-gray-500">{recipe.code}</div>
-                    <h2 className="mt-1 text-lg font-semibold text-[#0D3B42]">{recipe.name}</h2>
+                    <h2 className="mt-1 text-lg font-semibold text-brand-dark">{recipe.name}</h2>
                     <div className="mt-2 flex flex-wrap gap-2 text-xs"><span className="rounded bg-cyan-50 px-2 py-1 text-cyan-800">{recipe.type === "SEMI_FINISHED" ? "Bán thành phẩm" : "Thành phẩm"}</span><span className={`rounded px-2 py-1 ${isDraft ? "bg-amber-50 text-amber-700" : isArchived ? "bg-gray-100 text-gray-600" : "bg-emerald-50 text-emerald-700"}`}>{isDraft ? "Bản nháp" : isArchived ? "Đã lưu trữ" : "Đã publish"}</span>{recipe.category?.name && <span className="rounded bg-gray-100 px-2 py-1 text-gray-600">{recipe.category.name}</span>}</div>
                   </div>
                   </div>
@@ -168,10 +168,10 @@ export function RecipeDetailRow({ recipeId, colSpan, onDeleted }: Props) {
                   <div><dt className="text-xs text-gray-500">Bảo quản</dt><dd className="mt-1 font-medium text-gray-800">{recipe.storage || "—"}</dd></div>
                 </dl>
                 <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
-                  <div><h3 className="mb-1 text-sm font-semibold text-[#0D3B42]">Mô tả</h3><p className="whitespace-pre-wrap text-sm text-gray-600">{recipe.description || "Chưa có mô tả."}</p></div>
-                  {canViewCost && <div className="rounded-xl border bg-[#E8F4F5] p-4" style={{ borderColor: "var(--dt-border)" }}><div className="text-xs text-gray-500">Tổng giá cost</div><div className="mt-1 font-mono text-xl font-semibold text-[#0D3B42]">{money(version?.totalCost ?? totalCost)}</div></div>}
+                  <div><h3 className="mb-1 text-sm font-semibold text-brand-dark">Mô tả</h3><p className="whitespace-pre-wrap text-sm text-gray-600">{recipe.description || "Chưa có mô tả."}</p></div>
+                  {canViewCost && <div className="rounded-xl border bg-cyan-bg p-4" style={{ borderColor: "var(--dt-border)" }}><div className="text-xs text-gray-500">Tổng giá cost</div><div className="mt-1 font-mono text-xl font-semibold text-brand-dark">{money(version?.totalCost ?? totalCost)}</div></div>}
                 </div>
-                {!!version?.images?.length && <div><h3 className="mb-2 text-sm font-semibold text-[#0D3B42]">Media ({version.images.length})</h3><div className="flex gap-3 overflow-x-auto pb-1">{version.images.slice(0, 6).map((media, index) => <div key={media.id || `${media.fileUrl}-${index}`} className="w-36 max-h-40 shrink-0 overflow-hidden rounded-lg border bg-gray-50" style={{ borderColor: "var(--dt-border)" }}>{media.mediaType === "VIDEO" ? <video src={media.fileUrl} controls preload="metadata" className="aspect-video w-full max-h-32 bg-black object-contain" /> : <Image unoptimized width={288} height={180} src={media.fileUrl} alt={media.altText || media.fileName || recipe.name} className="aspect-video w-full max-h-32 object-cover" />}<div className="truncate px-2 py-1.5 text-xs text-gray-500" title={media.fileName || undefined}>{media.fileName || (media.mediaType === "VIDEO" ? "Video" : "Hình ảnh")}</div></div>)}</div></div>}
+                {!!version?.images?.length && <div><h3 className="mb-2 text-sm font-semibold text-brand-dark">Media ({version.images.length})</h3><div className="flex gap-3 overflow-x-auto pb-1">{version.images.slice(0, 6).map((media, index) => <div key={media.id || `${media.fileUrl}-${index}`} className="w-36 max-h-40 shrink-0 overflow-hidden rounded-lg border bg-gray-50" style={{ borderColor: "var(--dt-border)" }}>{media.mediaType === "VIDEO" ? <video src={media.fileUrl} controls preload="metadata" className="aspect-video w-full max-h-32 bg-black object-contain" /> : <Image unoptimized width={288} height={180} src={media.fileUrl} alt={media.altText || media.fileName || recipe.name} className="aspect-video w-full max-h-32 object-cover" />}<div className="truncate px-2 py-1.5 text-xs text-gray-500" title={media.fileName || undefined}>{media.fileName || (media.mediaType === "VIDEO" ? "Video" : "Hình ảnh")}</div></div>)}</div></div>}
               </div>
             )}
 
@@ -211,7 +211,7 @@ export function RecipeDetailRow({ recipeId, colSpan, onDeleted }: Props) {
                     </table>
                     {canViewCost && (
                       <div className="flex justify-end border-t px-2 py-2 text-xs font-mono" style={{ borderColor: "var(--dt-border)" }}>
-                        <span className="font-semibold text-[#0D3B42]">
+                        <span className="font-semibold text-brand-dark">
                           Tổng: {money(version?.totalCost ?? totalCost)}
                         </span>
                       </div>
@@ -244,7 +244,7 @@ export function RecipeDetailRow({ recipeId, colSpan, onDeleted }: Props) {
                 )}
                 {!!version?.images?.length && (
                   <div>
-                    <div className="mb-2 text-xs font-semibold text-[#0D3B42]">Media ({version.images.length})</div>
+                    <div className="mb-2 text-xs font-semibold text-brand-dark">Media ({version.images.length})</div>
                     <div className="grid grid-cols-3 gap-2 md:grid-cols-4">
                       {version.images.slice(0, 8).map((media, index) => (
                         <div key={media.id || `${media.fileUrl}-${index}`} className="overflow-hidden rounded-lg border bg-white" style={{ borderColor: "var(--dt-border)" }}>

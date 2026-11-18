@@ -247,7 +247,7 @@ function HomeContent() {
             minute: "2-digit",
           })
         : "--:--",
-    [stats.dataUpdatedAt],
+    [stats.dataUpdatedAt]
   );
 
   // ── Guards ──
@@ -286,7 +286,8 @@ function HomeContent() {
       </div>
 
       {/* ── Desktop (từ md) ── */}
-      <div className="hidden md:block dt-dash min-h-[calc(100vh-56px)] overflow-auto">
+      {/* palette-orig: giữ sáng trong bảng Tối cho tới khi biểu đồ chuyển sang biến màu (đợt 2). */}
+      <div className="hidden md:block dt-dash palette-orig min-h-[calc(100vh-56px)] overflow-auto">
         {/* Subbar */}
         <div className="flex items-center gap-[14px] flex-wrap px-7 pt-4 pb-[14px]">
           <div className="mr-auto">
@@ -308,7 +309,7 @@ function HomeContent() {
               value={branchId ?? "all"}
               onChange={(e) =>
                 setBranchId(
-                  e.target.value === "all" ? undefined : Number(e.target.value),
+                  e.target.value === "all" ? undefined : Number(e.target.value)
                 )
               }>
               <option value="all">Tất cả chi nhánh</option>
@@ -452,7 +453,7 @@ function HomeContent() {
               accent="#C0392B"
               name="Tồn cảnh báo"
               value={vi(
-                (s?.lowStockProducts ?? 0) + (s?.outOfStockProducts ?? 0),
+                (s?.lowStockProducts ?? 0) + (s?.outOfStockProducts ?? 0)
               )}
               valueSuffix="mã"
               delta={
@@ -545,7 +546,7 @@ function HomeContent() {
                     Tỷ trọng doanh thu ·{" "}
                     {rangeSubtitle(range, rangeCustom).replace(
                       /^Theo (giờ|ngày) · /,
-                      "",
+                      ""
                     )}
                   </div>
                 </div>
@@ -579,7 +580,7 @@ function HomeContent() {
                   <DashSelect
                     ariaLabel="Tiêu chí xếp hạng"
                     options={TOP_METRICS.filter(
-                      (m) => m.key !== "profit" || canSeeProfit,
+                      (m) => m.key !== "profit" || canSeeProfit
                     )}
                     value={topMetric}
                     onChange={(v) => {

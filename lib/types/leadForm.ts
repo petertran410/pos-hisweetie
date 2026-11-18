@@ -36,13 +36,18 @@ export interface LeadForm {
   category: LeadCategory | null;
   successMessage: string | null;
   isActive: boolean;
+  /** Đang gắn với QR chung (LEAD_FORM_QR_URL) — tối đa 1 form. */
+  isQrTarget: boolean;
   submissionCount: number;
   createdByName: string | null;
   createdAt: string;
 }
 
+/** QR chung in một lần: Cloudflare chuyển tới form đang gắn (đổi form không phải in lại QR). */
+export const LEAD_FORM_QR_URL = "https://leadform.hisweetievietnam.com";
+
 export type LeadFormInput = Partial<
-  Omit<LeadForm, "id" | "submissionCount" | "createdByName" | "createdAt" | "category">
+  Omit<LeadForm, "id" | "submissionCount" | "createdByName" | "createdAt" | "category" | "isQrTarget">
 > & { category?: LeadCategory | "" };
 
 export interface LeadFormAnswer {

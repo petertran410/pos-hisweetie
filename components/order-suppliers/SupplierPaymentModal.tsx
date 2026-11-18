@@ -5,6 +5,7 @@ import { X, ChevronDown } from "lucide-react";
 import { useBankAccountsForPayment } from "@/lib/hooks/useBankAccounts";
 import {
   formatCurrency,
+  formatNumber,
   parseNumberInput,
   formatNumberInput,
 } from "@/lib/utils";
@@ -42,6 +43,12 @@ interface SupplierPaymentModalProps {
    * luôn trả amount=VND + foreignAmount=CNY + exchangeRate.
    */
   currency?: "VND" | "CNY";
+  /**
+   * true khi tổng tiền chưa xác định (phiếu đặt hàng có dòng chưa có đơn giá
+   * vì giá vốn bị ẩn — BE tự lấy giá vốn khi lưu). Khi đó "Cần trả" / "Còn
+   * nợ" (VND) hiện "—" thay vì một con số thiếu.
+   */
+  totalUnknown?: boolean;
   onConfirm: (
     amount: number,
     method: "cash" | "transfer" | "card",
@@ -49,27 +56,6 @@ interface SupplierPaymentModalProps {
     exchangeRate?: number,
     foreignAmount?: number
   ) => void;
-}
-
-function formatExchangeRateInput(value: number | string | undefined): string {
-  if (value == null || value === "") return "";
-  const normalized = String(value).replace(/,/g, "");
-  if (!/^\d*(?:\.\d*)?$/.test(normalized)) return "";
-
-  const [integerPart = "", decimalPart] = normalized.split(".");
-  const formattedInteger = integerPart
-    ? new Intl.NumberFormat("en-US").format(Number(integerPart))
-    : "";
-
-  if (decimalPart !== undefined) {
-    return `${formattedInteger}.${decimalPart.slice(0, 2)}`;
-  }
-
-  return formattedInteger;
-}
-
-function parseExchangeRateInput(value: string): number {
-  return Number(value.replace(/,/g, "")) || 0;
 }
 
 export function SupplierPaymentModal({
@@ -82,6 +68,7 @@ export function SupplierPaymentModal({
   previouslyPaidForeign,
   defaultExchangeRate,
   currency = "VND",
+  totalUnknown = false,
   onConfirm,
 }: SupplierPaymentModalProps) {
   const needToPay = totalAmount - previouslyPaid;
@@ -98,7 +85,7 @@ export function SupplierPaymentModal({
   // Tỉ giá user nhập tay (chỉ dùng khi isImportMode=true). Snapshot tại thời
   // điểm thanh toán — khác defaultExchangeRate (snapshot lúc đặt hàng).
   const [exchangeRate, setExchangeRate] = useState<string>(
-    defaultExchangeRate ? formatExchangeRateInput(defaultExchangeRate) : ""
+    defaultExchangeRate ? formatNumberInput(String(defaultExchangeRate), 2) : ""
   );
   const [mounted, setMounted] = useState(false);
   const accountDropdownRef = useRef<HTMLDivElement>(null);
@@ -138,7 +125,7 @@ export function SupplierPaymentModal({
   useEffect(() => {
     if (isOpen) {
       setExchangeRate(
-        defaultExchangeRate ? formatExchangeRateInput(defaultExchangeRate) : ""
+        defaultExchangeRate ? formatNumberInput(String(defaultExchangeRate), 2) : ""
       );
       setInputCurrency("CNY");
       setAmount("");
@@ -165,7 +152,7 @@ export function SupplierPaymentModal({
         return;
       }
       if (!/^\d*(?:\.\d{0,2})?$/.test(normalized)) return;
-      setAmount(formatExchangeRateInput(normalized));
+      setAmount(formatNumberInput(normalized, 2));
       return;
     }
     setAmount(formatNumberInput(value));
@@ -178,13 +165,13 @@ export function SupplierPaymentModal({
       return;
     }
     if (!/^\d*(?:\.\d{0,2})?$/.test(normalized)) return;
-    setExchangeRate(formatExchangeRateInput(normalized));
+    setExchangeRate(formatNumberInput(normalized, 2));
   };
 
   // Tỉ giá đã parse để tính toán. Ưu tiên tỉ giá user nhập; nếu bỏ trống thì
   // dùng tỉ giá hệ thống đề xuất (defaultExchangeRate).
   const parsedAmount = parseNumberInput(amount);
-  const parsedRate = parseExchangeRateInput(exchangeRate);
+  const parsedRate = parseNumberInput(exchangeRate);
   const effectiveRate =
     parsedRate > 0
       ? parsedRate
@@ -205,7 +192,7 @@ export function SupplierPaymentModal({
       } else {
         // VND → CNY: giữ 2 chữ số thập phân.
         const converted = parsedAmount / effectiveRate;
-        setAmount(formatExchangeRateInput(converted.toFixed(2)));
+        setAmount(formatNumberInput(converted.toFixed(2), 2));
       }
     }
     setInputCurrency(next);
@@ -468,7 +455,7 @@ export function SupplierPaymentModal({
                   onChange={(e) => handleExchangeRateChange(e.target.value)}
                   placeholder={
                     defaultExchangeRate
-                      ? formatExchangeRateInput(defaultExchangeRate)
+                      ? formatNumberInput(String(defaultExchangeRate), 2)
                       : "Nhập tỉ giá VND/CNY"
                   }
                   className="flex-1 text-right text-sm px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-brand bg-white"
@@ -486,9 +473,7 @@ export function SupplierPaymentModal({
                   {showForeignPreview && parsedAmount > 0
                     ? snapshotUnit === "VND"
                       ? formatCurrency(Math.round(snapshotValue)) + " VND"
-                      : new Intl.NumberFormat("vi-VN", {
-                          maximumFractionDigits: 2,
-                        }).format(snapshotValue) + " CNY"
+                      : formatNumber(snapshotValue) + " CNY"
                     : "—"}
                 </span>
               </div>
@@ -500,20 +485,20 @@ export function SupplierPaymentModal({
               <span className="text-gray-600">Cần trả nhà cung cấp</span>
               <span className="font-semibold text-brand">
                 {isCNYMode
-                  ? new Intl.NumberFormat("vi-VN", {
-                      maximumFractionDigits: 2,
-                    }).format(foreignNeedToPay) + " CNY"
-                  : formatCurrency(needToPay)}
+                  ? formatNumber(foreignNeedToPay) + " CNY"
+                  : totalUnknown
+                    ? "—"
+                    : formatCurrency(needToPay)}
               </span>
             </div>
             <div className="flex justify-between text-base">
               <span className="text-gray-600">Còn nợ</span>
               <span className="font-semibold text-red-600">
                 {isCNYMode
-                  ? new Intl.NumberFormat("vi-VN", {
-                      maximumFractionDigits: 2,
-                    }).format(foreignRemaining) + " CNY"
-                  : formatCurrency(Math.max(0, remaining))}
+                  ? formatNumber(foreignRemaining) + " CNY"
+                  : totalUnknown
+                    ? "—"
+                    : formatCurrency(Math.max(0, remaining))}
               </span>
             </div>
           </div>

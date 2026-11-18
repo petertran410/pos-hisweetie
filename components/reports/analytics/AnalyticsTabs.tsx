@@ -12,16 +12,19 @@ import {
   ANALYTICS_REPORTS,
   reportHref,
 } from "./reportRegistry";
+import { usePrefetchAnalyticsReport } from "./useAnalyticsEntry";
 
 // Tab cấp 1 của nhóm Phân tích: mỗi report Power BI là 1 tab; "Cấu hình" chỉ
 // hiện với người có quyền sửa cấu hình.
 const TABS = [
   ...ANALYTICS_REPORTS.map((r) => ({
+    slug: r.slug,
     href: reportHref(r.slug),
     label: r.label,
     perm: r.perm,
   })),
   {
+    slug: "cau-hinh",
     href: "/bao-cao/phan-tich/cau-hinh",
     label: "Cấu hình",
     perm: ANALYTICS_CONFIG_PERM,
@@ -32,6 +35,7 @@ export function AnalyticsTabs({ right }: { right?: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { has } = useReportAccess();
+  const prefetchReport = usePrefetchAnalyticsReport();
   const tabs = TABS.filter((t) => has(t.perm));
 
   return (
@@ -42,7 +46,10 @@ export function AnalyticsTabs({ right }: { right?: React.ReactNode }) {
             key={t.href}
             type="button"
             data-on={pathname === t.href || pathname.startsWith(`${t.href}/`)}
-            onClick={() => router.push(t.href)}>
+            onClick={() => {
+              prefetchReport(t.slug);
+              router.push(t.href);
+            }}>
             {t.label}
           </button>
         ))}

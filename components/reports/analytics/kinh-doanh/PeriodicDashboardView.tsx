@@ -21,6 +21,7 @@ import {
   SectionTitle,
   StatCard,
 } from "./KdUi";
+import { formatDate } from "@/lib/utils";
 
 /**
  * Báo cáo điều hành Sale Tuần / Tuần trước / Tháng — dựng lại các measure
@@ -288,9 +289,8 @@ export function PeriodicDashboardView({ data }: { data: PeriodicDashboard }) {
         </div>
       </div>
       <div className="text-[11.5px] text-right" style={{ color: C.muted }}>
-        Cập nhật {new Date(data.updatedAt).toLocaleString("vi-VN")} · % KPI ={" "}
-        doanh số / (KPI tháng{isMonth ? "" : " ÷ 4"}) · Khách mới = lần mua đầu
-        tiên rơi vào kỳ
+        Cập nhật {formatDate(data.updatedAt)} · % KPI = doanh số / (KPI tháng
+        {isMonth ? "" : " ÷ 4"}) · Khách mới = lần mua đầu tiên rơi vào kỳ
       </div>
     </div>
   );

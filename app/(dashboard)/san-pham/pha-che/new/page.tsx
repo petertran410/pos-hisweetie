@@ -191,7 +191,7 @@ export default function NewRecipePage() {
           <div
             key={tab.id}
             ref={isActive ? activeTabRef : undefined}
-            className={`flex min-w-0 shrink-0 items-center rounded-lg border text-sm ${isActive ? "border-brand bg-cyan-50 text-[#0D3B42]" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+            className={`flex min-w-0 shrink-0 items-center rounded-lg border text-sm ${isActive ? "border-brand bg-cyan-50 text-brand-dark" : "bg-white text-gray-600 hover:bg-gray-50"}`}
             style={isActive ? undefined : { borderColor: "var(--dt-border)" }}
           >
             <button
@@ -230,7 +230,7 @@ export default function NewRecipePage() {
   const workspaceStatus = hasDraft ? (
     <span
       aria-live="polite"
-      className="hidden items-center gap-1.5 text-xs text-[#3A6B74] lg:flex"
+      className="hidden items-center gap-1.5 text-xs text-[color:var(--dt-color-text-secondary)] lg:flex"
     >
       <Check className="h-3.5 w-3.5 text-emerald-600" />
       Đã lưu nháp
@@ -268,7 +268,7 @@ export default function NewRecipePage() {
           onLeave={() => router.push("/san-pham/pha-che")}
         />
       ) : (
-        <div className="flex h-full items-center justify-center bg-[#f5fafb] text-gray-500">
+        <div className="flex h-full items-center justify-center bg-[var(--dt-color-bg-soft)] text-gray-500">
           Đang khởi tạo...
         </div>
       )}

@@ -10,6 +10,7 @@ import { PrintPreviewPane } from "./PrintPreviewPane";
 import { VariableTokenModal } from "./VariableTokenModal";
 import { replaceTokensWithDummy } from "./dummy-data";
 import { addPrintSerialNumberColumn } from "@/lib/utils/print";
+import { PRINT_FONT_FAMILY, printFontFaceCss } from "@/lib/utils/print-font";
 
 interface Props {
   template: any;
@@ -79,7 +80,8 @@ export function PrintTemplateEditorModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white w-full h-full flex flex-col">
+      {/* palette-orig: trình sửa mẫu in là "giấy", luôn hiển thị sáng. */}
+      <div className="palette-orig bg-white w-full h-full flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-3 border-b">
           <div className="flex items-center gap-2">
@@ -178,8 +180,14 @@ export function PrintTemplateEditorModal({
                   "undo redo | blocks fontfamily fontsize | bold italic underline forecolor backcolor | " +
                   "alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | " +
                   "table | removeformat code",
-                content_style:
-                  "body { font-family: Arial, sans-serif; font-size: 13px; }",
+                // Soạn bằng đúng font khi in (Be Vietnam Pro); ô Font chỉ còn
+                // font này vì bản in luôn ép Be Vietnam Pro.
+                content_style: `${printFontFaceCss(
+                  typeof window === "undefined" ? "" : window.location.origin
+                )}
+body { font-family: ${PRINT_FONT_FAMILY}; font-size: 13px; }`,
+                font_family_formats:
+                  "Be Vietnam Pro='Be Vietnam Pro', Arial, sans-serif",
                 branding: false,
                 promotion: false,
                 table_default_attributes: {

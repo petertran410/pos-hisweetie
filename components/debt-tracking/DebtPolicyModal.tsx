@@ -8,7 +8,8 @@ import {
 } from "@/lib/hooks/useDebtTracking";
 import {
   DebtPolicyFields,
-  EMPTY_DEBT_POLICY_FORM,
+  UNSET_DEBT_POLICY_FORM,
+  policyToFormValue,
   toDebtPolicyPayload,
   validateDebtPolicyForm,
   type DebtPolicyFormValue,
@@ -33,35 +34,15 @@ export function DebtPolicyModal({
   const { data, isLoading } = useDebtPolicy(customerId);
   const upsert = useUpsertDebtPolicy();
 
-  const [form, setForm] = useState<DebtPolicyFormValue>(EMPTY_DEBT_POLICY_FORM);
+  // Modal chỉ mở cho khách đã tồn tại: chưa có policy = "Chưa thiết lập".
+  const [form, setForm] = useState<DebtPolicyFormValue>(UNSET_DEBT_POLICY_FORM);
   const [error, setError] = useState<string | null>(null);
   const [loadedId, setLoadedId] = useState<number | null>(null);
 
   const policy = data?.policy;
   if (policy && loadedId !== policy.id) {
     setLoadedId(policy.id);
-    setForm({
-      debtRuleType:
-        policy.debtRuleType ??
-        (policy.hasCreditLimit
-          ? "CREDIT_LIMIT"
-          : policy.hasTermDays
-            ? "TERM_DAYS"
-            : "NONE"),
-      hasCreditLimit: policy.hasCreditLimit,
-      creditLimit:
-        policy.creditLimit != null ? String(Number(policy.creditLimit)) : "",
-      hasTermDays: policy.hasTermDays,
-      termDays: policy.termDays != null ? String(policy.termDays) : "",
-      paymentFrequency:
-        policy.paymentFrequency != null ? String(policy.paymentFrequency) : "",
-      debtForm: policy.debtForm ?? "",
-      salePicId: policy.salePicId ?? "",
-      requireFullPaymentForInvoice:
-        policy.requireFullPaymentForInvoice ?? false,
-      paymentScheduleType: policy.paymentScheduleType ?? "",
-      paymentScheduleDays: policy.paymentScheduleDays ?? [],
-    });
+    setForm(policyToFormValue(policy));
   }
 
   const handleSave = () => {

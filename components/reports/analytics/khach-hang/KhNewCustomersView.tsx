@@ -3,11 +3,12 @@
 import { Sparkles, UserPlus } from "lucide-react";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import type { KhNewCustomers } from "@/lib/api/analytics-khach-hang";
-import { DT_COLORS, vi } from "@/lib/dashboard/format";
+import { DT_COLORS } from "@/lib/dashboard/format";
 import { BLANK_LABEL, growthDelta, metricLabel } from "../analyticsFormat";
 import { AnalyticsTable } from "../shared/AnalyticsTable";
 import { ColumnChart, Panel } from "../shared/AnalyticsCharts";
 import { fmtDate } from "./KhCharts";
+import { formatNumber } from "@/lib/utils";
 
 type Row = KhNewCustomers["list"][number];
 
@@ -26,7 +27,7 @@ export function KhNewCustomersView({ data }: { data: KhNewCustomers }) {
       <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
         <KpiCard
           name="Khách mới"
-          value={vi(c.newCustomers.current ?? 0)}
+          value={formatNumber(Math.round(c.newCustomers.current ?? 0))}
           delta={g1.delta}
           deltaDir={g1.dir}
           vs={vs}
@@ -92,13 +93,13 @@ export function KhNewCustomersView({ data }: { data: KhNewCustomers }) {
               key: "orders",
               label: "Số hoá đơn",
               align: "right",
-              format: (v) => vi(Number(v)),
+              format: (v) => formatNumber(Math.round(Number(v))),
             },
             {
               key: "amount",
               label: "Doanh số",
               align: "right",
-              format: (v) => vi(Number(v)),
+              format: (v) => formatNumber(Math.round(Number(v))),
             },
           ]}
           totals={{

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import type { Product } from "@/lib/api/products";
 import {
   useCreateProduct,
@@ -12,11 +12,20 @@ import { useTrademarks } from "@/lib/hooks/useTrademarks";
 import { useAuthStore } from "@/lib/store/auth";
 import { useBranchStore } from "@/lib/store/branch";
 import { CostConfirmationModal } from "./CostConfirmationModal";
+import { FormSection } from "./FormSection";
+import { ProductFormHeader } from "./ProductFormHeader";
+import "./product-form.css";
 import { CategoryDropdown } from "./CategoryDropdown";
 import { MisaItemDropdown } from "./MisaItemDropdown";
 import { MisaInventoryItem } from "@/lib/api/misa";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { API_URL } from "@/lib/config/api";
+import { NumericInput } from "@/components/ui/NumericInput";
+import {
+  formatNumber,
+  formatNumberInput,
+  parseNumberInput,
+} from "@/lib/utils";
 import { usePublication } from "./publication/usePublication";
 import { PublicationSection } from "./publication/PublicationSection";
 import {
@@ -64,10 +73,7 @@ export function ComboProductForm({
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const canLinkMisa = usePermission("products", "link_misa");
-  const canEditPublication = usePermission(
-    "products",
-    "edit_publication"
-  );
+  const canEditPublication = usePermission("products", "edit_publication");
   const canViewCostPrice = usePermission("products", "view_cost_price");
   const canViewSalePrice = usePermission("products", "view_sale_price");
   // view_cost_price/view_sale_price chỉ ẩn ô giá trên UI, không quyết định
@@ -96,7 +102,7 @@ export function ComboProductForm({
     });
   }, [product]);
 
-  const { register, handleSubmit, watch, setValue } = useForm({
+  const { register, handleSubmit, watch, setValue, control } = useForm({
     defaultValues: {
       code: product?.code || "",
       name: product?.name || "",
@@ -363,19 +369,16 @@ export function ComboProductForm({
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-      <div className="bg-white w-full max-w-5xl h-[90vh] flex flex-col rounded-lg">
-        <div className="border-b p-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold">
-            {product ? "Sửa Combo - đóng gói" : "Tạo Combo - đóng gói"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600">
-            ✕
-          </button>
-        </div>
+      <div className="product-form bg-white w-full max-w-5xl h-[90vh] flex flex-col">
+        <ProductFormHeader
+          title={product ? "Sửa Combo - đóng gói" : "Tạo Combo - đóng gói"}
+          productType={1}
+          code={product?.code}
+          name={product?.name}
+          onClose={onClose}
+        />
 
-        <div className="border-b px-4 flex gap-1">
+        <div className="pf-tabs">
           <button
             type="button"
             onClick={() => setActiveTab("info")}
@@ -412,68 +415,72 @@ export function ComboProductForm({
 
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="flex-1 overflow-y-auto">
-          <div className={activeTab === "info" ? "p-6 space-y-6" : "hidden"}>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Mã hàng
-                </label>
-                <input
-                  {...register("code")}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="Tự động"
-                />
+          className="pf-body flex-1 overflow-y-auto">
+          <div className={activeTab === "info" ? "p-6 space-y-5" : "hidden"}>
+            <FormSection title="Thông tin chung" collapsible={false}>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Mã hàng
+                    </label>
+                    <input
+                      {...register("code")}
+                      className="w-full border rounded px-3 py-2"
+                      placeholder="Tự động"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Tên hàng <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    {...register("name", { required: true })}
+                    className="w-full border rounded px-3 py-2"
+                    placeholder="Nhập tên hàng"
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <CategoryDropdown
+                    type="parent"
+                    label="Loại Hàng"
+                    placeholder="Chọn loại hàng"
+                    value={watch("parentName")}
+                    onChange={(value) => setValue("parentName", value)}
+                  />
+
+                  <CategoryDropdown
+                    type="middle"
+                    label="Nguồn Gốc"
+                    placeholder="Chọn nguồn gốc"
+                    value={watch("middleName")}
+                    onChange={(value) => setValue("middleName", value)}
+                  />
+
+                  <CategoryDropdown
+                    type="child"
+                    label="Danh Mục"
+                    placeholder="Chọn danh mục"
+                    value={watch("childName")}
+                    onChange={(value) => setValue("childName", value)}
+                  />
+                </div>
               </div>
-            </div>
+            </FormSection>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Tên hàng <span className="text-red-500">*</span>
-              </label>
-              <input
-                {...register("name", { required: true })}
-                className="w-full border rounded px-3 py-2"
-                placeholder="Nhập tên hàng"
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <CategoryDropdown
-                type="parent"
-                label="Loại Hàng"
-                placeholder="Chọn loại hàng"
-                value={watch("parentName")}
-                onChange={(value) => setValue("parentName", value)}
-              />
-
-              <CategoryDropdown
-                type="middle"
-                label="Nguồn Gốc"
-                placeholder="Chọn nguồn gốc"
-                value={watch("middleName")}
-                onChange={(value) => setValue("middleName", value)}
-              />
-
-              <CategoryDropdown
-                type="child"
-                label="Danh Mục"
-                placeholder="Chọn danh mục"
-                value={watch("childName")}
-                onChange={(value) => setValue("childName", value)}
-              />
-            </div>
-
-            <div className="border-t pt-6">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold">Hàng thành phần</h3>
-                {components.length > 0 && (
+            <FormSection
+              title="Hàng thành phần"
+              collapsible={false}
+              headerRight={
+                components.length > 0 && (
                   <span className="text-sm text-gray-600">
                     Tổng: {components.length} sản phẩm
                   </span>
-                )}
-              </div>
-
+                )
+              }>
               <div className="relative mb-4">
                 <input
                   type="text"
@@ -505,7 +512,7 @@ export function ComboProductForm({
                           </span>
                           <span className="flex-1">{product.name}</span>
                           <span className="text-sm text-gray-500">
-                            {Number(product.basePrice).toLocaleString()} đ
+                            {formatNumber(Number(product.basePrice))} đ
                           </span>
                         </button>
                       ))}
@@ -529,12 +536,18 @@ export function ComboProductForm({
                       <th className="px-4 py-2 text-center text-sm font-medium">
                         Số lượng
                       </th>
-                      <th className="px-4 py-2 text-right text-sm font-medium">
-                        Giá vốn
-                      </th>
-                      <th className="px-4 py-2 text-right text-sm font-medium">
-                        Tổng giá vốn
-                      </th>
+                      {/* Thiếu quyền giá vốn → BE bỏ cost thành phần, ẩn cột
+                          thay vì hiện NaN. */}
+                      {canViewCostPrice && (
+                        <>
+                          <th className="px-4 py-2 text-right text-sm font-medium">
+                            Giá vốn
+                          </th>
+                          <th className="px-4 py-2 text-right text-sm font-medium">
+                            Tổng giá vốn
+                          </th>
+                        </>
+                      )}
                       <th className="px-4 py-2 text-right text-sm font-medium">
                         Giá bán
                       </th>
@@ -546,12 +559,16 @@ export function ComboProductForm({
                     {components.length > 0 && (
                       <tr className="bg-gray-100 font-semibold">
                         <td colSpan={5}></td>
+                        {canViewCostPrice && (
+                          <>
+                            <td className="px-4 py-2 text-right">
+                              {formatNumber(calculateTotalPurchasePrice())}
+                            </td>
+                            <td></td>
+                          </>
+                        )}
                         <td className="px-4 py-2 text-right">
-                          {calculateTotalPurchasePrice().toLocaleString()}
-                        </td>
-                        <td></td>
-                        <td className="px-4 py-2 text-right">
-                          {calculateTotalRetailPrice().toLocaleString()}
+                          {formatNumber(calculateTotalRetailPrice())}
                         </td>
                         <td></td>
                       </tr>
@@ -585,30 +602,31 @@ export function ComboProductForm({
                             {comp.componentProduct?.name}
                           </td>
                           <td className="px-4 py-2">
-                            <input
-                              type="number"
-                              min="1"
+                            <NumericInput
                               value={comp.quantity}
-                              onChange={(e) =>
-                                updateComponentQuantity(
-                                  actualIndex,
-                                  Number(e.target.value)
-                                )
+                              onValueChange={(qty) =>
+                                updateComponentQuantity(actualIndex, qty)
                               }
+                              formatWhileTyping
+                              maxFractionDigits={0}
                               className="w-20 border rounded px-2 py-1 text-center"
                             />
                           </td>
+                          {canViewCostPrice && (
+                            <>
+                              <td className="px-4 py-2 text-right">
+                                {formatNumber(purchasePrice)}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {formatNumber(totalPurchase)}
+                              </td>
+                            </>
+                          )}
                           <td className="px-4 py-2 text-right">
-                            {purchasePrice.toLocaleString()}
+                            {formatNumber(retailPrice)}
                           </td>
                           <td className="px-4 py-2 text-right">
-                            {totalPurchase.toLocaleString()}
-                          </td>
-                          <td className="px-4 py-2 text-right">
-                            {retailPrice.toLocaleString()}
-                          </td>
-                          <td className="px-4 py-2 text-right">
-                            {totalRetail.toLocaleString()}
+                            {formatNumber(totalRetail)}
                           </td>
                           <td className="px-4 py-2">
                             <button
@@ -635,7 +653,7 @@ export function ComboProductForm({
                     {components.length === 0 && (
                       <tr>
                         <td
-                          colSpan={9}
+                          colSpan={canViewCostPrice ? 9 : 7}
                           className="px-4 py-8 text-center text-gray-500">
                           Chưa có hàng thành phần. Tìm kiếm và thêm sản phẩm ở
                           trên.
@@ -679,40 +697,74 @@ export function ComboProductForm({
                   </div>
                 )}
               </div>
-            </div>
+            </FormSection>
 
             {canViewSalePrice && (
-              <div>
-                <h3 className="font-semibold mb-3">Giá bán</h3>
+              <FormSection title="Giá bán">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">
                       Giá bán
                     </label>
-                    <input
-                      {...register("basePrice", { valueAsNumber: true })}
-                      type="number"
-                      className="w-full border rounded px-3 py-2"
-                      placeholder="0"
-                    />
+                    <span className="pf-suffix" data-suffix="đ">
+                      <Controller
+                        control={control}
+                        name="basePrice"
+                        render={({ field }) => (
+                          <NumericInput
+                            value={Number(field.value) || 0}
+                            onValueChange={field.onChange}
+                            formatWhileTyping
+                            maxFractionDigits={0}
+                            className="w-full border rounded px-3 py-2"
+                            placeholder="0"
+                          />
+                        )}
+                      />
+                    </span>
                   </div>
                 </div>
-              </div>
+              </FormSection>
             )}
 
-            <div>
-              <h3 className="font-semibold mb-3">Vị trí, Trọng lượng</h3>
+            <FormSection title="Vị trí, Trọng lượng">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Khối lượng tịnh
                   </label>
                   <div className="flex gap-2">
-                    <input
-                      {...register("weight", { valueAsNumber: true })}
-                      type="number"
-                      className="flex-1 border rounded px-3 py-2"
-                      placeholder="550"
+                    <Controller
+                      control={control}
+                      name="weight"
+                      render={({ field }) => (
+                        // Gõ đến đâu thêm dấu phẩy ngăn cách đến đó; ô rỗng →
+                        // NaN như valueAsNumber cũ.
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={
+                            field.value == null ||
+                            Number.isNaN(Number(field.value))
+                              ? ""
+                              : formatNumber(field.value, "en-US", { max: 3 })
+                          }
+                          onChange={(e) => {
+                            const formatted = formatNumberInput(
+                              e.target.value,
+                              3
+                            );
+                            field.onChange(
+                              formatted === ""
+                                ? NaN
+                                : parseNumberInput(formatted)
+                            );
+                          }}
+                          onBlur={field.onBlur}
+                          className="flex-1 border rounded px-3 py-2"
+                          placeholder="550"
+                        />
+                      )}
                     />
                     <select
                       {...register("weightUnit")}
@@ -727,11 +779,35 @@ export function ComboProductForm({
                     Trọng lượng vận chuyển
                   </label>
                   <div className="flex gap-2">
-                    <input
-                      {...register("shippingWeight", { valueAsNumber: true })}
-                      type="number"
-                      className="flex-1 border rounded px-3 py-2"
-                      placeholder="0"
+                    <Controller
+                      control={control}
+                      name="shippingWeight"
+                      render={({ field }) => (
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={
+                            field.value == null ||
+                            Number.isNaN(Number(field.value))
+                              ? ""
+                              : formatNumber(field.value, "en-US", { max: 3 })
+                          }
+                          onChange={(e) => {
+                            const formatted = formatNumberInput(
+                              e.target.value,
+                              3
+                            );
+                            field.onChange(
+                              formatted === ""
+                                ? NaN
+                                : parseNumberInput(formatted)
+                            );
+                          }}
+                          onBlur={field.onBlur}
+                          className="flex-1 border rounded px-3 py-2"
+                          placeholder="0"
+                        />
+                      )}
                     />
                     <select
                       {...register("shippingWeightUnit")}
@@ -747,13 +823,19 @@ export function ComboProductForm({
                   <label className="block text-sm font-medium mb-1">
                     Định lượng đóng gói
                   </label>
-                  <input
-                    {...register("conversionValue", { valueAsNumber: true })}
-                    type="number"
-                    min={1}
-                    step={1}
-                    className="w-full border rounded px-3 py-2"
-                    placeholder="1"
+                  <Controller
+                    control={control}
+                    name="conversionValue"
+                    render={({ field }) => (
+                      <NumericInput
+                        value={Number(field.value) || 0}
+                        onValueChange={field.onChange}
+                        formatWhileTyping
+                        maxFractionDigits={0}
+                        className="w-full border rounded px-3 py-2"
+                        placeholder="1"
+                      />
+                    )}
                   />
                   <p className="mt-1 text-xs text-gray-500">
                     Ví dụ: 12 nghĩa là 1 thùng gồm 12 đơn vị sản phẩm.
@@ -763,14 +845,16 @@ export function ComboProductForm({
                   <label className="block text-sm font-medium mb-1">
                     VAT (%)
                   </label>
-                  <input
-                    {...register("vat", { valueAsNumber: true })}
-                    type="number"
-                    step="any"
-                    min={0}
-                    className="w-full border rounded px-3 py-2"
-                    placeholder="8"
-                  />
+                  <span className="pf-suffix" data-suffix="%">
+                    <input
+                      {...register("vat", { valueAsNumber: true })}
+                      type="number"
+                      step="any"
+                      min={0}
+                      className="w-full border rounded px-3 py-2"
+                      placeholder="8"
+                    />
+                  </span>
                 </div>
               </div>
               {canLinkMisa && (
@@ -799,19 +883,11 @@ export function ComboProductForm({
                   </div>
                 </div>
               )}
-            </div>
+            </FormSection>
 
-            <div>
-              <h3 className="font-semibold mb-3">Hình ảnh</h3>
+            <FormSection title="Hình ảnh">
               <ProductImageGallery images={images} onChange={setImages} />
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2">
-                <input {...register("isDirectSale")} type="checkbox" />
-                <span className="text-sm font-medium">Bán trực tiếp</span>
-              </label>
-            </div>
+            </FormSection>
           </div>
 
           {/* Tab Mô tả */}
@@ -851,20 +927,27 @@ export function ComboProductForm({
             <PublicationSection pub={pub} />
           </div>
 
-          <div className="border-t p-4 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border rounded hover:bg-gray-50"
-              disabled={isSubmitting}>
-              Bỏ qua
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50">
-              {isSubmitting ? "Đang lưu..." : product ? "Lưu" : "Tạo mới"}
-            </button>
+          <div className="pf-footer sticky bottom-0">
+            {/* Bán trực tiếp: luôn thấy ở footer */}
+            <label className="pf-direct-sale">
+              <input {...register("isDirectSale")} type="checkbox" />
+              Bán trực tiếp
+            </label>
+            <div className="pf-footer-actions">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 border rounded hover:bg-gray-50"
+                disabled={isSubmitting}>
+                Bỏ qua
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-brand text-white rounded hover:bg-brand-dark disabled:opacity-50">
+                {isSubmitting ? "Đang lưu..." : product ? "Lưu" : "Tạo mới"}
+              </button>
+            </div>
           </div>
         </form>
       </div>

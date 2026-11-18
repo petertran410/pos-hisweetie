@@ -42,6 +42,10 @@ export interface Order {
   priceBookName?: string | null;
   // Danh sách: dòng bán thấp hơn giá bảng giá buôn 2/3 (như hóa đơn; quantity luôn rỗng)
   hasPriceBookWarning?: boolean;
+  /** shippingFee > 0. */
+  hasShippingFee?: boolean;
+  /** Có sản phẩm hàng lạnh (cargoType = COLD). */
+  hasColdItems?: boolean;
   warnings?: InvoiceListWarnings | null;
   orderDate: string;
   totalAmount: number;
@@ -78,6 +82,7 @@ export interface Order {
       hasCreditLimit?: boolean;
       hasTermDays?: boolean;
       isActive?: boolean;
+      requireFullPaymentForInvoice?: boolean;
     } | null;
   };
   branch?: {

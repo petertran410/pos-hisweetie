@@ -42,9 +42,10 @@ export function useFastTitle(container: RefObject<HTMLElement | null>) {
         padding: "2px 6px",
         font: "12px/1.4 system-ui, sans-serif",
         whiteSpace: "pre-line",
-        color: "#222",
-        background: "#fff",
-        border: "1px solid #b5b5b5",
+        // Theo bảng màu (Gốc/A/B: chữ tối trên nền trắng như tooltip mặc định).
+        color: "var(--foreground)",
+        background: "rgb(var(--surface))",
+        border: "1px solid rgb(var(--g-300))",
         boxShadow: "1px 1px 3px rgba(0,0,0,.2)",
         pointerEvents: "none",
         visibility: "hidden",

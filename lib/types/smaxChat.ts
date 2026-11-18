@@ -191,6 +191,21 @@ export interface ChatDraft {
   stickerId?: string;
   // Đang trả lời tin (pid + trích đoạn để hiển thị)
   replyTo?: { pid: string; preview: string; senderName: string | null; thumb?: string | null };
+  // Tag thành viên nhóm Zalo: "@Tên" tại pos trong text (len gồm "@")
+  mentions?: ChatMention[];
+}
+
+export interface ChatMention {
+  uid: string;
+  pos: number;
+  len: number;
+}
+
+/** Thành viên nhóm Zalo gợi ý khi gõ "@" (uid = ID Zalo, không có tiền tố zlw). */
+export interface MentionMember {
+  uid: string;
+  name: string;
+  avatar: string | null;
 }
 
 export interface RecentChat {
@@ -277,6 +292,7 @@ export interface SendBody {
   imagesFirst?: boolean;
   stickerId?: string;
   replyToPid?: string;
+  mentions?: ChatMention[];
   // Chuyển tiếp ảnh/tệp đã có trên máy chủ Zalo
   forwardMedia?: { url: string; kind: "image" | "file" }[];
   // Messenger: gửi kèm thẻ HUMAN_AGENT → lấy lại quyền trả lời từ Meta Business AI

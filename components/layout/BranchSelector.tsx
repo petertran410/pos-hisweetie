@@ -153,7 +153,7 @@ export function BranchSelector({
 
       {isOpen && (
         <div
-          className={`absolute ${dropUp ? "bottom-full mb-1" : "top-full mt-1"} right-0 min-w-full bg-white border rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto`}>
+          className={`absolute ${dropUp ? "bottom-full mb-1" : "top-full mt-1"} right-0 min-w-full bg-white text-gray-800 border rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto`}>
           {branches?.map((branch) => (
             <button
               key={branch.id}

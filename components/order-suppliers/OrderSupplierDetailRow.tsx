@@ -12,7 +12,7 @@ import {
 import { ExternalLink, FileText, Loader2, Save, CheckCircle } from "lucide-react";
 import Swal from "sweetalert2";
 import { toast } from "sonner";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatNumber } from "@/lib/utils";
 import { useCan } from "@/lib/hooks/useCan";
 import Link from "next/link";
 import { CodeLink } from "../shared/CodeLink";
@@ -94,9 +94,7 @@ const getPurchaseOrderStatusLabel = (status: number) => {
 
 // Format số CNY (làm tròn 2 chữ số thập phân)
 const formatCNY = (value: number) =>
-  new Intl.NumberFormat("vi-VN", {
-    maximumFractionDigits: 2,
-  }).format(value) + " CNY";
+  formatNumber(value) + " CNY";
 
 // Ô hiển thị CNY chính + VND phụ (text-xs xám bên dưới) theo Option A.
 // Dùng cho info grid và tab payment của PDN NCC nước ngoài.

@@ -449,7 +449,7 @@ function CustomerDemandFormBody({
                         </span>
                       </div>
                       {line.unit === "CARTON" && quantity > 0 && (
-                        <div className="mt-1 text-[10px] text-[#1a5f6a]">
+                        <div className="mt-1 text-[10px] text-brand-deep">
                           ={" "}
                           {formatDemandQty(
                             quantity * Number(line.product.conversionValue || 0)

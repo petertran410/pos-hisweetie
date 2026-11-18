@@ -36,6 +36,7 @@ import type {
   ChatDraft,
   ChatMessage,
   LibraryFile,
+  MentionMember,
   OutgoingAttachment,
 } from "@/lib/types/smaxChat";
 import { messagePreview, messageThumb } from "@/lib/chat/messageActions";
@@ -45,6 +46,7 @@ import { EmojiStickerPicker } from "./EmojiStickerPicker";
 import { ImageGalleryModal } from "./ImageGalleryModal";
 import { LibraryPickerModal } from "./LibraryPickerModal";
 import { QuickRepliesModal, useQuickReplies } from "./QuickRepliesModal";
+import { filterMembers, findMentions, MentionMenu } from "./MentionMenu";
 import { norm, type QuickOption } from "./QuickInsertMenu";
 import { addRecentEmoji, addRecentSticker } from "@/lib/chat/stickers";
 import { CustomTooltip } from "@/components/ui/CustomTooltip";
@@ -72,6 +74,8 @@ interface Props {
   // Đang trả lời tin này (hiện khung trích dẫn, bấm ✕ để bỏ)
   replyTo?: ChatMessage | null;
   onCancelReply?: () => void;
+  // Nhóm Zalo cá nhân: gõ "@" để tag thành viên (không truyền = tắt)
+  mentionMembers?: MentionMember[];
 }
 
 // Bản nháp chữ theo hội thoại, giữ trong phiên (không lưu xuống máy)
@@ -89,8 +93,8 @@ interface Item {
 
 // Mở menu: "/" ở đầu ô hoặc sau khoảng trắng, ngay trước con trỏ — vd "báo giá /hd12".
 // Khi đã mở, chuỗi tìm nhận cả khoảng trắng ("/Lermao Xoài") tới khi Esc / chọn / xuống dòng.
-// "/" chèn thông tin POS, "#" chèn tin nhắn nhanh
-const SLASH = /(^|\s)([/#])([^\s/#]*)$/;
+// "/" chèn thông tin POS, "#" chèn tin nhắn nhanh, "@" tag thành viên nhóm
+const SLASH = /(^|\s)([/#@])([^\s/#@]*)$/;
 
 const productImageKey = (img: { productId: number; kind?: "packingSlip"; id: number }) =>
   `p-${img.kind ?? "product"}-${img.productId}-${img.id}`;
@@ -112,6 +116,7 @@ export function ChatComposer({
   draftKey,
   replyTo,
   onCancelReply,
+  mentionMembers,
 }: Props) {
   const [text, setText] = useState(() => drafts.get(draftKey) ?? "");
   const [items, setItems] = useState<Item[]>([]);
@@ -123,9 +128,11 @@ export function ChatComposer({
   >([]);
   const [dragging, setDragging] = useState(false);
   // Menu "/" (thông tin POS) hoặc "#" (tin nhắn nhanh): vị trí ký tự kích hoạt + chuỗi lọc
-  const [slash, setSlash] = useState<{ start: number; query: string; char: "/" | "#" } | null>(
+  const [slash, setSlash] = useState<{ start: number; query: string; char: "/" | "#" | "@" } | null>(
     null,
   );
+  // Thành viên đã chọn qua "@" — lúc gửi tìm lại vị trí "@Tên" trong chữ để tag
+  const [picked, setPicked] = useState<MentionMember[]>([]);
   const [quickOpen, setQuickOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [inserting, setInserting] = useState(false);
@@ -181,6 +188,13 @@ export function ChatComposer({
     if (!restore) return;
     const { draft } = restore;
     setText(draft.text);
+    setPicked(
+      (draft.mentions ?? []).map((m) => ({
+        uid: m.uid,
+        name: draft.text.slice(m.pos + 1, m.pos + m.len),
+        avatar: null,
+      })),
+    );
     setQrImageUrl(draft.qrImageUrl ?? null);
     setItems((cur) => [
       ...draft.attachments.map((a) => ({
@@ -303,6 +317,9 @@ export function ChatComposer({
   })();
   const options = hash ? replyOptions : pos.options;
   const loading = hash ? quickReplies.isFetching : pos.loading;
+  const mention = slash?.char === "@";
+  const members = mention ? filterMembers(mentionMembers ?? [], slash.query) : [];
+  const count = mention ? members.length : options.length;
 
   const detectSlash = (value: string, caret: number) => {
     // Đang mở: giữ nguyên vị trí "/", chuỗi tìm là đoạn tới con trỏ (cho phép khoảng trắng)
@@ -317,8 +334,8 @@ export function ChatComposer({
       }
     }
     const m = SLASH.exec(value.slice(0, caret));
-    if (!m) return setSlash(null);
-    setSlash({ start: caret - m[3].length - 1, query: m[3], char: m[2] as "/" | "#" });
+    if (!m || (m[2] === "@" && !mentionMembers?.length)) return setSlash(null);
+    setSlash({ start: caret - m[3].length - 1, query: m[3], char: m[2] as "/" | "#" | "@" });
     setActive(0);
   };
 
@@ -402,7 +419,28 @@ export function ChatComposer({
     onSend({ text: "", attachments: [], stickerId: id });
   };
 
+  /** Thay "@chuỗi gõ" bằng "@Tên " và nhớ thành viên để tag khi gửi. */
+  const pickMember = (member: MentionMember) => {
+    if (!slash) return;
+    const el = textRef.current;
+    const caret = el?.selectionStart ?? text.length;
+    const end = Math.max(caret, slash.start + 1 + slash.query.length);
+    const tag = `@${member.name} `;
+    setText((cur) => cur.slice(0, slash.start) + tag + cur.slice(end));
+    setPicked((cur) => [...cur.filter((p) => p.uid !== member.uid), member]);
+    setSlash(null);
+    const at = slash.start + tag.length;
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(at, at);
+    });
+  };
+
   const pickOption = (i: number) => {
+    if (mention) {
+      if (members[i]) pickMember(members[i]);
+      return;
+    }
     const o = options[i];
     if (!o || !slash) return;
     const caret = textRef.current?.selectionStart ?? text.length;
@@ -524,8 +562,10 @@ export function ChatComposer({
       toast.info("Trả lời tin cần có nội dung chữ");
       return;
     }
+    const mentions = findMentions(text.trim(), picked);
     onSend({
       text: text.trim(),
+      mentions: mentions.length ? mentions : undefined,
       attachments: ready.map((i) => i.result!),
       qrImageUrl: qrImageUrl ?? undefined,
       productImages: selectedProductImages.length
@@ -533,6 +573,7 @@ export function ChatComposer({
         : undefined,
     });
     setText("");
+    setPicked([]);
     setQrImageUrl(null);
     setProductPicks([]);
     setSlash(null);
@@ -619,7 +660,10 @@ export function ChatComposer({
           onClose={() => setPickerOpen(false)}
         />
       )}
-      {slash && !disabled && (
+      {mention && !disabled && (
+        <MentionMenu members={members} activeIndex={active} onHover={setActive} onPick={pickMember} />
+      )}
+      {slash && !mention && !disabled && (
         <QuickInsertMenu
           options={options}
           loading={loading}
@@ -811,19 +855,19 @@ export function ChatComposer({
               setFocused(false);
             }}
             onKeyDown={(e) => {
-              // "#" không khớp tin nhắn nhanh nào (vd hashtag thường) → Enter gửi tin như bình thường
-              if (hash && !options.length && e.key === "Enter" && !e.shiftKey) setSlash(null);
+              // "#"/"@" không khớp mục nào (vd hashtag, "@" thường) → Enter gửi tin như bình thường
+              if ((hash || mention) && !count && e.key === "Enter" && !e.shiftKey) setSlash(null);
               else if (slash && !e.nativeEvent.isComposing) {
                 if (e.key === "ArrowDown" || e.key === "ArrowUp") {
                   e.preventDefault();
-                  const n = options.length || 1;
+                  const n = count || 1;
                   setActive((a) => (a + (e.key === "ArrowDown" ? 1 : n - 1)) % n);
                   return;
                 }
                 // Menu đang mở: Enter chỉ để chọn (không gửi "/từ khóa" đi), Shift+Enter vẫn xuống dòng
-                if ((e.key === "Enter" && !e.shiftKey) || (e.key === "Tab" && options.length)) {
+                if ((e.key === "Enter" && !e.shiftKey) || (e.key === "Tab" && count)) {
                   e.preventDefault();
-                  if (options.length) pickOption(active);
+                  if (count) pickOption(active);
                   return;
                 }
                 if (e.key === "Escape") {

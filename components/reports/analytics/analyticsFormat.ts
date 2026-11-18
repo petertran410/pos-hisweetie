@@ -2,7 +2,7 @@ import type {
   AnalyticsMetric,
   MetricValues,
 } from "@/lib/api/analytics-reports";
-import { vi } from "@/lib/dashboard/format";
+import { formatNumber } from "@/lib/utils";
 
 // Nhãn chỉ số như Power BI (view_by[vie_mode] và các tiêu đề tille_*).
 export const METRIC_OPTIONS: { key: AnalyticsMetric; label: string }[] = [
@@ -27,45 +27,58 @@ export function metricValue(
   return row ? row[m] : 0;
 }
 
-/** Nhãn số trên biểu đồ (switch_dynamics_metrics_label): "x,xx Tỷ" / "x,xx Triệu" / "x VNĐ". */
+/** Nhãn số trên biểu đồ (switch_dynamics_metrics_label): "x.xx Tỷ" / "x.xx Triệu" / "x VNĐ". */
 export function metricLabel(v: number, m: AnalyticsMetric): string {
-  if (m !== "amount") return vi(v);
+  if (m !== "amount") return formatNumber(Math.round(v));
   const abs = Math.abs(v);
   const two = (n: number) =>
-    n.toLocaleString("vi-VN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+    formatNumber(n, "en-US", {
+      min: 2,
+      max: 2,
     });
   if (abs >= 1e9) return `${two(v / 1e9)} Tỷ`;
   if (abs >= 1e6) return `${two(v / 1e6)} Triệu`;
-  return `${vi(v)} VNĐ`;
+  return `${formatNumber(Math.round(v))} VNĐ`;
 }
 
 /** Trục: rút gọn. */
 export function metricAxis(v: number, m: AnalyticsMetric): string {
   if (m !== "amount") {
     if (Math.abs(v) >= 1e6)
-      return `${(v / 1e6).toLocaleString("vi-VN", { maximumFractionDigits: 1 })}tr`;
+      return `${formatNumber(v / 1e6, "en-US", { max: 1 })}tr`;
     if (Math.abs(v) >= 1e3)
-      return `${(v / 1e3).toLocaleString("vi-VN", { maximumFractionDigits: 1 })}k`;
-    return vi(v);
+      return `${formatNumber(v / 1e3, "en-US", { max: 1 })}k`;
+    return formatNumber(Math.round(v));
   }
   if (Math.abs(v) >= 1e9)
-    return `${(v / 1e9).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} tỷ`;
-  if (Math.abs(v) >= 1e6) return `${Math.round(v / 1e6)}tr`;
-  return vi(v);
+    return `${formatNumber(v / 1e9, "en-US", { max: 1 })} tỷ`;
+  if (Math.abs(v) >= 1e6) return `${formatNumber(Math.round(v / 1e6))}tr`;
+  return formatNumber(Math.round(v));
+}
+
+/** Số nguyên "#,##0" (en-US). */
+export const intText = (v: number) => formatNumber(Math.round(v));
+
+/** Tiền rút gọn "1.23 tỷ" / "12.3 tr" / "45k" (en-US). */
+export function money(vnd: number): string {
+  const abs = Math.abs(vnd);
+  if (abs >= 1e9)
+    return `${formatNumber(vnd / 1e9, "en-US", { min: 2, max: 2 })} tỷ`;
+  if (abs >= 1e6) return `${formatNumber(vnd / 1e6, "en-US", { max: 1 })} tr`;
+  if (abs >= 1e3) return `${formatNumber(Math.round(vnd / 1e3))}k`;
+  return formatNumber(Math.round(vnd));
 }
 
 /** % tăng trưởng so với kỳ trước (growth_*_samePeriod). null = kỳ trước không có số. */
 export function growthDelta(growth: number | null) {
   if (growth === null) return { delta: "—", dir: "flat" as const };
-  const p = (growth * 100).toLocaleString("vi-VN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+  const p = formatNumber(growth * 100, "en-US", {
+    min: 2,
+    max: 2,
   });
   if (growth > 0) return { delta: `+${p}%`, dir: "up" as const };
   if (growth < 0) return { delta: `${p}%`, dir: "down" as const };
-  return { delta: "0,00%", dir: "flat" as const };
+  return { delta: "0.00%", dir: "flat" as const };
 }
 
 export const TOOLTIP_STYLE = {

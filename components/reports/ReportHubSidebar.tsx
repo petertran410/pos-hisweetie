@@ -17,6 +17,7 @@ import {
   useReportAccess,
   type ReportGroupKey,
 } from "@/lib/permissions/reportPermissions";
+import { useAnalyticsEntry } from "@/components/reports/analytics/useAnalyticsEntry";
 
 interface ReportGroup {
   key: string;
@@ -97,6 +98,9 @@ const REPORT_GROUPS: ReportGroup[] = [
 export function ReportHubSidebar() {
   const pathname = usePathname();
   const { groupAllowed } = useReportAccess();
+  // Phân tích: link thẳng tới báo cáo đầu tiên có quyền (bỏ 1 lần chuyển trang qua
+  // /bao-cao/phan-tich) và hỏi số liệu ngay lúc bấm.
+  const analyticsEntry = useAnalyticsEntry();
 
   // Ẩn nhóm mà user không có quyền nào. Nhóm "Sắp có" (available:false) vẫn
   // hiển thị dạng disabled như cũ (không gắn với quyền backend).
@@ -128,10 +132,13 @@ export function ReportHubSidebar() {
             );
           }
 
+          const analytics = g.key === "phan-tich";
+
           return (
             <Link
               key={g.key}
-              href={g.href}
+              href={analytics ? (analyticsEntry.target ?? g.href) : g.href}
+              onClick={analytics ? analyticsEntry.prefetch : undefined}
               className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
                 active
                   ? "bg-brand-soft text-brand-dark font-medium"

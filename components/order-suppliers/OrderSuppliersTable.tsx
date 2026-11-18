@@ -23,7 +23,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatNumber } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { useAuthStore } from "@/lib/store/auth";
 import { CodeLink } from "../shared/CodeLink";
@@ -60,9 +60,7 @@ const formatDateTime = (date?: string) =>
 
 // Format số CNY (làm tròn 2 chữ số thập phân, dùng dấu phẩy phân cách hàng nghìn)
 const formatCNY = (value: number) =>
-  new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 2,
-  }).format(value) + " CNY";
+  formatNumber(value) + " CNY";
 
 // Tính các giá trị CNY cho PDN NCC nước ngoài.
 // - totalCNY = Σ items[i].factorySubTotal (đã là CNY, BE lưu CNY gốc)
@@ -261,14 +259,15 @@ const DEFAULT_COLUMNS: ColumnConfig<OrderSupplier>[] = [
     label: "Tổng số lượng",
     visible: false,
     width: "120px",
-    render: (os) => String(os.totalQty ?? "-"),
+    render: (os) => (os.totalQty == null ? "-" : formatNumber(os.totalQty)),
   },
   {
     key: "productQty",
     label: "Số mặt hàng",
     visible: false,
     width: "120px",
-    render: (os) => String(os.productQty ?? "-"),
+    render: (os) =>
+      os.productQty == null ? "-" : formatNumber(os.productQty),
   },
   {
     key: "discount",
@@ -720,7 +719,7 @@ export function OrderSuppliersTable({
 
           <span className="text-xs text-gray-400">
             Trang {page}/{totalPages}
-            {total > 0 ? ` · ${total.toLocaleString("en-US")} phiếu` : ""}
+            {total > 0 ? ` · ${formatNumber(total)} phiếu` : ""}
           </span>
         </div>
       </div>

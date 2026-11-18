@@ -36,6 +36,7 @@ const STATUS_TABS = [
   { value: "all", label: "Tất cả" },
   { value: "1", label: "Phiếu tạm" },
   { value: "4", label: "Đã gửi" },
+  { value: "5", label: "Nhận một phần" },
   { value: "2", label: "Hoàn thành" },
   { value: "3", label: "Đã hủy" },
 ];
@@ -45,6 +46,7 @@ const STATUS_COLOR: Record<number, string> = {
   2: "bg-green-100 text-green-700",
   3: "bg-red-100 text-red-700",
   4: "bg-blue-100 text-blue-700",
+  5: "bg-orange-100 text-orange-700",
 };
 
 const STATUS_TEXT: Record<number, string> = {
@@ -52,6 +54,7 @@ const STATUS_TEXT: Record<number, string> = {
   2: "Hoàn thành",
   3: "Đã hủy",
   4: "Đã gửi",
+  5: "Nhận một phần",
 };
 
 const formatDateTime = (d?: string) =>
@@ -127,7 +130,11 @@ const DEFAULT_COLUMNS: ColumnConfig<Production>[] = [
     label: "Số lượng",
     visible: true,
     width: "100px",
-    render: (prod) => String(prod.quantity),
+    // Phiếu gửi NSX đã gửi: "đã nhận / dự kiến".
+    render: (prod) =>
+      prod.manufacturerId && [2, 4, 5].includes(prod.status)
+        ? `${Number(prod.receivedQuantity ?? 0).toLocaleString("vi-VN")} / ${Number(prod.quantity).toLocaleString("vi-VN")}`
+        : String(prod.quantity),
   },
   {
     key: "createdByName",

@@ -3,8 +3,7 @@
 import { Banknote, Package, ShoppingCart, UserRound } from "lucide-react";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import type { BusinessOverview, CardValue } from "@/lib/api/analytics-reports";
-import { money, vi } from "@/lib/dashboard/format";
-import { growthDelta } from "./analyticsFormat";
+import { growthDelta, money, intText } from "./analyticsFormat";
 
 /** 4 thẻ của trang Tổng Quan: Doanh Số, Sản Lượng, AOV, ARPC (kèm % so kỳ trước). */
 export function BusinessOverviewCards({ data }: { data: BusinessOverview }) {
@@ -51,7 +50,7 @@ export function BusinessOverviewCards({ data }: { data: BusinessOverview }) {
       {item(
         "Sản Lượng",
         cards.quantity,
-        vi,
+        intText,
         <Package className="w-[18px] h-[18px]" />,
         "#E6F2F2",
         "#2E8B8F",

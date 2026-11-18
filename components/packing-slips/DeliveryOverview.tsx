@@ -226,14 +226,14 @@ export function DeliveryOverview() {
       {/* Mobile: 3 ô nhỏ nằm ngang, gọn */}
       <div className="grid grid-cols-3 gap-2 sm:hidden">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 flex flex-col items-center text-center">
-          <Receipt className="w-4 h-4 mb-1" style={{ color: "#1A5F6A" }} />
+          <Receipt className="w-4 h-4 mb-1" style={{ color: "var(--dt-text-brand-deep)" }} />
           <span className="text-xl font-bold leading-none">{stats.total}</span>
           <span className="text-[11px] text-gray-500 mt-1 leading-tight">
             Tổng đơn
           </span>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 flex flex-col items-center text-center">
-          <CheckCircle2 className="w-4 h-4 mb-1" style={{ color: "#2E8B8F" }} />
+          <CheckCircle2 className="w-4 h-4 mb-1" style={{ color: "var(--dt-color-instock)" }} />
           <span className="text-xl font-bold leading-none">
             {stats.delivered}
           </span>

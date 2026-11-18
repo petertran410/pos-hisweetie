@@ -1,14 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Loader2 } from "lucide-react";
+import { X, Phone, Network, UserX, Pencil } from "lucide-react";
+import {
+  StatBox,
+  TAB_BUTTON_PRIMARY,
+  TabEmpty,
+  TabLoading,
+} from "../customers/CustomerTabUI";
+import { CustomerInfoPanel } from "../customers/CustomerInfoPanel";
+import { CustomerForm } from "../customers/CustomerForm";
 import { useCustomer } from "@/lib/hooks/useCustomers";
 import { CustomerInvoicesTab } from "../customers/CustomerInvoicesTab";
 import { CustomerOrdersTab } from "../customers/CustomerOrdersTab";
 import { CustomerConsignmentsTab } from "../customers/CustomerConsignmentsTab";
 import { CustomerDebtsTab } from "../customers/CustomerDebtsTab";
-import { CustomerInfoTab } from "./CustomerInfoTab";
-import { CustomerInvoiceInfoTab } from "./CustomerInvoiceInfoTab";
 import { formatCurrency } from "@/lib/utils";
 import { CustomerAddressesTab } from "./CustomerAddressesTab";
 import { CodeLink } from "../shared/CodeLink";
@@ -24,7 +30,6 @@ interface CustomerDetailModalProps {
 
 type TabType =
   | "info"
-  | "invoiceInfo"
   | "addresses"
   | "invoices"
   | "orders"
@@ -41,8 +46,12 @@ export function CustomerDetailModal({
 }: CustomerDetailModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>("info");
   const [mounted, setMounted] = useState(false);
-  const { data: customer, isLoading } = useCustomer(customerId);
+  const { data: customer, isLoading, refetch } = useCustomer(customerId);
   const canViewDebt = useCan("customers", "view_debt");
+  const canUpdateCustomer = useCan("customers", "update");
+  // Sửa khách dùng chung CustomerForm với trang Khách hàng. Khi đang sửa thì ẩn
+  // modal chi tiết (tránh 2 modal chồng nhau), lưu/đóng xong thì hiện lại.
+  const [editing, setEditing] = useState(false);
 
   const isParent = (customer?.children?.length ?? 0) > 0;
 
@@ -73,10 +82,9 @@ export function CustomerDetailModal({
 
   const TABS: { key: TabType; label: string }[] = [
     { key: "info", label: "Thông tin" },
-    { key: "invoiceInfo", label: "Xuất hóa đơn" },
-    { key: "addresses", label: "Địa chỉ" },
-    { key: "invoices", label: "Lịch sử bán/trả" },
-    { key: "orders", label: "Lịch sử đặt hàng" },
+    { key: "addresses", label: "Địa chỉ nhận hàng" },
+    { key: "invoices", label: "Lịch sử hóa đơn/trả hàng" },
+    { key: "orders", label: "Lịch sử đơn hàng" },
     { key: "consignments", label: "Theo dõi ký gửi" },
     ...(canViewDebt
       ? isParent
@@ -88,62 +96,143 @@ export function CustomerDetailModal({
       : []),
   ];
 
+  const ownDebt = Number(customer?.totalDebt) || 0;
+  const totalDebtWithChildren =
+    ownDebt +
+    (customer?.children?.reduce(
+      (sum: number, c: any) => sum + Number(c.totalDebt),
+      0,
+    ) ?? 0);
+  const isOrg = Number(customer?.type) === 1;
+  // Tab dạng thẻ thông tin dùng nền xám nhạt, tab dạng bảng dùng nền trắng
+  const cardTab = activeTab === "info";
+
+  if (editing && customer) {
+    return (
+      <CustomerForm
+        customer={customer}
+        onClose={() => setEditing(false)}
+        onSuccess={async () => {
+          setEditing(false);
+          // Lấy bản mới nhất (đủ địa chỉ, nhóm…) để cập nhật khách trong giỏ
+          const fresh = await refetch();
+          if (fresh.data) handleCustomerUpdate(fresh.data);
+        }}
+      />
+    );
+  }
+
   return createPortal(
-    // Mobile: flex justify-end → sheet dán đáy. Desktop: justify-center → centered modal
+    // Mobile: sheet dán đáy. Desktop: modal giữa màn hình
     <div className="fixed inset-0 z-[99] flex flex-col justify-end lg:items-center lg:justify-center">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       {/* Sheet / Modal */}
-      <div className="relative bg-white w-full flex flex-col h-[95dvh] lg:h-[90dvh] rounded-t-2xl lg:rounded-xl lg:max-w-5xl">
+      <div className="relative flex h-[95dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl lg:h-[90dvh] lg:max-w-5xl lg:rounded-2xl">
         {/* Handle bar — mobile only */}
-        <div className="lg:hidden flex justify-center pt-2.5 pb-0.5 flex-shrink-0">
-          <div className="w-10 h-1 bg-gray-200 rounded-full" />
+        <div className="flex flex-shrink-0 justify-center pb-0.5 pt-2.5 lg:hidden">
+          <div className="h-1 w-10 rounded-full bg-gray-200" />
         </div>
 
         {/* Header */}
-        <div className="flex items-start justify-between px-4 pt-2 pb-3 lg:px-6 lg:pt-5 lg:pb-4 border-b flex-shrink-0">
-          <div className="flex-1 min-w-0 pr-3">
-            <h2 className="text-base lg:text-xl font-bold leading-snug truncate">
-              {customer?.name || "Đang tải..."}
-            </h2>
-            {customer && (
-              <div className="flex flex-nowrap items-baseline gap-x-1.5 mt-1 text-sm lg:text-sm text-gray-500">
-                <span>
-                  <CodeLink
-                    entity="customer"
-                    code={customer.code}
-                    className="text-brand hover:underline"
-                  />
-                </span>
-                <span>
-                  Nợ:{" "}
+        <div className="flex flex-shrink-0 items-start justify-between gap-3 px-4 pb-3 pt-2 lg:px-6 lg:pb-4 lg:pt-5">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <h2 className="truncate text-base font-semibold text-gray-900 lg:text-xl">
+                {customer?.name || "Đang tải..."}
+              </h2>
+              {customer && (
+                <>
                   <span
-                    className={
-                      customer.totalDebt > 0 ? "text-red-600 font-semibold" : ""
-                    }>
-                    {formatCurrency(customer.totalDebt)}
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      customer.isActive
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
+                    }`}>
+                    {customer.isActive ? "Hoạt động" : "Ngừng hoạt động"}
                   </span>
-                </span>
-                <span>Tổng bán: {formatCurrency(customer.totalPurchased)}</span>
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                    {isOrg ? "Tổ chức/Hộ KD" : "Cá nhân"}
+                  </span>
+                </>
+              )}
+            </div>
+            {customer && (
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-500 lg:text-sm">
+                <CodeLink
+                  entity="customer"
+                  code={customer.code}
+                  className="font-medium text-brand hover:underline"
+                />
+                {customer.contactNumber && (
+                  <span className="inline-flex items-center gap-1">
+                    <Phone className="h-3.5 w-3.5" />
+                    {customer.contactNumber}
+                  </span>
+                )}
+                {customer.parent && (
+                  <span className="inline-flex items-center gap-1">
+                    <Network className="h-3.5 w-3.5" />
+                    Thuộc {customer.parent.code} – {customer.parent.name}
+                  </span>
+                )}
               </div>
             )}
           </div>
+
+          {customer && (
+            <div className="hidden shrink-0 gap-2 sm:flex">
+              <StatBox
+                label="Tổng bán"
+                value={formatCurrency(customer.totalPurchased)}
+              />
+              <StatBox
+                label={isParent ? "Nợ riêng" : "Nợ hiện tại"}
+                value={formatCurrency(ownDebt)}
+                tone={ownDebt > 0 ? "danger" : "muted"}
+              />
+              {isParent && (
+                <StatBox
+                  label="Nợ tổng (gồm con)"
+                  value={formatCurrency(totalDebtWithChildren)}
+                  tone={totalDebtWithChildren > 0 ? "danger" : "muted"}
+                />
+              )}
+            </div>
+          )}
+
           <button
             onClick={onClose}
-            className="flex-shrink-0 p-1 -mt-0.5 text-gray-400 hover:text-gray-600 transition-colors">
-            <X className="w-5 h-5" />
+            aria-label="Đóng"
+            className="-mr-2 flex-shrink-0 rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700">
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Tab bar — scroll ngang trên mobile */}
-        <div className="border-b flex-shrink-0">
-          <div className="flex overflow-x-auto scrollbar-hide px-2 lg:px-6">
+        {/* Chỉ số — mobile hiện thành 1 hàng dưới tiêu đề */}
+        {customer && (
+          <div className="flex flex-shrink-0 gap-2 overflow-x-auto px-4 pb-3 sm:hidden">
+            <StatBox
+              label="Tổng bán"
+              value={formatCurrency(customer.totalPurchased)}
+            />
+            <StatBox
+              label={isParent ? "Nợ riêng" : "Nợ hiện tại"}
+              value={formatCurrency(ownDebt)}
+              tone={ownDebt > 0 ? "danger" : "muted"}
+            />
+          </div>
+        )}
+
+        {/* Tab bar — cuộn ngang khi hẹp */}
+        <div className="flex-shrink-0 border-b">
+          <div className="flex overflow-x-auto px-2 [scrollbar-width:none] lg:px-6 [&::-webkit-scrollbar]:hidden">
             {TABS.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-3 lg:px-4 py-2.5 text-sm lg:text-sm font-medium border-b-2 whitespace-nowrap flex-shrink-0 transition-colors ${
+                className={`-mb-px flex-shrink-0 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
                   activeTab === tab.key
                     ? "border-brand text-brand"
                     : "border-transparent text-gray-500 hover:text-gray-800"
@@ -155,23 +244,21 @@ export function CustomerDetailModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 lg:p-6">
+        <div
+          className={`flex-1 overflow-y-auto p-3 lg:p-5 ${
+            cardTab ? "bg-gray-50" : "bg-white"
+          }`}>
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-brand" />
-            </div>
+            <TabLoading />
           ) : customer ? (
             <>
               {activeTab === "info" && (
-                <CustomerInfoTab
+                <CustomerInfoPanel
                   customer={customer}
-                  onUpdate={handleCustomerUpdate}
-                />
-              )}
-              {activeTab === "invoiceInfo" && (
-                <CustomerInvoiceInfoTab
-                  customer={customer}
-                  onUpdate={handleCustomerUpdate}
+                  onEdit={
+                    canUpdateCustomer ? () => setEditing(true) : undefined
+                  }
+                  onViewAddresses={() => setActiveTab("addresses")}
                 />
               )}
               {activeTab === "addresses" && (
@@ -192,37 +279,48 @@ export function CustomerDetailModal({
               {activeTab === "debts" && canViewDebt && (
                 <CustomerDebtsTab
                   customerId={customer.id}
-                  customerDebt={Number(customer.totalDebt)}
+                  customerDebt={ownDebt}
+                  hideSummary
                 />
               )}
               {activeTab === "debts_total" && canViewDebt && (
                 <CustomerDebtsTab
                   customerId={customer.id}
-                  customerDebt={
-                    Number(customer.totalDebt) +
-                    (customer.children?.reduce(
-                      (sum: number, c: any) => sum + Number(c.totalDebt),
-                      0
-                    ) ?? 0)
-                  }
+                  customerDebt={totalDebtWithChildren}
                   includeChildren
+                  hideSummary
                 />
               )}
               {activeTab === "debts_own" && canViewDebt && (
                 <CustomerDebtsTab
                   customerId={customer.id}
-                  customerDebt={Number(customer.totalDebt)}
+                  customerDebt={ownDebt}
+                  hideSummary
                 />
               )}
             </>
           ) : (
-            <div className="text-center py-12 text-gray-500">
-              Không tìm thấy thông tin khách hàng
-            </div>
+            <TabEmpty
+              icon={UserX}
+              title="Không tìm thấy thông tin khách hàng"
+            />
           )}
         </div>
+
+        {/* Footer — sửa khách mở CustomerForm giống trang Khách hàng */}
+        {customer && canUpdateCustomer && (
+          <div className="flex flex-shrink-0 justify-end border-t bg-white px-4 py-3 lg:px-6">
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className={TAB_BUTTON_PRIMARY}>
+              <Pencil className="h-4 w-4" />
+              Chỉnh sửa
+            </button>
+          </div>
+        )}
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

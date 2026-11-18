@@ -155,10 +155,20 @@ export function useCreateOrder() {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       if (data.warnings && data.warnings.length > 0) {
         toast.warning("Đơn hàng đã tạo nhưng có cảnh báo", {
-          description: data.warnings.map((w) => w.message).join(", "),
+          // Backend trả chuỗi; giữ hỗ trợ dạng { message } cho chắc.
+          description: data.warnings
+            .map((w) => (typeof w === "string" ? w : w?.message))
+            .join(", "),
         });
       } else {
         toast.success("Tạo đơn hàng thành công");
+      }
+      if (data.debtPolicyUnset) {
+        toast.warning("Khách này chưa được thiết lập công nợ", {
+          description:
+            "Vào Khách hàng → Chỉnh sửa → tab Công nợ để chọn quy tắc công nợ cho khách.",
+          duration: 8000,
+        });
       }
     },
     onError: (error: any) => {

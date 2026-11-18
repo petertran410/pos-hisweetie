@@ -51,12 +51,12 @@ function useKdQuery<T>(
   });
 }
 
-export function useKdOptions() {
+export function useKdOptions(enabled = true) {
   const ready = useReady();
   return useAnalyticsQuery({
     queryKey: [...KEY, "options"],
     queryFn: () => analyticsKdApi.options(),
-    enabled: ready,
+    enabled: ready && enabled,
     staleTime: 5 * 60_000,
   });
 }

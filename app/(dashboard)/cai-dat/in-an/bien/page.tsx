@@ -20,6 +20,7 @@ const TABS: Array<{ key: string; label: string }> = [
   { key: "supplier_return", label: "Trả hàng nhập" },
   { key: "transfer", label: "Chuyển hàng" },
   { key: "internal_use", label: "Xuất dùng nội bộ" },
+  { key: "production_external", label: "Gửi sản xuất" },
   { key: "cash_flow_receipt", label: "Phiếu thu" },
   { key: "cash_flow_payment", label: "Phiếu chi" },
   { key: "consignment", label: "Ký gửi" },

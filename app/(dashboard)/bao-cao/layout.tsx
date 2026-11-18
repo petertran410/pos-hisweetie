@@ -11,7 +11,10 @@ export default function BaoCaoLayout({
       className="dt-dash flex h-full border-t"
       style={{ borderColor: "var(--dt-border)" }}>
       <ReportHubSidebar />
-      <div className="flex-1 min-w-0 flex overflow-hidden">{children}</div>
+      {/* palette-orig: báo cáo giữ sáng trong bảng Tối cho tới khi chuyển màu viết cứng (đợt 2). */}
+      <div className="palette-orig flex-1 min-w-0 flex overflow-hidden">
+        {children}
+      </div>
     </div>
   );
 }

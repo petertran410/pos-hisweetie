@@ -59,6 +59,7 @@ import {
 } from "@/lib/utils/customer-address";
 import { useAuthStore } from "@/lib/store/auth";
 import { useCan } from "@/lib/hooks/useCan";
+import { fetchCustomerSalePic } from "@/lib/hooks/useCustomers";
 import { MobilePrintPreviewModal } from "@/components/pos/MobilePrintPreviewModal";
 import {
   printEntity,
@@ -1519,6 +1520,37 @@ export default function BanHangPage() {
     return result.isConfirmed;
   };
 
+  /**
+   * Chặn tạo đơn/hóa đơn khi khách chưa gắn Sale PIC. Luôn hỏi lại server
+   * (không tin selectedCustomer — có thể khôi phục từ localStorage/đơn cũ,
+   * hoặc vừa được gắn Sale PIC qua modal Chỉnh sửa khách). Lỗi mạng → chặn.
+   */
+  const ensureCustomerHasSalePic = async (
+    customer: { id: number; name?: string },
+    documentLabel: "đơn hàng" | "hóa đơn"
+  ): Promise<boolean> => {
+    try {
+      const { salePicId } = await fetchCustomerSalePic(customer.id);
+      if (salePicId) return true;
+    } catch (error) {
+      console.error("ensureCustomerHasSalePic error:", error);
+      toast.error(
+        "Không kiểm tra được Sale PIC của khách hàng, vui lòng thử lại"
+      );
+      return false;
+    }
+
+    toast.error(
+      `Khách hàng "${customer.name ?? ""}" chưa được gắn Sale PIC nên không thể tạo ${documentLabel}`,
+      {
+        description:
+          "Bấm vào tên khách hàng → Chỉnh sửa để gắn Sale PIC rồi tạo lại.",
+        duration: 6000,
+      }
+    );
+    return false;
+  };
+
   const [mobilePrintData, setMobilePrintData] = useState<{
     templateFor: string;
     entityId: number;
@@ -2964,6 +2996,11 @@ export default function BanHangPage() {
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
+      if (
+        !(await ensureCustomerHasSalePic(activeTab.selectedCustomer, "hóa đơn"))
+      )
+        return;
+
       const proceed = await confirmPriceMismatch("hóa đơn");
       if (!proceed) return;
 
@@ -4158,6 +4195,19 @@ export default function BanHangPage() {
 
     isSubmittingRef.current = true;
     setIsSubmitting(true);
+
+    // Đơn hàng / hóa đơn bắt buộc khách đã gắn Sale PIC (ký gửi không áp dụng).
+    if (
+      activeTab.type !== "consignment" &&
+      !(await ensureCustomerHasSalePic(
+        activeTab.selectedCustomer,
+        activeTab.type === "order" ? "đơn hàng" : "hóa đơn"
+      ))
+    ) {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+      return;
+    }
 
     const proceed = await confirmPriceMismatch(
       activeTab.type === "order" ? "đơn hàng" : "hóa đơn"

@@ -4,6 +4,7 @@ import {
   type Production,
   type ProductionQueryParams,
   type CreateProductionData,
+  type ProductionReceiptData,
 } from "../api/productions";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -140,6 +141,40 @@ export const useReceiveProduction = () =>
         ? `Đã nhận hàng, tạo phiếu nhập ${po.code}`
         : "Đã nhận thành phẩm vào kho";
     },
+  );
+
+// ── Đợt nhận của phiếu gửi NSX ──
+export const useUpdateProductionReceipt = () =>
+  useFactoryProductionMutation(
+    ({
+      id,
+      receiptId,
+      data,
+    }: {
+      id: number;
+      receiptId: number;
+      data: ProductionReceiptData;
+    }) => productionsApi.updateReceipt(id, receiptId, data),
+    "Đã cập nhật đợt nhận",
+  );
+
+export const useCancelProductionReceipt = () =>
+  useFactoryProductionMutation(
+    ({ id, receiptId }: { id: number; receiptId: number }) =>
+      productionsApi.cancelReceipt(id, receiptId),
+    "Đã hủy đợt nhận",
+  );
+
+export const useCloseProductionReceiving = () =>
+  useFactoryProductionMutation(
+    (id: number) => productionsApi.closeReceiving(id),
+    "Đã kết thúc nhận hàng",
+  );
+
+export const useReopenProductionReceiving = () =>
+  useFactoryProductionMutation(
+    (id: number) => productionsApi.reopenReceiving(id),
+    "Đã mở lại nhận hàng",
   );
 
 export const useApplyProductionCost = () =>

@@ -172,10 +172,13 @@ export const smaxChatApi = {
   deliveryBookingSenders: (branchId: number): Promise<{ userIds: number[] | null }> =>
     apiClient.get("/smax/chat/delivery-booking/senders", { branchId }),
 
-  // invoiceIds: nhiều hóa đơn gộp 1 tin đặt xe (người nhận 1, 2… theo thứ tự)
+  // invoiceIds / orderIds: nhiều chứng từ gộp 1 tin đặt xe (người nhận 1, 2… theo thứ tự);
+  // không gộp hóa đơn với đơn đặt hàng
   bookDelivery: (body: {
     invoiceId?: number;
     invoiceIds?: number[];
+    orderId?: number;
+    orderIds?: number[];
     text: string;
     confirmed?: boolean;
   }): Promise<{ ok: true }> =>

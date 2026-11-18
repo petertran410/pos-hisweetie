@@ -62,7 +62,7 @@ export function RecipesSidebar({ filters, onChange }: Props) {
           onClick={() => setMobileOpen((open) => !open)}
           aria-expanded={mobileOpen}
           aria-controls="recipe-mobile-filters"
-          className="relative flex min-h-11 items-center gap-2 rounded-lg border px-3 text-sm font-medium text-[#0D3B42] hover:bg-[#E8F4F5]"
+          className="relative flex min-h-11 items-center gap-2 rounded-lg border px-3 text-sm font-medium text-brand-dark hover:bg-cyan-bg"
           style={{ borderColor: "var(--dt-border)" }}>
           <Filter className="h-4 w-4" /> Bộ lọc
           {activeFilterCount > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[11px] text-white">{activeFilterCount}</span>}

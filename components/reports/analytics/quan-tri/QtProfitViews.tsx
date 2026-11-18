@@ -12,7 +12,7 @@ import type {
   QtProfitProduct,
   QtProfitTeam,
 } from "@/lib/api/analytics-quan-tri";
-import { DT_COLORS, vi } from "@/lib/dashboard/format";
+import { DT_COLORS } from "@/lib/dashboard/format";
 import { Empty, Panel } from "../shared/AnalyticsCharts";
 import { QtDonut, QtHBar, QtScatter, QtStacked100 } from "./QtCharts";
 import {
@@ -26,9 +26,11 @@ import {
   qtAxis,
 } from "./qtFormat";
 import { QtTreeTable, buildTree, type TreeColumn } from "./QtTreeTable";
+import { formatNumber } from "@/lib/utils";
+import { intText } from "../analyticsFormat";
 
 const intFmt = (v: number | null | undefined) =>
-  v === null || v === undefined ? "—" : Math.round(v).toLocaleString("vi-VN");
+  v === null || v === undefined ? "—" : formatNumber(Math.round(v));
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Bookmark "Nhóm Bán"
@@ -217,7 +219,11 @@ export function ProfitCustomerView({ data }: { data: QtProfitCustomer }) {
     [data.productMix, order],
   );
   const qtyCols: TreeColumn<number>[] = [
-    { key: "q", label: "Sản Lượng", render: (v) => vi(v) },
+    {
+      key: "q",
+      label: "Sản Lượng",
+      render: (v) => formatNumber(Math.round(v)),
+    },
   ];
 
   return (
@@ -266,7 +272,7 @@ export function ProfitCustomerView({ data }: { data: QtProfitCustomer }) {
             groups={order}
             series={categories}
             value={catValue}
-            fmt={vi}
+            fmt={intText}
           />
         </Panel>
         <Panel

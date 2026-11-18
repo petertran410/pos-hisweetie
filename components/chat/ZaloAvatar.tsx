@@ -15,14 +15,15 @@ const initials = (name: string | null) =>
     .toUpperCase();
 
 function Face({ m, className }: { m: Member; className: string }) {
-  const [broken, setBroken] = useState(false);
-  if (m.avatar && !broken)
+  // Nhớ link lỗi (không phải cờ chung): link Zalo hết hạn được thay link mới thì hiện lại ảnh
+  const [brokenSrc, setBrokenSrc] = useState<string | null>(null);
+  if (m.avatar && m.avatar !== brokenSrc)
     return (
       <img
         src={m.avatar}
         alt={m.name ?? ""}
         referrerPolicy="no-referrer"
-        onError={() => setBroken(true)}
+        onError={() => setBrokenSrc(m.avatar)}
         className={`${className} object-cover`}
       />
     );
@@ -51,16 +52,16 @@ export function ZaloAvatar({
   memberCount?: number | null;
   size?: number;
 }) {
-  const [broken, setBroken] = useState(false);
+  const [brokenSrc, setBrokenSrc] = useState<string | null>(null);
   const box = { width: size, height: size };
 
-  if (avatar && !broken)
+  if (avatar && avatar !== brokenSrc)
     return (
       <img
         src={avatar}
         alt=""
         referrerPolicy="no-referrer"
-        onError={() => setBroken(true)}
+        onError={() => setBrokenSrc(avatar)}
         style={box}
         className="shrink-0 rounded-full object-cover"
       />

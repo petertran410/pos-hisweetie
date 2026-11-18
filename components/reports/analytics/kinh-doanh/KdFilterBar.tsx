@@ -42,11 +42,23 @@ interface Props {
   note?: string;
 }
 
+/** Slicer lấy danh sách từ /kinh-doanh/options (các slicer khác dùng filter-options chung). */
+const KD_OPTION_KEYS: KdFilterKey[] = [
+  "customerType",
+  "specialGroup",
+  "parent",
+  "productType",
+  "brand",
+  "category",
+  "product",
+];
+
 /** Thanh lọc các trang Kinh Doanh (thay slicer Power BI). */
 export function KdFilterBar({ filters, onChange, show, note }: Props) {
-  const { data: base } = useAnalyticsFilterOptions();
-  const { data: kd } = useKdOptions();
   const on = (k: KdFilterKey) => show.includes(k);
+  const { data: base } = useAnalyticsFilterOptions();
+  // Chỉ tải danh sách Kinh Doanh khi trang có slicer cần tới (vd. Đối Thủ chỉ lọc tháng).
+  const { data: kd } = useKdOptions(KD_OPTION_KEYS.some(on));
   const set = (patch: Partial<KdFilters>) => onChange({ ...filters, ...patch });
   const str = (v?: string | number) =>
     v === undefined || v === null ? "" : String(v);

@@ -84,7 +84,7 @@ const sourceLabels: Record<string, string> = {
   WAREHOUSE_CASH_RECEIPT: "Thu tiền khách",
   LARK_PAYMENT_VOUCHER: "Phiếu chi theo đơn duyệt",
   SEPAY_VPSG: "Thu từ tài khoản VPSG",
-  OPENING_BALANCE: "Số dư đầu kỳ",
+  BALANCE_ADJUSTMENT: "Cân bằng quỹ",
 };
 // Các nguồn này phải hủy tại màn hình gốc để hai bên không lệch nhau;
 // bút toán lịch sử thì chỉ đọc.

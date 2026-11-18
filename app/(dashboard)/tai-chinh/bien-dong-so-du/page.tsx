@@ -72,12 +72,12 @@ const DATE_PRESETS: { label: string; value: string }[] = [
 // yyyy-mm-dd (local) — khớp định dạng MiniCalendar + backend parseFilterDate.
 const toYmd = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate(),
+    d.getDate()
   ).padStart(2, "0")}`;
 
 /** Trả { dateFrom, dateTo } (yyyy-mm-dd) từ preset. all_time/custom → rỗng/giữ nguyên. */
 const getPresetRange = (
-  preset: string,
+  preset: string
 ): { dateFrom: string; dateTo: string } => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -165,7 +165,7 @@ const EMPTY_FILTERS: Filters = {
 // Chỉ giữ chữ số (state lưu raw digits, hiển thị có phân tách hàng nghìn).
 const onlyDigits = (v: string) => v.replace(/\D/g, "");
 const formatAmountInput = (v: string) =>
-  v ? Number(v).toLocaleString("vi-VN") : "";
+  v ? Number(v).toLocaleString("en-US") : "";
 
 export default function BienDongSoDuPage() {
   const searchParams = useSearchParams();
@@ -246,7 +246,7 @@ export default function BienDongSoDuPage() {
     vpsgCashFund?: boolean;
   }> = (Array.isArray(bankAccountsData) ? bankAccountsData : []).filter(
     (account: { vpsgCashFund?: boolean }) =>
-      !account.vpsgCashFund || vpsgAccess?.canView,
+      !account.vpsgCashFund || vpsgAccess?.canView
   );
 
   // Đóng lịch khi click ra ngoài
@@ -287,7 +287,7 @@ export default function BienDongSoDuPage() {
     .map((tx) => tx.id);
   const { data: vpsgRecords } = useVpsgCashRecords(
     vpsgIds,
-    Boolean(vpsgAccess?.canView),
+    Boolean(vpsgAccess?.canView)
   );
   const vpsgRecordOf = (id: number) =>
     vpsgRecords?.find((record) => record.transactionId === id);
@@ -681,7 +681,7 @@ export default function BienDongSoDuPage() {
             {isFetching && (
               <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
             )}
-            Tổng {total.toLocaleString("vi-VN")} giao dịch
+            Tổng {total.toLocaleString("en-US")} giao dịch
           </div>
           <div className="flex items-center gap-2">
             <button

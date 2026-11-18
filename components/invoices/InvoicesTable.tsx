@@ -43,7 +43,7 @@ import { ColumnToggle } from "../shared/ColumnToggle";
 import { InvoicePickupSummaryModal } from "./InvoicePickupSummaryModal";
 import { MergeInvoicesModal } from "./MergeInvoicesModal";
 import { DeliveryBookingModal } from "./DeliveryBookingModal";
-import { InvoiceWarningIcon } from "./InvoiceWarningIcon";
+import { InvoiceAlertIcons } from "./InvoiceAlertIcons";
 import { useCan } from "@/lib/hooks/useCan";
 import {
   useColumnVisibility,
@@ -408,7 +408,7 @@ const DEFAULT_COLUMNS: ColumnConfig<Invoice>[] = [
     visible: true,
     width: "210px",
     render: (inv) =>
-      getDebtRuleTypeLabel(inv.customer?.debtPolicy?.debtRuleType),
+      getDebtRuleTypeLabel(inv.customer?.debtPolicy),
   },
   // {
   //   key: "codAmount",
@@ -1495,7 +1495,7 @@ export function InvoicesTable({
                     className="cursor-pointer"
                   />
                 </th>
-                {/* Cột ngầm cảnh báo lệch giá — luôn giữ chỗ để không thụt mã hóa đơn */}
+                {/* Cột ngầm "Cảnh báo hóa đơn" — luôn giữ chỗ để không thụt mã hóa đơn */}
                 <th className="w-8 px-2 py-2.5" />
                 {visibleColumns.map((col) => (
                   <th
@@ -1587,18 +1587,14 @@ export function InvoicesTable({
                           className="cursor-pointer"
                         />
                       </td>
-                      {/* Cột ngầm cảnh báo: lệch giá bảng giá 2/3, lệch SL so với đơn đặt */}
+                      {/* Cột ngầm "Cảnh báo hóa đơn": lệch giá, lệch SL, hủy còn giao hàng, phí ship, hàng lạnh */}
                       <td
                         className={`w-8 px-2 py-2.5 text-center ${
                           expandedInvoiceId === invoice.id
                             ? "border-t-2 border-brand"
                             : ""
                         }`}>
-                        <InvoiceWarningIcon
-                          invoiceCode={invoice.code}
-                          warnings={invoice.warnings}
-                          hasPriceBookWarning={invoice.hasPriceBookWarning}
-                        />
+                        <InvoiceAlertIcons invoice={invoice} />
                       </td>
                       {visibleColumns.map((col) => (
                         <td

@@ -56,6 +56,49 @@ export function usePromisedSGDrilldownByProduct(productId: number | null) {
   });
 }
 
+/** Cột "Đang đi đường" ở danh sách hàng hóa — gom theo trang hiện tại. */
+export function useTransfersInTransitSummary(
+  productIds: number[],
+  branchId?: number,
+  options?: { silentForbidden?: boolean },
+) {
+  const sortedKey = [...productIds].sort((a, b) => a - b).join(",");
+  return useQuery({
+    queryKey: ["transfers-in-transit-summary", sortedKey, branchId ?? null],
+    queryFn: () => transfersApi.getInTransitSummary(productIds, branchId),
+    enabled: productIds.length > 0,
+    staleTime: 30_000,
+    ...(options?.silentForbidden ? { meta: { silentForbidden: true } } : {}),
+  });
+}
+
+/** Phiếu Đang chuyển chứa sản phẩm (modal "Đang đi đường"). */
+export function useTransfersInTransitByProduct(
+  productId: number | null,
+  branchId?: number,
+) {
+  return useQuery({
+    queryKey: ["transfers-in-transit-detail", productId, branchId ?? null],
+    queryFn: () => transfersApi.getInTransitDetail(productId!, branchId),
+    enabled: !!productId,
+  });
+}
+
+/**
+ * SL "Đang đi đường" của 1 sản phẩm theo chi nhánh nhận (modal tồn kho ở
+ * trang Bán hàng). Lấy phiếu Đang chuyển mọi tuyến rồi gom theo toBranchId.
+ */
+export function useTransfersInTransitByBranch(productId: number | null) {
+  const query = useTransfersInTransitByProduct(productId);
+  const byBranch: Record<number, number> = {};
+  for (const t of query.data?.data ?? []) {
+    if (t.toBranchId == null) continue;
+    byBranch[t.toBranchId] = (byBranch[t.toBranchId] ?? 0) + t.quantity;
+  }
+  // Tổng do component tự cộng theo các chi nhánh đang hiển thị (chỉ CN active).
+  return { byBranch, isLoading: query.isLoading };
+}
+
 export function useCreateTransfer() {
   const queryClient = useQueryClient();
 

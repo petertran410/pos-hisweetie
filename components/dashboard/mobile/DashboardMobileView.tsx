@@ -425,7 +425,7 @@ export function DashboardMobileView() {
   ];
 
   return (
-    <div className="dt-dash dt-m">
+    <div className="dt-dash dt-m palette-orig">
       {/* Filter pills */}
       <div className="dt-m-filter">
         <button className="dt-m-pill" onClick={() => setBranchSheet(true)}>

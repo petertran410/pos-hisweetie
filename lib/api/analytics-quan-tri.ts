@@ -190,6 +190,21 @@ export interface QtPivotCell {
   value: number | null;
 }
 
+/**
+ * Ô pivot gọn: mỗi mã (khách / sản phẩm) 1 dòng, `values[i]` ứng với `keys[i]`
+ * ("cur:YYYY-MM" | "prev:YYYY-MM"); null = không có ô.
+ */
+export interface QtPivotRows {
+  months: string[];
+  keys: string[];
+  rows: {
+    group: string | null;
+    code: string | null;
+    name: string | null;
+    values: (number | null)[];
+  }[];
+}
+
 export interface QtCustomers {
   period: QtPeriod | null;
   metric: QtMetric;
@@ -212,13 +227,7 @@ export interface QtCustomers {
   }[];
   byRegion?: { key: string | null; value: number | null }[];
   byProvince?: { key: string | null; value: number }[];
-  pivot?: {
-    months: string[];
-    cells: (QtPivotCell & {
-      customerType: string | null;
-      code: string | null;
-      name: string | null;
-    })[];
+  pivot?: QtPivotRows & {
     typeMonths: (QtPivotCell & { customerType: string | null })[];
     monthTotals: QtPivotCell[];
   };
@@ -239,13 +248,7 @@ export interface QtProducts {
   };
   trend?: (QtMetricValues & { key: string; label: string })[];
   products?: (QtMetricValues & { code: string | null; name: string | null })[];
-  pivot?: {
-    months: string[];
-    cells: (QtPivotCell & {
-      category: string | null;
-      code: string | null;
-      name: string | null;
-    })[];
+  pivot?: QtPivotRows & {
     categoryMonths: (QtPivotCell & { category: string | null })[];
     monthTotals: (QtPivotCell & { all: number | null })[];
     rowTotals: {

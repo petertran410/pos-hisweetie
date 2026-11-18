@@ -62,7 +62,7 @@ export function KpiCard({
       </div>
       <div
         className="text-[27px] font-bold leading-[1.1] tracking-tight dt-mono"
-        style={{ fontFamily: "var(--font-montserrat), sans-serif" }}>
+        style={{ fontFamily: "var(--font-sans)" }}>
         {value}
         {valueSuffix && (
           <small

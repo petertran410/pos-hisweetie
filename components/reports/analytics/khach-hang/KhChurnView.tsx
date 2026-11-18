@@ -4,10 +4,10 @@ import { Fragment, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { AnalyticsMetric } from "@/lib/api/analytics-reports";
 import type { KhChurn } from "@/lib/api/analytics-khach-hang";
-import { vi } from "@/lib/dashboard/format";
 import { BLANK_LABEL, metricTitle } from "../analyticsFormat";
 import { DonutChart, Empty, Panel } from "../shared/AnalyticsCharts";
 import { fmtDate } from "./KhCharts";
+import { formatNumber } from "@/lib/utils";
 
 /** Trang Churn Customer: khách "1.Khách Churn" theo sale phụ trách + danh sách. */
 export function KhChurnView({
@@ -37,12 +37,16 @@ export function KhChurnView({
     { v: 0, d: 0 },
   );
   const num = "px-2.5 py-1.5 text-right dt-mono whitespace-nowrap";
+  const productValue = (p: [string, number, number, number, number]) => {
+    const v = { amount: p[1], orders: p[2], customers: p[3], quantity: p[4] };
+    return v[metric as keyof typeof v] ?? 0;
+  };
 
   return (
     <div className="grid gap-3 xl:grid-cols-[1fr_2fr]">
       <Panel
         title="Theo người bán"
-        subtitle={`Khách lâu chưa mua (khách cha) · ${vi(data.totalCustomers)} khách`}>
+        subtitle={`Khách lâu chưa mua (khách cha) · ${formatNumber(Math.round(data.totalCustomers))} khách`}>
         <DonutChart rows={pie} metric="customers" />
       </Panel>
       <Panel
@@ -101,23 +105,33 @@ export function KhChurnView({
                         </button>
                       </td>
                       <td className={`${num} font-semibold`}>
-                        {r.value[metric] ? vi(r.value[metric]) : ""}
+                        {r.value[metric]
+                          ? formatNumber(Math.round(r.value[metric]))
+                          : ""}
                       </td>
                       <td className={num}>{fmtDate(r.lastOrder)}</td>
-                      <td className={num}>{vi(r.churnDay)}</td>
+                      <td className={num}>
+                        {formatNumber(Math.round(r.churnDay))}
+                      </td>
                     </tr>
                     {open.has(r.name) &&
                       r.products.map((p) => (
                         <tr
-                          key={p.code}
+                          key={p[0]}
                           className="border-b hover:bg-[#F7FBFC]"
                           style={{ borderColor: "var(--dt-border)" }}>
-                          <td className="pl-8 pr-2.5 py-1.5">{p.name}</td>
+                          <td className="pl-8 pr-2.5 py-1.5">
+                            {data.productNames[p[0]] ?? p[0]}
+                          </td>
                           <td className={num}>
-                            {p.value[metric] ? vi(p.value[metric]) : ""}
+                            {productValue(p)
+                              ? formatNumber(Math.round(productValue(p)))
+                              : ""}
                           </td>
                           <td className={num}>{fmtDate(r.lastOrder)}</td>
-                          <td className={num}>{vi(r.churnDay)}</td>
+                          <td className={num}>
+                            {formatNumber(Math.round(r.churnDay))}
+                          </td>
                         </tr>
                       ))}
                   </Fragment>
@@ -128,9 +142,13 @@ export function KhChurnView({
                 style={{ background: "#F3F8F9" }}>
                 <tr>
                   <td className="px-2.5 py-2 font-bold">Tổng</td>
-                  <td className={`${num} font-bold`}>{vi(total.v)}</td>
+                  <td className={`${num} font-bold`}>
+                    {formatNumber(Math.round(total.v))}
+                  </td>
                   <td />
-                  <td className={`${num} font-bold`}>{vi(total.d)}</td>
+                  <td className={`${num} font-bold`}>
+                    {formatNumber(Math.round(total.d))}
+                  </td>
                 </tr>
               </tfoot>
             </table>

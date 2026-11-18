@@ -52,9 +52,9 @@ export function RecipeComments({ recipeId, compact = false }: { recipeId: number
     <section className="rounded-xl border bg-white" style={{ borderColor: "var(--dt-border)" }}>
       <header className="flex items-center gap-2 border-b px-4 py-3" style={{ borderColor: "var(--dt-border)" }}>
         <MessageCircle className="h-5 w-5 text-brand" />
-        <h2 className="font-semibold text-[#0D3B42]">Comment ({comments.length})</h2>
+        <h2 className="font-semibold text-brand-dark">Comment ({comments.length})</h2>
       </header>
-      <div className={`${compact ? "max-h-72" : "max-h-[420px]"} space-y-3 overflow-y-auto bg-[#f8fbfb] p-4`}>
+      <div className={`${compact ? "max-h-72" : "max-h-[420px]"} space-y-3 overflow-y-auto bg-[#f8fbfb] dark:bg-[rgb(var(--g-50))] p-4`}>
         {isLoading && <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-brand" /></div>}
         {!isLoading && comments.length === 0 && <p className="py-6 text-center text-sm text-gray-500">Chưa có bình luận.</p>}
         {comments.map((comment) => {

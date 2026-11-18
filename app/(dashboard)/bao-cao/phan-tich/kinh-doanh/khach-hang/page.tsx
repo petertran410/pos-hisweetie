@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { AnalyticsReportShell } from "@/components/reports/analytics/AnalyticsReportShell";
+import { usePrefetchKdPivot } from "@/components/reports/analytics/kinh-doanh/KdPivot";
 import { ChurnSection } from "@/components/reports/analytics/kinh-doanh/ChurnSection";
 import {
   AXIS_OPTIONS,
   BrandKeySection,
   DemandSection,
+  DETAIL_PIVOT_REGION,
+  DETAIL_PIVOT_WEEK,
   DetailSection,
   LermaoSection,
   OverviewSection,
@@ -80,6 +83,9 @@ export default function Page() {
     !isChurn,
   );
   const data = q.data && q.data.section === section ? q.data : undefined;
+  // Mục Chi Tiết: 2 bảng pivot tải song song với số liệu chính.
+  usePrefetchKdPivot(filters, DETAIL_PIVOT_REGION, section === "detail");
+  usePrefetchKdPivot(filters, DETAIL_PIVOT_WEEK, section === "detail");
 
   const axisSeg = (
     <div className="dt-seg dt-seg-sm">

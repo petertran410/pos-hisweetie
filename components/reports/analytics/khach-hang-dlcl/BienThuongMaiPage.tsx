@@ -8,7 +8,6 @@ import type {
   BienThuongMaiReport,
   DlclFilters,
 } from "@/lib/api/analytics-khach-hang-dlcl";
-import { money, vi } from "@/lib/dashboard/format";
 import {
   useDlclOptions,
   useDlclReport,
@@ -17,6 +16,8 @@ import { DlclFilterBar } from "./DlclFilterBar";
 import { DlclPivotTable } from "./DlclPivotTable";
 import { pctText } from "./dlclFormat";
 import { DlclBody, DlclNote, DlclPeriodBadge } from "./DlclPageFrame";
+import { money } from "@/components/reports/analytics/analyticsFormat";
+import { formatNumber } from "@/lib/utils";
 
 /**
  * Phân tích › Khách Hàng › Biên Thương Mại — khách buôn × hàng thương hiệu:
@@ -90,7 +91,7 @@ export function BienThuongMaiPage() {
                 />
                 <KpiCard
                   name="Khách mua hàng"
-                  value={vi(d.cards.activeCustomers)}
+                  value={formatNumber(Math.round(d.cards.activeCustomers))}
                   icon={<UsersRound className="w-[18px] h-[18px]" />}
                   iconBg="#EEF7F8"
                   iconColor="#2E8B8F"

@@ -145,6 +145,8 @@ export function useUpsertDebtPolicy() {
     }) => debtTrackingApi.upsertPolicy(vars.customerId, vars.payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [KEY] });
+      // Phần "Thông tin" khách đọc policy từ GET /customers/:id.
+      qc.invalidateQueries({ queryKey: ["customers"] });
       toast.success("Đã cập nhật thiết lập công nợ");
     },
     onError: (e: unknown) => {

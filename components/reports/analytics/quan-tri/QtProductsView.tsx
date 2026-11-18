@@ -4,12 +4,12 @@ import { useMemo } from "react";
 import { Banknote, Package, Percent, TrendingUp } from "lucide-react";
 import type { AnalyticsAxis } from "@/lib/api/analytics-reports";
 import type { QtMetric, QtProducts } from "@/lib/api/analytics-quan-tri";
-import { money, vi } from "@/lib/dashboard/format";
 import { Panel } from "../shared/AnalyticsCharts";
 import { QtHBar, QtLine } from "./QtCharts";
-import { QtMonthPivot, collectMonths } from "./QtMonthPivot";
+import { QtMonthPivot, collectMonths, leavesFromRows } from "./QtMonthPivot";
 import { AxisSeg, QtKpi, TONES } from "./QtOverview";
 import { BLANK, pct2, qtAxis, qtLabel, qtMetricTitle } from "./qtFormat";
+import { money, intText } from "@/components/reports/analytics/analyticsFormat";
 
 const ico = (C: typeof Banknote) => <C className="w-[18px] h-[18px]" />;
 
@@ -35,25 +35,10 @@ export function QtProductsView({
   const pivot = data.pivot;
   const pivotData = useMemo(() => {
     if (!pivot) return null;
-    const leafVals = collectMonths(
-      pivot.cells,
-      (x) => `${x.category}\u0001${x.code}`,
-    );
-    const names = new Map<string, { group: string | null; label: string }>();
-    for (const x of pivot.cells)
-      names.set(`${x.category}\u0001${x.code}`, {
-        group: x.category,
-        label: x.name ?? x.code ?? BLANK,
-      });
     const allByMonth = new Map<string, number | null>();
     for (const t of pivot.monthTotals) if (t.k) allByMonth.set(t.k, t.all);
     return {
-      leaves: [...leafVals.entries()].map(([id, values]) => ({
-        id,
-        label: names.get(id)?.label ?? id,
-        group: names.get(id)?.group ?? null,
-        values,
-      })),
+      leaves: leavesFromRows(pivot),
       groups: collectMonths(pivot.categoryMonths, (x) => x.category ?? BLANK),
       total: collectMonths(pivot.monthTotals, () => "t").get("t") ?? new Map(),
       share: (ym: string, v: number | null) => {
@@ -95,7 +80,7 @@ export function QtProductsView({
           <QtKpi
             name="Sản Lượng Bán"
             card={c.quantity}
-            fmt={vi}
+            fmt={intText}
             compareLabel={data.compareLabel}
             icon={ico(Package)}
             tone={TONES.quantity}

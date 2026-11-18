@@ -15,6 +15,8 @@ import {
   KeyRound,
   MonitorSmartphone,
   MessageCircle,
+  FileSpreadsheet,
+  Bell,
 } from "lucide-react";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import "@/app/dashboard.css";
@@ -58,6 +60,12 @@ export default function SettingsLayout({
       permission: { resource: "print_templates", action: "view" },
     },
     {
+      href: "/cai-dat/mau-bao-gia",
+      label: "Mẫu báo giá",
+      icon: FileSpreadsheet,
+      permission: { resource: "quote_templates", action: "view" },
+    },
+    {
       href: "/cai-dat/so-quy",
       label: "Sổ quỹ",
       icon: Wallet,
@@ -91,6 +99,12 @@ export default function SettingsLayout({
       href: "/cai-dat/smax",
       label: "Smax",
       icon: MessageCircle,
+      permission: { resource: "settings", action: "update" },
+    },
+    {
+      href: "/cai-dat/thong-bao-lark",
+      label: "Thông báo Lark",
+      icon: Bell,
       permission: { resource: "settings", action: "update" },
     },
     {

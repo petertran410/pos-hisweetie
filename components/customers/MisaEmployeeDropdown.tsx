@@ -123,7 +123,7 @@ export function MisaEmployeeDropdown({
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-80 overflow-hidden">
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-80 overflow-hidden flex flex-col">
           <div className="p-2 border-b">
             <input
               type="text"
@@ -135,7 +135,7 @@ export function MisaEmployeeDropdown({
             />
           </div>
 
-          <div className="max-h-60 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             {isLoading ? (
               <div className="px-4 py-2 text-sm text-gray-500">Đang tải...</div>
             ) : filtered && filtered.length > 0 ? (

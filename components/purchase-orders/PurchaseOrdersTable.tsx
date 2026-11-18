@@ -23,7 +23,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatNumber } from "@/lib/utils";
 import { PermissionGate } from "../permissions/PermissionGate";
 import { useCan } from "@/lib/hooks/useCan";
 import { CodeLink } from "../shared/CodeLink";
@@ -49,9 +49,7 @@ const formatDateTime = (date?: string) =>
 
 // Format số CNY (làm tròn 2 chữ số thập phân, dấu phẩy phân cách hàng nghìn)
 const formatCNY = (value: number) =>
-  new Intl.NumberFormat("vi-VN", {
-    maximumFractionDigits: 2,
-  }).format(value) + " CNY";
+  formatNumber(value) + " CNY";
 
 // Tính các giá trị CNY cho phiếu nhập NCC nước ngoài.
 // - totalCNY = Σ items[i].factorySubTotal (BE lưu CNY gốc trên item)
@@ -634,7 +632,7 @@ export function PurchaseOrdersTable({
 
           <span className="text-xs text-gray-400">
             Trang {page}/{totalPages}
-            {total > 0 ? ` · ${total.toLocaleString("vi-VN")} phiếu` : ""}
+            {total > 0 ? ` · ${formatNumber(total)} phiếu` : ""}
           </span>
         </div>
       </div>

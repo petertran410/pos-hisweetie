@@ -11,7 +11,8 @@ import {
 import { Search, Trash2, Loader2, X, Upload } from "lucide-react";
 import { StockAudit } from "@/lib/types/stock-audit";
 import { stockAuditsApi } from "@/lib/api/stock-audits";
-import { formatNumberInput } from "@/lib/utils";
+import { formatCurrency, formatNumber, formatNumberInput } from "@/lib/utils";
+import { usePermission } from "@/lib/hooks/usePermissions";
 import {
   StockAuditImportModal,
   type ImportedAuditItem,
@@ -44,6 +45,9 @@ function toDatetimeLocal(iso?: string): string {
 
 export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
   const { selectedBranch } = useBranchStore();
+  // "Giá trị lệch" = SL lệch × giá vốn. Thiếu quyền giá vốn → BE bỏ cost
+  // (ra NaN) → ẩn cột. Payload không gửi giá, BE tự tính nên không ảnh hưởng.
+  const canViewCostPrice = usePermission("products", "view_cost_price");
   const createAudit = useCreateStockAudit();
   const updateAudit = useUpdateStockAudit();
   const completeAudit = useCompleteStockAudit();
@@ -382,7 +386,10 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
                       )}
                     </div>
                     <span className="text-xs text-gray-500">
-                      Tồn: {inv ? Number(inv.onHand).toLocaleString() : 0}
+                      Tồn:{" "}
+                      {inv
+                        ? formatNumber(Number(inv.onHand), "en-US", { max: 3 })
+                        : 0}
                     </span>
                   </button>
                 );
@@ -404,7 +411,9 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
                     <th className="px-3 py-2 text-right">Tồn kho</th>
                     <th className="px-3 py-2 text-center">Thực tế</th>
                     <th className="px-3 py-2 text-right">SL lệch</th>
-                    <th className="px-3 py-2 text-right">Giá trị lệch</th>
+                    {canViewCostPrice && (
+                      <th className="px-3 py-2 text-right">Giá trị lệch</th>
+                    )}
                     <th className="px-3 py-2 text-left">Ghi chú</th>
                     <th className="px-3 py-2 w-10"></th>
                   </tr>
@@ -425,17 +434,20 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
                           {item.unit || "-"}
                         </td>
                         <td className="px-3 py-2 text-right">
-                          {item.onHand.toLocaleString()}
+                          {formatNumber(item.onHand, "en-US", { max: 3 })}
                         </td>
                         <td className="px-3 py-2 text-center">
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={formatNumberInput(item.actualQuantity)}
+                            value={formatNumberInput(item.actualQuantity, 3)}
                             onChange={(e) => {
                               // Strip dấu phẩy trước khi validate
                               const raw = e.target.value.replace(/,/g, "");
-                              if (raw === "" || /^\d*\.?\d*$/.test(raw)) {
+                              if (
+                                raw === "" ||
+                                /^\d*(?:\.\d{0,3})?$/.test(raw)
+                              ) {
                                 updateItem(
                                   item.productId,
                                   "actualQuantity",
@@ -456,23 +468,25 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
                                 : ""
                           }`}>
                           {diff > 0
-                            ? `+${diff.toLocaleString()}`
-                            : diff.toLocaleString()}
+                            ? `+${formatNumber(diff, "en-US", { max: 3 })}`
+                            : formatNumber(diff, "en-US", { max: 3 })}
                         </td>
-                        <td
-                          className={`px-3 py-2 text-right ${
-                            diffValue < 0
-                              ? "text-red-600"
-                              : diffValue > 0
-                                ? "text-green-600"
-                                : ""
-                          }`}>
-                          {diffValue !== 0
-                            ? (diffValue > 0 ? "+" : "") +
-                              diffValue.toLocaleString() +
-                              " đ"
-                            : "-"}
-                        </td>
+                        {canViewCostPrice && (
+                          <td
+                            className={`px-3 py-2 text-right ${
+                              diffValue < 0
+                                ? "text-red-600"
+                                : diffValue > 0
+                                  ? "text-green-600"
+                                  : ""
+                            }`}>
+                            {diffValue !== 0
+                              ? (diffValue > 0 ? "+" : "") +
+                                formatCurrency(diffValue) +
+                                " đ"
+                              : "-"}
+                          </td>
+                        )}
                         <td className="px-3 py-2">
                           <input
                             type="text"
@@ -509,22 +523,24 @@ export function StockAuditForm({ onClose, audit }: StockAuditFormProps) {
                             : ""
                       }`}>
                       {totals.totalDiff > 0 ? "+" : ""}
-                      {totals.totalDiff.toLocaleString()}
+                      {formatNumber(totals.totalDiff, "en-US", { max: 3 })}
                     </td>
-                    <td
-                      className={`px-3 py-2 text-right ${
-                        totals.totalDiffValue < 0
-                          ? "text-red-600"
-                          : totals.totalDiffValue > 0
-                            ? "text-green-600"
-                            : ""
-                      }`}>
-                      {totals.totalDiffValue !== 0
-                        ? (totals.totalDiffValue > 0 ? "+" : "") +
-                          totals.totalDiffValue.toLocaleString() +
-                          " đ"
-                        : "-"}
-                    </td>
+                    {canViewCostPrice && (
+                      <td
+                        className={`px-3 py-2 text-right ${
+                          totals.totalDiffValue < 0
+                            ? "text-red-600"
+                            : totals.totalDiffValue > 0
+                              ? "text-green-600"
+                              : ""
+                        }`}>
+                        {totals.totalDiffValue !== 0
+                          ? (totals.totalDiffValue > 0 ? "+" : "") +
+                            formatCurrency(totals.totalDiffValue) +
+                            " đ"
+                          : "-"}
+                      </td>
+                    )}
                     <td colSpan={2}></td>
                   </tr>
                 </tfoot>

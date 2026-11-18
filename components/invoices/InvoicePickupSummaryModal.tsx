@@ -4,6 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Printer, Search, X } from "lucide-react";
 import type { Invoice } from "@/lib/types/invoice";
 import { invoicesApi } from "@/lib/api/invoices";
+import {
+  PRINT_FONT_FAMILY,
+  printFontCss,
+  waitForPrintFonts,
+} from "@/lib/utils/print-font";
 
 type PickupRow = {
   productId: number;
@@ -113,7 +118,7 @@ function printRows(rows: PickupRow[], invoices: Invoice[]) {
     <style>
       @page { size: A5 portrait; margin: 8mm; }
       * { box-sizing: border-box; }
-      body { margin: 0; color: #111; font: 8px Arial, sans-serif; }
+      body { margin: 0; color: #111; font: 8px ${PRINT_FONT_FAMILY}; }
       h1 { font-size: 14px; text-align: center; margin: 0 0 5px; }
       .meta { line-height: 1.45; margin-bottom: 6px; }
       table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -127,7 +132,7 @@ function printRows(rows: PickupRow[], invoices: Invoice[]) {
       tfoot td { background: #eee; font-weight: 700; }
       .invoice-table { margin-bottom: 7px; }
       .section-title { font-weight: 700; font-size: 9px; margin: 5px 0 3px; }
-    </style></head><body>
+    </style><style>${printFontCss()}</style></head><body>
     <h1>DANH SÁCH TỔNG HỢP HÀNG PICK-UP</h1>
     <div class="meta"><b>Thời gian:</b> ${escapeHtml(new Date().toLocaleString("vi-VN"))}<br>
     <b>Số hóa đơn:</b> ${invoices.length} &nbsp; <b>Mã:</b> ${escapeHtml(invoiceCodes)}<br>
@@ -138,7 +143,8 @@ function printRows(rows: PickupRow[], invoices: Invoice[]) {
     <tbody>${body}</tbody><tfoot><tr><td colspan="3">TỔNG CỘNG</td><td>${numberText(totals.good)}</td><td>${numberText(totals.damaged)}</td><td>${numberText(totals.nearExpiry)}</td><td>${numberText(totals.promotion)}</td><td>${numberText(grandTotal)}</td></tr></tfoot></table>
     </body></html>`);
   doc.close();
-  iframe.onload = () => {
+  iframe.onload = async () => {
+    await waitForPrintFonts(doc);
     iframe.contentWindow?.focus();
     iframe.contentWindow?.print();
     setTimeout(() => iframe.remove(), 100);

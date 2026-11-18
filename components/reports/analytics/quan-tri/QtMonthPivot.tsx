@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { QtMetric } from "@/lib/api/analytics-quan-tri";
+import type { QtMetric, QtPivotRows } from "@/lib/api/analytics-quan-tri";
 import {
   BLANK,
   growthColor,
@@ -56,7 +56,9 @@ export function QtMonthPivot({
     const byGroup = new Map<string, PivotLeaf[]>();
     for (const l of leaves) {
       const g = l.group ?? BLANK;
-      byGroup.set(g, [...(byGroup.get(g) ?? []), l]);
+      const list = byGroup.get(g);
+      if (list) list.push(l);
+      else byGroup.set(g, [l]);
     }
     return [...byGroup.entries()]
       .map(([g, list]) => ({
@@ -113,6 +115,22 @@ export function QtMonthPivot({
       firstWidth={260}
     />
   );
+}
+
+/** Dòng pivot gọn từ server (mỗi mã 1 dòng + mảng giá trị theo keys) → lá của bảng. */
+export function leavesFromRows(pivot: QtPivotRows): PivotLeaf[] {
+  return pivot.rows.map((r) => {
+    const values: MonthValues = new Map();
+    r.values.forEach((v, i) => {
+      if (v !== null) values.set(pivot.keys[i], v);
+    });
+    return {
+      id: `${r.group}\u0001${r.code}`,
+      label: r.name ?? r.code ?? BLANK,
+      group: r.group,
+      values,
+    };
+  });
 }
 
 /** Gom danh sách ô {k, value} theo khoá dòng. */

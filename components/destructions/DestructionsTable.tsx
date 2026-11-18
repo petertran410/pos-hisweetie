@@ -1,12 +1,13 @@
 "use client";
 
 import { Fragment } from "react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { usePermission } from "@/lib/hooks/usePermissions";
 import type {
   Destruction,
   DestructionQueryParams,
 } from "@/lib/api/destructions";
-import { formatCurrency } from "../../lib/utils";
+import { formatCurrency, formatNumber } from "../../lib/utils";
 import {
   Plus,
   Search,
@@ -190,9 +191,26 @@ export function DestructionsTable({
     number | null
   >(null);
 
-  const { columns, visibleColumns, toggleColumn } = useColumnVisibility(
-    "destructionTableColumns",
-    DEFAULT_COLUMNS
+  const {
+    columns: allColumns,
+    visibleColumns: allVisibleColumns,
+    toggleColumn,
+  } = useColumnVisibility("destructionTableColumns", DEFAULT_COLUMNS);
+
+  // "Tổng giá trị hủy" tính theo giá vốn → ẩn (cả trong ColumnToggle) khi
+  // thiếu quyền xem giá vốn. Mirror ProductTable displayColumns.
+  const canViewCostPrice = usePermission("products", "view_cost_price");
+  const columns = useMemo(
+    () =>
+      allColumns.filter((c) => c.key !== "totalValue" || canViewCostPrice),
+    [allColumns, canViewCostPrice]
+  );
+  const visibleColumns = useMemo(
+    () =>
+      allVisibleColumns.filter(
+        (c) => c.key !== "totalValue" || canViewCostPrice
+      ),
+    [allVisibleColumns, canViewCostPrice]
   );
 
   const { exportToFile, exportDetailToFile, isExporting } =
@@ -467,7 +485,7 @@ export function DestructionsTable({
 
         <span className="text-xs text-gray-400">
           Trang {page}/{totalPages}
-          {total > 0 ? ` · ${total.toLocaleString("vi-VN")} phiếu` : ""}
+          {total > 0 ? ` · ${formatNumber(total)} phiếu` : ""}
         </span>
       </div>
     </div>

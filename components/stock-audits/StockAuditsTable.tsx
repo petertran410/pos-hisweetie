@@ -18,7 +18,7 @@ import {
 import { StockAuditDetailRow } from "./StockAuditDetailRow";
 import { StockAuditForm } from "./StockAuditForm";
 import { usePermission } from "@/lib/hooks/usePermissions";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatNumber } from "@/lib/utils";
 import { CodeLink } from "@/components/shared/CodeLink";
 
 const formatDateTime = (d?: string) =>
@@ -29,8 +29,6 @@ const STATUS_MAP: Record<number, { label: string; cls: string }> = {
   2: { label: "Hoàn thành", cls: "bg-green-100 text-green-700" },
   3: { label: "Đã hủy", cls: "bg-red-100 text-red-700" },
 };
-
-const formatMoney = (n: number) => n.toLocaleString("vi-VN") + " đ";
 
 export function StockAuditsTable({ filters }: { filters?: any }) {
   const { selectedBranch } = useBranchStore();
@@ -43,6 +41,8 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
 
   const canCreate = usePermission("stock_audits", "create");
   const canExport = usePermission("stock_audits", "export");
+  // Giá trị lệch = SL lệch × giá vốn → ẩn khi thiếu quyền xem giá vốn.
+  const canViewCostPrice = usePermission("products", "view_cost_price");
 
   const { exportToFile, exportDetailToFile, isExporting } =
     useExportStockAudits();
@@ -106,7 +106,7 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
   const toggleExpand = (id: number) =>
     setExpandedId((prev) => (prev === id ? null : id));
 
-  const colSpan = 10;
+  const colSpan = canViewCostPrice ? 10 : 9;
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-white mt-4 mr-4 mb-4 border rounded-xl min-w-0">
@@ -201,9 +201,11 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
               <th className="px-4 py-2.5 text-right font-medium text-gray-600">
                 Tổng số lượng lệch
               </th>
-              <th className="px-4 py-2.5 text-right font-medium text-gray-600">
-                Tổng giá trị lệch
-              </th>
+              {canViewCostPrice && (
+                <th className="px-4 py-2.5 text-right font-medium text-gray-600">
+                  Tổng giá trị lệch
+                </th>
+              )}
               <th className="px-4 py-2.5 text-center font-medium text-gray-600">
                 Trạng thái
               </th>
@@ -295,13 +297,15 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
                         className={`px-4 py-2.5 text-right font-medium ${borderCls}`}>
                         {totalDiff !== 0 ? formatCurrency(totalDiff) : "-"}
                       </td>
-                      <td
-                        className={`px-4 py-2.5 text-right font-medium ${borderCls}`}>
-                        {totalDiffValue !== 0
-                          ? formatCurrency(totalDiffValue)
-                          : "-"}{" "}
-                        đ
-                      </td>
+                      {canViewCostPrice && (
+                        <td
+                          className={`px-4 py-2.5 text-right font-medium ${borderCls}`}>
+                          {totalDiffValue !== 0
+                            ? formatCurrency(totalDiffValue)
+                            : "-"}{" "}
+                          đ
+                        </td>
+                      )}
                       <td className={`px-4 py-2.5 text-center ${borderCls}`}>
                         <span
                           className={`px-2 py-0.5 rounded-full text-xs font-medium ${st.cls}`}>
@@ -375,7 +379,7 @@ export function StockAuditsTable({ filters }: { filters?: any }) {
 
         <span className="text-xs text-gray-400">
           Trang {page}/{totalPages}
-          {total > 0 ? ` · ${total} phiếu` : ""}
+          {total > 0 ? ` · ${formatNumber(total)} phiếu` : ""}
         </span>
       </div>
 

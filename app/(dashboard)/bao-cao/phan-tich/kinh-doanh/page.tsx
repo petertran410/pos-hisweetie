@@ -11,18 +11,19 @@ import type {
   AnalyticsMetric,
 } from "@/lib/api/analytics-reports";
 import {
+  defaultBusinessFilters,
   useAnalyticsFilterOptions,
   useBusinessOverview,
 } from "@/lib/hooks/useAnalyticsReports";
+import { formatDate } from "@/lib/utils";
 
 const fmtDate = (iso: string) => iso.split("-").reverse().join("/");
 
 /** Phân tích › Kinh Doanh › Tổng Quan — thay trang "Tổng Quan" của Power BI. */
 export default function AnalyticsBusinessPage() {
-  const [filters, setFilters] = useState<AnalyticsBusinessFilters>({
-    year: new Date().getFullYear(),
-    axis: "month",
-  });
+  const [filters, setFilters] = useState<AnalyticsBusinessFilters>(
+    defaultBusinessFilters,
+  );
   const [metric, setMetric] = useState<AnalyticsMetric>("amount");
 
   const { data: options } = useAnalyticsFilterOptions();
@@ -101,8 +102,7 @@ export default function AnalyticsBusinessPage() {
           <div
             className="text-[11.5px] text-right"
             style={{ color: "var(--dt-text-muted)" }}>
-            Dữ liệu cập nhật vào lúc{" "}
-            {new Date(data.updatedAt).toLocaleString("vi-VN")}
+            Dữ liệu cập nhật vào lúc {formatDate(data.updatedAt)}
           </div>
         </>
       )}

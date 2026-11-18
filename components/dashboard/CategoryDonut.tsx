@@ -48,7 +48,7 @@ export function CategoryDonut({ data }: Props) {
               allowEscapeViewBox={{ x: false, y: true }}
               wrapperStyle={{ outline: "none", zIndex: 20 }}
               contentStyle={{
-                background: "#fff",
+                background: "rgb(var(--surface))",
                 border: "1px solid var(--dt-border)",
                 borderRadius: 8,
                 color: "var(--dt-text-primary)",

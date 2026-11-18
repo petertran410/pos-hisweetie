@@ -1,4 +1,5 @@
 import { apiClient, API_URL, getAuthHeaders } from "@/lib/config/api";
+import { formatCurrency } from "@/lib/utils";
 
 // ==================================================================
 // KIỂU DỮ LIỆU
@@ -39,8 +40,60 @@ export const DEBT_RULE_TYPE_LABELS: Record<DebtRuleType, string> = {
   WEEKLY_SCHEDULE: "Thanh toán cố định theo tuần",
 };
 
-export function getDebtRuleTypeLabel(type?: DebtRuleType | null): string {
-  return type ? DEBT_RULE_TYPE_LABELS[type] ?? "—" : "—";
+/**
+ * Nhãn quy tắc công nợ của khách. NONE mà không bắt trả đủ là khách cũ chưa
+ * thiết lập — không phải "Không công nợ".
+ */
+export function getDebtRuleTypeLabel(
+  policy?: {
+    debtRuleType?: DebtRuleType | null;
+    requireFullPaymentForInvoice?: boolean;
+  } | null
+): string {
+  const type = policy?.debtRuleType;
+  if (!type) return "—";
+  if (type === "NONE" && policy?.requireFullPaymentForInvoice === false) {
+    return "Chưa thiết lập";
+  }
+  return DEBT_RULE_TYPE_LABELS[type] ?? "—";
+}
+
+/** Chính sách công nợ rút gọn để hiển thị (Thông tin khách, giỏ bán hàng). */
+export interface DebtPolicySummary {
+  debtForm?: DebtForm | null;
+  debtRuleType?: DebtRuleType | null;
+  requireFullPaymentForInvoice?: boolean | null;
+  creditLimit?: string | number | null;
+  termDays?: number | null;
+  paymentScheduleDays?: number[] | null;
+}
+
+/**
+ * Mô tả quy tắc công nợ của khách. Chưa có policy, hoặc NONE mà không bắt
+ * trả đủ (khách cũ) → "Chưa thiết lập". Kèm chi tiết ngắn: hạn mức, số ngày,
+ * ngày/thứ thanh toán cố định.
+ */
+export function describeDebtRule(policy?: DebtPolicySummary | null): {
+  unset: boolean;
+  label: string;
+  detail: string;
+} {
+  const type = policy?.debtRuleType ?? "NONE";
+  if (!policy || (type === "NONE" && !policy.requireFullPaymentForInvoice)) {
+    return { unset: true, label: "Chưa thiết lập", detail: "" };
+  }
+  const days = policy.paymentScheduleDays ?? [];
+  const detail =
+    type === "CREDIT_LIMIT" && policy.creditLimit != null
+      ? `${formatCurrency(Number(policy.creditLimit))} đ`
+      : type === "TERM_DAYS" && policy.termDays != null
+        ? `${policy.termDays} ngày`
+        : type === "MONTHLY_SCHEDULE" && days.length > 0
+          ? `ngày ${days.join(", ")}`
+          : type === "WEEKLY_SCHEDULE" && days.length > 0
+            ? days.map((d) => (d === 7 ? "CN" : `T${d + 1}`)).join(", ")
+            : "";
+  return { unset: false, label: DEBT_RULE_TYPE_LABELS[type] ?? "—", detail };
 }
 
 export type PaymentHistory =

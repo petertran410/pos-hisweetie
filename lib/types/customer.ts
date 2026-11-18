@@ -1,3 +1,5 @@
+import type { DebtRuleType } from "@/lib/api/debt-tracking";
+
 export interface Customer {
   id: number;
   code: string;
@@ -21,6 +23,11 @@ export interface Customer {
     hasTermDays: boolean;
     isActive?: boolean;
     requireFullPaymentForInvoice?: boolean;
+    // API chi tiết khách (GET /customers/:id) trả thêm để hiển thị quy tắc.
+    debtRuleType?: DebtRuleType | null;
+    creditLimit?: string | number | null;
+    termDays?: number | null;
+    paymentScheduleDays?: number[] | null;
   } | null;
   totalInvoiced: number;
   totalPoint: number;

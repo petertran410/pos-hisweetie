@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { AlertTriangle, Database } from "lucide-react";
 import { C } from "./kdFormat";
+import { formatDate } from "@/lib/utils";
 
 // Các khối giao diện nhỏ dùng chung cho các trang Kinh Doanh.
 
@@ -257,7 +258,7 @@ export function UpdatedAt({ at }: { at?: string }) {
     <div
       className="text-[11.5px] text-right"
       style={{ color: "var(--dt-text-muted)" }}>
-      Dữ liệu cập nhật vào lúc {new Date(at).toLocaleString("vi-VN")}
+      Dữ liệu cập nhật vào lúc {formatDate(at)}
     </div>
   );
 }

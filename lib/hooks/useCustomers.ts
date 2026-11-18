@@ -11,6 +11,7 @@ import {
 import { toast } from "sonner";
 import { useAuthStore } from "../store/auth";
 import { useBranchStore } from "../store/branch";
+import type { DebtPolicySummary } from "@/lib/api/debt-tracking";
 
 export function useCustomers(filters?: CustomerFilters) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -88,6 +89,37 @@ export function useCustomerShippingFeeHistory(customerId: number | undefined) {
     enabled: !!customerId && hasHydrated && isAuthenticated,
     staleTime: 60_000,
   });
+}
+
+/**
+ * Hình thức + quy tắc công nợ của khách (cạnh "Nợ hiện tại" ở giỏ bán hàng).
+ * Lấy theo id thay vì đọc từ object khách trong giỏ, vì khách có thể đến từ
+ * đơn/hóa đơn cũ hoặc tab lưu sẵn không có đủ trường. Key nằm dưới
+ * "customers" nên tự làm mới khi sửa khách / lưu công nợ.
+ */
+export function useCustomerDebtPolicy(customerId: number | undefined) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const hasHydrated = useAuthStore((state) => state._hasHydrated);
+
+  return useQuery({
+    queryKey: ["customers", customerId, "debt-policy"],
+    queryFn: () =>
+      apiClient.get<{ policy: DebtPolicySummary | null }>(
+        `/customers/${customerId}/debt-policy`,
+      ),
+    enabled: !!customerId && hasHydrated && isAuthenticated,
+    staleTime: 60_000,
+  });
+}
+
+/**
+ * Sale PIC đang gắn cho khách. Hàm thường (không phải hook) vì POS gọi đúng
+ * lúc bấm tạo đơn/hóa đơn, cần dữ liệu mới nhất chứ không dùng cache.
+ */
+export function fetchCustomerSalePic(customerId: number) {
+  return apiClient.get<{ salePicId: number | null }>(
+    `/customers/${customerId}/sale-pic`,
+  );
 }
 
 export function useCustomerGroups() {
@@ -195,17 +227,25 @@ export function useUpdateCustomerComments() {
   });
 }
 
-export function useDeleteCustomer() {
+/** Ngừng hoạt động / kích hoạt — cần quyền customers:delete (hiển thị "Ngừng hoạt động"). */
+export function useUpdateCustomerStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: number) => {
-      return await apiClient.delete(`/customers/${id}`);
+    mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
+      return await apiClient.patch<{ id: number; isActive: boolean }>(
+        `/customers/${id}/status`,
+        { isActive },
+      );
     },
-    onSuccess: () => {
+    onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       queryClient.invalidateQueries({ queryKey: ["customers-search"] });
-      toast.success("Xóa khách hàng thành công");
+      toast.success(
+        variables.isActive
+          ? "Đã kích hoạt khách hàng"
+          : "Đã ngừng hoạt động khách hàng",
+      );
     },
     onError: (error: Error) => {
       toast.error(error.message || "Có lỗi xảy ra");

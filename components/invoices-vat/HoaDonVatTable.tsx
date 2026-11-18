@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import type { InvoiceVat } from "@/lib/api/invoices";
 import { HoaDonVatDetailRow } from "@/components/invoices-vat/HoaDonVatDetailRow";
+import { InvoiceAlertIcons } from "@/components/invoices/InvoiceAlertIcons";
 import type { InvoiceBuyerInfoValue } from "@/components/invoices-vat/InvoiceBuyerTaxInfo";
 import type { MisaBuyerOverride } from "@/lib/api/misa";
 import { formatCurrency } from "@/lib/utils";
@@ -50,6 +51,8 @@ import Swal from "sweetalert2";
 
 interface HoaDonVatTableProps {
   filters: any;
+  /** false = bộ lọc chưa sẵn sàng (sidebar chưa đẩy lần đầu) → chưa gọi API. */
+  enabled?: boolean;
 }
 
 // ─── Trạng thái đồng bộ Misa ──────────────────────────────────────────────────
@@ -307,7 +310,10 @@ const DEFAULT_COLUMNS: ColumnConfig<InvoiceVat>[] = [
   },
 ];
 
-export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
+export function HoaDonVatTable({
+  filters,
+  enabled = true,
+}: HoaDonVatTableProps) {
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<number | null>(
     null
   );
@@ -595,7 +601,12 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
     [page, limit, debouncedSearch, effectiveFilters, sortBy, sortDir, advancedSearch]
   );
 
-  const { data, isLoading } = useInvoicesVat(queryParams);
+  const { data, isLoading: isListLoading } = useInvoicesVat(queryParams, {
+    enabled,
+  });
+  // React Query v5: query đang tắt thì isLoading = false → vẫn hiện "Đang tải..."
+  // trong lúc chờ bộ lọc, tránh nháy "Không có dữ liệu".
+  const isLoading = isListLoading || !enabled;
 
   // Tổng các cột VAT của TOÀN BỘ hóa đơn match filter — không phụ thuộc page/limit/sort.
   const totalsParams = useMemo(() => {
@@ -603,7 +614,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
       queryParams as any;
     return rest;
   }, [queryParams]);
-  const { data: totals } = useInvoicesVatTotals(totalsParams);
+  const { data: totals } = useInvoicesVatTotals(totalsParams, { enabled });
 
   const invoices = data?.data || [];
   const total = data?.total ?? 0;
@@ -779,7 +790,8 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
         : EXPORT_VAT_DETAIL_COLUMNS.map((c) => c.key)
     );
 
-  const colSpan = visibleColumns.length + 2;
+  // checkbox + cột icon cảnh báo + cột thao tác
+  const colSpan = visibleColumns.length + 3;
 
   const renderTotalCell = (key: string): React.ReactNode => {
     if (!totals) return null;
@@ -1088,6 +1100,8 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                     className="cursor-pointer accent-brand"
                   />
                 </th>
+                {/* Cột ngầm "Cảnh báo hóa đơn" — luôn giữ chỗ để không thụt mã hóa đơn */}
+                <th className="w-8 px-2 py-2.5" />
                 {visibleColumns.map((col) => (
                   <th
                     key={col.key}
@@ -1121,6 +1135,7 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
               {hasTotalRow && (
                 <tr className="bg-gray-50/60 border-b">
                   <td className="px-4 py-2.5 sticky left-0 bg-gray-50/60" />
+                  <td className="w-8 px-2 py-2.5" />
                   {visibleColumns.map((col) => (
                     <td
                       key={col.key}
@@ -1176,6 +1191,15 @@ export function HoaDonVatTable({ filters }: HoaDonVatTableProps) {
                           onChange={() => toggleSelect(invoice.id)}
                     className="cursor-pointer accent-brand"
                         />
+                      </td>
+                      {/* Cột ngầm "Cảnh báo hóa đơn": lệch giá, lệch SL, hủy còn giao hàng, phí ship, hàng lạnh */}
+                      <td
+                        className={`w-8 px-2 py-2.5 text-center ${
+                          expandedInvoiceId === invoice.id
+                            ? "border-t-2 border-brand"
+                            : ""
+                        }`}>
+                        <InvoiceAlertIcons invoice={invoice} />
                       </td>
                       {visibleColumns.map((col) => (
                         <td

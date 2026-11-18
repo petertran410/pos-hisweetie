@@ -17,6 +17,7 @@ import {
 } from "@/components/reports/analytics/shared/AnalyticsTable";
 import { DatePickerInput } from "@/components/ui/DatePickerInput";
 import { BLANK_LABEL } from "@/components/reports/analytics/analyticsFormat";
+import { formatDate, formatNumber } from "@/lib/utils";
 
 // Phần dùng chung của các trang Kế Toán: định dạng số (#,0 / #,0.0 như Power BI),
 // bảng có phân trang + sắp xếp, xuất Excel, bộ lọc Chi Nhánh / Ngày.
@@ -26,7 +27,7 @@ export function fmtInt(v: unknown): string {
   if (v === null || v === undefined || v === "") return "";
   const n = Number(v);
   if (!Number.isFinite(n)) return "";
-  return Math.round(n).toLocaleString("vi-VN");
+  return formatNumber(Math.round(n));
 }
 
 /** "#,0.0". */
@@ -34,9 +35,9 @@ export function fmtDec1(v: unknown): string {
   if (v === null || v === undefined || v === "") return "";
   const n = Number(v);
   if (!Number.isFinite(n)) return "";
-  return n.toLocaleString("vi-VN", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
+  return formatNumber(n, "en-US", {
+    min: 1,
+    max: 1,
   });
 }
 
@@ -152,11 +153,9 @@ export function PagedTable<T>({
           className="flex items-center justify-end gap-2 text-[12px]"
           style={{ color: "var(--dt-text-muted)" }}>
           <span>
-            Dòng {(cur * pageSize + 1).toLocaleString("vi-VN")}–
-            {Math.min((cur + 1) * pageSize, sorted.length).toLocaleString(
-              "vi-VN",
-            )}{" "}
-            / {sorted.length.toLocaleString("vi-VN")}
+            Dòng {formatNumber(cur * pageSize + 1)}–
+            {formatNumber(Math.min((cur + 1) * pageSize, sorted.length))} /{" "}
+            {formatNumber(sorted.length)}
           </span>
           <button
             type="button"
@@ -168,7 +167,7 @@ export function PagedTable<T>({
             <ChevronLeft className="w-3.5 h-3.5" />
           </button>
           <span>
-            Trang {cur + 1}/{pages}
+            Trang {formatNumber(cur + 1)}/{formatNumber(pages)}
           </span>
           <button
             type="button"
@@ -388,7 +387,7 @@ export function UpdatedAt({ at }: { at?: string }) {
     <div
       className="text-[11.5px] text-right"
       style={{ color: "var(--dt-text-muted)" }}>
-      Dữ liệu cập nhật vào lúc {new Date(at).toLocaleString("vi-VN")}
+      Dữ liệu cập nhật vào lúc {formatDate(at)}
     </div>
   );
 }

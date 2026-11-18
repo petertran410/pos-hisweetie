@@ -4,7 +4,19 @@ import { useQuery } from "@tanstack/react-query";
 import { invoicesApi } from "@/lib/api/invoices";
 import { returnOrdersApi } from "@/lib/api/return-orders";
 import { formatCurrency } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { Receipt } from "lucide-react";
+import {
+  DateCell,
+  MoneyChange,
+  StatusPill,
+  TabEmpty,
+  TabLoading,
+  TabPagination,
+  TabTable,
+  Td,
+  Th,
+  Tr,
+} from "./CustomerTabUI";
 import { useMemo, useState } from "react";
 import { DocumentPreviewModal } from "../shared/DocumentPreviewModal";
 
@@ -127,7 +139,7 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
 
   const isLoading = invoicesLoading || returnsLoading;
   const [page, setPage] = useState(1);
-  const limit = 5;
+  const limit = 9;
   const [preview, setPreview] = useState<{
     type: "invoice" | "return-order";
     id: number;
@@ -186,160 +198,89 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
   const totalPages = Math.ceil(timeline.length / limit);
   const paginatedItems = timeline.slice((page - 1) * limit, page * limit);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-brand" />
-      </div>
-    );
-  }
+  if (isLoading) return <TabLoading />;
 
   if (timeline.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
-        Chưa có lịch sử bán hàng/trả hàng
-      </div>
+      <TabEmpty
+        icon={Receipt}
+        title="Chưa có lịch sử bán hàng/trả hàng"
+        description="Hóa đơn và phiếu trả hàng của khách sẽ hiện ở đây."
+      />
     );
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
+    <>
+      <TabTable
+        footer={
+          <TabPagination
+            page={page}
+            totalPages={totalPages}
+            total={timeline.length}
+            unit="bản ghi"
+            onChange={setPage}
+          />
+        }>
         <thead>
-          <tr className="border-b bg-gray-50">
-            <th className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
-              Loại
-            </th>
-            <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
-              Mã phiếu
-            </th>
-            <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
-              Thời gian
-            </th>
-            <th className="px-2 py-2 lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
-              Người thực hiện
-            </th>
-            <th className="px-2 py-2 hidden lg:block lg:px-4 lg:py-3 text-left text-xs lg:text-sm font-medium">
-              Chi nhánh
-            </th>
-            <th className="px-2 py-2 lg:px-4 lg:py-3 text-right text-xs lg:text-sm font-medium">
-              Giá trị
-            </th>
-            {/* <th className="px-4 py-3 text-center text-sm font-medium">
-              Trạng thái
-            </th> */}
+          <tr>
+            <Th className="hidden md:table-cell">Loại</Th>
+            <Th>Mã phiếu</Th>
+            <Th>Thời gian</Th>
+            <Th>Người thực hiện</Th>
+            <Th className="hidden md:table-cell">Chi nhánh</Th>
+            <Th align="right">Giá trị</Th>
           </tr>
         </thead>
         <tbody>
           {paginatedItems.map((item) => (
-            <tr
-              key={`${item.type}-${item.id}`}
-              className="border-b hover:bg-gray-50">
-              <td className="hidden lg:table-cell px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
+            <Tr key={`${item.type}-${item.id}`}>
+              <Td className="hidden md:table-cell">
                 {item.type === "invoice" ? (
-                  <span className="px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700">
+                  <StatusPill colorClass="bg-blue-50 text-blue-700">
                     Bán hàng
-                  </span>
+                  </StatusPill>
                 ) : (
-                  <span className="px-2 py-1 rounded text-xs font-medium bg-orange-50 text-orange-700">
+                  <StatusPill colorClass="bg-orange-50 text-orange-700">
                     Trả hàng
-                  </span>
+                  </StatusPill>
                 )}
-              </td>
-
-              <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
+              </Td>
+              <Td>
                 {item.code ? (
-                  item.type === "invoice" ? (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPreview({
-                          type: "invoice",
-                          id: item.id,
-                          code: item.code,
-                        });
-                      }}
-                      className="text-xs lg:text-sm font-medium text-brand hover:underline">
-                      {item.code}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPreview({
-                          type: "return-order",
-                          id: item.id,
-                          code: item.code,
-                        });
-                      }}
-                      className="text-xs lg:text-sm font-medium text-brand hover:underline">
-                      {item.code}
-                    </button>
-                  )
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPreview({
+                        type:
+                          item.type === "invoice" ? "invoice" : "return-order",
+                        id: item.id,
+                        code: item.code,
+                      });
+                    }}
+                    className="font-medium text-brand hover:underline">
+                    {item.code}
+                  </button>
                 ) : (
-                  <span>-</span>
+                  "—"
                 )}
-                {/* <span className="text-blue-600 hover:underline cursor-pointer">
-                  {item.code}
-                </span> */}
-              </td>
-              <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
-                {new Date(item.date).toLocaleString("vi-VN")}
-              </td>
-              <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm">
-                {item.sellerName}
-              </td>
-              <td className="px-2 py-2 hidden lg:block lg:px-4 lg:py-3 text-xs lg:text-sm">
-                {item.branchName}
-              </td>
-              <td className="px-2 py-2 lg:px-4 lg:py-3 text-xs lg:text-sm text-right">
-                {item.type === "invoice" ? (
-                  <span className="text-red-600 font-medium">
-                    +{formatCurrency(item.totalAmount)}
-                  </span>
-                ) : (
-                  <span className="text-green-600 font-medium">
-                    -{formatCurrency(item.totalAmount)}
-                  </span>
-                )}
-              </td>
-              {/* <td className="px-4 py-3 text-center">
-                <span
-                  className={`px-2 py-1 rounded text-xs font-medium ${item.statusColor}`}>
-                  {item.statusLabel}
-                </span>
-              </td> */}
-            </tr>
+              </Td>
+              <Td>
+                <DateCell value={item.date} />
+              </Td>
+              <Td>{item.sellerName}</Td>
+              <Td className="hidden md:table-cell">{item.branchName}</Td>
+              <Td align="right">
+                <MoneyChange
+                  direction={item.type === "invoice" ? "increase" : "decrease"}
+                  formatted={formatCurrency(item.totalAmount)}
+                />
+              </Td>
+            </Tr>
           ))}
         </tbody>
-      </table>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t">
-          <div className="text-sm text-gray-600">
-            Tổng: {timeline.length} bản ghi
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage(Math.max(1, page - 1))}
-              disabled={page === 1}
-              className="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-50">
-              Trước
-            </button>
-            <span className="text-sm">
-              {page} / {totalPages}
-            </span>
-            <button
-              onClick={() => setPage(Math.min(totalPages, page + 1))}
-              disabled={page >= totalPages}
-              className="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-50">
-              Sau
-            </button>
-          </div>
-        </div>
-      )}
+      </TabTable>
 
       {preview && (
         <DocumentPreviewModal
@@ -349,6 +290,6 @@ export function CustomerInvoicesTab({ customerId }: CustomerInvoicesTabProps) {
           onClose={() => setPreview(null)}
         />
       )}
-    </div>
+    </>
   );
 }

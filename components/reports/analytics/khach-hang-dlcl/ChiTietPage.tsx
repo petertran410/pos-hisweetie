@@ -25,6 +25,7 @@ import {
   DlclNote,
   DlclPeriodBadge,
 } from "./DlclPageFrame";
+import { formatNumber } from "@/lib/utils";
 
 const COLUMN_OPTIONS = [
   { key: "month" as const, label: "Theo tháng" },
@@ -49,7 +50,7 @@ const TYPE_COLUMNS: AnalyticsColumn<CustomerTypeRow>[] = [
     format: (v) =>
       v === null || v === undefined
         ? ""
-        : Number(v).toLocaleString("vi-VN", { maximumFractionDigits: 2 }),
+        : formatNumber(Number(v), "en-US", { max: 2 }),
   },
   { key: "arpc", label: "ARPC", align: "right", format: num },
   {

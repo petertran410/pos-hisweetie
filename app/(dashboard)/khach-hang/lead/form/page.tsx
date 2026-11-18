@@ -3,10 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Inbox, Pencil, Plus, Share2, Trash2 } from "lucide-react";
+import { ArrowLeft, Inbox, Pencil, Plus, QrCode, Share2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { LeadFormEditor } from "@/components/lead-forms/LeadFormEditor";
+import { LeadFormQrModal } from "@/components/lead-forms/LeadFormQrModal";
 import { LeadFormShareModal } from "@/components/lead-forms/LeadFormShareModal";
 import { LeadFormSubmissionsModal } from "@/components/lead-forms/LeadFormSubmissionsModal";
 import { leadFormsApi } from "@/lib/api/leadForms";
@@ -21,6 +22,8 @@ export default function LeadFormsPage() {
   const [editing, setEditing] = useState<LeadForm | "new" | null>(null);
   const [sharing, setSharing] = useState<LeadForm | null>(null);
   const [viewing, setViewing] = useState<LeadForm | null>(null);
+  const [qrOpen, setQrOpen] = useState(false);
+  const qrTarget = forms?.find((f) => f.isQrTarget) ?? null;
 
   const toggle = useMutation({
     mutationFn: (f: LeadForm) => leadFormsApi.update(f.id, { isActive: !f.isActive }),
@@ -30,6 +33,31 @@ export default function LeadFormsPage() {
     },
     onError: (e: Error) => toast.error(e.message || "Không đổi được trạng thái"),
   });
+  // QR chung: chỉ 1 form được gắn — gắn form khác thì form đang gắn tự bỏ (backend xử lý)
+  const qr = useMutation({
+    mutationFn: ({ f, on }: { f: LeadForm; on: boolean }) => leadFormsApi.setQrTarget(f.id, on),
+    onSuccess: (_, { f, on }) => {
+      queryClient.invalidateQueries({ queryKey: ["leadForms"] });
+      toast.success(on ? `QR chung đã trỏ tới "${f.name}"` : `Đã bỏ gắn QR chung khỏi "${f.name}"`);
+    },
+    onError: (e: Error) => toast.error(e.message || "Không đổi được QR chung"),
+  });
+  const toggleQr = async (f: LeadForm) => {
+    if (f.isQrTarget) {
+      const ok = await confirmAction(`Bỏ gắn QR chung khỏi "${f.name}"? Khách quét QR sẽ thấy “Form tạm đóng”.`, {
+        title: "QR chung",
+        confirmText: "Bỏ gắn",
+      });
+      if (ok) qr.mutate({ f, on: false });
+      return;
+    }
+    const msg = qrTarget
+      ? `Chuyển QR chung từ "${qrTarget.name}" sang "${f.name}"?`
+      : `Gắn QR chung vào "${f.name}"?`;
+    const warn = f.isActive ? "" : " Form này đang tắt — khách quét sẽ thấy “Form tạm đóng” cho tới khi mở form.";
+    if (await confirmAction(msg + warn, { title: "QR chung", confirmText: "Gắn" })) qr.mutate({ f, on: true });
+  };
+
   const remove = useMutation({
     mutationFn: (f: LeadForm) => leadFormsApi.remove(f.id),
     onSuccess: () => {
@@ -52,8 +80,16 @@ export default function LeadFormsPage() {
             </Link>
             <h1 className="text-lg font-semibold">Form thu thập lead</h1>
             <button
+              onClick={() => setQrOpen(true)}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50"
+              title="QR chung leadform.hisweetievietnam.com">
+              <QrCode className="h-4 w-4 text-brand" />
+              QR chung
+              <span className="text-gray-500">→ {qrTarget ? qrTarget.name : "chưa gắn"}</span>
+            </button>
+            <button
               onClick={() => setEditing("new")}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white">
+              className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white">
               <Plus className="h-4 w-4" /> Tạo form
             </button>
           </div>
@@ -66,6 +102,9 @@ export default function LeadFormsPage() {
                   <th className={th}>Nguồn · Kênh</th>
                   <th className={th}>Lượt gửi</th>
                   <th className={th}>Đang mở</th>
+                  <th className={th} title="Form khách vào khi quét QR chung leadform.hisweetievietnam.com — chỉ 1 form">
+                    QR chung
+                  </th>
                   <th className={th}>Ngày tạo</th>
                   <th className={th} />
                 </tr>
@@ -73,14 +112,14 @@ export default function LeadFormsPage() {
               <tbody>
                 {isLoading && (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-gray-500">
+                    <td colSpan={8} className="py-8 text-center text-gray-500">
                       Đang tải…
                     </td>
                   </tr>
                 )}
                 {forms?.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-gray-500">
+                    <td colSpan={8} className="py-8 text-center text-gray-500">
                       Chưa có form nào — bấm “Tạo form” để bắt đầu
                     </td>
                   </tr>
@@ -121,6 +160,19 @@ export default function LeadFormsPage() {
                         />
                       </button>
                     </td>
+                    <td className={td}>
+                      <label className="inline-flex cursor-pointer items-center gap-1.5">
+                        <input
+                          type="checkbox"
+                          checked={f.isQrTarget}
+                          disabled={qr.isPending}
+                          onChange={() => toggleQr(f)}
+                          aria-label={`Gắn QR chung vào form ${f.name}`}
+                          className="h-4 w-4 cursor-pointer accent-brand"
+                        />
+                        {f.isQrTarget && !f.isActive && <span className="text-xs text-amber-700">Form đang tắt</span>}
+                      </label>
+                    </td>
                     <td className={`${td} text-gray-600`}>
                       {new Date(f.createdAt).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" })}
                     </td>
@@ -159,6 +211,7 @@ export default function LeadFormsPage() {
       {editing && <LeadFormEditor form={editing === "new" ? undefined : editing} onClose={() => setEditing(null)} />}
       {sharing && <LeadFormShareModal form={sharing} onClose={() => setSharing(null)} />}
       {viewing && <LeadFormSubmissionsModal form={viewing} onClose={() => setViewing(null)} />}
+      {qrOpen && <LeadFormQrModal target={qrTarget} onClose={() => setQrOpen(false)} />}
     </PagePermissionGuard>
   );
 }

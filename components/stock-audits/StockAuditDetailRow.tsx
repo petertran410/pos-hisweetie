@@ -8,10 +8,8 @@ import {
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { StockAudit } from "@/lib/types/stock-audit";
 import { StockAuditForm } from "./StockAuditForm";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, formatNumber } from "@/lib/utils";
 import { CodeLink } from "@/components/shared/CodeLink";
-
-const formatMoney = (n: number) => n.toLocaleString("vi-VN") + " đ";
 
 interface Props {
   audit: StockAudit;
@@ -23,6 +21,8 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
   const completeAudit = useCompleteStockAudit();
   const cancelAudit = useCancelStockAudit();
   const canUpdate = usePermission("stock_audits", "update");
+  // Giá trị lệch = SL lệch × giá vốn → ẩn khi thiếu quyền xem giá vốn.
+  const canViewCostPrice = usePermission("products", "view_cost_price");
   const [showEditForm, setShowEditForm] = useState(false);
 
   const isDraft = audit.status === 1;
@@ -143,7 +143,9 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                     <th className="px-3 py-2 text-right">Tồn kho hiện tại</th>
                     <th className="px-3 py-2 text-right">Tồn kho thực tế</th>
                     <th className="px-3 py-2 text-right">Số lượng lệch</th>
-                    <th className="px-3 py-2 text-right">Giá trị lệch tổng</th>
+                    {canViewCostPrice && (
+                      <th className="px-3 py-2 text-right">Giá trị lệch tổng</th>
+                    )}
                     <th className="px-3 py-2 text-left">Ghi chú</th>
                   </tr>
                 </thead>
@@ -165,10 +167,14 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                           {d.unit || "-"}
                         </td>
                         <td className="px-3 py-2 text-right">
-                          {Number(d.systemQuantity).toLocaleString()}
+                          {formatNumber(Number(d.systemQuantity), "en-US", {
+                            max: 3,
+                          })}
                         </td>
                         <td className="px-3 py-2 text-right font-medium">
-                          {Number(d.actualQuantity).toLocaleString()}
+                          {formatNumber(Number(d.actualQuantity), "en-US", {
+                            max: 3,
+                          })}
                         </td>
                         <td
                           className={`px-3 py-2 text-right font-medium ${
@@ -179,19 +185,21 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                                 : ""
                           }`}>
                           {diff > 0
-                            ? `+${diff.toLocaleString()}`
-                            : diff.toLocaleString()}
+                            ? `+${formatNumber(diff, "en-US", { max: 3 })}`
+                            : formatNumber(diff, "en-US", { max: 3 })}
                         </td>
-                        <td
-                          className={`px-3 py-2 text-right ${
-                            diffValue < 0
-                              ? "text-red-600"
-                              : diffValue > 0
-                                ? "text-green-600"
-                                : ""
-                          }`}>
-                          {diffValue !== 0 ? formatCurrency(diffValue) : "-"}
-                        </td>
+                        {canViewCostPrice && (
+                          <td
+                            className={`px-3 py-2 text-right ${
+                              diffValue < 0
+                                ? "text-red-600"
+                                : diffValue > 0
+                                  ? "text-green-600"
+                                  : ""
+                            }`}>
+                            {diffValue !== 0 ? formatCurrency(diffValue) : "-"}
+                          </td>
+                        )}
                         <td className="px-3 py-2 text-gray-500">
                           {d.note || "-"}
                         </td>
@@ -207,14 +215,14 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                     <td></td>
                     <td></td>
                     <td className={`px-3 py-2 text-right text-brand`}>
-                      {totalSystemQuantityValue > 0
-                        ? `${totalSystemQuantityValue.toLocaleString()}`
-                        : totalSystemQuantityValue.toLocaleString()}
+                      {formatNumber(totalSystemQuantityValue, "en-US", {
+                        max: 3,
+                      })}
                     </td>
                     <td className={`px-3 py-2 text-right text-green-600`}>
-                      {totalActualQuantityValue > 0
-                        ? `${totalActualQuantityValue.toLocaleString()}`
-                        : totalActualQuantityValue.toLocaleString()}
+                      {formatNumber(totalActualQuantityValue, "en-US", {
+                        max: 3,
+                      })}
                     </td>
                     <td
                       className={`px-3 py-2 text-right ${
@@ -225,21 +233,23 @@ export function StockAuditDetailRow({ audit, colSpan }: Props) {
                             : ""
                       }`}>
                       {totalDiff > 0
-                        ? `+${totalDiff.toLocaleString()}`
-                        : totalDiff.toLocaleString()}
+                        ? `+${formatNumber(totalDiff, "en-US", { max: 3 })}`
+                        : formatNumber(totalDiff, "en-US", { max: 3 })}
                     </td>
-                    <td
-                      className={`px-3 py-2 text-right ${
-                        totalDiffValue < 0
-                          ? "text-red-600"
-                          : totalDiffValue > 0
-                            ? "text-green-600"
-                            : ""
-                      }`}>
-                      {totalDiffValue !== 0
-                        ? formatCurrency(totalDiffValue)
-                        : "-"}
-                    </td>
+                    {canViewCostPrice && (
+                      <td
+                        className={`px-3 py-2 text-right ${
+                          totalDiffValue < 0
+                            ? "text-red-600"
+                            : totalDiffValue > 0
+                              ? "text-green-600"
+                              : ""
+                        }`}>
+                        {totalDiffValue !== 0
+                          ? formatCurrency(totalDiffValue)
+                          : "-"}
+                      </td>
+                    )}
                     <td></td>
                   </tr>
                 </tfoot>

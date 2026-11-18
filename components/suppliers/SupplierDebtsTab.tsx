@@ -206,7 +206,7 @@ export function SupplierDebtsTab({
 
                 return (
                   <tr
-                    key={`${item.type}-${item.id}`}
+                    key={`${item.type}-${item.id}-${item.receiptId ?? ""}`}
                     className="border-b hover:bg-gray-50">
                     <td className="px-4 py-3">
                       {isPurchase ? (

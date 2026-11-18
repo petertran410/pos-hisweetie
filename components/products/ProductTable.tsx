@@ -5,6 +5,7 @@ import { useProducts } from "@/lib/hooks/useProducts";
 import { useOrdersPendingSummary } from "@/lib/hooks/useOrders";
 import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
 import { useConsignmentSummary } from "@/lib/hooks/useConsignments";
+import { useTransfersInTransitSummary } from "@/lib/hooks/useTransfers";
 import { useBranchStore } from "@/lib/store/branch";
 import {
   Plus,
@@ -24,6 +25,7 @@ import { ManufacturingProductForm } from "./ManufacturingProductForm";
 import { ProductCustomerOrdersModal } from "./ProductCustomerOrdersModal";
 import { ProductSupplierOrdersModal } from "./ProductSupplierOrdersModal";
 import { ProductConsignmentsModal } from "./ProductConsignmentsModal";
+import { ProductInTransitModal } from "./ProductInTransitModal";
 import { ProductExportModal } from "./ProductExportModal";
 import { BulkCargoTypeModal } from "./BulkCargoTypeModal";
 import { usePermission } from "@/lib/hooks/usePermissions";
@@ -86,6 +88,8 @@ interface ProductColumnCtx {
   onOpenSupplier: (product: Product) => void;
   consignmentMap: Record<string | number, number>;
   onOpenConsignment: (product: Product) => void;
+  inTransitMap: Record<string | number, number>;
+  onOpenInTransit: (product: Product) => void;
 }
 
 // Số lượng bục rách / cận date theo chi nhánh đang chọn (không chọn → cộng tất cả).
@@ -303,6 +307,31 @@ const DEFAULT_COLUMNS: ColumnConfig<Product, ProductColumnCtx>[] = [
           onClick={(e) => {
             e.stopPropagation();
             ctx?.onOpenSupplier(product);
+          }}
+          className="text-brand hover:underline font-medium">
+          {display}
+        </button>
+      );
+    },
+  },
+  {
+    // Phiếu chuyển hàng Đang chuyển tới chi nhánh đang chọn
+    key: "inTransit",
+    label: "Đang đi đường",
+    visible: false,
+    width: "110px",
+    render: (product, ctx) => {
+      const total = ctx?.inTransitMap?.[product.id] ?? 0;
+      const display = total.toLocaleString();
+      if (total <= 0) {
+        return <span className="text-gray-500">{display}</span>;
+      }
+      return (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            ctx?.onOpenInTransit(product);
           }}
           className="text-brand hover:underline font-medium">
           {display}
@@ -530,7 +559,7 @@ export function ProductsTable({
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  const products = data?.data || [];
+  const products = useMemo(() => data?.data || [], [data]);
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / limit) || 1;
 
@@ -603,7 +632,28 @@ export function ProductsTable({
   );
   const consignmentMap = consignmentSummary || {};
 
+  // Chỉ fetch summary "Đang đi đường" khi cột đang hiển thị, gom theo trang hiện tại.
+  const isInTransitColumnVisible = useMemo(
+    () => visibleColumns.some((c) => c.key === "inTransit"),
+    [visibleColumns]
+  );
+
+  const productIdsForInTransit = useMemo(
+    () => (isInTransitColumnVisible ? products.map((p) => p.id) : []),
+    [isInTransitColumnVisible, products]
+  );
+
+  const { data: inTransitSummary } = useTransfersInTransitSummary(
+    productIdsForInTransit,
+    selectedBranch?.id,
+    { silentForbidden: true }
+  );
+  const inTransitMap = inTransitSummary || {};
+
   const [pendingModalProduct, setPendingModalProduct] =
+    useState<Product | null>(null);
+
+  const [inTransitModalProduct, setInTransitModalProduct] =
     useState<Product | null>(null);
 
   const [supplierModalProduct, setSupplierModalProduct] =
@@ -675,7 +725,7 @@ export function ProductsTable({
           <input
             type="text"
             placeholder="Theo mã, tên hàng"
-            className="border rounded-lg px-3 py-2 w-64 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+            className="border rounded-lg px-3 py-2 w-80 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -847,6 +897,8 @@ export function ProductsTable({
                           consignmentMap,
                           onOpenConsignment: (p) =>
                             setConsignmentModalProduct(p),
+                          inTransitMap,
+                          onOpenInTransit: (p) => setInTransitModalProduct(p),
                         })}
                       </td>
                     ))}
@@ -991,6 +1043,17 @@ export function ProductsTable({
           branchId={selectedBranch?.id}
           branchName={selectedBranch?.name}
           onClose={() => setConsignmentModalProduct(null)}
+        />
+      )}
+
+      {inTransitModalProduct && (
+        <ProductInTransitModal
+          productId={inTransitModalProduct.id}
+          productName={inTransitModalProduct.name}
+          productCode={inTransitModalProduct.code}
+          branchId={selectedBranch?.id}
+          branchName={selectedBranch?.name}
+          onClose={() => setInTransitModalProduct(null)}
         />
       )}
 

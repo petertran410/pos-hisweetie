@@ -31,6 +31,31 @@ const IDX: Record<AnalyticsMetric, number> = {
 };
 const NULL_TOKEN = "__null__";
 
+type PivotSpec = Pick<PivotParams, "rows"> &
+  Partial<Pick<PivotParams, "cols" | "growth" | "detail">>;
+
+/** Tham số gửi API của <KdPivot> (cùng mặc định → cùng khoá cache). */
+function pivotParams(p: PivotSpec): PivotParams {
+  return {
+    rows: p.rows,
+    cols: p.cols ?? "month",
+    growth: p.growth ?? "none",
+    detail: p.detail,
+  };
+}
+
+/**
+ * Gửi sớm request của 1 bảng <KdPivot> — song song với API chính của trang thay vì
+ * đợi dữ liệu chính về rồi bảng mới hiện ra và mới gọi. Cùng khoá nên bảng dùng lại.
+ */
+export function usePrefetchKdPivot(
+  filters: KdFilters,
+  spec: PivotSpec,
+  enabled = true,
+) {
+  useKdPivot(filters, pivotParams(spec), enabled);
+}
+
 interface Props {
   filters: KdFilters;
   rows: PivotDim[];
@@ -45,8 +70,8 @@ interface Props {
 }
 
 export function KdPivot(props: Props) {
-  const { filters, rows, cols = "month", growth = "none", detail } = props;
-  const params: PivotParams = { rows, cols, growth, detail };
+  const { filters } = props;
+  const params = pivotParams(props);
   const { data, isLoading, error, isFetching } = useKdPivot(filters, params);
 
   if (error)

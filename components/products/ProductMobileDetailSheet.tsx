@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import { useProduct } from "@/lib/hooks/useProducts";
 import { useOrderSuppliersConfirmedSummary } from "@/lib/hooks/useOrderSuppliers";
 import { useBranchStore } from "@/lib/store/branch";
-import { formatCurrency } from "@/lib/utils";
+import { usePermission } from "@/lib/hooks/usePermissions";
+import { formatCurrency, formatNumber } from "@/lib/utils";
 import { CodeLink } from "@/components/shared/CodeLink";
 import {
   X,
@@ -93,7 +94,7 @@ function MobileSupplierOrderCell({
       type="button"
       onClick={() => onOpen(branch)}
       className="text-xs font-medium text-brand hover:underline">
-      {total.toLocaleString()}
+      {formatNumber(total, "en-US", { max: 3 })}
     </button>
   );
 }
@@ -109,6 +110,9 @@ export function ProductMobileDetailSheet({
     product ? { type: "product", id: product.id, code: product.code, name: product.name } : null
   );
   const { selectedBranch } = useBranchStore();
+  // Thiếu quyền giá vốn → BE bỏ `cost` (NaN nếu hiển thị) → ẩn các ô giá vốn,
+  // giống ProductDetailContent bản desktop.
+  const canViewCostPrice = usePermission("products", "view_cost_price");
   const [activeTab, setActiveTab] = useState<
     "info" | "description" | "inventory"
   >("info");
@@ -279,21 +283,25 @@ export function ProductMobileDetailSheet({
                       value={`${formatCurrency(Number(product.basePrice))} đ`}
                       highlight
                     />
-                    <InfoCard
-                      label="Giá vốn"
-                      value={
-                        currentBranchInventory
-                          ? `${formatCurrency(Number(currentBranchInventory.cost))} đ`
-                          : "0 đ"
-                      }
-                    />
+                    {canViewCostPrice && (
+                      <InfoCard
+                        label="Giá vốn"
+                        value={
+                          currentBranchInventory
+                            ? `${formatCurrency(Number(currentBranchInventory.cost))} đ`
+                            : "0 đ"
+                        }
+                      />
+                    )}
                     <InfoCard
                       label="Tồn kho"
                       value={
                         currentBranchInventory
-                          ? Number(
-                              currentBranchInventory.onHand
-                            ).toLocaleString()
+                          ? formatNumber(
+                              Number(currentBranchInventory.onHand),
+                              "en-US",
+                              { max: 3 }
+                            )
                           : "0"
                       }
                       valueColor={
@@ -307,7 +315,7 @@ export function ProductMobileDetailSheet({
                       label="Định mức tồn"
                       value={
                         currentBranchInventory
-                          ? `${Number(currentBranchInventory.minQuality).toLocaleString()} - ${Number(currentBranchInventory.maxQuality).toLocaleString()}`
+                          ? `${formatNumber(Number(currentBranchInventory.minQuality), "en-US", { max: 3 })} - ${formatNumber(Number(currentBranchInventory.maxQuality), "en-US", { max: 3 })}`
                           : "0 - 0"
                       }
                     />
@@ -319,7 +327,7 @@ export function ProductMobileDetailSheet({
                       label="Trọng lượng"
                       value={
                         product.weight
-                          ? `${Number(product.weight).toLocaleString()} ${product.weightUnit || "kg"}`
+                          ? `${formatNumber(Number(product.weight), "en-US", { max: 3 })} ${product.weightUnit || "kg"}`
                           : "-"
                       }
                     />
@@ -388,12 +396,17 @@ export function ProductMobileDetailSheet({
                                     ) : (
                                       "-"
                                     )}{" "}
-                                    | SL: {Number(comp.quantity)}
+                                    | SL:{" "}
+                                    {formatNumber(Number(comp.quantity), "en-US", {
+                                      max: 6,
+                                    })}
                                   </p>
                                 </div>
-                                <span className="text-xs font-medium text-gray-600">
-                                  {cost.toLocaleString()} đ
-                                </span>
+                                {canViewCostPrice && (
+                                  <span className="text-xs font-medium text-gray-600">
+                                    {formatNumber(cost)} đ
+                                  </span>
+                                )}
                               </div>
                             );
                           })}
@@ -453,7 +466,7 @@ export function ProductMobileDetailSheet({
                                 {inv.branchName}
                               </span>
                               <span className="text-sm font-bold text-gray-900">
-                                {onHand.toLocaleString()}
+                                {formatNumber(onHand, "en-US", { max: 3 })}
                               </span>
                             </div>
                             <div className="grid grid-cols-3 gap-2">
@@ -462,7 +475,7 @@ export function ProductMobileDetailSheet({
                                   Hàng tốt
                                 </p>
                                 <p className="text-xs font-medium text-green-600">
-                                  {goodStock.toLocaleString()}
+                                  {formatNumber(goodStock, "en-US", { max: 3 })}
                                 </p>
                               </div>
                               <div>
@@ -471,7 +484,7 @@ export function ProductMobileDetailSheet({
                                 </p>
                                 <p
                                   className={`text-xs font-medium ${damaged > 0 ? "text-red-500" : "text-gray-500"}`}>
-                                  {damaged.toLocaleString()}
+                                  {formatNumber(damaged, "en-US", { max: 3 })}
                                 </p>
                               </div>
                               <div>
@@ -480,7 +493,7 @@ export function ProductMobileDetailSheet({
                                 </p>
                                 <p
                                   className={`text-xs font-medium ${nearExpiry > 0 ? "text-orange-500" : "text-gray-500"}`}>
-                                  {nearExpiry.toLocaleString()}
+                                  {formatNumber(nearExpiry, "en-US", { max: 3 })}
                                 </p>
                               </div>
                               <div>
@@ -493,7 +506,7 @@ export function ProductMobileDetailSheet({
                                       ? "text-purple-600"
                                       : "text-gray-500"
                                   }`}>
-                                  {promoQty.toLocaleString()}
+                                  {formatNumber(promoQty, "en-US", { max: 3 })}
                                 </p>
                               </div>
                               <div>
@@ -514,17 +527,21 @@ export function ProductMobileDetailSheet({
                                   KH đặt
                                 </p>
                                 <p className="text-xs font-medium text-gray-600">
-                                  {Number(inv.reserved).toLocaleString()}
+                                  {formatNumber(Number(inv.reserved), "en-US", {
+                                    max: 3,
+                                  })}
                                 </p>
                               </div>
-                              <div>
-                                <p className="text-[10px] text-gray-400">
-                                  Giá vốn
-                                </p>
-                                <p className="text-xs font-medium text-gray-600">
-                                  {Number(inv.cost).toLocaleString()}
-                                </p>
-                              </div>
+                              {canViewCostPrice && (
+                                <div>
+                                  <p className="text-[10px] text-gray-400">
+                                    Giá vốn
+                                  </p>
+                                  <p className="text-xs font-medium text-gray-600">
+                                    {formatNumber(Number(inv.cost))}
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           </div>
                         );

@@ -1,7 +1,7 @@
 import type { AnalyticsMetric } from "@/lib/api/analytics-reports";
 import type { PivotMeasure } from "@/lib/api/analytics-khach-hang-dlcl";
-import { vi } from "@/lib/dashboard/format";
 import { metricTitle } from "../analyticsFormat";
+import { formatNumber } from "@/lib/utils";
 
 /** Màu "Color for MoM Growth (%)" của Power BI. */
 export function momColor(v: number | null | undefined): string | undefined {
@@ -13,15 +13,15 @@ export function momColor(v: number | null | undefined): string | undefined {
 
 export function pctText(v: number | null | undefined, digits = 2): string {
   if (v === null || v === undefined) return "";
-  return `${(v * 100).toLocaleString("vi-VN", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
+  return `${formatNumber(v * 100, "en-US", {
+    min: digits,
+    max: digits,
   })}%`;
 }
 
 export function numText(v: number | null | undefined): string {
   if (v === null || v === undefined) return "";
-  return vi(v);
+  return formatNumber(Math.round(v));
 }
 
 /** Tên cột của từng measure trong bảng pivot. */

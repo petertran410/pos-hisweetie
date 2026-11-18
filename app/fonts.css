@@ -1,0 +1,17 @@
+/* Font giao diện dùng chung: var(--font-sans) = Inter. File font khai báo ở
+   app/fonts.ts (next/font/local, cùng font-family + unicode-range như Google
+   Fonts). Font dự phòng: Arial chỉnh số đo cho khớp Inter để chữ không nhảy
+   khi font tải xong — đúng thông số next/font/google sinh cho Inter. */
+
+@font-face {
+  font-family: "Inter Fallback";
+  src: local("Arial");
+  ascent-override: 90.44%;
+  descent-override: 22.52%;
+  line-gap-override: 0%;
+  size-adjust: 107.12%;
+}
+
+:root {
+  --font-sans: "Inter", "Inter Fallback", -apple-system, "Segoe UI", sans-serif;
+}

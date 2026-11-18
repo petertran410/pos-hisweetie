@@ -8,6 +8,7 @@ import type {
   MuaHangFilterOptions,
 } from "@/lib/api/analytics-mua-hang";
 import { optionLabel } from "./muaHangFormat";
+import { formatNumber } from "@/lib/utils";
 import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
 
 const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
@@ -74,7 +75,7 @@ export function MuaHangSlicers<F extends Filters>({
         set({ [key]: vals.length ? vals : undefined } as Partial<F>)
       }
       placeholder={placeholder}
-      multiLabel={(n) => `${placeholder.split(":")[0]}: ${n} mục`}
+      multiLabel={(n) => `${placeholder.split(":")[0]}: ${formatNumber(n)} mục`}
     />
   );
 
@@ -161,7 +162,7 @@ export function MuaHangSlicers<F extends Filters>({
           } as Partial<F>)
         }
         placeholder="Khách hàng: Tất cả"
-        multiLabel={(n) => `Khách hàng: ${n} mục`}
+        multiLabel={(n) => `Khách hàng: ${formatNumber(n)} mục`}
       />,
     );
 

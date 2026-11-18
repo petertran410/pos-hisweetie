@@ -8,6 +8,13 @@ import { toast } from "sonner";
 import { packingSlipsApi } from "@/lib/api/packing-slips";
 import { apiClient } from "@/lib/config/api";
 import type { Invoice } from "@/lib/types/invoice";
+import type { Order } from "@/lib/types/order";
+import {
+  PRINT_FONT_FAMILY,
+  printFontCss,
+  printFontFaceCss,
+  waitForPrintFonts,
+} from "@/lib/utils/print-font";
 
 /**
  * Tem giao hàng A6 (105×148mm) — dựng theo mẫu "Tem A6.xlsx".
@@ -41,7 +48,7 @@ const rowMm = (row: number) => (ROW_PT[row - 1] / TOTAL_PT) * CONTENT_MM;
 const LABEL_CSS = `
 .tem-sheet { width: 105mm; height: 148mm; padding: 2mm; box-sizing: border-box;
   overflow: hidden; background: #fff; color: #000;
-  font-family: Arial, Helvetica, sans-serif; }
+  font-family: ${PRINT_FONT_FAMILY}; }
 .tem-table { width: 100%; border-collapse: collapse; table-layout: fixed;
   border: 2px solid #000; }
 .tem-table td { border: 1px solid #000; padding: 0 1.5mm; overflow: hidden;
@@ -103,7 +110,8 @@ function latestPackages(groups: any[][]): number | null {
   return null;
 }
 
-export function buildDefaults(invoice: Invoice, packages: number | null): LabelFields {
+// Đơn đặt hàng có cùng các trường khách / giao hàng / chi nhánh → Đặt xe giao hàng dùng chung
+export function buildDefaults(invoice: Invoice | Order, packages: number | null): LabelFields {
   const inv: any = invoice;
   const customer = inv.customer || {};
   const delivery = inv.delivery || {};
@@ -293,14 +301,16 @@ function printLabelHtml(labelHtml: string) {
   doc.open();
   doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8" /><title></title>
 <style>@page { size: 105mm 148mm; margin: 0; }
-html, body { margin: 0; padding: 0; }${LABEL_CSS}</style></head>
+html, body { margin: 0; padding: 0; }${LABEL_CSS}</style>
+<style>${printFontCss()}</style></head>
 <body>${labelHtml}</body></html>`);
   doc.close();
   const cleanup = () =>
     setTimeout(() => iframe.parentNode?.removeChild(iframe), 100);
-  iframe.onload = () => {
+  iframe.onload = async () => {
     const win = iframe.contentWindow;
     if (!win) return cleanup();
+    await waitForPrintFonts(doc);
     win.focus();
     win.print();
     cleanup();
@@ -376,6 +386,16 @@ export function ShippingLabelA6Modal({
   useLayoutEffect(() => {
     if (sheetRef.current) fitText(sheetRef.current);
   }, [fields]);
+  // Cỡ chữ vừa ô đo bằng font in → đo lại khi Be Vietnam Pro tải xong.
+  useEffect(() => {
+    let alive = true;
+    waitForPrintFonts(document).then(() => {
+      if (alive && sheetRef.current) fitText(sheetRef.current);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [fields]);
 
   const update = (key: keyof LabelFields, value: string) =>
     setFields((prev) => (prev ? { ...prev, [key]: value } : prev));
@@ -445,7 +465,7 @@ export function ShippingLabelA6Modal({
 
             <div className="flex-shrink-0 flex flex-col items-center gap-2">
               <span className="text-xs text-gray-500">Xem trước (A6)</span>
-              <style>{LABEL_CSS}</style>
+              <style>{printFontFaceCss("") + LABEL_CSS}</style>
               <div ref={sheetRef} className="shadow-md border border-gray-200">
                 <LabelSheet f={fields} />
               </div>

@@ -634,7 +634,7 @@ export function RecipeForm({
   if (mode === "edit" && isLoading) {
     return (
       <div
-        className="flex h-full items-center justify-center bg-[#f5fafb]"
+        className="flex h-full items-center justify-center bg-[var(--dt-color-bg-soft)]"
         aria-label="Đang tải công thức"
       >
         <div className="w-full max-w-3xl space-y-4 p-6">
@@ -648,13 +648,13 @@ export function RecipeForm({
 
   if (mode === "edit" && (isError || !existing)) {
     return (
-      <div className="flex h-full items-center justify-center bg-[#f5fafb] p-6">
+      <div className="flex h-full items-center justify-center bg-[var(--dt-color-bg-soft)] p-6">
         <div
           className="max-w-md rounded-xl border bg-white p-8 text-center"
           style={{ borderColor: "var(--dt-border)" }}
         >
           <AlertCircle className="mx-auto h-12 w-12 text-red-500" />
-          <h1 className="mt-4 text-xl font-semibold text-[#0D3B42]">
+          <h1 className="mt-4 text-xl font-semibold text-brand-dark">
             Không thể mở công thức
           </h1>
           <p className="mt-2 text-sm text-gray-500">
@@ -695,7 +695,7 @@ export function RecipeForm({
   const saving = createRecipe.isPending || updateRecipe.isPending;
 
   return (
-    <div className="h-full min-h-0 overflow-y-auto bg-[#f5fafb] pb-20 md:pb-8">
+    <div className="h-full min-h-0 overflow-y-auto bg-[var(--dt-color-bg-soft)] pb-20 md:pb-8">
       <header
         className="sticky top-0 z-20 border-b bg-white"
         style={{ borderColor: "var(--dt-border)" }}
@@ -836,11 +836,11 @@ export function RecipeForm({
 
       <main className="mx-auto w-full max-w-none p-3 md:p-6">
         {!editable && (
-          <div className="mb-4 flex items-start gap-3 rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-sm text-[#0D3B42]">
+          <div className="mb-4 flex items-start gap-3 rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-sm text-brand-dark">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
             <div>
               <div className="font-semibold">Chế độ chỉ xem</div>
-              <p className="mt-0.5 text-[#3A6B74]">
+              <p className="mt-0.5 text-[color:var(--dt-color-text-secondary)]">
                 Tài khoản của bạn chưa có quyền chỉnh sửa công thức này.
               </p>
             </div>
@@ -1073,7 +1073,7 @@ export function RecipeForm({
                     <div
                       key={`${row.id || "new"}-${index}`}
                       data-ingredient-index={index}
-                      className={`rounded-xl border bg-[#fbfefe] p-3 transition md:p-4 ${draggingIngredient === index ? "border-brand bg-cyan-50 shadow-lg ring-2 ring-brand/20" : ""}`}
+                      className={`rounded-xl border bg-[#fbfefe] dark:bg-[rgb(var(--g-50))] p-3 transition md:p-4 ${draggingIngredient === index ? "border-brand bg-cyan-50 shadow-lg ring-2 ring-brand/20" : ""}`}
                       style={{
                         borderColor:
                           draggingIngredient === index
@@ -1275,7 +1275,7 @@ export function RecipeForm({
                             }
                           >
                             <div
-                              className="flex h-[42px] items-center rounded-lg border bg-gray-50 px-3 font-mono text-sm font-semibold text-[#0D3B42]"
+                              className="flex h-[42px] items-center rounded-lg border bg-gray-50 px-3 font-mono text-sm font-semibold text-brand-dark"
                               style={{ borderColor: "var(--dt-border)" }}
                             >
                               {money(ingredientUnitCost(row))}
@@ -1290,7 +1290,7 @@ export function RecipeForm({
                             }
                           >
                             <div
-                              className="flex h-[42px] items-center rounded-lg border bg-[#E8F4F5] px-3 font-mono text-sm font-semibold text-[#0D3B42]"
+                              className="flex h-[42px] items-center rounded-lg border bg-cyan-bg px-3 font-mono text-sm font-semibold text-brand-dark"
                               style={{ borderColor: "var(--dt-border)" }}
                             >
                               {money(ingredientLineCost(row))}
@@ -1351,22 +1351,22 @@ export function RecipeForm({
                 })}
                 {canViewCost && (
                   <div
-                    className={`mt-4 flex flex-col gap-2 rounded-xl border bg-[#E8F4F5] px-4 py-3 md:flex-row md:items-center md:justify-between ${mode === "create" ? "" : ""}`}
+                    className={`mt-4 flex flex-col gap-2 rounded-xl border bg-cyan-bg px-4 py-3 md:flex-row md:items-center md:justify-between ${mode === "create" ? "" : ""}`}
                     style={{ borderColor: "var(--dt-border)" }}
                   >
                     <div className="min-w-0">
-                      <div className="text-sm font-medium text-[#3A6B74]">
+                      <div className="text-sm font-medium text-[color:var(--dt-color-text-secondary)]">
                         Tổng giá cost
                       </div>
-                      <div className="mt-0.5 text-xs text-[#3A6B74]">
+                      <div className="mt-0.5 text-xs text-[color:var(--dt-color-text-secondary)]">
                         Tổng định lượng:{" "}
-                        <span className="font-medium text-[#0D3B42]">
+                        <span className="font-medium text-brand-dark">
                           {totalIngredientQuantities(form.ingredients || []) ||
                             "—"}
                         </span>
                       </div>
                     </div>
-                    <div className="font-mono text-xl font-semibold text-[#0D3B42] md:text-right">
+                    <div className="font-mono text-xl font-semibold text-brand-dark md:text-right">
                       {money(totalIngredientCost(form.ingredients || []))}
                     </div>
                   </div>
@@ -1399,7 +1399,7 @@ export function RecipeForm({
                     className="flex gap-3 rounded-xl border p-3 md:p-4"
                     style={{ borderColor: "var(--dt-border)" }}
                   >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e8f4f5] text-sm font-bold text-[#0D3B42]">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-bg text-sm font-bold text-brand-dark">
                       {index + 1}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -1514,7 +1514,7 @@ function Section({
         className="flex items-center justify-between gap-3 border-b px-4 py-3 md:px-5"
         style={{ borderColor: "var(--dt-border)" }}
       >
-        <h2 className="flex items-center gap-2 font-semibold text-[#0D3B42]">
+        <h2 className="flex items-center gap-2 font-semibold text-brand-dark">
           <Icon className="h-5 w-5 text-brand" />
           {title}
         </h2>
@@ -1527,7 +1527,7 @@ function Section({
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p role="alert" className="mt-1 text-xs font-medium text-[#C0392B]">
+    <p role="alert" className="mt-1 text-xs font-medium text-sale">
       {message}
     </p>
   );
@@ -1632,7 +1632,7 @@ function MediaUploadGroup({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-[#0D3B42]">
+        <h3 className="text-sm font-semibold text-brand-dark">
           {label} ({items.length})
         </h3>
         {editable && (
@@ -1668,7 +1668,7 @@ function MediaUploadGroup({
           {items.map(({ file, index }) => (
             <div
               key={`${file.fileUrl}-${index}`}
-              className="group relative overflow-hidden rounded-xl border bg-[#F5FAFB]"
+              className="group relative overflow-hidden rounded-xl border bg-[var(--dt-color-bg-soft)]"
               style={{ borderColor: "var(--dt-border)" }}
             >
               {mediaType === "IMAGE" ? (

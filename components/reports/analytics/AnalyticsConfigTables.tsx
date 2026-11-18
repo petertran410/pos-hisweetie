@@ -14,6 +14,8 @@ import {
   analyticsReportApi,
   type ParentRule,
   type ProductGroupRow,
+  type VisualGroupRule,
+  type VisualGroupRuleInput,
   type SaleTeam,
 } from "@/lib/api/analytics-reports";
 import {
@@ -21,16 +23,21 @@ import {
   useParentPreview,
   useParentRules,
   useProductGroups,
+  useVisualGroupRuleOptions,
+  useVisualGroupRules,
   useSaleTeams,
   useTeamMembers,
 } from "@/lib/hooks/useAnalyticsReports";
 import { AnalyticsSelect } from "@/components/reports/analytics/shared/AnalyticsSelect";
+import { formatNumber, formatNumberInput, parseNumberInput } from "@/lib/utils";
+import { VISUAL_GROUPS } from "./kinh-doanh/kdConstants";
 
 type Tab =
   | "parent"
   | "teams"
   | "members"
   | "groups"
+  | "visual-groups"
   | "kinh-doanh"
   | "khach-hang"
   | "quan-tri"
@@ -59,6 +66,11 @@ const TABS: { key: Tab; label: string; hint: string }[] = [
     key: "groups",
     label: "Nhóm hàng 2026",
     hint: "Mã hàng → Nhóm A–D. Mã chưa có ở đây: hàng tạo sau 01/12/2025 tự vào Nhóm C (thương hiệu) / Nhóm B (thương mại, OEM), còn lại “Chưa Phân Loại”.",
+  },
+  {
+    key: "visual-groups",
+    label: "Nhóm hàng hiển thị",
+    hint: "Quy tắc xếp sản phẩm vào nhóm hiển thị (1.Boduo, 2.Trong nước…) — thay cột tính của Power BI. Xét từ trên xuống theo Thứ tự, sản phẩm khớp quy tắc đầu tiên thì vào nhóm đó; không khớp quy tắc nào → Khác. Ô “bất kỳ” = không xét điều kiện đó. Muốn gán riêng 1 mã / 1 thương hiệu: thêm quy tắc có Thứ tự nhỏ hơn.",
   },
   {
     key: "kinh-doanh",
@@ -137,6 +149,7 @@ export function AnalyticsConfigTables() {
         {tab === "teams" && <TeamsTab />}
         {tab === "members" && <MembersTab />}
         {tab === "groups" && <ProductGroupsTab />}
+        {tab === "visual-groups" && <VisualGroupRulesTab />}
         {tab === "kinh-doanh" && <KinhDoanhConfigPanel />}
         {tab === "khach-hang" && <KhachHangConfigPanel />}
         {tab === "quan-tri" && <QuanTriConfigPanel />}
@@ -235,11 +248,12 @@ function ParentRulesTab() {
     <tr className="bg-[#F4FBFC]">
       <td className="p-2 w-24">
         <input
-          type="number"
+          type="text"
+          inputMode="numeric"
           className={inputCls}
-          value={draft.priority}
+          value={formatNumberInput(String(draft.priority))}
           onChange={(e) =>
-            setDraft({ ...draft, priority: Number(e.target.value) })
+            setDraft({ ...draft, priority: parseNumberInput(e.target.value) })
           }
         />
       </td>
@@ -335,7 +349,7 @@ function ParentRulesTab() {
                   <tr
                     key={r.id}
                     className={`border-t ${r.isActive ? "" : "opacity-50"}`}>
-                    <td className="p-2 dt-mono">{r.priority}</td>
+                    <td className="p-2 dt-mono">{formatNumber(r.priority)}</td>
                     <td className="p-2">
                       {r.matchType === "code"
                         ? "Mã khách là"
@@ -496,11 +510,12 @@ function TeamsTab() {
       </td>
       <td className="p-2 w-24">
         <input
-          type="number"
+          type="text"
+          inputMode="numeric"
           className={inputCls}
-          value={draft.sortOrder}
+          value={formatNumberInput(String(draft.sortOrder))}
           onChange={(e) =>
-            setDraft({ ...draft, sortOrder: Number(e.target.value) })
+            setDraft({ ...draft, sortOrder: parseNumberInput(e.target.value) })
           }
         />
       </td>
@@ -560,8 +575,10 @@ function TeamsTab() {
                   <td className="p-2 dt-mono">{t.code}</td>
                   <td className="p-2 font-medium">{t.name}</td>
                   <td className="p-2">{t.isSale ? "Có" : "Không"}</td>
-                  <td className="p-2 dt-mono">{t.sortOrder}</td>
-                  <td className="p-2 dt-mono">{t._count?.members ?? 0}</td>
+                  <td className="p-2 dt-mono">{formatNumber(t.sortOrder)}</td>
+                  <td className="p-2 dt-mono">
+                    {formatNumber(t._count?.members ?? 0)}
+                  </td>
                   <td className="p-2 text-right whitespace-nowrap">
                     <button
                       type="button"
@@ -719,12 +736,15 @@ function ProductGroupsTab() {
           placeholder="Tìm mã / tên hàng / nhóm…"
         />
         <div className="flex-1" />
-        <input
-          className={`${inputCls} w-36`}
-          value={newCode}
-          onChange={(e) => setNewCode(e.target.value)}
-          placeholder="Mã hàng"
-        />
+        {/* inputCls có w-full → bọc khung rộng cố định để không giãn hết dòng. */}
+        <div className="w-36">
+          <input
+            className={inputCls}
+            value={newCode}
+            onChange={(e) => setNewCode(e.target.value)}
+            placeholder="Mã hàng"
+          />
+        </div>
         <div className="w-40">
           <FilterSearchableSelect
             options={GROUP_OPTIONS}
@@ -805,7 +825,8 @@ function ProductGroupsTab() {
       </div>
       <div className="flex items-center justify-end gap-2 text-[12.5px] text-gray-500">
         <span>
-          {data?.total ?? 0} mã · trang {page}/{totalPages}
+          {formatNumber(data?.total ?? 0)} mã · trang {formatNumber(page)}/
+          {formatNumber(totalPages)}
         </span>
         <button
           type="button"
@@ -821,6 +842,281 @@ function ProductGroupsTab() {
           onClick={() => setPage((p) => p + 1)}>
           Sau
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Quy tắc nhóm hàng hiển thị (1.Boduo…) ────────────────────────────────────
+// Thay cột tính DAX visual_product_group: xét từ trên xuống, khớp quy tắc đầu tiên thì dừng.
+const VISUAL_OPTIONS = [...VISUAL_GROUPS, "Khác"].map((g) => ({
+  value: g,
+  label: g,
+}));
+const SCOPE_OPTIONS = [
+  { value: "sale", label: "Chỉ báo cáo bán hàng" },
+  { value: "purchasing", label: "Chỉ Thu Mua / Chuyển Kho" },
+];
+type RuleCond = "productType" | "origin" | "brand" | "category";
+const COND_COLS: { key: RuleCond; label: string }[] = [
+  { key: "productType", label: "Loại Hàng" },
+  { key: "origin", label: "Nguồn Gốc" },
+  { key: "brand", label: "Thương hiệu" },
+  { key: "category", label: "Danh Mục" },
+];
+const emptyRule = (priority: number): VisualGroupRuleInput => ({
+  priority,
+  productCode: null,
+  productType: null,
+  origin: null,
+  brand: null,
+  category: null,
+  nameContains: null,
+  reportScope: null,
+  visualGroup: VISUAL_OPTIONS[0].value,
+});
+const ANY = <span className="text-gray-300">bất kỳ</span>;
+
+function VisualGroupRulesTab() {
+  const { data: rules = [], isLoading } = useVisualGroupRules();
+  const { data: opts } = useVisualGroupRuleOptions();
+  const [editing, setEditing] = useState<number | "new" | null>(null);
+  const [draft, setDraft] = useState<VisualGroupRuleInput>(emptyRule(10));
+
+  const create = useAnalyticsConfigMutation(
+    (d: VisualGroupRuleInput) => analyticsReportApi.createVisualGroupRule(d),
+    "Đã thêm quy tắc",
+  );
+  const update = useAnalyticsConfigMutation(
+    ({ id, data }: { id: number; data: VisualGroupRuleInput }) =>
+      analyticsReportApi.updateVisualGroupRule(id, data),
+    "Đã lưu quy tắc",
+  );
+  const remove = useAnalyticsConfigMutation(
+    (id: number) => analyticsReportApi.deleteVisualGroupRule(id),
+    "Đã xoá quy tắc",
+  );
+
+  const startNew = () => {
+    const maxPrio = rules.reduce((m, r) => Math.max(m, r.priority), 0);
+    setDraft(emptyRule(maxPrio + 10));
+    setEditing("new");
+  };
+  const startEdit = (r: VisualGroupRule) => {
+    setDraft({
+      priority: r.priority,
+      productCode: r.productCode,
+      productType: r.productType,
+      origin: r.origin,
+      brand: r.brand,
+      category: r.category,
+      nameContains: r.nameContains,
+      reportScope: r.reportScope,
+      visualGroup: r.visualGroup,
+    });
+    setEditing(r.id);
+  };
+  const save = () => {
+    const done = { onSuccess: () => setEditing(null) };
+    if (editing === "new") create.mutate(draft, done);
+    else if (typeof editing === "number")
+      update.mutate({ id: editing, data: draft }, done);
+  };
+  /** Lựa chọn của 1 điều kiện, luôn có giá trị đang chọn (kể cả khi không còn sản phẩm nào). */
+  const condOptions = (k: RuleCond) => {
+    const list = opts?.[k] ?? [];
+    const cur = draft[k];
+    const all =
+      cur && !list.some((v) => v.toLowerCase() === cur.toLowerCase())
+        ? [cur, ...list]
+        : list;
+    return all.map((v) => ({ value: v, label: v }));
+  };
+  const setText = (k: "productCode" | "nameContains", v: string) =>
+    setDraft({ ...draft, [k]: v === "" ? null : v });
+
+  const editRow = (
+    <tr className="bg-[#F4FBFC] align-top">
+      <td className="p-2 w-20">
+        <input
+          type="text"
+          inputMode="numeric"
+          className={inputCls}
+          value={formatNumberInput(String(draft.priority))}
+          onChange={(e) =>
+            setDraft({ ...draft, priority: parseNumberInput(e.target.value) })
+          }
+        />
+      </td>
+      {COND_COLS.map((c) => (
+        <td key={c.key} className="p-2">
+          <AnalyticsSelect
+            options={condOptions(c.key)}
+            value={draft[c.key] ?? ""}
+            onChange={(v) => setDraft({ ...draft, [c.key]: v || null })}
+            clearLabel="(bất kỳ)"
+            placeholder="(bất kỳ)"
+            className="w-full min-w-[130px]"
+          />
+        </td>
+      ))}
+      <td className="p-2">
+        <input
+          className={`${inputCls} min-w-[90px]`}
+          value={draft.nameContains ?? ""}
+          onChange={(e) => setText("nameContains", e.target.value)}
+          placeholder="(bất kỳ)"
+        />
+      </td>
+      <td className="p-2">
+        <input
+          className={`${inputCls} min-w-[90px]`}
+          value={draft.productCode ?? ""}
+          onChange={(e) => setText("productCode", e.target.value)}
+          placeholder="(bất kỳ)"
+        />
+      </td>
+      <td className="p-2">
+        <AnalyticsSelect
+          options={SCOPE_OPTIONS}
+          value={draft.reportScope ?? ""}
+          onChange={(v) =>
+            setDraft({
+              ...draft,
+              reportScope: (v || null) as VisualGroupRuleInput["reportScope"],
+            })
+          }
+          clearLabel="Mọi báo cáo"
+          placeholder="Mọi báo cáo"
+          className="w-full min-w-[150px]"
+        />
+      </td>
+      <td className="p-2">
+        <AnalyticsSelect
+          options={VISUAL_OPTIONS}
+          value={draft.visualGroup}
+          onChange={(v) =>
+            setDraft({ ...draft, visualGroup: v || VISUAL_OPTIONS[0].value })
+          }
+          className="w-full min-w-[140px]"
+        />
+      </td>
+      <td className="p-2 text-right whitespace-nowrap">
+        <button
+          type="button"
+          className={iconBtn}
+          onClick={save}
+          disabled={create.isPending || update.isPending}
+          title="Lưu">
+          <Check className="w-4 h-4 text-[var(--dt-primary)]" />
+        </button>
+        <button
+          type="button"
+          className={iconBtn}
+          onClick={() => setEditing(null)}
+          title="Huỷ">
+          <X className="w-4 h-4" />
+        </button>
+      </td>
+    </tr>
+  );
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex-1" />
+        <button
+          type="button"
+          onClick={startNew}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand text-white text-[13px]">
+          <Plus className="w-4 h-4" /> Thêm quy tắc
+        </button>
+      </div>
+      <div className="border rounded-lg overflow-x-auto">
+        <table className="w-full text-[13px]">
+          <thead className="bg-gray-50 text-left text-[12px] text-gray-500">
+            <tr>
+              <th className="p-2 w-20">Thứ tự</th>
+              {COND_COLS.map((c) => (
+                <th key={c.key} className="p-2">
+                  {c.label}
+                </th>
+              ))}
+              <th className="p-2">Tên chứa</th>
+              <th className="p-2">Mã hàng</th>
+              <th className="p-2">Áp cho</th>
+              <th className="p-2">→ Nhóm</th>
+              <th className="p-2 w-24" />
+            </tr>
+          </thead>
+          <tbody>
+            {editing === "new" && editRow}
+            {isLoading && (
+              <tr>
+                <td colSpan={10} className="p-4 text-center text-gray-400">
+                  Đang tải…
+                </td>
+              </tr>
+            )}
+            {!isLoading && !rules.length && editing !== "new" && (
+              <tr>
+                <td colSpan={10} className="p-4 text-center text-gray-400">
+                  Chưa có quy tắc nào — mọi sản phẩm đang vào nhóm “Khác”.
+                  Backend tự nạp lại quy tắc gốc ở lần khởi động sau.
+                </td>
+              </tr>
+            )}
+            {rules.map((r) =>
+              editing === r.id ? (
+                <Fragment key={r.id}>{editRow}</Fragment>
+              ) : (
+                <tr key={r.id} className="border-t">
+                  <td className="p-2 dt-mono">{formatNumber(r.priority)}</td>
+                  {COND_COLS.map((c) => (
+                    <td key={c.key} className="p-2">
+                      {r[c.key] ?? ANY}
+                    </td>
+                  ))}
+                  <td className="p-2">{r.nameContains ?? ANY}</td>
+                  <td className="p-2">
+                    {r.productCode ? (
+                      <span title={r.productName ?? "(không tìm thấy hàng)"}>
+                        <span className="dt-mono">{r.productCode}</span>
+                      </span>
+                    ) : (
+                      ANY
+                    )}
+                  </td>
+                  <td className="p-2 text-gray-600">
+                    {SCOPE_OPTIONS.find((o) => o.value === r.reportScope)
+                      ?.label ?? "Mọi báo cáo"}
+                  </td>
+                  <td className="p-2 font-medium">{r.visualGroup}</td>
+                  <td className="p-2 text-right whitespace-nowrap">
+                    <button
+                      type="button"
+                      className={iconBtn}
+                      onClick={() => startEdit(r)}
+                      title="Sửa">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      className={iconBtn}
+                      title="Xoá"
+                      onClick={() =>
+                        window.confirm(
+                          `Xoá quy tắc thứ tự ${formatNumber(r.priority)} (→ ${r.visualGroup})?`,
+                        ) && remove.mutate(r.id)
+                      }>
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ),
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

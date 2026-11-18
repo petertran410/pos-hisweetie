@@ -108,6 +108,32 @@ export interface ProductGroupRow {
   groupName: string;
 }
 
+/**
+ * Quy tắc nhóm hàng hiển thị (1.Boduo…): xét theo "Thứ tự" tăng dần, sản phẩm khớp quy tắc
+ * đầu tiên thì vào nhóm đó; không khớp → "Khác". Điều kiện null = không xét.
+ */
+export interface VisualGroupRule {
+  id: number;
+  priority: number;
+  productCode: string | null;
+  /** Tên hàng của productCode (chỉ để hiển thị). */
+  productName: string | null;
+  productType: string | null;
+  origin: string | null;
+  brand: string | null;
+  category: string | null;
+  nameContains: string | null;
+  /** null = mọi báo cáo; sale = Kinh Doanh, Định Kì…; purchasing = Thu Mua, Chuyển Kho. */
+  reportScope: "sale" | "purchasing" | null;
+  visualGroup: string;
+}
+export type VisualGroupRuleInput = Omit<VisualGroupRule, "id" | "productName">;
+/** Giá trị chọn được cho điều kiện (sản phẩm đang hoạt động). */
+export type VisualGroupRuleOptions = Record<
+  "productType" | "origin" | "brand" | "category",
+  string[]
+>;
+
 const CFG = "/reports/analytics/config";
 
 export const analyticsReportApi = {
@@ -177,4 +203,16 @@ export const analyticsReportApi = {
     apiClient.patch(`${CFG}/product-groups/${id}`, { groupName }),
   deleteProductGroup: (id: number) =>
     apiClient.delete(`${CFG}/product-groups/${id}`),
+
+  // Quy tắc nhóm hàng hiển thị
+  listVisualGroupRules: (): Promise<VisualGroupRule[]> =>
+    apiClient.get(`${CFG}/product-visual-groups`),
+  visualGroupRuleOptions: (): Promise<VisualGroupRuleOptions> =>
+    apiClient.get(`${CFG}/product-visual-groups/options`),
+  createVisualGroupRule: (data: VisualGroupRuleInput) =>
+    apiClient.post(`${CFG}/product-visual-groups`, data),
+  updateVisualGroupRule: (id: number, data: VisualGroupRuleInput) =>
+    apiClient.patch(`${CFG}/product-visual-groups/${id}`, data),
+  deleteVisualGroupRule: (id: number) =>
+    apiClient.delete(`${CFG}/product-visual-groups/${id}`),
 };
