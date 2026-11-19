@@ -25,7 +25,8 @@ import {
 } from "@/lib/hooks/usePackingSlips";
 import { formatNumberInput } from "@/lib/utils";
 
-const WAREHOUSE_IDS = [6, 1];
+// Tiền mặt của 2 kho và 2 văn phòng.
+const WAREHOUSE_IDS = [6, 1, 4, 7];
 
 type AttachmentPreviewFile = {
   fileUrl: string;
@@ -82,6 +83,8 @@ export function WarehouseCashForm({
       : [
           { id: 6, name: "Kho Hà Nội" },
           { id: 1, name: "Kho Sài Gòn" },
+          { id: 4, name: "Văn phòng Hà Nội" },
+          { id: 7, name: "Văn phòng Sài Gòn" },
         ];
     // Chỉ các kho user có quyền; giữ kho của phiếu đang sửa.
     return base.filter(

@@ -13,7 +13,8 @@ import type { WarehouseReceiptQuery } from "@/lib/api/internal-finance";
 import { useIsClient, useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useBranchStore } from "@/lib/store/branch";
 
-const WAREHOUSE_IDS = [6, 1];
+// Tiền mặt của 2 kho và 2 văn phòng.
+const WAREHOUSE_IDS = [6, 1, 4, 7];
 
 function WarehouseCashScreen() {
   const isMobile = useIsMobile(768);

@@ -3,99 +3,140 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, X } from "lucide-react";
+import {
+  FilterDivider,
+  FilterSection,
+  FinanceFilterSidebar,
+} from "@/components/internal-finance/FinanceFilterSidebar";
+import { TimeRangeFilter } from "@/components/shared/TimeRangeFilter";
 import { FilterMultiSelect } from "@/components/ui/filters";
-import { InternalFinanceDateField } from "@/components/internal-finance/InternalFinanceDateField";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
+import {
+  useFollowHeaderBranch,
+  useHeaderBranchId,
+} from "@/lib/internal-finance/header-branch";
+import {
+  readSavedFilters,
+  restoreBranchIds,
+  writeSavedFilters,
+} from "@/lib/internal-finance/saved-filters";
+import {
+  loadSavedDates,
+  useSavedTimeRange,
+} from "@/lib/internal-finance/time-range";
 import type { WarehouseReceiptQuery } from "@/lib/api/internal-finance";
-import { useBranchStore } from "@/lib/store/branch";
 import { getFixedRect } from "@/lib/utils/zoom";
 
-const WAREHOUSE_IDS = [6, 1];
+// Tiền mặt của 2 kho và 2 văn phòng.
+const WAREHOUSE_IDS = [6, 1, 4, 7];
 const STORAGE_KEY = "warehouse-cash-sidebar-filters";
 
 type SavedWarehouseFilters = {
   branchIds?: number[];
-  fromDate?: string;
-  toDate?: string;
   receiptStatus?: string;
   confirmStatus?: string;
 };
 
-function readSavedFilters(): SavedWarehouseFilters | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as SavedWarehouseFilters) : null;
-  } catch {
-    return null;
-  }
+// Giống ô "Trạng thái hóa đơn" của sidebar hóa đơn: chấm màu + nhãn màu.
+interface StatusOption {
+  value: string;
+  label: string;
+  color: string;
+  dot: string;
 }
 
-export function loadWarehouseCashFilters(headerBranchId: number | null): WarehouseReceiptQuery {
-  const saved = readSavedFilters();
-  const savedIds = Array.isArray(saved?.branchIds)
-    ? saved.branchIds.map(Number).filter((id) => WAREHOUSE_IDS.includes(id))
-    : null;
-  let branchIds: number[] | undefined;
-  if (savedIds) {
-    branchIds =
-      savedIds.length >= 2 || savedIds.length === 0
-        ? savedIds
-        : headerBranchId
-          ? [headerBranchId]
-          : savedIds;
-  } else if (headerBranchId) {
-    branchIds = [headerBranchId];
-  }
-  const status = saved?.receiptStatus;
-  return {
-    page: 1,
-    limit: 20,
-    branchIds,
-    fromDate: saved?.fromDate || undefined,
-    toDate: saved?.toDate || undefined,
-    receiptStatus:
-      status === "OPEN" || status === "POSTED" || status === "CANCELLED"
-        ? status
-        : undefined,
-    confirmStatus: CONFIRM_OPTIONS.some(
-      (option) => option.value && option.value === saved?.confirmStatus,
-    )
-      ? (saved?.confirmStatus as WarehouseReceiptQuery["confirmStatus"])
-      : undefined,
-  };
-}
-
-const STATUS_OPTIONS = [
-  { value: "", label: "Tất cả", dot: "bg-gray-300" },
-  { value: "OPEN", label: "Chưa lập phiếu", dot: "bg-amber-400" },
-  { value: "POSTED", label: "Đã lập phiếu", dot: "bg-green-500" },
-  { value: "CANCELLED", label: "Đã hủy", dot: "bg-red-400" },
+const STATUS_OPTIONS: StatusOption[] = [
+  {
+    value: "OPEN",
+    label: "Chưa lập phiếu",
+    color: "bg-amber-100 text-amber-700",
+    dot: "bg-amber-400",
+  },
+  {
+    value: "POSTED",
+    label: "Đã lập phiếu",
+    color: "bg-green-100 text-green-700",
+    dot: "bg-green-500",
+  },
+  {
+    value: "CANCELLED",
+    label: "Đã hủy",
+    color: "bg-red-100 text-red-700",
+    dot: "bg-red-400",
+  },
 ];
 
 // Kế toán kho xác nhận số tiền thực nhận.
-const CONFIRM_OPTIONS = [
-  { value: "", label: "Tất cả", dot: "bg-gray-300" },
-  { value: "UNCONFIRMED", label: "Chưa xác nhận", dot: "bg-amber-400" },
-  { value: "CONFIRMED", label: "Đã xác nhận", dot: "bg-green-500" },
-  { value: "DIFFERENT", label: "Có chênh lệch", dot: "bg-red-400" },
+const CONFIRM_OPTIONS: StatusOption[] = [
+  {
+    value: "UNCONFIRMED",
+    label: "Chưa xác nhận",
+    color: "bg-amber-100 text-amber-700",
+    dot: "bg-amber-400",
+  },
+  {
+    value: "CONFIRMED",
+    label: "Đã xác nhận",
+    color: "bg-green-100 text-green-700",
+    dot: "bg-green-500",
+  },
+  {
+    value: "DIFFERENT",
+    label: "Có chênh lệch",
+    color: "bg-red-100 text-red-700",
+    dot: "bg-red-400",
+  },
 ];
 
+const pick = <T extends string>(options: StatusOption[], value?: string) =>
+  options.some((option) => option.value === value) ? (value as T) : undefined;
+
+export function loadWarehouseCashFilters(
+  headerBranchId: number | null,
+): WarehouseReceiptQuery {
+  const saved = readSavedFilters<SavedWarehouseFilters>(STORAGE_KEY);
+  const branchIds = restoreBranchIds(
+    saved?.branchIds,
+    headerBranchId,
+    WAREHOUSE_IDS,
+  );
+  return {
+    page: 1,
+    limit: 20,
+    branchIds: branchIds.length ? branchIds : undefined,
+    receiptStatus: pick<NonNullable<WarehouseReceiptQuery["receiptStatus"]>>(
+      STATUS_OPTIONS,
+      saved?.receiptStatus,
+    ),
+    confirmStatus: pick<NonNullable<WarehouseReceiptQuery["confirmStatus"]>>(
+      CONFIRM_OPTIONS,
+      saved?.confirmStatus,
+    ),
+    ...loadSavedDates(STORAGE_KEY),
+  };
+}
+
+/**
+ * Ô chọn trạng thái theo giao diện sidebar hóa đơn. Danh sách mở qua portal
+ * (đã tính zoom) để không bị khung cuộn của sidebar cắt mất.
+ */
 function StatusDropdown({
+  options,
   value,
+  placeholder,
   onChange,
-  options = STATUS_OPTIONS,
 }: {
+  options: StatusOption[];
   value: string;
+  placeholder: string;
   onChange: (value: string) => void;
-  options?: typeof STATUS_OPTIONS;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState<ReturnType<typeof getFixedRect> | null>(null);
-  const selected = options.find((option) => option.value === value) || options[0];
+  const selected = options.find((option) => option.value === value);
 
   useEffect(() => {
     if (!open || !triggerRef.current) return;
@@ -115,7 +156,11 @@ function StatusDropdown({
     if (!open) return;
     const handlePointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (triggerRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      if (
+        triggerRef.current?.contains(target) ||
+        panelRef.current?.contains(target)
+      )
+        return;
       setOpen(false);
     };
     document.addEventListener("mousedown", handlePointerDown);
@@ -130,7 +175,7 @@ function StatusDropdown({
             style={(() => {
               const viewportHeight = window.innerHeight / box.zoom;
               const spaceBelow = viewportHeight - box.bottom;
-              const dropUp = spaceBelow < 220 && box.top > spaceBelow;
+              const dropUp = spaceBelow < 180 && box.top > spaceBelow;
               return {
                 position: "fixed" as const,
                 left: box.left,
@@ -144,23 +189,24 @@ function StatusDropdown({
             className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
             {options.map((option, index) => (
               <button
-                key={option.value || "all"}
+                key={option.value}
                 type="button"
                 onClick={() => {
-                  onChange(option.value);
+                  onChange(value === option.value ? "" : option.value);
                   setOpen(false);
                 }}
-                className={`flex w-full items-center justify-between px-3 py-2.5 text-left text-sm transition-colors ${
-                  option.value === selected.value
-                    ? "bg-brand-soft font-medium text-brand-dark"
-                    : "text-gray-700 hover:bg-gray-50"
+                className={`flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm transition-colors ${
+                  value === option.value ? "bg-brand-soft" : "hover:bg-gray-50"
                 } ${index > 0 ? "border-t border-gray-50" : ""}`}>
-                <span className="flex min-w-0 items-center gap-2">
-                  <span className={`h-2 w-2 shrink-0 rounded-full ${option.dot}`} />
-                  <span className="truncate">{option.label}</span>
+                <span
+                  className={`h-2 w-2 flex-shrink-0 rounded-full ${option.dot}`}
+                />
+                <span
+                  className={`flex-1 rounded-full px-2 py-0.5 text-xs font-medium ${option.color}`}>
+                  {option.label}
                 </span>
-                {option.value === selected.value && (
-                  <Check className="h-3.5 w-3.5 shrink-0 text-brand" />
+                {value === option.value && (
+                  <Check className="h-3.5 w-3.5 flex-shrink-0 text-brand" />
                 )}
               </button>
             ))}
@@ -176,23 +222,30 @@ function StatusDropdown({
         tabIndex={0}
         onClick={() => setOpen((current) => !current)}
         onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            setOpen((current) => !current);
-          }
+          if (event.key === "Enter") setOpen((current) => !current);
         }}
         className={`flex w-full cursor-pointer select-none items-center justify-between gap-2 rounded-lg border bg-white px-2 py-1 text-sm transition-colors ${
           open ? "border-brand ring-2 ring-brand-soft" : "hover:border-gray-400"
         }`}>
-        <span className="flex min-w-0 items-center gap-2">
-          <span className={`h-2 w-2 shrink-0 rounded-full ${selected.dot}`} />
-          <span className="truncate text-gray-800">{selected.label}</span>
-        </span>
-        <span className="flex shrink-0 items-center gap-1">
-          {selected.value && (
+        <div className="flex min-w-0 items-center gap-2">
+          {selected ? (
+            <>
+              <span
+                className={`h-2 w-2 flex-shrink-0 rounded-full ${selected.dot}`}
+              />
+              <span
+                className={`truncate rounded-full px-2 py-0.5 text-xs font-medium ${selected.color}`}>
+                {selected.label}
+              </span>
+            </>
+          ) : (
+            <span className="text-sm text-gray-400">{placeholder}</span>
+          )}
+        </div>
+        <div className="flex flex-shrink-0 items-center gap-1">
+          {selected && (
             <button
               type="button"
-              title="Bỏ lọc trạng thái"
               onClick={(event) => {
                 event.stopPropagation();
                 onChange("");
@@ -201,8 +254,10 @@ function StatusDropdown({
               <X className="h-3 w-3" />
             </button>
           )}
-          <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
-        </span>
+          <ChevronDown
+            className={`h-4 w-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </div>
       </div>
       {menu}
     </div>
@@ -218,167 +273,121 @@ export function WarehouseCashSidebar({
 }) {
   const { data: branchData } = useBranches();
   const access = useFinanceAccess();
-  const { selectedBranch } = useBranchStore();
-  const headerBranchId =
-    selectedBranch && WAREHOUSE_IDS.includes(selectedBranch.id)
-      ? selectedBranch.id
-      : null;
   const branches = useMemo(() => {
     const payload = branchData as
-      | { data?: Array<{ id: number; name: string }> }
-      | Array<{ id: number; name: string }>
+      | { data?: Array<{ id: number; name: string; isActive?: boolean }> }
+      | Array<{ id: number; name: string; isActive?: boolean }>
       | undefined;
     const rows = Array.isArray(payload) ? payload : payload?.data || [];
-    const known = rows.filter((branch) => WAREHOUSE_IDS.includes(branch.id));
+    const known = rows.filter(
+      (branch) =>
+        WAREHOUSE_IDS.includes(branch.id) && branch.isActive !== false,
+    );
     const all = known.length
       ? known
       : [
           { id: 6, name: "Kho Hà Nội" },
           { id: 1, name: "Kho Sài Gòn" },
+          { id: 4, name: "Văn phòng Hà Nội" },
+          { id: 7, name: "Văn phòng Sài Gòn" },
         ];
-    // Chỉ hiện kho user được xem.
-    const base = all.filter((branch) =>
+    // Chỉ hiện chi nhánh user được xem.
+    return all.filter((branch) =>
       access.can("warehouse_cash", "view", branch.id),
     );
-    if (
-      selectedBranch &&
-      WAREHOUSE_IDS.includes(selectedBranch.id) &&
-      access.can("warehouse_cash", "view", selectedBranch.id) &&
-      !base.some((branch) => branch.id === selectedBranch.id)
-    ) {
-      return [{ id: selectedBranch.id, name: selectedBranch.name }, ...base];
-    }
-    return base;
-  }, [branchData, selectedBranch, access]);
-  const lastHeaderId = useRef<number | null>(headerBranchId);
-  const skippedHeaderSync = useRef(false);
-  useEffect(() => {
-    if (!skippedHeaderSync.current) {
-      skippedHeaderSync.current = true;
-      lastHeaderId.current = headerBranchId;
-      return;
-    }
-    if (headerBranchId === lastHeaderId.current) return;
-    lastHeaderId.current = headerBranchId;
-    const current = filters.branchIds || [];
-    if (current.length === 1 && headerBranchId) {
-      onChange({ branchIds: [headerBranchId] });
-    }
-  }, [filters.branchIds, headerBranchId, onChange]);
+  }, [branchData, access]);
+
+  // Đổi chi nhánh ở header thì bộ lọc đổi theo, như sidebar hóa đơn.
+  const headerBranchId = useHeaderBranchId(WAREHOUSE_IDS, (id) =>
+    access.can("warehouse_cash", "view", id),
+  );
+  useFollowHeaderBranch(headerBranchId, filters.branchIds || [], (id) =>
+    onChange({ branchIds: id ? [id] : undefined }),
+  );
+
+  const time = useSavedTimeRange(STORAGE_KEY, onChange);
+
   useEffect(() => {
     const state: SavedWarehouseFilters = {
       branchIds: filters.branchIds || [],
-      fromDate: filters.fromDate || "",
-      toDate: filters.toDate || "",
       receiptStatus: filters.receiptStatus || "",
       confirmStatus: filters.confirmStatus || "",
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [
-    filters.branchIds,
-    filters.fromDate,
-    filters.toDate,
-    filters.receiptStatus,
-    filters.confirmStatus,
-  ]);
+    writeSavedFilters(STORAGE_KEY, state);
+  }, [filters.branchIds, filters.receiptStatus, filters.confirmStatus]);
+
   const activeCount = [
     filters.branchIds?.length,
-    filters.fromDate || filters.toDate,
+    time.active,
     filters.receiptStatus,
     filters.confirmStatus,
   ].filter(Boolean).length;
-  const resetBranchIds = headerBranchId ? [headerBranchId] : undefined;
+
+  const clearAll = () => {
+    time.reset();
+    onChange({
+      branchIds: headerBranchId ? [headerBranchId] : undefined,
+      fromDate: undefined,
+      toDate: undefined,
+      receiptStatus: undefined,
+      confirmStatus: undefined,
+    });
+  };
 
   return (
-    <aside className="custom-sidebar-scroll m-4 flex h-[calc(100%-2rem)] min-h-0 w-64 shrink-0 flex-col overflow-y-auto rounded-xl border bg-white shadow-xl">
-      <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-xl border-b bg-white px-4 py-2">
-        <h2 className="text-base font-semibold text-gray-800">Bộ lọc</h2>
-        {activeCount > 0 && (
-          <button
-            type="button"
-            onClick={() =>
-              onChange({
-                branchIds: resetBranchIds,
-                fromDate: undefined,
-                toDate: undefined,
-                receiptStatus: undefined,
-                confirmStatus: undefined,
-              })
-            }
-            className="text-sm font-medium text-brand hover:text-brand-dark">
-            Xóa tất cả
-          </button>
-        )}
-      </div>
-      <div className="space-y-4 p-4">
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Chi nhánh
-          </label>
-          <FilterMultiSelect
-            options={branches.map((branch) => ({
-              value: String(branch.id),
-              label: branch.name,
-            }))}
-            values={(filters.branchIds || []).map(String)}
-            onChange={(values) =>
-              onChange({
-                branchIds: values.map(Number).filter((id) => WAREHOUSE_IDS.includes(id)),
-              })
-            }
-            placeholder="Tất cả chi nhánh"
-            searchPlaceholder="Tìm chi nhánh..."
-            multiLabel={(count) => `${count} chi nhánh`}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Thời gian</label>
-          <InternalFinanceDateField
-            compact
-            label="Từ ngày"
-            value={filters.fromDate || ""}
-            maxDate={filters.toDate || undefined}
-            onChange={(value) => onChange({ fromDate: value || undefined })}
-          />
-          <InternalFinanceDateField
-            compact
-            label="Đến ngày"
-            value={filters.toDate || ""}
-            minDate={filters.fromDate || undefined}
-            onChange={(value) => onChange({ toDate: value || undefined })}
-          />
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Trạng thái
-          </label>
-          <StatusDropdown
-            value={filters.receiptStatus || ""}
-            onChange={(value) =>
-              onChange({
-                receiptStatus: (value || undefined) as WarehouseReceiptQuery["receiptStatus"],
-              })
-            }
-          />
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Kế toán kho xác nhận
-          </label>
-          <StatusDropdown
-            value={filters.confirmStatus || ""}
-            options={CONFIRM_OPTIONS}
-            onChange={(value) =>
-              onChange({
-                confirmStatus: (value || undefined) as WarehouseReceiptQuery["confirmStatus"],
-              })
-            }
-          />
-        </div>
-      </div>
-    </aside>
+    <FinanceFilterSidebar activeCount={activeCount} onClear={clearAll}>
+      <TimeRangeFilter
+        label="Thời gian"
+        value={time.range}
+        onChange={time.change}
+      />
+      <FilterDivider />
+      <FilterSection label="Chi nhánh">
+        <FilterMultiSelect
+          options={branches.map((branch) => ({
+            value: String(branch.id),
+            label: branch.name,
+          }))}
+          values={(filters.branchIds || []).map(String)}
+          onChange={(values) =>
+            onChange({
+              branchIds: values
+                .map(Number)
+                .filter((id) => WAREHOUSE_IDS.includes(id)),
+            })
+          }
+          placeholder="Tất cả chi nhánh"
+          searchPlaceholder="Tìm chi nhánh..."
+          multiLabel={(count) => `${count} chi nhánh`}
+        />
+      </FilterSection>
+      <FilterDivider />
+      <FilterSection label="Trạng thái">
+        <StatusDropdown
+          options={STATUS_OPTIONS}
+          value={filters.receiptStatus || ""}
+          placeholder="Tất cả"
+          onChange={(value) =>
+            onChange({
+              receiptStatus: (value ||
+                undefined) as WarehouseReceiptQuery["receiptStatus"],
+            })
+          }
+        />
+      </FilterSection>
+      <FilterSection label="Kế toán kho xác nhận">
+        <StatusDropdown
+          options={CONFIRM_OPTIONS}
+          value={filters.confirmStatus || ""}
+          placeholder="Tất cả"
+          onChange={(value) =>
+            onChange({
+              confirmStatus: (value ||
+                undefined) as WarehouseReceiptQuery["confirmStatus"],
+            })
+          }
+        />
+      </FilterSection>
+    </FinanceFilterSidebar>
   );
 }

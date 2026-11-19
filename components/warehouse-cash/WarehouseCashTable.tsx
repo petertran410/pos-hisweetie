@@ -557,9 +557,9 @@ export function WarehouseCashTable({
   const postReceipt = usePostWarehouseReceipt();
   const cancelReceipt = useCancelWarehouseReceipt();
   const confirmAmount = useConfirmWarehouseReceiptAmount();
-  // Quyền theo vai trò × chi nhánh: xét theo kho của từng phiếu.
+  // Quyền theo vai trò × chi nhánh: xét theo chi nhánh (kho / văn phòng) của từng phiếu.
   const access = useFinanceAccess();
-  const viewBranches = access.branches("warehouse_cash", "view", [6, 1]);
+  const viewBranches = access.branches("warehouse_cash", "view", [6, 1, 4, 7]);
   const canCreate = access.any("warehouse_cash", "create");
   const pageSize = filters.limit || PAGE_SIZE;
   const allowedFilter = (filters.branchIds || []).filter((id) =>
