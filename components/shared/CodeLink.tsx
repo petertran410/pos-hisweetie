@@ -29,6 +29,7 @@ export type CodeEntity =
   | "internal-use"
   | "internal-use-return"
   | "production"
+  | "manufacturer-stock"
   | "packing-slip"
   | "debt-offset"
   | "promotion"
@@ -56,6 +57,8 @@ const ROUTES: Record<CodeEntity, string> = {
   "internal-use": "/san-pham/xuat-dung-noi-bo",
   "internal-use-return": "/san-pham/tra-hang-xuat-dung-noi-bo",
   production: "/san-pham/san-xuat",
+  // Phiếu nguyên liệu NSX: trang Nhà sản xuất mở đúng NSX ở tab Tồn NL.
+  "manufacturer-stock": "/san-pham/nha-san-xuat",
   "packing-slip": "/don-hang/bao-don",
   "debt-offset": "/don-hang/can-tru-cong-no",
   promotion: "/khach-hang/khuyen-mai",

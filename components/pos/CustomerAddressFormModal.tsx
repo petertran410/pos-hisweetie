@@ -49,6 +49,64 @@ interface Commune {
   provinceCode: string;
 }
 
+type AddressErrors = {
+  region?: string;
+  district?: string;
+  ward?: string;
+  newWard?: string;
+};
+
+const sameCode = (a: unknown, b: unknown) =>
+  a !== null && a !== undefined && a !== "" && String(a) === String(b);
+
+/**
+ * Loại địa chỉ nào đã chọn Tỉnh thì phải điền đủ các cấp của loại đó.
+ * - So khớp theo danh sách đang hiển thị (không chỉ "có giá trị"): mã phường
+ *   cũ không thuộc quận đã chọn sẽ hiện placeholder → coi như chưa chọn.
+ * - Cấp nào không có lựa chọn (huyện đảo không có phường, dữ liệu chưa tải)
+ *   thì không bắt.
+ */
+function getAddressErrors(
+  form: Record<string, unknown>,
+  lists: {
+    districts: Array<{ code: number | string }>;
+    wards: Array<{ code: number | string }>;
+    filteredCommunes: Array<{ code: string }>;
+  },
+): AddressErrors {
+  const { districts, wards, filteredCommunes } = lists;
+  const errors: AddressErrors = {};
+
+  if (!form.cityCode && !form.newCityCode) {
+    errors.region = "Phải điền ít nhất 1 trong 2 loại địa chỉ (cũ hoặc mới)";
+    return errors;
+  }
+
+  if (
+    form.newCityCode &&
+    filteredCommunes.length > 0 &&
+    !filteredCommunes.some((c) => sameCode(c.code, form.newWardCode))
+  ) {
+    errors.newWard = "Chọn Phường/Xã cho địa chỉ mới";
+  }
+
+  if (form.cityCode) {
+    if (
+      districts.length > 0 &&
+      !districts.some((d) => sameCode(d.code, form.districtCode))
+    ) {
+      errors.district = "Chọn Quận/Huyện cho địa chỉ cũ";
+    } else if (
+      wards.length > 0 &&
+      !wards.some((w) => sameCode(w.code, form.wardCode))
+    ) {
+      errors.ward = "Chọn Phường/Xã cho địa chỉ cũ";
+    }
+  }
+
+  return errors;
+}
+
 interface Props {
   isOpen: boolean;
   mode: "create" | "edit";
@@ -96,7 +154,8 @@ export function CustomerAddressFormModal({
   onSubmit,
 }: Props) {
   const [form, setForm] = useState<any>(emptyForm);
-  const [error, setError] = useState<string | null>(null);
+  // Đã bấm Lưu ít nhất 1 lần → bắt đầu hiện lỗi (và tự mất khi sửa đúng)
+  const [submitted, setSubmitted] = useState(false);
   const [showOld, setShowOld] = useState(false);
 
   // Reset form khi mở modal
@@ -104,7 +163,7 @@ export function CustomerAddressFormModal({
     if (!isOpen) return;
     const next = initial ? { ...emptyForm, ...initial } : { ...emptyForm };
     setForm(next);
-    setError(null);
+    setSubmitted(false);
     // Mở sẵn địa chỉ cũ nếu có data
     setShowOld(!!(next.cityCode || next.districtCode || next.wardCode));
   }, [isOpen, initial]);
@@ -227,12 +286,17 @@ export function CustomerAddressFormModal({
     }));
   };
 
+  const lists = { districts, wards, filteredCommunes };
+  const errs: AddressErrors = submitted ? getAddressErrors(form, lists) : {};
+  const firstError = errs.region || errs.newWard || errs.district || errs.ward;
+
   const handleSubmit = () => {
-    if (!form.cityCode && !form.newCityCode) {
-      setError("Phải điền ít nhất 1 trong 2 loại địa chỉ (cũ hoặc mới)");
+    setSubmitted(true);
+    const found = getAddressErrors(form, lists);
+    if (Object.keys(found).length > 0) {
+      if (found.district || found.ward) setShowOld(true);
       return;
     }
-    setError(null);
     onSubmit(form);
   };
 
@@ -352,14 +416,14 @@ export function CustomerAddressFormModal({
           {/* ── Địa chỉ ── */}
           <section
             className={`rounded-xl border bg-white p-4 sm:p-5 ${
-              error && !hasAnyRegion ? "border-red-300" : ""
+              errs.region ? "border-red-300" : ""
             }`}>
             <div className="mb-4 flex items-start justify-between gap-3">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                 Địa chỉ giao hàng
               </h4>
               <span className="text-right text-[11px] text-gray-400">
-                Cần ít nhất 1 trong 2 loại địa chỉ
+                Cần ít nhất 1 loại, chọn loại nào phải điền đủ
               </span>
             </div>
 
@@ -401,6 +465,7 @@ export function CustomerAddressFormModal({
                   onChange={handleNewCityChange}
                   placeholder="Tỉnh/Thành phố"
                   searchPlaceholder="Tìm Tỉnh/Thành phố..."
+                  clearable
                 />
                 <SearchableSelect
                   variant="form"
@@ -415,6 +480,7 @@ export function CustomerAddressFormModal({
                   }
                   searchPlaceholder="Tìm Phường/Xã..."
                   disabled={!form.newCityCode}
+                  error={errs.newWard}
                 />
               </div>
             </div>
@@ -450,6 +516,7 @@ export function CustomerAddressFormModal({
                     onChange={handleCityChange}
                     placeholder="Tỉnh/Thành phố"
                     searchPlaceholder="Tìm Tỉnh/Thành phố..."
+                    clearable
                   />
                   <SearchableSelect
                     variant="form"
@@ -462,6 +529,7 @@ export function CustomerAddressFormModal({
                     placeholder="Quận/Huyện"
                     searchPlaceholder="Tìm Quận/Huyện..."
                     disabled={!form.cityCode}
+                    error={errs.district}
                   />
                   <SearchableSelect
                     variant="form"
@@ -474,6 +542,7 @@ export function CustomerAddressFormModal({
                     placeholder="Phường/Xã"
                     searchPlaceholder="Tìm Phường/Xã..."
                     disabled={!form.districtCode}
+                    error={errs.ward}
                   />
                 </div>
               )}
@@ -520,9 +589,9 @@ export function CustomerAddressFormModal({
             />
           </label>
 
-          {error && (
+          {firstError && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
+              {firstError}
             </div>
           )}
         </div>

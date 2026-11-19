@@ -593,68 +593,6 @@ export function CustomerForm({
     return null;
   };
 
-  // Thêm hàm này trước onSubmit (hoặc đặt ngoài component)
-  const sanitizeAddressForApi = (addr: any) => {
-    const allowedFields = [
-      "id",
-      "label",
-      "receiver",
-      "contactNumber",
-      "address",
-      "cityCode",
-      "cityName",
-      "districtCode",
-      "districtName",
-      "wardCode",
-      "wardName",
-      "newCityCode",
-      "newCityName",
-      "newWardCode",
-      "newWardName",
-      "locationName",
-      "invoiceBuyerName",
-      "invoiceAddress",
-      "invoiceCityCode",
-      "invoiceCityName",
-      "invoiceWardCode",
-      "invoiceWardName",
-      "invoiceCccdCmnd",
-      "invoiceBankAccount",
-      "invoiceEmail",
-      "invoicePhone",
-      "invoiceDvqhnsCode",
-      "isDefault",
-    ];
-
-    // Field text user-editable — cần gửi cả "" để BE xóa được giá trị cũ.
-    const clearableTextFields = new Set([
-      "receiver",
-      "contactNumber",
-      "label",
-      "address",
-    ]);
-
-    const clean: Record<string, any> = {};
-    for (const key of allowedFields) {
-      const val = addr[key];
-      if (val === null || val === undefined) continue;
-      if (val === "" && !clearableTextFields.has(key)) continue;
-      if (key === "id") {
-        clean.id = typeof val === "number" ? val : parseInt(val, 10);
-      } else if (key === "isDefault") {
-        clean.isDefault = Boolean(val);
-      } else {
-        // Đảm bảo tất cả string fields là string (xử lý cityCode number → string)
-        clean[key] = String(val);
-      }
-    }
-
-    // isDefault phải luôn có
-    if (clean.isDefault === undefined) clean.isDefault = false;
-
-    return clean;
-  };
-
   // Thiếu Tên/SĐT (required của react-hook-form) → quay về tab đầu và báo lỗi
   const onInvalid = () => {
     setSubmitAttempted(true);
@@ -721,9 +659,6 @@ export function CustomerForm({
       setActiveFormTab("invoice");
       return;
     }
-
-    // Sanitize addresses — loại bỏ null, extra fields, đảm bảo đúng type
-    const cleanedAddresses = addresses.map(sanitizeAddressForApi);
 
     const formattedData: Record<string, any> = {
       name: data.name || undefined,

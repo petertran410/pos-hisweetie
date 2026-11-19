@@ -25,6 +25,8 @@ export interface OwnMaterial {
   productId: number;
   quantity: number;
   unit: string;
+  /** Lấy từ: branch = kho gửi (mặc định), manufacturer = tồn nguyên liệu đang ở NSX. */
+  source?: "branch" | "manufacturer";
 }
 /**
  * Dòng NSX bổ sung. Dòng mới: có productId, UNIT_PRICE, unit/priceUnit g|kg|gói.

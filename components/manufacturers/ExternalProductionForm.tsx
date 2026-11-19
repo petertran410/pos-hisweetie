@@ -52,6 +52,13 @@ import {
 } from "@/lib/utils/nsx-pricing";
 import { NumericInput } from "@/components/ui/NumericInput";
 import { formatNumber } from "@/lib/utils";
+import {
+  defaultOwnUnit,
+  gramsPerStockUnit,
+  stockFactor,
+  stockWithGrams,
+} from "@/lib/utils/stock-units";
+import { useManufacturerStock } from "@/lib/hooks/useManufacturerStock";
 import { DatePickerInput } from "@/components/ui/DatePickerInput";
 import { PartnerPicker, ProductPicker } from "./ProductionPickers";
 import {
@@ -60,10 +67,13 @@ import {
 } from "./ManufacturerMaterialsEditor";
 
 type OwnDraft = OwnMaterial & {
+  source: "branch" | "manufacturer";
   name: string;
   code: string;
   product?: Product;
 };
+const ownKey = (line: { productId: number; source: string }) =>
+  `${line.productId}:${line.source}`;
 
 // Cùng chiều cao 42px với ô tìm sản phẩm / ô số / ô ngày (ô chọn mặc định thấp hơn 1px).
 const fieldClass =
@@ -82,27 +92,6 @@ const stockText = (value: number) =>
   value.toLocaleString("en-US", { maximumFractionDigits: 4 });
 
 /** Gram của 1 đơn vị kho (thiếu weightUnit coi là gram — cùng quy tắc backend). */
-const gramsPerStockUnit = (product?: Product) =>
-  Number(product?.weight ?? 0) * (product?.weightUnit === "kg" ? 1000 : 1);
-
-/** Hệ số đổi lượng gửi sang đơn vị kho — cùng quy tắc ownConversion ở backend. */
-const stockFactor = (product: Product | undefined, unit: string) => {
-  if (!product) return null;
-  if (unit === product.unit || unit === "unit") return 1;
-  const grams = gramsPerStockUnit(product);
-  if (grams > 0 && (unit === "g" || unit === "kg"))
-    return (unit === "kg" ? 1000 : 1) / grams;
-  return null;
-};
-
-/**
- * Hàng có khối lượng (vd thùng 20 kg) gửi theo gram như công thức; hàng
- * không có khối lượng / tính theo chiếc thì theo đơn vị kho.
- */
-const defaultOwnUnit = (product: Product) =>
-  !product.isPieceUnit && gramsPerStockUnit(product) > 0
-    ? "g"
-    : product.unit || "unit";
 const localDate = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
@@ -187,6 +176,7 @@ function ExternalProductionFormContent({
       productId: line.componentProductId,
       quantity: Number(line.actualGrams),
       unit: line.unit ?? "unit",
+      source: line.source === "manufacturer" ? ("manufacturer" as const) : ("branch" as const),
       name: line.componentName,
       code: line.componentCode,
     })),
@@ -255,6 +245,39 @@ function ExternalProductionFormContent({
   const productOf = (line: OwnDraft) =>
     line.product ??
     ownProducts.find((query) => query.data?.id === line.productId)?.data;
+  // Tồn nguyên liệu gửi trước đang nằm ở NSX — dòng "Lấy từ: Tồn NSX" trừ vào đây.
+  const nsxStock = useManufacturerStock(manufacturerId);
+  const nsxRows = (nsxStock.data?.data ?? []).filter((row) => row.units > 0.00005);
+  const nsxUnitsOf = (productId: number) =>
+    nsxStock.data?.data.find((row) => row.productId === productId)?.units ?? 0;
+  // Phiếu đã gửi: tồn NSX hiện tại đã trừ phần của chính phiếu này → cộng lại
+  // để cột "Tồn" luôn là tồn trước phiếu (giống phiếu tạm), so được với lượng cần.
+  const nsxUsedBySlip = new Map<number, number>();
+  if (sent) {
+    for (const line of production?.components ?? []) {
+      if (line.source !== "manufacturer") continue;
+      nsxUsedBySlip.set(
+        line.componentProductId,
+        (nsxUsedBySlip.get(line.componentProductId) ?? 0) + Number(line.unitsDeducted),
+      );
+    }
+  }
+  const nsxBeforeSlip = (productId: number) =>
+    round4(nsxUnitsOf(productId) + (nsxUsedBySlip.get(productId) ?? 0));
+  /** NSX đang giữ mã này thì mặc định lấy từ tồn NSX. */
+  const defaultSource = (productId: number): OwnDraft["source"] =>
+    nsxUnitsOf(productId) > 0.00005 ? "manufacturer" : "branch";
+  const addOwn = (line: Omit<OwnDraft, "source">, source = defaultSource(line.productId)) => {
+    if (own.some((item) => ownKey(item) === ownKey({ productId: line.productId, source }))) {
+      toast.error(
+        source === "manufacturer"
+          ? "Mã hàng đã có dòng lấy từ tồn NSX"
+          : "Mã hàng đã có dòng lấy từ kho gửi",
+      );
+      return;
+    }
+    setOwn([...own, { ...line, source }]);
+  };
 
   // Phiếu theo công thức (hoặc phiếu cũ từ mẫu phối trộn): đổi sản lượng thì co
   // giãn hàng mình, nguyên liệu NSX theo lượng và phí gia công (nếu biết phí/sp).
@@ -304,10 +327,11 @@ function ExternalProductionFormContent({
     sourceBranchId: source,
     destinationBranchId: dest,
     quantity,
-    ownMaterials: own.map(({ productId, quantity, unit }) => ({
+    ownMaterials: own.map(({ productId, quantity, unit, source }) => ({
       productId,
       quantity,
       unit,
+      source,
     })),
     // Map tường minh: server bật forbidNonWhitelisted.
     manufacturerMaterials: supplied.map(materialPayload),
@@ -329,7 +353,10 @@ function ExternalProductionFormContent({
       if (
         send &&
         !confirm(
-          `Gửi nguyên liệu ngày ${sentDate.split("-").reverse().join("/")}? Hàng mình gửi sẽ trừ tồn kho theo ngày này.`,
+          `Gửi nguyên liệu ngày ${sentDate.split("-").reverse().join("/")}? Hàng mình gửi sẽ trừ tồn kho theo ngày này` +
+            (own.some((line) => line.source === "manufacturer")
+              ? " (dòng \"Tồn NSX\" trừ vào tồn nguyên liệu đang ở NSX)."
+              : "."),
         )
       ) {
         return false;
@@ -337,7 +364,7 @@ function ExternalProductionFormContent({
       if (
         sent &&
         !confirm(
-          "Lưu thay đổi phiếu đã gửi? Tồn kho nguyên liệu ở kho gửi và giá thành dự kiến sẽ được tính lại.",
+          "Lưu thay đổi phiếu đã gửi? Tồn kho nguyên liệu ở kho gửi, tồn tại NSX và giá thành dự kiến sẽ được tính lại.",
         )
       ) {
         return false;
@@ -396,6 +423,7 @@ function ExternalProductionFormContent({
           product: item,
           quantity: round4(Number(line.quantity) * quantity),
           unit: piece || !(grams > 0) ? item.unit || "unit" : "g",
+          source: defaultSource(line.componentProductId),
         };
       }),
     );
@@ -747,42 +775,72 @@ function ExternalProductionFormContent({
                       <ProductPicker
                         label="Thêm hàng mình gửi"
                         branchId={source}
-                        onChange={(item) => {
-                          if (
-                            own.some((line) => line.productId === item.id)
-                          ) {
-                            toast.error("Mã hàng đã có trong phiếu");
-                            return;
-                          }
-                          setOwn([
-                            ...own,
-                            {
-                              productId: item.id,
-                              product: item,
-                              code: item.code,
-                              name: item.name,
-                              quantity: 1,
-                              unit: defaultOwnUnit(item),
-                            },
-                          ]);
-                        }}
+                        onChange={(item) =>
+                          addOwn({
+                            productId: item.id,
+                            product: item,
+                            code: item.code,
+                            name: item.name,
+                            quantity: 1,
+                            unit: defaultOwnUnit(item),
+                          })
+                        }
                       />
                     </div>
                   </div>
+                  {nsxRows.length > 0 && (
+                    <div className="mb-3 flex flex-wrap items-center gap-1.5 rounded-lg border border-brand-border bg-brand-soft px-3 py-2 text-xs">
+                      <span className="flex items-center gap-1 font-medium text-brand-dark">
+                        <Boxes size={14} />
+                        Đang có tại NSX:
+                      </span>
+                      {nsxRows.map((row) => (
+                        <button
+                          key={row.productId}
+                          type="button"
+                          title="Thêm dòng lấy từ tồn NSX"
+                          className="rounded-full border border-brand-border bg-white px-2.5 py-1 text-gray-700 hover:border-brand hover:text-brand"
+                          onClick={() =>
+                            addOwn(
+                              {
+                                productId: row.productId,
+                                code: row.productCode,
+                                name: row.productName,
+                                quantity: row.gramsPerUnit > 0 ? 1000 : 1,
+                                unit: row.gramsPerUnit > 0 ? "g" : row.unit || "unit",
+                              },
+                              "manufacturer",
+                            )
+                          }>
+                          {row.productName} ·{" "}
+                          <span className="tabular-nums">
+                            {stockWithGrams(row.units, row.unit, row.gramsPerUnit)}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <div className="overflow-x-auto rounded-lg border border-gray-200">
                     <table className="w-full min-w-[820px] text-sm">
                       <thead className="bg-gray-50 text-left text-xs font-medium text-gray-500">
                         <tr>
                           <th className="px-3 py-2.5">Sản phẩm</th>
+                          <th
+                            className="w-44 px-3 py-2.5"
+                            title="Kho gửi: trừ tồn kho gửi khi gửi phiếu. Tồn NSX: dùng nguyên liệu đã gửi trước, đang nằm ở NSX">
+                            Lấy từ
+                          </th>
                           <th className="w-36 px-3 py-2.5">Lượng gửi</th>
                           <th className="w-32 px-3 py-2.5">Đơn vị</th>
                           <th
                             className="w-36 px-3 py-2.5 text-right"
-                            title="Lượng gửi đổi sang đơn vị kho — số sẽ bị trừ khỏi kho gửi">
+                            title="Lượng gửi đổi sang đơn vị kho — dòng Kho gửi trừ kho gửi, dòng Tồn NSX trừ tồn tại NSX">
                             Trừ kho
                           </th>
-                          <th className="w-32 px-3 py-2.5 text-right">
-                            Tồn kho
+                          <th
+                            className="w-40 px-3 py-2.5 text-right"
+                            title="Tồn trước phiếu này: tồn kho gửi, hoặc tồn tại NSX với dòng Tồn NSX">
+                            Tồn
                           </th>
                           <th className="w-12" />
                         </tr>
@@ -790,7 +848,7 @@ function ExternalProductionFormContent({
                       <tbody className="divide-y divide-gray-100">
                         {own.map((line, index) => (
                           <tr
-                            key={line.productId}
+                            key={ownKey(line)}
                             className="align-middle hover:bg-gray-50/70"
                           >
                             <td className="px-3 py-2.5">
@@ -800,6 +858,37 @@ function ExternalProductionFormContent({
                               <p className="mt-0.5 font-mono text-xs text-gray-400">
                                 {line.code}
                               </p>
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <div
+                                className="inline-flex rounded-lg border border-gray-200 p-0.5"
+                                role="group"
+                                aria-label={`Lấy ${line.code} từ`}>
+                                {(["branch", "manufacturer"] as const).map((option) => (
+                                  <button
+                                    key={option}
+                                    type="button"
+                                    aria-pressed={line.source === option}
+                                    disabled={
+                                      line.source !== option &&
+                                      own.some(
+                                        (item) =>
+                                          ownKey(item) ===
+                                          ownKey({ productId: line.productId, source: option }),
+                                      )
+                                    }
+                                    onClick={() =>
+                                      setOwn(
+                                        own.map((item, position) =>
+                                          position === index ? { ...item, source: option } : item,
+                                        ),
+                                      )
+                                    }
+                                    className={`whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium disabled:opacity-40 ${line.source === option ? "bg-brand text-white" : "text-gray-600 hover:bg-gray-50"}`}>
+                                    {option === "branch" ? "Kho gửi" : "Tồn NSX"}
+                                  </button>
+                                ))}
+                              </div>
                             </td>
                             <td className="px-3 py-2.5">
                               <NumericInput
@@ -860,6 +949,11 @@ function ExternalProductionFormContent({
                               unit={line.unit}
                               branchId={source}
                               checkStock={checkStock}
+                              nsxUnits={
+                                line.source === "manufacturer"
+                                  ? nsxBeforeSlip(line.productId)
+                                  : undefined
+                              }
                             />
                             <td className="px-2 py-2.5 text-center">
                               <button
@@ -1121,23 +1215,32 @@ function OwnStockCells({
   unit,
   branchId,
   checkStock,
+  nsxUnits,
 }: {
   product?: Product;
   quantity: number;
   unit: string;
   branchId: number;
   checkStock: boolean;
+  /**
+   * Có → dòng lấy từ tồn NSX: cột tồn hiện tồn tại NSX TRƯỚC phiếu này (phiếu
+   * đã gửi đã được cộng lại phần của chính nó) thay vì tồn kho gửi.
+   */
+  nsxUnits?: number;
 }) {
+  const fromNsx = nsxUnits != null;
   const factor = stockFactor(product, unit);
   const deduct = factor == null ? null : round4(Number(quantity) * factor);
-  const rawOnHand = product?.inventories?.find(
-    (inventory) => inventory.branchId === branchId,
-  )?.onHand;
+  const rawOnHand =
+    nsxUnits ??
+    product?.inventories?.find((inventory) => inventory.branchId === branchId)
+      ?.onHand;
   // Tồn có thể còn số lẻ dư (2.5999…): so ở 4 số lẻ như backend.
   const onHand = rawOnHand == null ? null : round4(Number(rawOnHand));
   const stockUnit = product?.unit || "";
+  // Tồn NSX luôn là tồn trước phiếu nên so được cả khi sửa phiếu đã gửi.
   const missing =
-    checkStock && deduct != null && onHand != null && deduct > onHand
+    (checkStock || fromNsx) && deduct != null && onHand != null && deduct > onHand
       ? round4(deduct - onHand)
       : 0;
   return (
@@ -1157,16 +1260,34 @@ function OwnStockCells({
               className={`font-medium tabular-nums ${missing > 0 ? "text-red-600" : "text-gray-800"}`}>
               {stockText(deduct)} {stockUnit}
             </span>
-            {missing > 0 && (
-              <span className="block text-xs text-red-600">
+            {missing > 0 ? (
+              <span className="block whitespace-nowrap text-xs text-red-600">
                 Thiếu {stockText(missing)} {stockUnit}
               </span>
+            ) : (
+              fromNsx && (
+                <span className="block whitespace-nowrap text-xs text-brand-dark">
+                  trừ tồn NSX
+                </span>
+              )
             )}
           </>
         )}
       </td>
       <td className="px-3 py-2.5 text-right font-medium tabular-nums text-gray-600">
         {onHand == null ? "-" : `${stockText(onHand)} ${stockUnit}`}
+        {fromNsx && (
+          <>
+            <span className="block text-xs font-normal text-brand-dark">
+              tại NSX
+            </span>
+            {deduct != null && onHand != null && missing === 0 && (
+              <span className="block whitespace-nowrap text-xs font-normal text-gray-500">
+                còn {stockText(round4(onHand - deduct))} sau phiếu
+              </span>
+            )}
+          </>
+        )}
       </td>
     </>
   );

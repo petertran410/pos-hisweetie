@@ -13,6 +13,8 @@ export interface SavedProductionComponent {
   actualGrams: number;
   unitsDeducted: number;
   inputMode?: string | null;
+  /** Lấy từ: branch = kho gửi, manufacturer = tồn nguyên liệu đang ở NSX. */
+  source?: "branch" | "manufacturer" | null;
 }
 
 export interface Production {
