@@ -4,12 +4,14 @@ import { apiClient } from "@/lib/config/api";
  * Tồn nguyên liệu của mình đang nằm ở NSX (gửi trước, dùng dần cho nhiều phiếu
  * gửi sản xuất) và các phiếu nguyên liệu NSX: Gửi / Trả về kho / Điều chỉnh.
  */
-export type StockSlipType = "SEND" | "RETURN" | "ADJUST";
+/** OPENING: khai báo tồn đầu — hàng đã ở NSX từ trước, kho mình đã trừ. */
+export type StockSlipType = "SEND" | "RETURN" | "ADJUST" | "OPENING";
 
 export const STOCK_SLIP_LABEL: Record<StockSlipType, string> = {
   SEND: "Gửi nguyên liệu",
   RETURN: "Trả về kho",
   ADJUST: "Điều chỉnh",
+  OPENING: "Tồn đầu",
 };
 
 type Numeric = number | string;
@@ -81,7 +83,13 @@ export interface ManufacturerStockSlipInput {
   branchId?: number | null;
   date?: string;
   note?: string | null;
-  lines: Array<{ productId: number; quantity: number; unit: string }>;
+  /** unitCost: chỉ cho Khai báo tồn đầu (giá vốn / 1 đơn vị kho). */
+  lines: Array<{
+    productId: number;
+    quantity: number;
+    unit: string;
+    unitCost?: number;
+  }>;
 }
 
 export const manufacturerStockApi = {

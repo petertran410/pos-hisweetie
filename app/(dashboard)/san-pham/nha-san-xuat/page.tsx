@@ -44,7 +44,7 @@ function ManufacturersView() {
   const stockSlip = useQuery({
     queryKey: ["manufacturer-stock-slip-code", codeParam],
     queryFn: () => manufacturerStockApi.findByCode(codeParam!),
-    enabled: !!codeParam && /^(GNL|TNL|DCN)/i.test(codeParam),
+    enabled: !!codeParam && /^(GNL|TNL|DCN|TDK)/i.test(codeParam),
     retry: false,
   });
   // Điều chỉnh state ngay khi render (một lần cho mỗi mã), không dùng effect.
