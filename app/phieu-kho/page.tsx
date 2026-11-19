@@ -17,7 +17,7 @@ const ITEMS = [
     label: "Phiếu tiền mặt kho",
     icon: Banknote,
     resource: "warehouse_cash",
-    candidates: [6, 1],
+    candidates: [6, 1, 4, 7],
   },
   {
     href: "/phieu-kho/xang-dau",
