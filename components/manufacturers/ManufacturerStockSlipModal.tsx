@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import {
   AlertTriangle,
   Check,
+  ClipboardList,
   PackageMinus,
   PackagePlus,
   Scale,
@@ -24,6 +25,7 @@ import {
   type StockSlipType,
 } from "@/lib/api/manufacturer-stock";
 import { useBranches } from "@/lib/hooks/useBranches";
+import { usePermission } from "@/lib/hooks/usePermissions";
 import {
   useCreateManufacturerStockSlip,
   useUpdateManufacturerStockSlip,
@@ -60,14 +62,42 @@ interface Line {
   info?: UnitInfo;
   quantity: number;
   unit: string;
+  /** Khai báo tồn đầu: giá vốn / 1 đơn vị kho. */
+  unitCost?: number;
 }
 
 const TITLE: Record<StockSlipType, string> = {
   SEND: "Gửi nguyên liệu cho NSX",
   RETURN: "NSX trả nguyên liệu về kho",
   ADJUST: "Điều chỉnh tồn tại NSX",
+  OPENING: "Khai báo tồn đầu tại NSX",
 };
-const ICON = { SEND: PackagePlus, RETURN: PackageMinus, ADJUST: Scale };
+const ICON = {
+  SEND: PackagePlus,
+  RETURN: PackageMinus,
+  ADJUST: Scale,
+  OPENING: ClipboardList,
+};
+const QUANTITY_LABEL: Record<StockSlipType, string> = {
+  SEND: "Lượng gửi",
+  RETURN: "Lượng trả",
+  ADJUST: "Thực tế còn",
+  OPENING: "Lượng đang ở NSX",
+};
+const DATE_LABEL: Record<StockSlipType, string> = {
+  SEND: "Ngày gửi",
+  RETURN: "Ngày trả",
+  ADJUST: "Ngày kiểm",
+  OPENING: "Ngày khai báo",
+};
+const HINT: Record<StockSlipType, string> = {
+  SEND: 'Nguyên liệu trừ khỏi kho gửi và nằm ở NSX để các phiếu gửi sản xuất sau chọn "Lấy từ: Tồn NSX".',
+  RETURN: "Nguyên liệu được cộng lại vào kho nhận và trừ khỏi tồn tại NSX.",
+  ADJUST:
+    "Nhập lượng thực tế còn ở NSX. Phần chênh lệch ghi vào tồn NSX (âm là hao hụt); không đổi tồn kho của mình.",
+  OPENING:
+    "Dùng cho hàng đã nằm ở NSX từ trước và kho của bạn đã trừ rồi. Phiếu chỉ cộng tồn tại NSX theo giá vốn khai báo, không trừ tồn kho. Giá vốn mặc định lấy theo giá vốn hiện tại, sửa được.",
+};
 
 const infoFromStock = (row: ManufacturerStockRow): UnitInfo => ({
   unit: row.unit ?? undefined,
@@ -81,6 +111,7 @@ const infoFromStock = (row: ManufacturerStockRow): UnitInfo => ({
  * - Gửi: trừ kho gửi, cộng tồn NSX (giá vốn = giá vốn kho gửi).
  * - Trả: trừ tồn NSX, cộng kho nhận.
  * - Điều chỉnh: nhập lượng thực tế còn tại NSX, chênh lệch là hao hụt / dư.
+ * - Khai báo tồn đầu: hàng đã ở NSX từ trước, kho đã trừ — chỉ cộng tồn NSX.
  */
 export function ManufacturerStockSlipModal({
   manufacturerId,
@@ -100,15 +131,18 @@ export function ManufacturerStockSlipModal({
 }) {
   const editing = !!slip;
   const Icon = ICON[type];
+  /** Gửi / Trả mới chạm kho mình; Điều chỉnh / Khai báo tồn đầu chỉ đổi tồn NSX. */
+  const usesBranch = type === "SEND" || type === "RETURN";
+  /** Gửi / Khai báo tồn đầu chọn mã bất kỳ; Trả / Điều chỉnh chọn trong tồn NSX. */
+  const anyProduct = type === "SEND" || type === "OPENING";
+  const canViewCost = usePermission("products", "view_cost_price");
   const { data: branches } = useBranches();
   const selectedBranch = useBranchStore((state) => state.selectedBranch);
   const branchOptions = (branches ?? [])
     .filter((branch) => branch.isActive || branch.id === slip?.branchId)
     .map((branch) => ({ value: String(branch.id), label: branch.name }));
   const [branchId, setBranchId] = useState(() =>
-    String(
-      slip?.branchId ?? (type === "ADJUST" ? "" : (selectedBranch?.id ?? "")),
-    ),
+    String(slip?.branchId ?? (usesBranch ? (selectedBranch?.id ?? "") : "")),
   );
   const [date, setDate] = useState(
     localDate(slip ? new Date(slip.date) : new Date()),
@@ -132,9 +166,10 @@ export function ManufacturerStockSlipModal({
         productId: line.productId,
         code: line.productCode,
         name: line.productName,
-        info: type === "SEND" || !row ? undefined : infoFromStock(row),
+        info: anyProduct || !row ? undefined : infoFromStock(row),
         quantity: Number(line.quantity),
         unit: line.unit,
+        unitCost: type === "OPENING" ? Number(line.unitCost) : undefined,
       };
     }),
   );
@@ -181,6 +216,16 @@ export function ManufacturerStockSlipModal({
     );
   };
 
+  /** Giá vốn gợi ý: kho đang chọn ở header, không có thì kho đầu tiên có giá vốn. */
+  const defaultCost = (info?: UnitInfo) => {
+    const inventories = info?.inventories ?? [];
+    const own = inventories.find((inv) => inv.branchId === selectedBranch?.id);
+    const cost =
+      Number(own?.cost ?? 0) ||
+      Number(inventories.find((inv) => Number(inv.cost) > 0)?.cost ?? 0);
+    return Math.round(cost * 100) / 100;
+  };
+
   const addLine = (
     productId: number,
     code: string,
@@ -195,14 +240,24 @@ export function ManufacturerStockSlipModal({
     const factor = info ? stockFactor(info, unit) : null;
     // Trả: mặc định trả hết phần còn ở NSX; Điều chỉnh: mặc định = tồn hệ thống.
     const units =
-      type === "SEND"
-        ? 0
-        : type === "RETURN"
-          ? nsxAvailable(productId)
-          : systemOf(productId);
-    const quantity =
-      type === "SEND" ? 1 : factor ? round4(units / factor) : units;
-    setLines([...lines, { productId, code, name, info, quantity, unit }]);
+      type === "RETURN"
+        ? nsxAvailable(productId)
+        : type === "ADJUST"
+          ? systemOf(productId)
+          : 0;
+    const quantity = anyProduct ? 1 : factor ? round4(units / factor) : units;
+    setLines([
+      ...lines,
+      {
+        productId,
+        code,
+        name,
+        info,
+        quantity,
+        unit,
+        unitCost: type === "OPENING" ? defaultCost(info) : undefined,
+      },
+    ]);
   };
   const patch = (index: number, value: Partial<Line>) =>
     setLines(
@@ -239,7 +294,7 @@ export function ManufacturerStockSlipModal({
   const anyShort = rows.some((row) => row.short > 0);
 
   const submit = () => {
-    if (type !== "ADJUST" && !branchId) {
+    if (usesBranch && !branchId) {
       toast.error(type === "SEND" ? "Chọn kho gửi" : "Chọn kho nhận");
       return;
     }
@@ -258,6 +313,13 @@ export function ManufacturerStockSlipModal({
       toast.error("Lượng phải lớn hơn 0");
       return;
     }
+    if (
+      type === "OPENING" &&
+      lines.some((line) => !(Number(line.unitCost) >= 0))
+    ) {
+      toast.error("Nhập giá vốn cho từng nguyên liệu");
+      return;
+    }
     // Giữ giờ cũ nếu không đổi ngày; ngày mới lấy giờ hiện tại.
     const keep =
       slip && localDate(new Date(slip.date)) === date
@@ -271,13 +333,14 @@ export function ManufacturerStockSlipModal({
     const data = {
       ...(editing
         ? {}
-        : { type, branchId: type === "ADJUST" ? null : Number(branchId) }),
+        : { type, branchId: usesBranch ? Number(branchId) : null }),
       date: at.toISOString(),
       note: note.trim() || null,
       lines: lines.map((line) => ({
         productId: line.productId,
         quantity: Number(line.quantity),
         unit: line.unit,
+        ...(type === "OPENING" ? { unitCost: Number(line.unitCost ?? 0) } : {}),
       })),
     };
     const options = { onSuccess: onClose };
@@ -288,12 +351,8 @@ export function ManufacturerStockSlipModal({
   const pickable = stock.filter((row) =>
     type === "RETURN" ? nsxAvailable(row.productId) > 0 : true,
   );
-  const quantityLabel =
-    type === "SEND"
-      ? "Lượng gửi"
-      : type === "RETURN"
-        ? "Lượng trả"
-        : "Thực tế còn";
+  const quantityLabel = QUANTITY_LABEL[type];
+  const showCost = type === "OPENING" && canViewCost;
 
   return createPortal(
     <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/40 p-2 sm:p-5">
@@ -323,7 +382,7 @@ export function ManufacturerStockSlipModal({
             </span>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
-            {type !== "ADJUST" && (
+            {usesBranch && (
               <div className="text-sm">
                 <label className="mb-1 block">
                   {type === "SEND" ? "Kho gửi" : "Kho nhận"}
@@ -344,13 +403,7 @@ export function ManufacturerStockSlipModal({
               </div>
             )}
             <div className="text-sm">
-              <label className="mb-1 block">
-                {type === "SEND"
-                  ? "Ngày gửi"
-                  : type === "RETURN"
-                    ? "Ngày trả"
-                    : "Ngày kiểm"}
-              </label>
+              <label className="mb-1 block">{DATE_LABEL[type]}</label>
               <DatePickerInput
                 value={date}
                 onChange={setDate}
@@ -378,10 +431,16 @@ export function ManufacturerStockSlipModal({
               </span>
             </h3>
             <div className="w-full sm:w-80">
-              {type === "SEND" ? (
+              {anyProduct ? (
                 <ProductPicker
-                  label="Thêm nguyên liệu gửi"
-                  branchId={branchId ? Number(branchId) : undefined}
+                  label={
+                    type === "SEND"
+                      ? "Thêm nguyên liệu gửi"
+                      : "Thêm nguyên liệu đang ở NSX"
+                  }
+                  branchId={
+                    type === "SEND" && branchId ? Number(branchId) : undefined
+                  }
                   onChange={(product) =>
                     addLine(product.id, product.code, product.name, product)
                   }
@@ -429,9 +488,14 @@ export function ManufacturerStockSlipModal({
                   <th className="w-36 px-3 py-2.5 text-right">
                     {type === "ADJUST" ? "Chênh lệch" : "Quy đổi kho"}
                   </th>
-                  {type !== "ADJUST" && (
+                  {usesBranch && (
                     <th className="w-36 px-3 py-2.5 text-right">
                       {type === "SEND" ? "Tồn kho gửi" : "Còn tại NSX"}
+                    </th>
+                  )}
+                  {showCost && (
+                    <th className="w-44 px-3 py-2.5 text-right">
+                      Giá vốn / đơn vị kho
                     </th>
                   )}
                   <th className="w-12" />
@@ -519,11 +583,29 @@ export function ManufacturerStockSlipModal({
                           </>
                         )}
                       </td>
-                      {type !== "ADJUST" && (
+                      {usesBranch && (
                         <td className="px-3 py-2.5 text-right font-medium tabular-nums text-gray-600">
                           {available == null
                             ? "-"
                             : `${qty(available)} ${stockUnit}`}
+                        </td>
+                      )}
+                      {showCost && (
+                        <td className="px-3 py-2.5">
+                          <NumericInput
+                            className={numericClass}
+                            value={line.unitCost ?? 0}
+                            maxFractionDigits={2}
+                            formatWhileTyping
+                            onValueChange={(value) =>
+                              patch(index, { unitCost: value })
+                            }
+                          />
+                          {stockUnit && (
+                            <span className="mt-0.5 block text-right text-xs text-gray-400">
+                              đ / {stockUnit}
+                            </span>
+                          )}
                         </td>
                       )}
                       <td className="px-2 py-2.5 text-center">
@@ -563,13 +645,7 @@ export function ManufacturerStockSlipModal({
                 : "Có dòng trả nhiều hơn lượng còn ở NSX — lưu sẽ bị từ chối."}
             </p>
           )}
-          <p className="text-xs text-gray-500">
-            {type === "SEND"
-              ? 'Nguyên liệu trừ khỏi kho gửi và nằm ở NSX để các phiếu gửi sản xuất sau chọn "Lấy từ: Tồn NSX".'
-              : type === "RETURN"
-                ? "Nguyên liệu được cộng lại vào kho nhận và trừ khỏi tồn tại NSX."
-                : "Nhập lượng thực tế còn ở NSX. Phần chênh lệch ghi vào tồn NSX (âm là hao hụt); không đổi tồn kho của mình."}
-          </p>
+          <p className="text-xs text-gray-500">{HINT[type]}</p>
         </fieldset>
         <footer className="flex justify-end gap-2 border-t px-4 py-3">
           <button

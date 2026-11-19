@@ -7,6 +7,7 @@ import Swal from "sweetalert2";
 import {
   Ban,
   ChevronDown,
+  ClipboardList,
   History,
   Loader2,
   PackageMinus,
@@ -53,6 +54,7 @@ const TYPE_BADGE: Record<StockSlipType, string> = {
   SEND: "bg-brand-soft text-brand-dark",
   RETURN: "bg-green-100 text-green-700",
   ADJUST: "bg-amber-100 text-amber-700",
+  OPENING: "bg-gray-100 text-gray-700",
 };
 
 /**
@@ -86,7 +88,7 @@ export function ManufacturerStockPanel({
   } | null>(null);
   const rows = stock.data?.data ?? [];
   const visible = rows.filter(
-    (row) => showEmpty || Math.abs(row.units) > 0.00005
+    (row) => showEmpty || Math.abs(row.units) > 0.00005,
   );
   const hasStock = rows.some((row) => row.units > 0.00005);
 
@@ -98,7 +100,9 @@ export function ManufacturerStockPanel({
           ? `Nguyên liệu được cộng lại vào kho <b>${slip.branchName}</b> và trừ khỏi tồn tại NSX. Không hủy được nếu đã dùng cho phiếu gửi sản xuất.`
           : slip.type === "RETURN"
             ? `Nguyên liệu bị trừ khỏi kho <b>${slip.branchName}</b> và trả lại tồn tại NSX.`
-            : "Tồn tại NSX trở lại như trước khi điều chỉnh.",
+            : slip.type === "OPENING"
+              ? "Lượng đã khai báo bị trừ khỏi tồn tại NSX (kho của bạn không đổi). Không hủy được nếu đã dùng cho phiếu gửi sản xuất."
+              : "Tồn tại NSX trở lại như trước khi điều chỉnh.",
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Hủy phiếu",
@@ -151,6 +155,15 @@ export function ManufacturerStockPanel({
                 onClick={() => setModal({ type: "ADJUST" })}>
                 <Scale size={15} />
                 Điều chỉnh
+              </button>
+              <button
+                type="button"
+                className={secondary}
+                disabled={!manufacturerActive}
+                title="Hàng đã ở NSX từ trước và kho của bạn đã trừ rồi: chỉ cộng tồn NSX, không trừ kho"
+                onClick={() => setModal({ type: "OPENING" })}>
+                <ClipboardList size={15} />
+                Khai báo tồn đầu
               </button>
             </div>
           )}
@@ -207,7 +220,7 @@ export function ManufacturerStockPanel({
                           {stockWithGrams(
                             row.units,
                             row.unit,
-                            row.gramsPerUnit
+                            row.gramsPerUnit,
                           )}
                         </td>
                         {canViewCost && (
@@ -231,7 +244,7 @@ export function ManufacturerStockPanel({
                               setCardProduct(
                                 cardProduct === row.productId
                                   ? null
-                                  : row.productId
+                                  : row.productId,
                               )
                             }>
                             <History size={13} />
@@ -527,7 +540,7 @@ function SlipPrintButton({ slipId }: { slipId: number }) {
                 onClick={() => void print(template.id)}>
                 {template.name}
               </button>
-            )
+            ),
           )}
         </div>
       )}
