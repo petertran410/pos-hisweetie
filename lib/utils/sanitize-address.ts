@@ -1,12 +1,15 @@
 /**
- * Loại bỏ các field không có trong CustomerAddressDto
- * (customerId, createdAt, updatedAt, ...) trước khi gửi API.
+ * Chuẩn hóa 1 địa chỉ trước khi gửi API (CustomerAddressDto):
+ * - Chỉ giữ các field DTO nhận (customerId, createdAt, ... bị bỏ → tránh 400).
+ * - Địa chỉ ĐÃ LƯU (có id): ô bỏ trống vẫn phải gửi lên để xóa giá trị cũ,
+ *   vì backend chỉ sửa field có trong payload (Prisma giữ nguyên field thiếu).
+ *   Nếu không gửi, phường/quận cũ còn sót lại trong DB dù người dùng đã bỏ trống.
+ *   → field text gửi "", field mã/tên địa giới gửi null.
+ * - Địa chỉ MỚI (chưa có id): ô trống thì bỏ qua.
  *
- * Lưu ý: các field text người dùng nhập (receiver, contactNumber, label, address)
- * được giữ nguyên cả khi rỗng để cho phép clear giá trị khi edit.
+ * Giống `toAddressPayload` bên app mobile.
  */
-const ALLOWED_FIELDS = new Set([
-  "id",
+const ALLOWED_FIELDS = [
   "label",
   "receiver",
   "contactNumber",
@@ -22,11 +25,10 @@ const ALLOWED_FIELDS = new Set([
   "newWardCode",
   "newWardName",
   "locationName",
-  "isDefault",
-]);
+] as const;
 
-// Field text user-editable — cần gửi cả "" để BE xóa được giá trị cũ.
-const CLEARABLE_TEXT_FIELDS = new Set([
+// Field text user-editable — xóa trắng thì gửi "".
+const CLEARABLE_TEXT_FIELDS = new Set<string>([
   "receiver",
   "contactNumber",
   "label",
@@ -37,25 +39,22 @@ export function sanitizeAddressForApi(
   addr: Record<string, any>
 ): Record<string, any> {
   const clean: Record<string, any> = {};
+  const hasId =
+    addr.id !== null && addr.id !== undefined && String(addr.id) !== "";
 
-  for (const key of ALLOWED_FIELDS) {
-    const val = addr[key];
-    if (val === null || val === undefined) continue;
-    // Field text cho phép gửi chuỗi rỗng để clear giá trị.
-    // Các field khác (code/name) thì vẫn drop "" như cũ.
-    if (val === "" && !CLEARABLE_TEXT_FIELDS.has(key)) continue;
-
-    if (key === "id") {
-      clean.id = typeof val === "number" ? val : parseInt(val, 10);
-    } else if (key === "isDefault") {
-      clean.isDefault = Boolean(val);
-    } else {
-      // Đảm bảo tất cả string fields là string (xử lý cityCode number → string)
-      clean[key] = String(val);
-    }
+  if (hasId) {
+    clean.id = typeof addr.id === "number" ? addr.id : parseInt(addr.id, 10);
   }
 
-  if (clean.isDefault === undefined) clean.isDefault = false;
+  for (const key of ALLOWED_FIELDS) {
+    const raw = addr[key];
+    // String() xử lý cityCode dạng number → string
+    const val = raw === null || raw === undefined ? "" : String(raw).trim();
+    if (val) clean[key] = val;
+    else if (hasId) clean[key] = CLEARABLE_TEXT_FIELDS.has(key) ? "" : null;
+  }
+
+  clean.isDefault = Boolean(addr.isDefault);
   return clean;
 }
 

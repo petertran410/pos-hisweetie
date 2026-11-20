@@ -2,6 +2,7 @@
 
 import {
   BookOpen,
+  Boxes,
   ClipboardList,
   History,
   X,
@@ -11,6 +12,7 @@ export type ManufacturerView =
   | "info"
   | "debt"
   | "productions"
+  | "stock"
   | "costHistory";
 export type ManufacturerStatus = "all" | "active" | "inactive";
 export type ManufacturerBooleanFilter = "all" | "yes" | "no";
@@ -19,6 +21,7 @@ export const MANUFACTURER_VIEWS = [
   { value: "info", label: "Thông tin nhà sản xuất", icon: BookOpen },
   { value: "debt", label: "Công nợ nhà sản xuất", icon: ClipboardList },
   { value: "productions", label: "Phiếu gửi sản xuất", icon: ClipboardList },
+  { value: "stock", label: "Tồn NL tại NSX", icon: Boxes },
   { value: "costHistory", label: "Lịch sử giá thành", icon: History },
 ] as const;
 
