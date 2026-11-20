@@ -439,6 +439,8 @@ function PriceList({
     </>
   );
 
+  // Ẩn thương hiệu không có sản phẩm trong nhóm / kết quả tìm đang xem (giữ chip đang chọn để còn bỏ chọn được)
+  const chipIds = [null, ...data.brands.map((b) => b.id)].filter((id) => id == null || id === brand || brandCount(id) > 0);
   const chip = (id: number | null) => {
     const on = brand === id;
     const n = brandCount(id);
@@ -698,7 +700,7 @@ function PriceList({
             )}
           </h3>
           <div className="pp-bg" role="group" aria-label="Lọc thương hiệu">
-            {[null, ...data.brands.map((b) => b.id)].map(chip)}
+            {chipIds.map(chip)}
           </div>
           {R.hotline && (
             <div className="pp-help">
@@ -810,7 +812,7 @@ function PriceList({
               })}
             </div>
             <div className="pp-chips" role="group" aria-label="Lọc thương hiệu">
-              {[null, ...data.brands.map((b) => b.id)].map(chip)}
+              {chipIds.map(chip)}
             </div>
           </div>
 
