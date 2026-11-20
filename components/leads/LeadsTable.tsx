@@ -3,8 +3,8 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { ClipboardList, FileText, Plus, Search } from "lucide-react";
-import { useLeads } from "@/lib/hooks/useLeads";
+import { ClipboardList, Download, FileText, Loader2, Plus, Search } from "lucide-react";
+import { useExportLeads, useLeads } from "@/lib/hooks/useLeads";
 import { useColumnVisibility, type ColumnConfig } from "@/lib/hooks/useColumnVisibility";
 import { useCan } from "@/lib/hooks/useCan";
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
@@ -206,6 +206,7 @@ export function LeadsTable({
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
   const [expandedId, setExpandedId] = useState<number | null>(openId);
+  const { exportLeads, isExporting } = useExportLeads();
 
   useEffect(() => {
     const t = setTimeout(() => setQ(input.trim()), 300);
@@ -260,6 +261,12 @@ export function LeadsTable({
               <FileText className="h-4 w-4" /> Mẫu tin
             </button>
           )}
+          <button
+            onClick={() => exportLeads({ ...filters, q: q || undefined })}
+            disabled={isExporting}
+            className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50">
+            {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Xuất file
+          </button>
           <ColumnToggle columns={columns} onToggle={toggleColumn} />
         </div>
       </div>
