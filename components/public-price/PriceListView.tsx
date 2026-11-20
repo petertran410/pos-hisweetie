@@ -1,13 +1,22 @@
 "use client";
 
 import "./price-list.css";
-import { useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { AnimatePresence, motion, spring } from "motion/react";
 import {
   ReducedMotionConfig,
   blur,
   scale,
   shift,
+  transition,
   useMotionTokens,
   useShouldReduceMotion,
 } from "@animate-ui/react/utils/motion";
@@ -18,12 +27,18 @@ import {
   PRICE_GROUPS,
   PRICE_TAG_LABEL,
   REGION_PARAM,
+  isGroupIcon,
+  type PriceGroupIcon,
   type PriceGroupKey,
   type PriceRegionKey,
   type PriceTag,
   type PublicPriceData,
   type PublicPriceProduct,
 } from "@/lib/public-price/types";
+import { id } from "date-fns/locale";
+import { on } from "events";
+import { data, p, b, q, main, div } from "motion/react-client";
+import { root } from "postcss";
 
 const LOGO = "/brands/price/lermao-mascot.png";
 const REGION_STORAGE_KEY = "price-region";
@@ -33,7 +48,8 @@ const DESKTOP_MIN = 1024;
 /* ---------- Icon (nét 2px, theo mockup) ---------- */
 const UI = {
   pin: "M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11zM9.5 10a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0z",
-  phone: "M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z",
+  phone:
+    "M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z",
   chat: "M4 5h16v11H9l-5 4zM8 9.5h8M8 12.5h5",
   search: "M4.5 11a6.5 6.5 0 1 0 13 0a6.5 6.5 0 1 0-13 0zM20 20l-4.2-4.2",
   x: "M6 6l12 12M18 6 6 18",
@@ -44,40 +60,80 @@ const TAG_ICON: Record<PriceTag, string> = {
   hot: "M12 21c-4 0-6-2.8-6-6 0-3 2-4.5 3-7 1 1.5 2 2 3 2 0-3 1-5 2-6 3 3 4 6.5 4 9.5 0 3.5-2 7.5-6 7.5z",
   sale: "M19 5 5 19M4.5 7a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0zM14.5 17a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0z",
 };
-/** Minh hoạ nhóm (khung 48): lá trà · chai syrup · ly trân châu · bông tuyết */
-const GROUP_ICON: Record<PriceGroupKey, string> = {
+/** Minh hoạ nhóm (khung 48): lá trà · chai syrup · ly trân châu · bông tuyết · túi bột (dự phòng khi ảnh lỗi) */
+const GROUP_ICON: Record<PriceGroupIcon, string> = {
   tea: "M8 38C8 18 20 8 40 8c0 20-10 32-30 32M8 40 28 20",
   jam: "M19 6h10v6l4 6v22a4 4 0 0 1-4 4H19a4 4 0 0 1-4-4V18l4-6zM15 26h18M24 30c-2 3-3 4-3 6a3 3 0 0 0 6 0c0-2-1-3-3-6z",
   top: "M10 14h28l-3 26a3 3 0 0 1-3 3H16a3 3 0 0 1-3-3zM8 14h32M16 34a3 3 0 1 0 6 0a3 3 0 1 0-6 0zM25 35a3 3 0 1 0 6 0a3 3 0 1 0-6 0zM21 28a3 3 0 1 0 6 0a3 3 0 1 0-6 0zM26 14l5-8",
   froz: "M24 6v36M8.4 15l31.2 18M8.4 33 39.6 15M19 9l5 4 5-4M19 39l5-4 5 4",
+  pow: "M14 6h20l2 4v28a4 4 0 0 1-4 4H16a4 4 0 0 1-4-4V10zM12 14h24",
 };
 
 function Ui({ d, className = "pp-i" }: { d: string; className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true">
       <path d={d} />
     </svg>
   );
 }
 /** Icon nhóm dạng ảnh (thay cho nét vẽ) */
-const GROUP_IMG: Partial<Record<PriceGroupKey, string>> = { jam: "/brands/price/icon-jam.webp" };
+const GROUP_IMG: Partial<Record<PriceGroupIcon, string>> = {
+  jam: "/brands/price/icon-jam.webp",
+  pow: "/brands/price/icon-pow.webp",
+};
 
-function Ill({ group, className }: { group: PriceGroupKey; className?: string }) {
-  const img = GROUP_IMG[group];
+function Ill({
+  icon,
+  className,
+}: {
+  icon: PriceGroupIcon;
+  className?: string;
+}) {
+  const img = GROUP_IMG[icon];
   if (img) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img className={`${className ?? ""} pp-ill-img`} src={img} alt="" aria-hidden="true" width={128} height={128} />;
+    return (
+      <img
+        className={`${className ?? ""} pp-ill-img`}
+        src={img}
+        alt=""
+        aria-hidden="true"
+        width={128}
+        height={128}
+      />
+    );
   }
   return (
-    <svg className={className} viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d={GROUP_ICON[group]} />
+    <svg
+      className={className}
+      viewBox="0 0 48 48"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true">
+      <path d={GROUP_ICON[icon]} />
     </svg>
   );
 }
 
 /* ---------- Tiện ích ---------- */
 const norm = (s: string) =>
-  s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "d").toLowerCase();
+  s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "d")
+    .toLowerCase();
 const telHref = (tel: string) => `tel:${tel.replace(/[^\d+]/g, "")}`;
 const ddmmyyyy = (iso: string | null) => {
   if (!iso) return "";
@@ -89,10 +145,14 @@ const ymdToDmy = (s: string) => s.split("-").reverse().join("/");
 /** Logo badge cho các thương hiệu chính; thương hiệu khác hiện chữ. */
 function brandLogo(name: string): { src: string; w: number; h: number } | null {
   const n = norm(name);
-  if (n.includes("lermao")) return { src: "/brands/price/lermao.png", w: 110, h: 105 };
-  if (n.includes("phuong hoang")) return { src: "/brands/price/tra-phuong-hoang.png", w: 140, h: 150 };
-  if (n.includes("amo")) return { src: "/brands/price/amo-pastel.png", w: 200, h: 86 };
-  if (n.includes("natufruit")) return { src: "/brands/price/natufruite.png", w: 130, h: 122 };
+  if (n.includes("lermao"))
+    return { src: "/brands/price/lermao.png", w: 110, h: 105 };
+  if (n.includes("phuong hoang"))
+    return { src: "/brands/price/tra-phuong-hoang.png", w: 140, h: 150 };
+  if (n.includes("amo"))
+    return { src: "/brands/price/amo-pastel.png", w: 200, h: 86 };
+  if (n.includes("natufruit"))
+    return { src: "/brands/price/natufruite.png", w: 130, h: 122 };
   return null;
 }
 
@@ -120,21 +180,48 @@ export function PriceListView(props: PriceListViewProps) {
   );
 }
 
-function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, portalContainer = null, region: regionProp, updatedLabel }: PriceListViewProps) {
+function PriceList({
+  data,
+  initialRegion,
+  syncUrl = false,
+  scrollRoot = null,
+  portalContainer = null,
+  region: regionProp,
+  updatedLabel,
+}: PriceListViewProps) {
   const uid = useId();
   const reduce = useShouldReduceMotion();
   const { spring, transition } = useMotionTokens();
 
-  const regions = data.regions.length ? data.regions : [{ key: "N" as const, name: "Miền Bắc", listName: "", hotline: "" }];
-  const groups = data.groups.length ? data.groups : PRICE_GROUPS.map(({ key, name }) => ({ key, name }));
+  const regions = data.regions.length
+    ? data.regions
+    : [{ key: "N" as const, name: "Miền Bắc", listName: "", hotline: "" }];
+  const groups = data.groups.length
+    ? data.groups
+    : PRICE_GROUPS.map(({ key, name }) => ({ key, name, icon: key }));
+  // Bản xuất bản cũ chưa có `icon`: nhóm mặc định có mã trùng kiểu hiển thị
+  const iconOf = (key?: PriceGroupKey): PriceGroupIcon => {
+    const g = groups.find((x) => x.key === key);
+    return g?.icon ?? (key && isGroupIcon(key) ? key : "top");
+  };
   // Mặc định Miền Nam (khi URL không ghi ?region= và máy chưa nhớ lựa chọn)
   const pickRegion = (k?: PriceRegionKey | null) =>
-    k && regions.some((r) => r.key === k) ? k : regions.some((r) => r.key === "S") ? "S" : regions[0].key;
+    k && regions.some((r) => r.key === k)
+      ? k
+      : regions.some((r) => r.key === "S")
+        ? "S"
+        : regions[0].key;
 
-  const [regionState, setRegionState] = useState<PriceRegionKey>(() => pickRegion(initialRegion));
+  const [regionState, setRegionState] = useState<PriceRegionKey>(() =>
+    pickRegion(initialRegion)
+  );
   const region = regionProp ? pickRegion(regionProp) : regionState;
   const R = regions.find((r) => r.key === region) ?? regions[0];
-  const [group, setGroup] = useState<PriceGroupKey>(groups[0].key);
+  const [groupState, setGroup] = useState<PriceGroupKey>(groups[0].key);
+  // Xem trước trong POS: nhóm đang chọn có thể vừa bị xoá → về nhóm đầu
+  const group = groups.some((g) => g.key === groupState)
+    ? groupState
+    : groups[0].key;
   const [brand, setBrand] = useState<number | null>(null);
   const [q, setQ] = useState("");
   const dq = useDeferredValue(q);
@@ -150,8 +237,15 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
     if (!syncUrl || regionProp) return;
     try {
       if (new URLSearchParams(window.location.search).get("region")) return;
-      const saved = window.localStorage.getItem(REGION_STORAGE_KEY) as PriceRegionKey | null;
-      if (saved && saved !== regionState && regions.some((r) => r.key === saved)) setRegionState(saved);
+      const saved = window.localStorage.getItem(
+        REGION_STORAGE_KEY
+      ) as PriceRegionKey | null;
+      if (
+        saved &&
+        saved !== regionState &&
+        regions.some((r) => r.key === saved)
+      )
+        setRegionState(saved);
     } catch {
       /* localStorage bị chặn: dùng mặc định */
     }
@@ -177,7 +271,11 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
     const el = headerRef.current;
     if (!el) return;
     const io = new IntersectionObserver(
-      ([e]) => setCompact(!e.isIntersecting && e.boundingClientRect.top < (e.rootBounds?.top ?? 0) + 56),
+      ([e]) =>
+        setCompact(
+          !e.isIntersecting &&
+            e.boundingClientRect.top < (e.rootBounds?.top ?? 0) + 56
+        ),
       { root: scrollRoot, rootMargin: "-56px 0px 0px 0px" }
     );
     io.observe(el);
@@ -188,27 +286,51 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
   useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(([e]) => setDesktop(e.contentRect.width >= DESKTOP_MIN));
+    const ro = new ResizeObserver(([e]) =>
+      setDesktop(e.contentRect.width >= DESKTOP_MIN)
+    );
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
-  const brandName = useCallback((id: number | null) => data.brands.find((b) => b.id === id)?.name ?? "", [data.brands]);
+  const brandName = useCallback(
+    (id: number | null) => data.brands.find((b) => b.id === id)?.name ?? "",
+    [data.brands]
+  );
   const qn = norm(dq.trim());
   const matchQ = useCallback(
-    (p: PublicPriceProduct) => !qn || norm(`${p.name} ${brandName(p.brandId)} ${p.spec} ${p.code}`).includes(qn),
+    (p: PublicPriceProduct) =>
+      !qn ||
+      norm(`${p.name} ${brandName(p.brandId)} ${p.spec} ${p.code}`).includes(
+        qn
+      ),
     [qn, brandName]
   );
-  const match = useCallback((p: PublicPriceProduct) => (brand == null || p.brandId === brand) && matchQ(p), [brand, matchQ]);
+  const match = useCallback(
+    (p: PublicPriceProduct) =>
+      (brand == null || p.brandId === brand) && matchQ(p),
+    [brand, matchQ]
+  );
   const counts = useMemo(() => {
     const c = {} as Record<PriceGroupKey, number>;
-    for (const g of groups) c[g.key] = data.products.filter((p) => p.group === g.key && match(p)).length;
+    for (const g of groups)
+      c[g.key] = data.products.filter(
+        (p) => p.group === g.key && match(p)
+      ).length;
     return c;
   }, [data.products, groups, match]);
-  const items = useMemo(() => data.products.filter((p) => p.group === group && match(p)), [data.products, group, match]);
+  const items = useMemo(
+    () => data.products.filter((p) => p.group === group && match(p)),
+    [data.products, group, match]
+  );
   const filtering = !!qn || brand != null;
-  const others = groups.filter((g) => g.key !== group && counts[g.key] > 0).sort((a, b) => counts[b.key] - counts[a.key]);
-  const brandCount = (id: number | null) => data.products.filter((p) => p.group === group && (id == null || p.brandId === id) && matchQ(p)).length;
+  const others = groups
+    .filter((g) => g.key !== group && counts[g.key] > 0)
+    .sort((a, b) => counts[b.key] - counts[a.key]);
+  const brandCount = (id: number | null) =>
+    data.products.filter(
+      (p) => p.group === group && (id == null || p.brandId === id) && matchQ(p)
+    ).length;
 
   const current = data.products.find((p) => p.id === sheetId) ?? null;
   const lastSheet = useRef<PublicPriceProduct | null>(null);
@@ -216,10 +338,13 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
   const sheet = current ?? lastSheet.current;
 
   const groupName = groups.find((g) => g.key === group)?.name ?? "";
-  const updated = updatedLabel ?? (data.publishedAt ? `cập nhật ${ddmmyyyy(data.publishedAt)}` : "");
-  const validity = data.validFrom || data.validTo
-    ? `Hiệu lực${data.validFrom ? ` từ ${ymdToDmy(data.validFrom)}` : ""}${data.validTo ? ` đến ${ymdToDmy(data.validTo)}` : ""}. `
-    : "";
+  const updated =
+    updatedLabel ??
+    (data.publishedAt ? `cập nhật ${ddmmyyyy(data.publishedAt)}` : "");
+  const validity =
+    data.validFrom || data.validTo
+      ? `Hiệu lực${data.validFrom ? ` từ ${ymdToDmy(data.validFrom)}` : ""}${data.validTo ? ` đến ${ymdToDmy(data.validTo)}` : ""}. `
+      : "";
   const clearAll = () => {
     setQ("");
     setBrand(null);
@@ -227,7 +352,10 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
 
   /* ---------- Thành phần ---------- */
   const regionSwitch = (variant: "big" | "small") => (
-    <div className={`pp-rg${variant === "small" ? " small" : ""}`} role="group" aria-label="Chọn khu vực">
+    <div
+      className={`pp-rg${variant === "small" ? " small" : ""}`}
+      role="group"
+      aria-label="Chọn khu vực">
       {regions.map((r) => {
         const on = r.key === region;
         return (
@@ -240,7 +368,13 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
             initial={{ transform: "scale(1)" }}
             whileTap={{ transform: `scale(${reduce ? 1 : scale.press})` }}
             transition={spring.press}>
-            {on && <motion.span layoutId={`${uid}-rg-${variant}`} className="pp-rg-thumb" transition={spring.thumb} />}
+            {on && (
+              <motion.span
+                layoutId={`${uid}-rg-${variant}`}
+                className="pp-rg-thumb"
+                transition={spring.thumb}
+              />
+            )}
             <Ui d={UI.pin} />
             <span>
               <b>{r.name}</b>
@@ -256,9 +390,23 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
       <motion.span
         key={region}
         className="pp-t2"
-        initial={{ opacity: 0, filter: blur.surface, y: reduce ? 0 : shift.handoff }}
-        animate={{ opacity: 1, filter: "blur(0px)", y: 0, transition: transition.reveal }}
-        exit={{ opacity: 0, filter: blur.surface, y: reduce ? 0 : -shift.handoff, transition: transition.swap }}>
+        initial={{
+          opacity: 0,
+          filter: blur.surface,
+          y: reduce ? 0 : shift.handoff,
+        }}
+        animate={{
+          opacity: 1,
+          filter: "blur(0px)",
+          y: 0,
+          transition: transition.reveal,
+        }}
+        exit={{
+          opacity: 0,
+          filter: blur.surface,
+          y: reduce ? 0 : -shift.handoff,
+          transition: transition.swap,
+        }}>
         {updated}
       </motion.span>
     </AnimatePresence>
@@ -276,7 +424,11 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
         </a>
       )}
       {data.zaloUrl && (
-        <a className="pp-bt zalo" href={data.zaloUrl} target="_blank" rel="noopener noreferrer">
+        <a
+          className="pp-bt zalo"
+          href={data.zaloUrl}
+          target="_blank"
+          rel="noopener noreferrer">
           <Ui d={UI.chat} />
           <span>
             <b>Chat Zalo</b>
@@ -302,7 +454,13 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
         initial={{ transform: "scale(1)" }}
         whileTap={{ transform: `scale(${reduce ? 1 : scale.press})` }}
         transition={spring.press}>
-        {id == null ? "Tất cả" : logo ? <img src={logo.src} width={logo.w} height={logo.h} alt="" /> : <span className="pp-wm">{brandName(id)}</span>}
+        {id == null ? (
+          "Tất cả"
+        ) : logo ? (
+          <img src={logo.src} width={logo.w} height={logo.h} alt="" />
+        ) : (
+          <span className="pp-wm">{brandName(id)}</span>
+        )}
         {(qn || desktop) && <em>{n}</em>}
       </motion.button>
     );
@@ -311,7 +469,16 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
   const emptyState = () => {
     const anim = {
       initial: { opacity: 0, filter: blur.surface, y: reduce ? 0 : 12 },
-      animate: { opacity: 1, filter: "blur(0px)", y: 0, transition: { default: spring.pop, opacity: transition.reveal, filter: transition.reveal } },
+      animate: {
+        opacity: 1,
+        filter: "blur(0px)",
+        y: 0,
+        transition: {
+          default: spring.pop,
+          opacity: transition.reveal,
+          filter: transition.reveal,
+        },
+      },
     };
     if (filtering && others.length) {
       const b = others[0];
@@ -324,10 +491,16 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
             {others.length > 1 ? ` và ${others.length - 1} nhóm khác` : ""}.
           </p>
           <div className="pp-es-btns">
-            <button type="button" className="pp-btn pp-btn-p" onClick={() => setGroup(b.key)}>
+            <button
+              type="button"
+              className="pp-btn pp-btn-p"
+              onClick={() => setGroup(b.key)}>
               Xem {b.name}
             </button>
-            <button type="button" className="pp-btn pp-btn-s" onClick={clearAll}>
+            <button
+              type="button"
+              className="pp-btn pp-btn-s"
+              onClick={clearAll}>
               Xoá bộ lọc
             </button>
           </div>
@@ -338,8 +511,14 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
       return (
         <motion.div key="es-none" className="pp-es" {...anim}>
           <img src={LOGO} alt="" />
-          <h3>Ối! Chưa thấy {qn ? `“${dq.trim()}”` : "sản phẩm nào"} trong bảng giá</h3>
-          <p>LerMao lục khắp kho rồi mà chưa thấy. Thử từ khoá ngắn hơn nhé, hoặc nhắn Zalo để được tư vấn.</p>
+          <h3>
+            Ối! Chưa thấy {qn ? `“${dq.trim()}”` : "sản phẩm nào"} trong bảng
+            giá
+          </h3>
+          <p>
+            LerMao lục khắp kho rồi mà chưa thấy. Thử từ khoá ngắn hơn nhé, hoặc
+            nhắn Zalo để được tư vấn.
+          </p>
           <div className="pp-sug" aria-label="Gợi ý tìm kiếm">
             {["Syrup", "Trân châu", "Matcha", "Mứt"].map((s) => (
               <button key={s} type="button" onClick={() => setQ(s)}>
@@ -348,11 +527,18 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
             ))}
           </div>
           <div className="pp-es-btns">
-            <button type="button" className="pp-btn pp-btn-p" onClick={clearAll}>
+            <button
+              type="button"
+              className="pp-btn pp-btn-p"
+              onClick={clearAll}>
               Xoá tìm kiếm
             </button>
             {data.zaloUrl && (
-              <a className="pp-btn pp-btn-s" href={data.zaloUrl} target="_blank" rel="noopener noreferrer">
+              <a
+                className="pp-btn pp-btn-s"
+                href={data.zaloUrl}
+                target="_blank"
+                rel="noopener noreferrer">
                 <Ui d={UI.chat} />
                 Hỏi giá qua Zalo
               </a>
@@ -365,15 +551,25 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
       <motion.div key="es-empty" className="pp-es" {...anim}>
         <img src={LOGO} alt="" />
         <h3>Nhóm này chưa có sản phẩm</h3>
-        <p>Hàng mới sắp về. Hãy cùng LerMao khám phá các nhóm khác, hoặc nhắn Zalo để được báo sớm nhé!</p>
+        <p>
+          Hàng mới sắp về. Hãy cùng LerMao khám phá các nhóm khác, hoặc nhắn
+          Zalo để được báo sớm nhé!
+        </p>
         <div className="pp-es-btns">
           {others[0] && (
-            <button type="button" className="pp-btn pp-btn-p" onClick={() => setGroup(others[0].key)}>
+            <button
+              type="button"
+              className="pp-btn pp-btn-p"
+              onClick={() => setGroup(others[0].key)}>
               Xem nhóm {others[0].name}
             </button>
           )}
           {data.zaloUrl && (
-            <a className="pp-btn pp-btn-s" href={data.zaloUrl} target="_blank" rel="noopener noreferrer">
+            <a
+              className="pp-btn pp-btn-s"
+              href={data.zaloUrl}
+              target="_blank"
+              rel="noopener noreferrer">
               <Ui d={UI.chat} />
               Nhắn Zalo hỏi hàng
             </a>
@@ -393,7 +589,11 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
           animate={
             reduce
               ? { opacity: compact ? 1 : 0, transform: "translateY(0%)" }
-              : { opacity: 1, transform: compact ? "translateY(0%)" : "translateY(-110%)", transition: compact ? transition.sheet : transition.dismiss }
+              : {
+                  opacity: 1,
+                  transform: compact ? "translateY(0%)" : "translateY(-110%)",
+                  transition: compact ? transition.sheet : transition.dismiss,
+                }
           }>
           <img className="pp-logo" src={LOGO} alt="" width={220} height={210} />
           {regionSwitch("small")}
@@ -401,7 +601,11 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
       </div>
 
       <header ref={headerRef} className="pp-hdr">
-        <svg className="pp-deco" viewBox="0 0 375 140" preserveAspectRatio="xMaxYMin slice" aria-hidden="true">
+        <svg
+          className="pp-deco"
+          viewBox="0 0 375 140"
+          preserveAspectRatio="xMaxYMin slice"
+          aria-hidden="true">
           <g fill="#FFFFFF" opacity=".22">
             <path d="M318 14c24 2 40 18 42 42-26-1-42-16-42-42z" />
             <path d="M290 74c18-18 38-20 52-12-8 18-30 26-52 12z" />
@@ -413,7 +617,13 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
         </svg>
         <div className="pp-wrap pp-hdr-in">
           <div className="pp-brandrow">
-            <img className="pp-logo" src={LOGO} alt="Gấu LerMao" width={220} height={210} />
+            <img
+              className="pp-logo"
+              src={LOGO}
+              alt="Gấu LerMao"
+              width={220}
+              height={210}
+            />
             <div>
               <h1 className="pp-t1">Bảng giá nguyên liệu</h1>
               {subtitle}
@@ -422,7 +632,11 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
           {regionSwitch("big")}
           <div className="pp-acts">{ctaButtons}</div>
         </div>
-        <svg className="pp-wave" viewBox="0 0 375 20" preserveAspectRatio="none" aria-hidden="true">
+        <svg
+          className="pp-wave"
+          viewBox="0 0 375 20"
+          preserveAspectRatio="none"
+          aria-hidden="true">
           <path d="M0 20V9c40 9 80 9 125 0s90-9 125 0 85 9 125 0v11z" />
         </svg>
       </header>
@@ -432,9 +646,17 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
           <motion.div
             key="banner"
             className="pp-wrap pp-bn-wrap"
-            exit={{ height: 0, opacity: 0, filter: blur.disclosure, transition: transition.disclosure }}>
+            exit={{
+              height: 0,
+              opacity: 0,
+              filter: blur.disclosure,
+              transition: transition.disclosure,
+            }}>
             <div className="pp-bn">
-              <svg className="pp-bn-deco" viewBox="0 0 70 56" aria-hidden="true">
+              <svg
+                className="pp-bn-deco"
+                viewBox="0 0 70 56"
+                aria-hidden="true">
                 <g fill="#00B7E9" opacity=".6">
                   <path d="M8 40c2-18 14-28 34-28 0 18-10 30-30 30z" />
                   <circle cx="52" cy="38" r="9" />
@@ -445,10 +667,16 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
                 <Ui d={UI.gift} />
               </span>
               <div className="pp-bn-body">
-                {data.banner.tag && <span className="pp-tag-sale">{data.banner.tag}</span>}
+                {data.banner.tag && (
+                  <span className="pp-tag-sale">{data.banner.tag}</span>
+                )}
                 <p>{data.banner.text}</p>
               </div>
-              <button type="button" className="pp-bn-x" onClick={() => setBannerOpen(false)} aria-label="Ẩn thông báo">
+              <button
+                type="button"
+                className="pp-bn-x"
+                onClick={() => setBannerOpen(false)}
+                aria-label="Ẩn thông báo">
                 <Ui d={UI.x} />
               </button>
             </div>
@@ -461,7 +689,10 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
           <h3>
             Thương hiệu
             {brand != null && (
-              <button type="button" className="pp-lnk" onClick={() => setBrand(null)}>
+              <button
+                type="button"
+                className="pp-lnk"
+                onClick={() => setBrand(null)}>
                 Xoá lọc
               </button>
             )}
@@ -473,7 +704,9 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
             <div className="pp-help">
               <img src={LOGO} alt="" />
               <b>Cần báo giá số lượng lớn?</b>
-              <span>Nhắn Zalo OA hoặc gọi hotline {R.hotline} để được tư vấn.</span>
+              <span>
+                Nhắn Zalo OA hoặc gọi hotline {R.hotline} để được tư vấn.
+              </span>
             </div>
           )}
         </aside>
@@ -486,36 +719,69 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
             <label className="pp-sr" htmlFor={`${uid}-q`}>
               Tìm sản phẩm
             </label>
-            <input id={`${uid}-q`} type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm sản phẩm, thương hiệu…" autoComplete="off" />
+            <input
+              id={`${uid}-q`}
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Tìm sản phẩm, thương hiệu…"
+              autoComplete="off"
+            />
             {q && (
-              <button type="button" className="pp-sr-clear" onClick={() => setQ("")} aria-label="Xoá tìm kiếm">
+              <button
+                type="button"
+                className="pp-sr-clear"
+                onClick={() => setQ("")}
+                aria-label="Xoá tìm kiếm">
                 <Ui d={UI.x} />
               </button>
             )}
           </div>
 
           <div className="pp-stk">
-            <div className="pp-tabs" role="group" aria-label="Nhóm sản phẩm" style={{ ["--pp-cols" as string]: groups.length }}>
+            <div className="pp-tabs" role="group" aria-label="Nhóm sản phẩm">
               {groups.map((g) => {
                 const on = g.key === group;
-                const def = PRICE_GROUPS.find((x) => x.key === g.key);
+                const def = PRICE_GROUPS.find((x) => x.name === g.name);
                 return (
                   <motion.button
                     key={g.key}
                     type="button"
-                    className={`pp-tab ppg-${g.key}`}
+                    className={`pp-tab ppg-${iconOf(g.key)}`}
                     aria-pressed={on}
-                    onClick={() => setGroup(g.key)}
+                    onClick={(e) => {
+                      setGroup(g.key);
+                      // Nhiều nhóm thì thanh tab cuộn ngang: kéo tab vừa chọn vào tầm nhìn
+                      e.currentTarget.scrollIntoView({
+                        block: "nearest",
+                        inline: "nearest",
+                        behavior: reduce ? "auto" : "smooth",
+                      });
+                    }}
                     initial={{ transform: "scale(1)" }}
-                    whileTap={{ transform: `scale(${reduce ? 1 : scale.press})` }}
+                    whileTap={{
+                      transform: `scale(${reduce ? 1 : scale.press})`,
+                    }}
                     transition={spring.press}>
-                    {on && <motion.span layoutId={`${uid}-tab-bg`} className="pp-tab-bg" transition={spring.selection} />}
+                    {on && (
+                      <motion.span
+                        layoutId={`${uid}-tab-bg`}
+                        className="pp-tab-bg"
+                        transition={spring.selection}
+                      />
+                    )}
                     <motion.span
                       style={{ display: "inline-flex" }}
                       initial={false}
-                      animate={{ opacity: on ? 1 : 0.6, transform: on && !reduce ? "translateY(-1px) scale(1.08)" : "translateY(0px) scale(1)" }}
+                      animate={{
+                        opacity: on ? 1 : 0.6,
+                        transform:
+                          on && !reduce
+                            ? "translateY(-1px) scale(1.08)"
+                            : "translateY(0px) scale(1)",
+                      }}
                       transition={spring.pop}>
-                      <Ill group={g.key} className="pp-tab-ic" />
+                      <Ill icon={iconOf(g.key)} className="pp-tab-ic" />
                     </motion.span>
                     <span className="pp-tab-label-2">
                       {def?.lines[0] ?? g.name}
@@ -527,8 +793,18 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
                       )}
                     </span>
                     <span className="pp-tab-label-1">{g.name}</span>
-                    {(filtering || desktop) && <i className={`pp-cn${counts[g.key] ? "" : " zero"}`}>{counts[g.key]}</i>}
-                    {on && <motion.span layoutId={`${uid}-tab-ind`} className="pp-ind" transition={spring.selection} />}
+                    {(filtering || desktop) && (
+                      <i className={`pp-cn${counts[g.key] ? "" : " zero"}`}>
+                        {counts[g.key]}
+                      </i>
+                    )}
+                    {on && (
+                      <motion.span
+                        layoutId={`${uid}-tab-ind`}
+                        className="pp-ind"
+                        transition={spring.selection}
+                      />
+                    )}
                   </motion.button>
                 );
               })}
@@ -538,10 +814,12 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
             </div>
           </div>
 
-          <section className={`pp-list ppg-${group}`} aria-live="polite">
+          <section
+            className={`pp-list ppg-${iconOf(group)}`}
+            aria-live="polite">
             <div className="pp-sh">
               <span className="pp-sh-ic">
-                <Ill group={group} className="pp-i" />
+                <Ill icon={iconOf(group)} className="pp-i" />
               </span>
               <h2>{groupName}</h2>
               <span className="pp-sh-ct">{items.length} sản phẩm</span>
@@ -551,7 +829,15 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
                 {/* initial={false}: lần vẽ đầu (HTML từ server) hiện thẻ ngay; đổi nhóm/lọc/tìm thì thẻ mới mới chạy hiệu ứng vào */}
                 <AnimatePresence mode="popLayout" initial={false}>
                   {items.map((p, i) => (
-                    <ProductCard key={`${p.id}`} product={p} region={region} index={i} brand={brandName(p.brandId)} onOpen={() => setSheetId(p.id)} />
+                    <ProductCard
+                      key={`${p.id}`}
+                      product={p}
+                      icon={iconOf(p.group)}
+                      region={region}
+                      index={i}
+                      brand={brandName(p.brandId)}
+                      onOpen={() => setSheetId(p.id)}
+                    />
                   ))}
                 </AnimatePresence>
               </div>
@@ -560,7 +846,8 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
             )}
           </section>
           <div className="pp-note">
-            {validity}Giá tham khảo theo bảng giá đang áp dụng. Liên hệ hotline hoặc Zalo để chốt đơn và nhận báo giá chính thức.
+            {validity}Giá tham khảo theo bảng giá đang áp dụng. Liên hệ hotline
+            hoặc Zalo để chốt đơn và nhận báo giá chính thức.
           </div>
         </main>
       </div>
@@ -572,26 +859,61 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
       )}
 
       {/* Chi tiết: drawer kéo để đóng (mobile), hộp thoại giữa màn hình (desktop) */}
-      <Drawer.Root open={sheetId != null && !desktop} onOpenChange={(o) => !o && setSheetId(null)} container={portalContainer}>
+      <Drawer.Root
+        open={sheetId != null && !desktop}
+        onOpenChange={(o) => !o && setSheetId(null)}
+        container={portalContainer}>
         <Drawer.Portal container={portalContainer}>
           <Drawer.Overlay className="pp-portal pp-overlay" />
-          <Drawer.Content className={`pp-portal pp-drawer ppg-${sheet?.group ?? "tea"}`} aria-describedby={undefined}>
+          <Drawer.Content
+            className={`pp-portal pp-drawer ppg-${iconOf(sheet?.group)}`}
+            aria-describedby={undefined}>
             <Drawer.Handle className="pp-drawer-handle" />
-            {sheet && <SheetBody product={sheet} region={region} regionName={R.name} hotline={R.hotline} brand={brandName(sheet.brandId)} TitleTag={Drawer.Title} />}
+            {sheet && (
+              <SheetBody
+                product={sheet}
+                region={region}
+                regionName={R.name}
+                hotline={R.hotline}
+                brand={brandName(sheet.brandId)}
+                icon={iconOf(sheet.group)}
+                groupName={
+                  groups.find((g) => g.key === sheet.group)?.name ?? ""
+                }
+                TitleTag={Drawer.Title}
+              />
+            )}
             <div className="pp-sheet-cta">
               <div className="pp-cta-in">{ctaButtons}</div>
             </div>
           </Drawer.Content>
         </Drawer.Portal>
       </Drawer.Root>
-      <Dialog.Root open={sheetId != null && desktop} onOpenChange={(o) => !o && setSheetId(null)}>
+      <Dialog.Root
+        open={sheetId != null && desktop}
+        onOpenChange={(o) => !o && setSheetId(null)}>
         <Dialog.Portal container={portalContainer}>
           <Dialog.Overlay className="pp-portal pp-overlay" />
-          <Dialog.Content className={`pp-portal pp-dialog ppg-${sheet?.group ?? "tea"}`} aria-describedby={undefined}>
+          <Dialog.Content
+            className={`pp-portal pp-dialog ppg-${iconOf(sheet?.group)}`}
+            aria-describedby={undefined}>
             <Dialog.Close className="pp-sheet-x" aria-label="Đóng">
               <Ui d={UI.x} />
             </Dialog.Close>
-            {sheet && <SheetBody product={sheet} region={region} regionName={R.name} hotline={R.hotline} brand={brandName(sheet.brandId)} TitleTag={Dialog.Title} />}
+            {sheet && (
+              <SheetBody
+                product={sheet}
+                region={region}
+                regionName={R.name}
+                hotline={R.hotline}
+                brand={brandName(sheet.brandId)}
+                icon={iconOf(sheet.group)}
+                groupName={
+                  groups.find((g) => g.key === sheet.group)?.name ?? ""
+                }
+                TitleTag={Dialog.Title}
+              />
+            )}
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
@@ -600,7 +922,15 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
 }
 
 /* ---------- Giá: số lăn khi đổi khu vực ---------- */
-function Price({ value, unit, className }: { value: number; unit: string; className: string }) {
+function Price({
+  value,
+  unit,
+  className,
+}: {
+  value: number;
+  unit: string;
+  className: string;
+}) {
   return (
     <span className={className}>
       <SlidingNumber number={value} thousandSeparator="." initiallyStable />
@@ -610,7 +940,15 @@ function Price({ value, unit, className }: { value: number; unit: string; classN
   );
 }
 
-function Photo({ product, alt }: { product: PublicPriceProduct; alt: string }) {
+function Photo({
+  product,
+  icon,
+  alt,
+}: {
+  product: PublicPriceProduct;
+  icon: PriceGroupIcon;
+  alt: string;
+}) {
   const [ok, setOk] = useState(true);
   const src = ok ? product.image : null;
   return (
@@ -618,9 +956,15 @@ function Photo({ product, alt }: { product: PublicPriceProduct; alt: string }) {
       {src ? (
         // Ảnh sản phẩm từ server POS (nhiều host), không qua next/image
         // eslint-disable-next-line @next/next/no-img-element
-        <img className="pp-ph-img" src={src} alt={alt} loading="lazy" onError={() => setOk(false)} />
+        <img
+          className="pp-ph-img"
+          src={src}
+          alt={alt}
+          loading="lazy"
+          onError={() => setOk(false)}
+        />
       ) : (
-        <Ill group={product.group} className="pp-ph-ill" />
+        <Ill icon={icon} className="pp-ph-ill" />
       )}
       {product.size && <span className="pp-sz">{product.size}</span>}
       {product.tag && (
@@ -633,7 +977,21 @@ function Photo({ product, alt }: { product: PublicPriceProduct; alt: string }) {
   );
 }
 
-function ProductCard({ product: p, region, index, brand, onOpen }: { product: PublicPriceProduct; region: PriceRegionKey; index: number; brand: string; onOpen: () => void }) {
+function ProductCard({
+  product: p,
+  icon,
+  region,
+  index,
+  brand,
+  onOpen,
+}: {
+  product: PublicPriceProduct;
+  icon: PriceGroupIcon;
+  region: PriceRegionKey;
+  index: number;
+  brand: string;
+  onOpen: () => void;
+}) {
   const reduce = useShouldReduceMotion();
   const { spring, transition } = useMotionTokens();
   const price = p.price[region];
@@ -643,19 +1001,28 @@ function ProductCard({ product: p, region, index, brand, onOpen }: { product: Pu
       className="pp-cell"
       layout="position"
       initial={{ opacity: 0, y: reduce ? 0 : 12, filter: blur.surface }}
-      animate={{ opacity: 1, y: 0, filter: "blur(0px)", transition: { default: { ...spring.pop, delay }, opacity: { ...transition.reveal, delay }, filter: { ...transition.reveal, delay } } }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        filter: "blur(0px)",
+        transition: {
+          default: { ...spring.pop, delay },
+          opacity: { ...transition.reveal, delay },
+          filter: { ...transition.reveal, delay },
+        },
+      }}
       exit={{ opacity: 0, filter: blur.icon, transition: transition.fade }}
       transition={{ layout: spring.reflow }}>
       <div className="pp-card-lift">
         <motion.button
           type="button"
-          className={`pp-card ppg-${p.group}`}
+          className={`pp-card ppg-${icon}`}
           onClick={onOpen}
           aria-label={`${p.name}, ${brand}, ${price == null ? "Liên hệ" : `${price.toLocaleString("vi-VN")} đồng`}`}
           initial={{ transform: "scale(1)" }}
           whileTap={{ transform: `scale(${reduce ? 1 : scale.choice})` }}
           transition={spring.press}>
-          <Photo product={p} alt="" />
+          <Photo product={p} icon={icon} alt="" />
           <span className="pp-cb">
             {brand && <span className="pp-br">{brand}</span>}
             <span className="pp-nm">{p.name}</span>
@@ -682,6 +1049,8 @@ function SheetBody({
   regionName,
   hotline,
   brand,
+  icon,
+  groupName,
   TitleTag,
 }: {
   product: PublicPriceProduct;
@@ -689,14 +1058,19 @@ function SheetBody({
   regionName: string;
   hotline: string;
   brand: string;
+  icon: PriceGroupIcon;
+  groupName: string;
   TitleTag: React.ElementType;
 }) {
   const price = p.price[region];
-  const groupName = PRICE_GROUPS.find((g) => g.key === p.group)?.name ?? "";
   return (
     <div className="pp-sheet-scroll">
       <div className="pp-shi">
-        <Photo product={{ ...p, tag: null, size: p.size }} alt={p.name} />
+        <Photo
+          product={{ ...p, tag: null, size: p.size }}
+          icon={icon}
+          alt={p.name}
+        />
       </div>
       <div className="pp-sb">
         <div className="pp-tags">
@@ -707,7 +1081,7 @@ function SheetBody({
             </span>
           )}
           <span className="pp-gtag">
-            <Ill group={p.group} />
+            <Ill icon={icon} />
             {groupName}
           </span>
         </div>
@@ -717,9 +1091,7 @@ function SheetBody({
         {brand && <div className="pp-by">{brand}</div>}
         {price != null ? (
           <div className="pp-pbox">
-            <div className="pp-pl">
-              Giá {regionName}
-            </div>
+            <div className="pp-pl">Giá {regionName}</div>
             <Price value={price} unit={p.unit || "sp"} className="pp-pv" />
           </div>
         ) : (
@@ -728,7 +1100,12 @@ function SheetBody({
               <Ui d={UI.phone} />
               Liên hệ
             </div>
-            <p>Sản phẩm này báo giá theo số lượng và khu vực.{hotline ? ` Gọi hotline ${hotline} hoặc chat Zalo để nhận giá nhé!` : " Nhắn Zalo để nhận giá nhé!"}</p>
+            <p>
+              Sản phẩm này báo giá theo số lượng và khu vực.
+              {hotline
+                ? ` Gọi hotline ${hotline} hoặc chat Zalo để nhận giá nhé!`
+                : " Nhắn Zalo để nhận giá nhé!"}
+            </p>
           </div>
         )}
         <dl className="pp-spec">
