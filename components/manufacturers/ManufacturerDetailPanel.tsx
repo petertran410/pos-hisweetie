@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Loader2,
@@ -25,6 +26,7 @@ import {
 } from "./ManufacturerSidebar";
 import { PayablePaymentModal } from "./PayablePaymentModal";
 import { ProductionCostHistoryPanel } from "./ProductionCostHistoryPanel";
+import { ManufacturerStockPanel } from "./ManufacturerStockPanel";
 
 interface AccountGroup extends PayableSummary {
   manufacturerProductionDebt: number;
@@ -66,6 +68,8 @@ export function ManufacturerDetailPanel({
   onViewChange?: (view: ManufacturerView) => void;
 }) {
   const queryClient = useQueryClient();
+  // Mở từ link mã phiếu nguyên liệu NSX (thẻ kho sản phẩm) → tô sáng phiếu đó.
+  const codeParam = useSearchParams().get("Code");
   const canUpdate = usePermission("productions", "update");
   const canPay = usePermission("cash_flows", "create");
   const canCancelPayment = usePermission("cash_flows", "delete");
@@ -195,6 +199,14 @@ export function ManufacturerDetailPanel({
             <>
               {view === "costHistory" && (
                 <ProductionCostHistoryPanel manufacturerId={id} />
+              )}
+              {view === "stock" && (
+                <ManufacturerStockPanel
+                  manufacturerId={id}
+                  manufacturerName={data.manufacturer.name}
+                  manufacturerActive={data.manufacturer.isActive}
+                  highlightCode={codeParam}
+                />
               )}
               {view === "info" && (
                 <div className="space-y-4">

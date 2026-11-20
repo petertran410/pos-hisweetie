@@ -1,15 +1,24 @@
 /** Bảng giá public price.hisweetievietnam.com — khớp backend src/public-price/public-price.types.ts */
 
 export type PriceRegionKey = "N" | "S";
-export type PriceGroupKey = "tea" | "jam" | "top" | "froz";
+/** Mã nhóm: 4 nhóm mặc định (tea/jam/top/froz) hoặc mã sinh khi thêm nhóm mới */
+export type PriceGroupKey = string;
+/** Kiểu hiển thị (màu + biểu tượng) của nhóm */
+export type PriceGroupIcon = "tea" | "jam" | "top" | "froz" | "pow";
 export type PriceTag = "new" | "hot" | "sale";
 
-export const PRICE_GROUPS: { key: PriceGroupKey; name: string; lines: [string, string?] }[] = [
+/** 5 nhóm mặc định; `lines` = cách xuống dòng trên tab mobile khi tên nhóm giữ nguyên */
+export const PRICE_GROUPS: { key: PriceGroupIcon; name: string; lines: [string, string?] }[] = [
   { key: "tea", name: "Trà", lines: ["Trà"] },
   { key: "jam", name: "Mứt & Syrup", lines: ["Mứt &", "Syrup"] },
   { key: "top", name: "Topping nhiệt thường", lines: ["Topping", "nhiệt thường"] },
   { key: "froz", name: "Topping đông lạnh", lines: ["Topping", "đông lạnh"] },
+  { key: "pow", name: "Bột", lines: ["Bột"] },
 ];
+
+export const PRICE_GROUP_ICON_LABEL: Record<PriceGroupIcon, string> = { tea: "Lá trà", jam: "Túi mứt", top: "Ly topping", froz: "Bông tuyết", pow: "Túi bột" };
+export const PRICE_GROUP_MAX = 8;
+export const isGroupIcon = (v: string): v is PriceGroupIcon => v in PRICE_GROUP_ICON_LABEL;
 
 export const PRICE_TAG_LABEL: Record<PriceTag, string> = { new: "Mới", hot: "Bán chạy", sale: "Khuyến mãi" };
 
@@ -39,7 +48,8 @@ export interface PublicPriceData {
   zaloUrl: string;
   banner: { enabled: boolean; tag: string; text: string };
   regions: { key: PriceRegionKey; name: string; listName: string; hotline: string }[];
-  groups: { key: PriceGroupKey; name: string }[];
+  /** `icon` thiếu ở bản xuất bản cũ: suy từ mã nhóm */
+  groups: { key: PriceGroupKey; name: string; icon?: PriceGroupIcon }[];
   brands: { id: number; name: string }[];
   products: PublicPriceProduct[];
 }
@@ -53,6 +63,13 @@ export interface PriceRegionConfig {
   enabled: boolean;
 }
 
+export interface PriceGroupConfig {
+  key: PriceGroupKey;
+  name: string;
+  icon: PriceGroupIcon;
+  visible: boolean;
+}
+
 export interface PriceItemConfig {
   productId: number;
   group: PriceGroupKey;
@@ -61,6 +78,20 @@ export interface PriceItemConfig {
   hidePrice: PriceRegionKey[];
   name: string;
   desc: string;
+  /** Id ảnh sản phẩm hiện trên trang public; null = ảnh chính */
+  imageId: number | null;
+  /** Thương hiệu hiển thị (tradeMarkId trong `brands`); null = thương hiệu của sản phẩm */
+  brandId: number | null;
+  /** Ghi đè khối lượng / quy cách / đơn vị tính; rỗng = tự tách từ tên POS */
+  size: string;
+  spec: string;
+  unit: string;
+}
+
+export interface PriceSpecInfo {
+  size: string;
+  spec: string;
+  unit: string;
 }
 
 export interface PricePageConfig {
@@ -69,7 +100,8 @@ export interface PricePageConfig {
   banner: { enabled: boolean; tag: string; text: string };
   validFrom: string;
   validTo: string;
-  hiddenGroups: PriceGroupKey[];
+  /** Thứ tự mảng = thứ tự tab nhóm */
+  groups: PriceGroupConfig[];
   brands: { tradeMarkId: number; label: string; visible: boolean }[];
   items: PriceItemConfig[];
 }
@@ -83,6 +115,10 @@ export interface PriceCatalogEntry {
   tradeMarkId: number | null;
   tradeMarkName: string | null;
   price: Record<PriceRegionKey, number | null>;
+  /** Mọi ảnh của sản phẩm, ảnh chính đứng đầu */
+  images: { id: number; image: string }[];
+  /** Giá trị tự động (tách từ tên POS) khi không ghi đè */
+  auto: PriceSpecInfo & { name: string };
 }
 
 export interface PricePageAdmin {

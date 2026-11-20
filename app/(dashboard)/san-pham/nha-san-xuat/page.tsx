@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, SlidersHorizontal } from "lucide-react";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { manufacturersApi, type Manufacturer } from "@/lib/api/manufacturers";
+import { manufacturerStockApi } from "@/lib/api/manufacturer-stock";
 import {
   ManufacturerSidebar,
   type ManufacturerView,
@@ -37,6 +39,23 @@ function ManufacturersView() {
   const [selected, setSelected] = useState<number | null>(null);
   const [editing, setEditing] = useState<Manufacturer | "new" | null>(null);
   const [mobileFilters, setMobileFilters] = useState(false);
+  // Link mã phiếu nguyên liệu NSX (?Code=GNL…/TNL…/DCN…): mở đúng NSX ở tab Tồn NL.
+  const codeParam = useSearchParams().get("Code");
+  const stockSlip = useQuery({
+    queryKey: ["manufacturer-stock-slip-code", codeParam],
+    queryFn: () => manufacturerStockApi.findByCode(codeParam!),
+    enabled: !!codeParam && /^(GNL|TNL|DCN|TDK)/i.test(codeParam),
+    retry: false,
+  });
+  // Điều chỉnh state ngay khi render (một lần cho mỗi mã), không dùng effect.
+  const [openedSlipCode, setOpenedSlipCode] = useState<string | null>(null);
+  if (stockSlip.data && openedSlipCode !== stockSlip.data.code) {
+    setOpenedSlipCode(stockSlip.data.code);
+    setStatus("all");
+    setSearch(stockSlip.data.manufacturer.code);
+    setSelected(stockSlip.data.manufacturerId);
+    setView("stock");
+  }
   useEffect(() => {
     const timer = setTimeout(() => {
       setQuery(search.trim());

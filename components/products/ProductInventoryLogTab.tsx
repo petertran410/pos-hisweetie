@@ -36,6 +36,8 @@ const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   CONSIGNMENT_OUT_CANCEL: "Hủy ký gửi",
   CONSIGNMENT_RETURN: "Hoàn ký gửi",
   CONSIGNMENT_RETURN_CANCEL: "Hủy hoàn ký gửi",
+  MANUFACTURER_STOCK_OUT: "Gửi NL cho NSX",
+  MANUFACTURER_STOCK_IN: "NSX trả NL",
 };
 
 // Map loại giao dịch → trang đích cho mã liên quan
@@ -59,6 +61,8 @@ const TRANSACTION_TYPE_ENTITY: Record<string, CodeEntity> = {
   STOCK_AUDIT_CANCEL: "stock-audit",
   CONSIGNMENT_OUT: "consignment",
   CONSIGNMENT_OUT_CANCEL: "consignment",
+  MANUFACTURER_STOCK_OUT: "manufacturer-stock",
+  MANUFACTURER_STOCK_IN: "manufacturer-stock",
 };
 
 const formatMoney = (v: number | null | undefined) => {

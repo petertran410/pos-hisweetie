@@ -180,10 +180,16 @@ export function ProductionDetailRow({
     if (!production) return;
     const now = new Date();
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const lines = production.components ?? [];
+    const fromNsx = lines.filter((line) => line.source === "manufacturer").length;
     const res = await Swal.fire({
       title: `Gửi hàng phiếu ${production.code}?`,
       // Ngày gửi = ngày trừ tồn: chọn lùi khi hàng đã gửi trước lúc làm phiếu.
-      html: `Hàng mình gửi sẽ trừ khỏi kho <b>${production.sourceBranchName}</b> theo ngày gửi bên dưới.`,
+      html:
+        fromNsx === lines.length && fromNsx > 0
+          ? "Nguyên liệu lấy từ tồn đang ở NSX (không trừ kho mình), ghi theo ngày gửi bên dưới."
+          : `Hàng mình gửi sẽ trừ khỏi kho <b>${production.sourceBranchName}</b> theo ngày gửi bên dưới.` +
+            (fromNsx ? "<br/>Dòng lấy từ tồn NSX trừ vào tồn nguyên liệu đang ở NSX." : ""),
       input: "date",
       inputLabel: "Ngày gửi",
       inputValue: today,
@@ -216,7 +222,10 @@ export function ProductionDetailRow({
             (production.costAppliedAt
               ? "<br/><b>Giá vốn thành phẩm đã áp sẽ không tự hoàn lại.</b>"
               : "")
-          : "Nguyên liệu đã gửi được cộng lại vào kho.",
+          : "Nguyên liệu đã gửi được cộng lại vào kho." +
+            (production.components?.some((line) => line.source === "manufacturer")
+              ? "<br/>Dòng lấy từ tồn NSX được trả lại tồn nguyên liệu đang ở NSX."
+              : ""),
       input: "text",
       inputPlaceholder: "Lý do hủy (không bắt buộc)",
       icon: "warning",
@@ -585,7 +594,16 @@ export function ProductionDetailRow({
                           {production.components!.map((c) => (
                             <tr key={c.id} className="border-t">
                               <td className="px-3 py-2">{c.componentCode}</td>
-                              <td className="px-3 py-2">{c.componentName}</td>
+                              <td className="px-3 py-2">
+                                {c.componentName}
+                                {c.source === "manufacturer" && (
+                                  <span
+                                    title="Dùng nguyên liệu đã gửi trước, đang nằm ở NSX (không trừ kho gửi)"
+                                    className="ml-2 rounded bg-brand-soft px-1.5 py-0.5 text-xs font-medium text-brand-dark">
+                                    Tồn NSX
+                                  </span>
+                                )}
+                              </td>
                               <td className="px-3 py-2 text-right">
                                 {Number(c.unitsDeducted).toLocaleString(
                                   "en-US",

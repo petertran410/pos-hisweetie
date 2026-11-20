@@ -1,4 +1,4 @@
-import type { PriceGroupKey } from "./types";
+import type { PriceGroupIcon } from "./types";
 
 /** Bỏ dấu, chữ thường — để so khớp tên (giống backend public-price.util). */
 export const normText = (s: string | null | undefined) =>
@@ -10,11 +10,12 @@ export const normText = (s: string | null | undefined) =>
     .toLowerCase()
     .trim();
 
-/** Gợi ý nhóm khi thêm sản phẩm vào bảng giá. */
-export function guessGroup(fullName: string): PriceGroupKey {
+/** Gợi ý kiểu nhóm khi thêm sản phẩm vào bảng giá. */
+export function guessGroup(fullName: string): PriceGroupIcon {
   const n = normText(fullName);
   if (/tu dong|dong lanh/.test(n)) return "froz";
   if (/\b(mut|siro|syrup|sot|puree)\b/.test(n)) return "jam";
+  if (/\bbot\b/.test(n)) return "pow";
   if (/\b(tra|olong|o long|matcha|hong tra)\b/.test(n)) return "tea";
   return "top";
 }
@@ -27,6 +28,15 @@ export function knownBrandLabel(tradeMarkName: string): string {
   if (n.includes("amo")) return "Amo Pastel";
   if (n.includes("natufruit")) return "Natufruite";
   return tradeMarkName;
+}
+
+/** Link gắn vào nút trên trang public phải là https:// (backend bỏ link khác khi lưu). */
+export function isHttpsUrl(s: string): boolean {
+  try {
+    return new URL(s.trim()).protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 export const formatVnd = (n: number | null | undefined) => (n == null ? "—" : n.toLocaleString("vi-VN"));
