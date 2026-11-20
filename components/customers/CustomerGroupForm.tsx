@@ -168,7 +168,7 @@ export function CustomerGroupForm({
     const res =
       customerCount > 0
         ? await Swal.fire({
-            title: `Nhóm "${group.name}" còn ${customerCount} khách hàng`,
+            titleText: `Nhóm "${group.name}" còn ${customerCount} khách hàng`,
             text: "Phải gỡ hết khách khỏi nhóm mới hủy được. Khách hàng vẫn giữ nguyên, chỉ bị bỏ khỏi nhóm. Nhóm đã hủy có thể khôi phục.",
             icon: "warning",
             showCancelButton: true,
@@ -177,7 +177,7 @@ export function CustomerGroupForm({
             confirmButtonColor: "#dc2626",
           })
         : await Swal.fire({
-            title: `Hủy nhóm "${group.name}"?`,
+            titleText: `Hủy nhóm "${group.name}"?`,
             text: "Nhóm vẫn được lưu lại và có thể khôi phục.",
             icon: "question",
             showCancelButton: true,

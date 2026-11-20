@@ -7,7 +7,11 @@ import type {
   VehicleEntryKind,
 } from "@/lib/api/internal-finance";
 import { formatDateOnly, formatVnDateTime } from "@/lib/internal-finance/dates";
-import { ENTRY_STATUS_LABELS } from "@/lib/internal-finance/vehicle-constants";
+import {
+  ENTRY_STATUS_LABELS,
+  FUEL_ADVANCE_USED_LABEL,
+  isFuelAdvanceUsed,
+} from "@/lib/internal-finance/vehicle-constants";
 import { formatCurrency } from "@/lib/utils";
 
 type Column = {
@@ -212,12 +216,19 @@ export function VehicleEntryTable({
       width: "140px",
       render: (row: VehicleEntry) => (
         <div>
-          <span
-            className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${
-              STATUS_CLASS[row.status] || "bg-gray-100 text-gray-600"
-            }`}>
-            {ENTRY_STATUS_LABELS[row.status] || row.status}
-          </span>
+          {isFuelAdvanceUsed(row) ? (
+            // Phiếu xăng Kho HN: trừ vào tiền ứng xăng, không vào Approval tuần.
+            <span className="inline-flex whitespace-nowrap rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+              {FUEL_ADVANCE_USED_LABEL}
+            </span>
+          ) : (
+            <span
+              className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${
+                STATUS_CLASS[row.status] || "bg-gray-100 text-gray-600"
+              }`}>
+              {ENTRY_STATUS_LABELS[row.status] || row.status}
+            </span>
+          )}
           {row.status === "CANCELLED" && row.cancelReason && (
             <div
               className="mt-0.5 max-w-[160px] break-words text-[11px] text-red-600"

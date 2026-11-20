@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   AlertCircle,
   Info,
+  Paperclip,
 } from "lucide-react";
 
 interface AuditLogsTableProps {
@@ -40,6 +41,7 @@ const categoryNames: Record<string, string> = {
   user: "Người dùng",
   branch: "Chi nhánh",
   setting: "Cài đặt",
+  internal_finance: "Tài chính nội bộ",
   auth: "Đăng nhập",
   other: "Khác",
 };
@@ -79,23 +81,176 @@ const fmtCurrency = (val: any): string => {
   return new Intl.NumberFormat("en-US").format(Number(val)) + "đ";
 };
 
+const FINANCE_CATEGORY = "internal_finance";
+
+// Tài chính nội bộ: thao tác không do nhân viên bấm (metadata.actorKind).
+const actorKindLabels: Record<string, string> = {
+  LARK: "Lark Approval",
+  CRON: "Tự động",
+  SYSTEM: "Tự động",
+  SCRIPT: "Script",
+};
+
+function actorKindLabel(metadata: unknown): string | null {
+  if (!metadata || typeof metadata !== "object") return null;
+  const kind = (metadata as { actorKind?: unknown }).actorKind;
+  if (typeof kind !== "string" || !kind || kind === "USER") return null;
+  return actorKindLabels[kind] || kind;
+}
+
+// Người chịu trách nhiệm của dòng không do nhân viên bấm: người chạy script
+// (user_id = --user) và người được ghi thay (vd người tạo đơn Lark).
+function financeActorNote(log: {
+  userId?: unknown;
+  user?: { name?: string | null; email?: string | null } | null;
+  metadata?: unknown;
+}): string | null {
+  const meta =
+    log.metadata && typeof log.metadata === "object"
+      ? (log.metadata as Record<string, unknown>)
+      : {};
+  const kind = typeof meta.actorKind === "string" ? meta.actorKind : "USER";
+  const parts: string[] = [];
+  // Chỉ script mới lưu user_id là người thật; Lark / tự động là user hệ thống.
+  if (kind === "SCRIPT") {
+    const runner =
+      log.user?.name || log.user?.email || (log.userId ? `#${log.userId}` : "");
+    if (runner) parts.push(`chạy bởi ${runner}`);
+  }
+  const behalfId = Number(meta.onBehalfOfUserId);
+  if (
+    Number.isInteger(behalfId) &&
+    behalfId > 0 &&
+    (kind !== "USER" || behalfId !== Number(log.userId))
+  ) {
+    const name =
+      typeof meta.onBehalfOfUserName === "string" && meta.onBehalfOfUserName
+        ? meta.onBehalfOfUserName
+        : `#${behalfId}`;
+    parts.push(`thay ${name}`);
+  }
+  return parts.length ? parts.join(" · ") : null;
+}
+
+interface FinanceFile {
+  key: string;
+  name: string;
+  href: string | null;
+}
+
+// Chỉ mở link http(s) hoặc đường dẫn tương đối, không mở scheme lạ.
+function safeFileHref(url: string): string | null {
+  return /^(https?:\/\/|\/(?!\/))/i.test(url) ? url : null;
+}
+
+/** metadata.removedAttachments / addedAttachments: [{ fileName, fileUrl }]. */
+function financeFiles(
+  metadata: unknown,
+  key: "removedAttachments" | "addedAttachments",
+): FinanceFile[] {
+  if (!metadata || typeof metadata !== "object") return [];
+  const list = (metadata as Record<string, unknown>)[key];
+  if (!Array.isArray(list)) return [];
+  return list.flatMap((item: unknown, index): FinanceFile[] => {
+    const file =
+      typeof item === "string"
+        ? { fileUrl: item }
+        : item && typeof item === "object"
+          ? (item as { fileName?: unknown; fileUrl?: unknown })
+          : null;
+    if (!file) return [];
+    const url = typeof file.fileUrl === "string" ? file.fileUrl.trim() : "";
+    const fileName =
+      typeof file.fileName === "string" ? file.fileName.trim() : "";
+    if (!url && !fileName) return [];
+    return [
+      {
+        key: `${index}-${url}`,
+        name: fileName || url.split("?")[0].split("/").pop() || "Chứng từ",
+        href: url ? safeFileHref(url) : null,
+      },
+    ];
+  });
+}
+
+function FinanceFileList({
+  title,
+  files,
+}: {
+  title: string;
+  files: FinanceFile[];
+}) {
+  if (!files.length) return null;
+  return (
+    <div>
+      <div className="font-medium text-gray-700">
+        {title} ({files.length}):
+      </div>
+      <ul className="mt-1 space-y-0.5">
+        {files.map((file) => (
+          <li key={file.key} className="flex items-center gap-1.5 min-w-0">
+            <Paperclip className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+            {file.href ? (
+              <a
+                href={file.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-brand hover:underline break-all">
+                {file.name}
+              </a>
+            ) : (
+              <span className="text-gray-700 break-all">{file.name}</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// Chứng từ gỡ/thêm của phiếu tài chính nội bộ, kèm link mở file.
+function FinanceAttachments({ metadata }: { metadata: unknown }) {
+  const removed = financeFiles(metadata, "removedAttachments");
+  const added = financeFiles(metadata, "addedAttachments");
+  if (!removed.length && !added.length) return null;
+  return (
+    <div className="mt-3 space-y-2 text-sm">
+      <FinanceFileList title="Chứng từ đã gỡ" files={removed} />
+      <FinanceFileList title="Chứng từ thêm" files={added} />
+    </div>
+  );
+}
+
 function renderSnapshot(
   entityType: string,
   snapshot: any,
-  actionCode?: string
+  actionCode?: string,
+  category?: string,
 ): string {
   if (!snapshot) return "";
   const lines: string[] = [];
+
+  // Tài chính nội bộ: backend đã định dạng sẵn snapshot.lines (label: value),
+  // các trường thô khác (before, …) không in ra.
+  if (category === FINANCE_CATEGORY) {
+    if (Array.isArray(snapshot.lines)) {
+      snapshot.lines.forEach((line: { label?: unknown; value?: unknown }) => {
+        if (line?.label)
+          lines.push(`${String(line.label)}: ${String(line.value ?? "")}`);
+      });
+    }
+    return lines.join("\n");
+  }
 
   // POS: đổi bảng giá cho đơn đang lên sang bảng giá khách không thuộc.
   // Xét theo actionCode vì entityType là "customers" (log ghi theo khách).
   if (actionCode === "PRICE_BOOK_CUSTOMER_SWITCH") {
     const c = snapshot.customer;
     lines.push(
-      "Thao tác: Đổi bảng giá khi bán hàng (chỉ cho đơn đang lên, không thay đổi Thiết lập giá)"
+      "Thao tác: Đổi bảng giá khi bán hàng (chỉ cho đơn đang lên, không thay đổi Thiết lập giá)",
     );
     lines.push(
-      `Khách hàng: ${c?.code ? `${c.code} - ` : ""}${c?.name || "N/A"}`
+      `Khách hàng: ${c?.code ? `${c.code} - ` : ""}${c?.name || "N/A"}`,
     );
     if (Array.isArray(snapshot.customerPriceBooks)) {
       const own = snapshot.customerPriceBooks
@@ -104,19 +259,21 @@ function renderSnapshot(
       lines.push(`Bảng giá của khách: ${own || "Bảng giá chung"}`);
     }
     lines.push(
-      `Bảng giá trước khi đổi: ${snapshot.fromPriceBook?.name || "Bảng giá chung"}`
+      `Bảng giá trước khi đổi: ${snapshot.fromPriceBook?.name || "Bảng giá chung"}`,
     );
     lines.push(
-      `Bảng giá đổi sang: ${snapshot.toPriceBook?.name || "Bảng giá chung"}`
+      `Bảng giá đổi sang: ${snapshot.toPriceBook?.name || "Bảng giá chung"}`,
     );
     if (snapshot.branch?.name) lines.push(`Chi nhánh: ${snapshot.branch.name}`);
     return lines.join("\n");
   }
 
   if (entityType === "customer_debt_collection_attempts") {
-    lines.push(`Khách hàng: ${snapshot.customerName || snapshot.customerCode || "N/A"}`);
     lines.push(
-      `Vai trò: ${snapshot.role === "ACCOUNTANT" ? "Kế toán" : "Sale"}`
+      `Khách hàng: ${snapshot.customerName || snapshot.customerCode || "N/A"}`,
+    );
+    lines.push(
+      `Vai trò: ${snapshot.role === "ACCOUNTANT" ? "Kế toán" : "Sale"}`,
     );
     if (snapshot.attemptDate) {
       const [year, month, day] = String(snapshot.attemptDate).split("-");
@@ -135,11 +292,11 @@ function renderSnapshot(
     lines.push(`Khách hàng: ${snapshot.customer?.name || "N/A"}`);
     lines.push(`Bảng giá: ${snapshot.priceBookName || "Bảng giá chung"}`);
     lines.push(
-      `Tổng tiền hàng (Chưa trừ giảm giá): ${fmtCurrency(snapshot.totalAmount)}`
+      `Tổng tiền hàng (Chưa trừ giảm giá): ${fmtCurrency(snapshot.totalAmount)}`,
     );
     lines.push(`Giảm giá trên đơn hàng: ${fmtCurrency(snapshot.discount)}`);
     lines.push(
-      `Tổng tiền hàng (Sau giảm giá): ${fmtCurrency(snapshot.grandTotal)}`
+      `Tổng tiền hàng (Sau giảm giá): ${fmtCurrency(snapshot.grandTotal)}`,
     );
     lines.push(`Đã thanh toán: ${fmtCurrency(snapshot.paidAmount)}`);
     lines.push(`Công nợ: ${fmtCurrency(snapshot.debtAmount)}`);
@@ -158,7 +315,7 @@ function renderSnapshot(
           ? ` (Giảm Giá Trên Đơn Giá: ${fmtCurrency(item.discount)})`
           : "";
         lines.push(
-          `  - ${item.productCode || item.productName}: ${fmt(item.quantity)} × ${fmtCurrency(priceAfterDiscount)}${discount}`
+          `  - ${item.productCode || item.productName}: ${fmt(item.quantity)} × ${fmtCurrency(priceAfterDiscount)}${discount}`,
         );
       });
     }
@@ -175,13 +332,13 @@ function renderSnapshot(
         lines.push(`  - Trọng lượng: ${fmt(snapshot.delivery.weight)}`);
       if (snapshot.delivery.price)
         lines.push(
-          `  - Phí giao hàng: ${fmtCurrency(snapshot.delivery.price)}`
+          `  - Phí giao hàng: ${fmtCurrency(snapshot.delivery.price)}`,
         );
       if (snapshot.delivery.statusValue)
         lines.push(`  - Trạng thái giao: ${snapshot.delivery.statusValue}`);
       if (snapshot.delivery.noteForDriver)
         lines.push(
-          `  - Ghi chú cho giao hàng: ${snapshot.delivery.noteForDriver}`
+          `  - Ghi chú cho giao hàng: ${snapshot.delivery.noteForDriver}`,
         );
     }
 
@@ -195,7 +352,7 @@ function renderSnapshot(
     lines.push(`Giá bán: ${fmtCurrency(snapshot.basePrice)}`);
     if (snapshot.weight)
       lines.push(
-        `Trọng lượng: ${fmt(snapshot.weight)} ${snapshot.weightUnit || ""}`
+        `Trọng lượng: ${fmt(snapshot.weight)} ${snapshot.weightUnit || ""}`,
       );
     if (snapshot.unit) lines.push(`Đơn vị: ${snapshot.unit}`);
     lines.push(`Hoạt động: ${snapshot.isActive ? "Có" : "Không"}`);
@@ -252,7 +409,7 @@ function renderSnapshot(
       lines.push("Sản phẩm:");
       snapshot.details.forEach((d: any) => {
         lines.push(
-          `  - ${d.productCode || d.productName}: gửi ${fmt(d.sendQuantity)}, nhận ${fmt(d.receivedQuantity)}`
+          `  - ${d.productCode || d.productName}: gửi ${fmt(d.sendQuantity)}, nhận ${fmt(d.receivedQuantity)}`,
         );
       });
     }
@@ -288,7 +445,7 @@ function renderSnapshot(
   if (entityType === "productions") {
     lines.push(`Mã: ${snapshot.code || "N/A"}`);
     lines.push(
-      `Sản phẩm: ${snapshot.productName || "N/A"} (${snapshot.productCode || ""})`
+      `Sản phẩm: ${snapshot.productName || "N/A"} (${snapshot.productCode || ""})`,
     );
     lines.push(`Số lượng: ${fmt(snapshot.quantity)}`);
     lines.push(`Giá vốn: ${fmtCurrency(snapshot.totalCost)}`);
@@ -311,7 +468,7 @@ function renderSnapshot(
       lines.push("Sản phẩm:");
       snapshot.details.forEach((d: any) => {
         lines.push(
-          `  - ${d.productCode || d.productName}: ${fmt(d.quantity)} × ${fmtCurrency(d.price)}`
+          `  - ${d.productCode || d.productName}: ${fmt(d.quantity)} × ${fmtCurrency(d.price)}`,
         );
       });
     }
@@ -323,7 +480,7 @@ function renderSnapshot(
     lines.push(`NCC: ${snapshot.supplierName || "N/A"}`);
     if (snapshot.branchName) lines.push(`Chi nhánh: ${snapshot.branchName}`);
     lines.push(
-      `Tổng tiền: ${fmtCurrency(snapshot.total || snapshot.grandTotal)}`
+      `Tổng tiền: ${fmtCurrency(snapshot.total || snapshot.grandTotal)}`,
     );
     lines.push(`Đã thanh toán: ${fmtCurrency(snapshot.paidAmount)}`);
     lines.push(`Công nợ NCC: ${fmtCurrency(snapshot.supplierDebt)}`);
@@ -345,7 +502,7 @@ function renderSnapshot(
       lines.push("Sản phẩm:");
       snapshot.items.forEach((i: any) => {
         lines.push(
-          `  - ${i.productCode || i.productName}: ${fmt(i.quantity)} × ${fmtCurrency(i.price)}`
+          `  - ${i.productCode || i.productName}: ${fmt(i.quantity)} × ${fmtCurrency(i.price)}`,
         );
       });
     }
@@ -412,7 +569,7 @@ function renderSnapshot(
       snapshot.purchaseOrder?.supplier || snapshot.orderSupplier?.supplier;
     if (supplierName)
       lines.push(
-        `NCC: ${typeof supplierName === "object" ? supplierName.name : supplierName}`
+        `NCC: ${typeof supplierName === "object" ? supplierName.name : supplierName}`,
       );
     return lines.join("\n");
   }
@@ -449,7 +606,7 @@ function renderSnapshot(
       lines.push(`Số tiền hoàn: ${fmtCurrency(snapshot.refundAmount)}`);
     if (snapshot.actualCashRefund !== undefined)
       lines.push(
-        `Tiền mặt thực hoàn: ${fmtCurrency(snapshot.actualCashRefund)}`
+        `Tiền mặt thực hoàn: ${fmtCurrency(snapshot.actualCashRefund)}`,
       );
     if (snapshot.refundType)
       lines.push(
@@ -461,7 +618,7 @@ function renderSnapshot(
               : snapshot.refundType === "manual_offset"
                 ? "Bù trừ thủ công"
                 : snapshot.refundType
-        }`
+        }`,
       );
     if (snapshot.status) lines.push(`Trạng thái: ${snapshot.status}`);
     return lines.join("\n");
@@ -536,7 +693,7 @@ function renderSnapshot(
       lines.push("Sản phẩm:");
       snapshot.details.forEach((d: any) => {
         lines.push(
-          `  - ${d.productCode || d.productName}: tồn ${fmt(d.currentOnHand)}, loại B ${fmt(d.damagedQuantity)}, cận date ${fmt(d.nearExpiryQuantity)}`
+          `  - ${d.productCode || d.productName}: tồn ${fmt(d.currentOnHand)}, loại B ${fmt(d.damagedQuantity)}, cận date ${fmt(d.nearExpiryQuantity)}`,
         );
       });
     }
@@ -558,7 +715,7 @@ function renderSnapshot(
       lines.push("Sản phẩm:");
       snapshot.details.forEach((d: any) => {
         lines.push(
-          `  - ${d.productCode || d.productName}: hệ thống ${fmt(d.systemQuantity)} → thực tế ${fmt(d.actualQuantity)} (lệch ${fmt(d.difference)})`
+          `  - ${d.productCode || d.productName}: hệ thống ${fmt(d.systemQuantity)} → thực tế ${fmt(d.actualQuantity)} (lệch ${fmt(d.difference)})`,
         );
       });
     }
@@ -567,7 +724,7 @@ function renderSnapshot(
 
   if (entityType === "inventory_condition") {
     lines.push(
-      `Sản phẩm: ${snapshot.productName || "N/A"} (${snapshot.productCode || ""})`
+      `Sản phẩm: ${snapshot.productName || "N/A"} (${snapshot.productCode || ""})`,
     );
     lines.push(`Chi nhánh: ${snapshot.branchName || "N/A"}`);
     lines.push(`Tồn kho: ${fmt(snapshot.onHand)}`);
@@ -579,7 +736,7 @@ function renderSnapshot(
   const entries = Object.entries(snapshot).filter(
     ([key]) =>
       !["id", "createdAt", "updatedAt", "createdBy"].includes(key) &&
-      typeof snapshot[key] !== "object"
+      typeof snapshot[key] !== "object",
   );
   entries.forEach(([key, val]) => {
     lines.push(`${key}: ${fmt(val)}`);
@@ -587,22 +744,29 @@ function renderSnapshot(
   return lines.join("\n");
 }
 
-function renderChanges(changes: any[]): string {
+function renderChanges(changes: any[], category?: string): string {
   if (!changes || changes.length === 0) return "";
   const lines: string[] = ["", "Các thay đổi:"];
+  const finance = category === FINANCE_CATEGORY;
 
   changes.forEach((c: any) => {
-    if (c.type === "item_added") {
+    if (finance && (c.type === "item_added" || c.type === "item_removed")) {
+      // Tài chính nội bộ: from/to là chuỗi hiển thị (vd. tên file chứng từ).
+      const added = c.type === "item_added";
       lines.push(
-        `  + Thêm SP: ${c.detail?.productName} - SL: ${fmt(c.detail?.quantity)}, Giá: ${fmtCurrency(c.detail?.price)}`
+        `  ${added ? "+" : "-"} ${c.label || c.field}: ${fmt(added ? c.to || c.from : c.from || c.to)}`,
+      );
+    } else if (c.type === "item_added") {
+      lines.push(
+        `  + Thêm SP: ${c.detail?.productName} - SL: ${fmt(c.detail?.quantity)}, Giá: ${fmtCurrency(c.detail?.price)}`,
       );
     } else if (c.type === "item_removed") {
       lines.push(
-        `  - Xóa SP: ${c.detail?.productName} - SL: ${fmt(c.detail?.quantity)}`
+        `  - Xóa SP: ${c.detail?.productName} - SL: ${fmt(c.detail?.quantity)}`,
       );
     } else if (c.type === "item_changed") {
       lines.push(
-        `  ~ SP ${c.detail?.productName}: ${(c.detail?.changes || []).join(", ")}`
+        `  ~ SP ${c.detail?.productName}: ${(c.detail?.changes || []).join(", ")}`,
       );
     } else if (c.field === "reason") {
       lines.push(`  ~ ${c.label || "Lý do"}: ${fmt(c.to)}`);
@@ -643,9 +807,10 @@ export function AuditLogsTable({
     const snapshotText = renderSnapshot(
       log.entityType,
       log.snapshot,
-      log.actionCode
+      log.actionCode,
+      log.category,
     );
-    const changesText = renderChanges(log.changes);
+    const changesText = renderChanges(log.changes, log.category);
     return snapshotText + changesText || log.message || "Không có chi tiết";
   };
 
@@ -677,6 +842,9 @@ export function AuditLogsTable({
             const severity =
               severityConfig[log.severity] || severityConfig.info;
             const SeverityIcon = severity.icon;
+            const isFinance = log.category === FINANCE_CATEGORY;
+            const actorLabel = isFinance ? actorKindLabel(log.metadata) : null;
+            const actorNote = isFinance ? financeActorNote(log) : null;
 
             return (
               <Fragment key={log.id}>
@@ -692,7 +860,19 @@ export function AuditLogsTable({
                       <ChevronRight className="w-4 h-4 text-gray-600" />
                     )}
                   </td>
-                  <td className="px-6 py-4 text-sm">{log.userName}</td>
+                  <td className="px-6 py-4 text-sm">
+                    {log.userName}
+                    {actorLabel && (
+                      <span className="ml-2 inline-block px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 whitespace-nowrap">
+                        {actorLabel}
+                      </span>
+                    )}
+                    {actorNote && (
+                      <span className="ml-1 text-xs text-gray-500">
+                        {actorNote}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-sm">
                     <span className="inline-block px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">
                       {categoryNames[log.category] || log.entityType || "Khác"}
@@ -731,6 +911,9 @@ export function AuditLogsTable({
                         <div className="text-sm whitespace-pre-line font-mono">
                           {formatExpandedDetail(log)}
                         </div>
+                        {isFinance && (
+                          <FinanceAttachments metadata={log.metadata} />
+                        )}
                       </div>
                     </td>
                   </tr>

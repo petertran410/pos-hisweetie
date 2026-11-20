@@ -10,7 +10,8 @@ export async function confirmAction(
   opts: { title?: string; confirmText?: string; danger?: boolean } = {}
 ): Promise<boolean> {
   const result = await Swal.fire({
-    title: opts.title ?? "Xác nhận",
+    // titleText: tiêu đề có thể chứa tên bản ghi → hiện dạng chữ, không phải HTML.
+    titleText: opts.title ?? "Xác nhận",
     text,
     icon: opts.danger ? "warning" : "question",
     showCancelButton: true,

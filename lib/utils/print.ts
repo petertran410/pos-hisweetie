@@ -7,6 +7,11 @@ import {
   waitForPrintFonts,
   warmUpEmbeddedPrintFonts,
 } from "@/lib/utils/print-font";
+import {
+  PRINT_FRAME_SANDBOX,
+  safeCssPageSize,
+  sanitizePrintHtml,
+} from "@/lib/utils/html-safety";
 
 const ITEM_TABLE_HEADER_GROUPS = [
   ["san pham", "ten hang", "hang hoa", "ma hang"],
@@ -156,13 +161,16 @@ export function buildPrintDocumentHtml(
    */
   options?: { fontCss?: string }
 ): string {
+  const size = safeCssPageSize(pageSize);
+  // Nội dung từ máy chủ (dữ liệu bản ghi + thân mẫu in) → lọc trước khi ghi.
+  const safeContent = sanitizePrintHtml(content);
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
   <title></title>
   <style>
-    @page { ${pageSize ? `size: ${pageSize}; ` : ""}margin: 8mm; }
+    @page { ${size ? `size: ${size}; ` : ""}margin: 8mm; }
     html, body {
       width: 100%;
       max-width: 100%;
@@ -193,7 +201,7 @@ export function buildPrintDocumentHtml(
   </style>
   <style>${options?.fontCss ?? printFontCss()}</style>
 </head>
-<body><div class="print-content">${content}</div></body>
+<body><div class="print-content">${safeContent}</div></body>
 </html>`;
 }
 
@@ -244,6 +252,7 @@ export async function printEntity(
   iframe.style.width = "0";
   iframe.style.height = "0";
   iframe.style.border = "0";
+  iframe.setAttribute("sandbox", PRINT_FRAME_SANDBOX);
   document.body.appendChild(iframe);
 
   const doc = iframe.contentDocument;
@@ -362,6 +371,7 @@ export async function printDeliverySlip(
   const iframe = document.createElement("iframe");
   iframe.style.cssText =
     "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+  iframe.setAttribute("sandbox", PRINT_FRAME_SANDBOX);
   document.body.appendChild(iframe);
 
   const doc = iframe.contentDocument;
@@ -412,6 +422,7 @@ export async function printConsignmentReturn(returnId: number): Promise<void> {
   const iframe = document.createElement("iframe");
   iframe.style.cssText =
     "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+  iframe.setAttribute("sandbox", PRINT_FRAME_SANDBOX);
   document.body.appendChild(iframe);
 
   const doc = iframe.contentDocument;
@@ -464,6 +475,7 @@ export async function printWarehouseExport(invoiceId: number): Promise<void> {
   const iframe = document.createElement("iframe");
   iframe.style.cssText =
     "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+  iframe.setAttribute("sandbox", PRINT_FRAME_SANDBOX);
   document.body.appendChild(iframe);
 
   const doc = iframe.contentDocument;
@@ -614,6 +626,7 @@ export async function renderPrintImage(
 
   const iframe = document.createElement("iframe");
   iframe.style.cssText = `position:fixed;left:-10000px;top:0;width:${width}px;height:10px;border:0;visibility:hidden`;
+  iframe.setAttribute("sandbox", PRINT_FRAME_SANDBOX);
   document.body.appendChild(iframe);
   try {
     const doc = iframe.contentDocument;

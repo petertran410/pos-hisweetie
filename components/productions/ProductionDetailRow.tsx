@@ -42,6 +42,7 @@ import {
 } from "../manufacturers/ExternalProductionReceiveModal";
 import { ManufacturerMaterialsEditor } from "../manufacturers/ManufacturerMaterialsEditor";
 
+import { escapeHtml } from "@/lib/utils/html-safety";
 const vnd = (v: unknown, precise = false) =>
   `${(precise ? Number(v ?? 0) : Math.round(Number(v ?? 0))).toLocaleString("en-US", { maximumFractionDigits: precise ? 6 : 0 })} đ`;
 
@@ -183,12 +184,12 @@ export function ProductionDetailRow({
     const lines = production.components ?? [];
     const fromNsx = lines.filter((line) => line.source === "manufacturer").length;
     const res = await Swal.fire({
-      title: `Gửi hàng phiếu ${production.code}?`,
+      titleText: `Gửi hàng phiếu ${production.code}?`,
       // Ngày gửi = ngày trừ tồn: chọn lùi khi hàng đã gửi trước lúc làm phiếu.
       html:
         fromNsx === lines.length && fromNsx > 0
           ? "Nguyên liệu lấy từ tồn đang ở NSX (không trừ kho mình), ghi theo ngày gửi bên dưới."
-          : `Hàng mình gửi sẽ trừ khỏi kho <b>${production.sourceBranchName}</b> theo ngày gửi bên dưới.` +
+          : `Hàng mình gửi sẽ trừ khỏi kho <b>${escapeHtml(production.sourceBranchName)}</b> theo ngày gửi bên dưới.` +
             (fromNsx ? "<br/>Dòng lấy từ tồn NSX trừ vào tồn nguyên liệu đang ở NSX." : ""),
       input: "date",
       inputLabel: "Ngày gửi",
@@ -215,7 +216,7 @@ export function ProductionDetailRow({
   const handleCancelSent = async () => {
     if (!production) return;
     const res = await Swal.fire({
-      title: `Hủy phiếu ${production.code}?`,
+      titleText: `Hủy phiếu ${production.code}?`,
       html:
         production.status === 2 || production.status === 5
           ? "Nguyên liệu được cộng lại vào kho, thành phẩm đã nhập (mọi đợt) bị trừ ra và phí sản xuất bị bỏ khỏi nợ NCC." +
@@ -254,7 +255,7 @@ export function ProductionDetailRow({
   const handleCloseReceiving = async () => {
     if (!production) return;
     const res = await Swal.fire({
-      title: `Kết thúc nhận hàng ${production.code}?`,
+      titleText: `Kết thúc nhận hàng ${production.code}?`,
       html: `Đã nhận <b>${received.toLocaleString("en-US")}</b> / ${planned.toLocaleString("en-US")}. <b>${leftToReceive.toLocaleString("en-US")}</b> sp còn lại sẽ không nhận nữa (coi là hao hụt).`,
       icon: "question",
       showCancelButton: true,
@@ -951,8 +952,8 @@ function ReceiptHistory({
 
   const handleCancel = async (receipt: ProductionReceipt) => {
     const res = await Swal.fire({
-      title: `Hủy đợt nhận ${receipt.code}?`,
-      html: `Trừ lại <b>${qty(receipt.quantity)}</b> thành phẩm khỏi kho ${production.destinationBranchName} và bỏ <b>${vnd(receipt.totalPayable)}</b> khỏi nợ NSX.`,
+      titleText: `Hủy đợt nhận ${receipt.code}?`,
+      html: `Trừ lại <b>${qty(receipt.quantity)}</b> thành phẩm khỏi kho ${escapeHtml(production.destinationBranchName)} và bỏ <b>${vnd(receipt.totalPayable)}</b> khỏi nợ NSX.`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Hủy đợt",

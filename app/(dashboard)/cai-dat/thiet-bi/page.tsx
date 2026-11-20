@@ -5,7 +5,7 @@ import Swal from "sweetalert2";
 import { toast } from "sonner";
 import { DeviceSessionList } from "@/components/sessions/DeviceSessionList";
 import type { DeviceSession } from "@/lib/api/sessions";
-import { logout } from "@/lib/auth/session";
+import { LOGOUT_FAILED_MESSAGE, logout } from "@/lib/auth/session";
 import {
   useMySessions,
   useRevokeMySession,
@@ -38,7 +38,8 @@ export default function DeviceSessionsPage() {
     if (!result.isConfirmed) return;
 
     if (session.current) {
-      await logout();
+      // Thành công thì chuyển về trang đăng nhập; thất bại thì phiên còn nguyên.
+      if (!(await logout())) toast.error(LOGOUT_FAILED_MESSAGE);
       return;
     }
     setPendingId(session.id);

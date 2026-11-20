@@ -184,6 +184,8 @@ export function useUpdateOrder() {
       ordersApi.updateOrder(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      // Lưu đơn ở Bán hàng có thể kèm tiền khách trả (tạo phiếu thanh toán).
+      queryClient.invalidateQueries({ queryKey: ["order-payments"] });
     },
     onError: (error: any) => {
       toast.error(error.message || "Cập nhật đơn hàng thất bại");

@@ -28,7 +28,7 @@ export function CancelledCustomerGroupsModal({
 
   const handleRestore = async (group: CancelledCustomerGroup) => {
     const res = await Swal.fire({
-      title: `Khôi phục nhóm "${group.name}"?`,
+      titleText: `Khôi phục nhóm "${group.name}"?`,
       text: "Nhóm sẽ dùng lại được nhưng không tự thêm lại khách đã gỡ.",
       icon: "question",
       showCancelButton: true,

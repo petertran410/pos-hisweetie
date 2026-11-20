@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/lib/store/auth";
 import { applyAccessToken, refreshAccessToken } from "@/lib/auth/session";
+import { safeReturnUrl } from "@/lib/auth/safe-return-url";
 import { toast } from "sonner";
 import { EyeOff, Eye, QrCode } from "lucide-react";
 import "@/app/dashboard.css";
@@ -31,7 +32,8 @@ function LoginContent() {
   const [setupToken, setSetupToken] = useState("");
   const [hashReturnUrl, setHashReturnUrl] = useState("");
 
-  const queryReturnUrl = searchParams.get("returnUrl") || "/";
+  // Chỉ nhận đường dẫn nội bộ (chặn javascript:, //host, link ngoài…).
+  const queryReturnUrl = safeReturnUrl(searchParams.get("returnUrl"));
   const returnUrl = hashReturnUrl || queryReturnUrl;
 
   const {
@@ -98,7 +100,8 @@ function LoginContent() {
     const error = params.get("lark_error");
     const setup = params.get("lark_setup");
     const larkOk = params.get("lark_ok");
-    const nextReturn = params.get("return_to");
+    const rawReturn = params.get("return_to");
+    const nextReturn = rawReturn ? safeReturnUrl(rawReturn) : "";
     if (nextReturn) setHashReturnUrl(nextReturn);
     if (error) {
       setAuthError(error);

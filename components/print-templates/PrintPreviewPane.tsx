@@ -2,6 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { printFontCss, waitForPrintFonts } from "@/lib/utils/print-font";
+import {
+  PRINT_FRAME_SANDBOX,
+  safeCssPageSize,
+  sanitizePrintHtml,
+} from "@/lib/utils/html-safety";
 
 interface Props {
   html: string;
@@ -35,11 +40,11 @@ export function PrintPreviewPane({ html, paperSize = "A5" }: Props) {
             td, th { padding: 4px 8px; }
             h1, h2, h3 { margin: 2px 0; }
             * { box-sizing: border-box; }
-            @page { size: ${paperSize}; margin: 0; }
+            @page { size: ${safeCssPageSize(paperSize, "A5")}; margin: 0; }
           </style>
           <style>${printFontCss()}</style>
         </head>
-        <body>${html}</body>
+        <body>${sanitizePrintHtml(html)}</body>
       </html>
     `);
     doc.close();
@@ -59,6 +64,7 @@ export function PrintPreviewPane({ html, paperSize = "A5" }: Props) {
   return (
     <iframe
       ref={iframeRef}
+      sandbox={PRINT_FRAME_SANDBOX}
       style={{
         width: "100%",
         height: `${height}px`,

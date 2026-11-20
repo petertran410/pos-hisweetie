@@ -35,6 +35,7 @@ import { stockWithGrams } from "@/lib/utils/stock-units";
 import { CodeLink } from "../shared/CodeLink";
 import { ManufacturerStockSlipModal } from "./ManufacturerStockSlipModal";
 
+import { escapeHtml } from "@/lib/utils/html-safety";
 const qty = (value: number) =>
   value.toLocaleString("en-US", { maximumFractionDigits: 4 });
 const vnd = (value: unknown) =>
@@ -94,12 +95,12 @@ export function ManufacturerStockPanel({
 
   const confirmCancel = async (slip: ManufacturerStockSlip) => {
     const result = await Swal.fire({
-      title: `Hủy phiếu ${slip.code}?`,
+      titleText: `Hủy phiếu ${slip.code}?`,
       html:
         slip.type === "SEND"
-          ? `Nguyên liệu được cộng lại vào kho <b>${slip.branchName}</b> và trừ khỏi tồn tại NSX. Không hủy được nếu đã dùng cho phiếu gửi sản xuất.`
+          ? `Nguyên liệu được cộng lại vào kho <b>${escapeHtml(slip.branchName)}</b> và trừ khỏi tồn tại NSX. Không hủy được nếu đã dùng cho phiếu gửi sản xuất.`
           : slip.type === "RETURN"
-            ? `Nguyên liệu bị trừ khỏi kho <b>${slip.branchName}</b> và trả lại tồn tại NSX.`
+            ? `Nguyên liệu bị trừ khỏi kho <b>${escapeHtml(slip.branchName)}</b> và trả lại tồn tại NSX.`
             : slip.type === "OPENING"
               ? "Lượng đã khai báo bị trừ khỏi tồn tại NSX (kho của bạn không đổi). Không hủy được nếu đã dùng cho phiếu gửi sản xuất."
               : "Tồn tại NSX trở lại như trước khi điều chỉnh.",

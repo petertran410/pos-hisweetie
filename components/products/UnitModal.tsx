@@ -76,7 +76,7 @@ export function UnitModal({
   const handleDelete = async () => {
     if (!unit) return;
     const res = await Swal.fire({
-      title: `Xóa đơn vị "${unit.name}"?`,
+      titleText: `Xóa đơn vị "${unit.name}"?`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Xóa",

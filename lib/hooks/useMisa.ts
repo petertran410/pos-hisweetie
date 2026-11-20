@@ -1,6 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { misaApi, MisaBuyerOverride } from "../api/misa";
+import { misaApi, MisaBuyerOverride, MisaBulkVoucherResult } from "../api/misa";
 import { toast } from "sonner";
+
+// Đẩy hàng loạt theo lô nhỏ: backend gửi tuần tự, nghỉ giữa các hóa đơn và tự
+// thử lại khi MISA chập chờn, nên mỗi lô cần thời gian. Mỗi request tối đa 90s
+// (dưới giới hạn 100s của Cloudflare).
+const BULK_CHUNK_SIZE = 5;
+const BULK_CHUNK_TIMEOUT_MS = 90_000;
+
+export interface MisaBulkPushSummary {
+  total: number;
+  results: MisaBulkVoucherResult["results"];
+  /** Lô bị lỗi kết nối/timeout: backend có thể vẫn đang xử lý, chưa rõ kết quả. */
+  unknownCodes: string[];
+  /** Các hóa đơn chưa gửi vì đã dừng sau lô lỗi. */
+  notSentCodes: string[];
+  stopError: string | null;
+}
 
 /** Danh sách nhân viên phụ trách (Misa) cho dropdown filter */
 export function useMisaEmployees(enabled: boolean = true) {
@@ -88,21 +104,75 @@ export function useDeleteVoucher() {
 export function useCreateVouchersBulk() {
   const invalidate = useInvalidateVat();
   return useMutation({
-    mutationFn: (vars: {
+    mutationFn: async (vars: {
       invoiceCodes: string[];
       buyerOverrides?: Record<string, MisaBuyerOverride>;
-    }) => misaApi.createVouchersBulk(vars.invoiceCodes, vars.buyerOverrides),
-    onSuccess: (res) => {
-      if (res.failedCount === 0) {
+    }): Promise<MisaBulkPushSummary> => {
+      const codes = vars.invoiceCodes;
+      const summary: MisaBulkPushSummary = {
+        total: codes.length,
+        results: [],
+        unknownCodes: [],
+        notSentCodes: [],
+        stopError: null,
+      };
+      const progressText = (done: number) =>
+        `Đang đẩy ${done}/${codes.length} hóa đơn lên Misa…`;
+      const toastId = toast.loading(progressText(0));
+
+      try {
+        for (let i = 0; i < codes.length; i += BULK_CHUNK_SIZE) {
+          const chunk = codes.slice(i, i + BULK_CHUNK_SIZE);
+          const chunkOverrides: Record<string, MisaBuyerOverride> = {};
+          for (const code of chunk) {
+            const override = vars.buyerOverrides?.[code];
+            if (override) chunkOverrides[code] = override;
+          }
+
+          try {
+            const res = await misaApi.createVouchersBulk(
+              chunk,
+              chunkOverrides,
+              undefined,
+              BULK_CHUNK_TIMEOUT_MS
+            );
+            summary.results.push(...res.results);
+          } catch (error) {
+            // Lô lỗi kết nối có thể vẫn đang chạy ở backend → dừng, không gửi
+            // tiếp để tránh dồn request lên MISA.
+            summary.stopError =
+              error instanceof Error && error.message
+                ? error.message
+                : "Lỗi kết nối";
+            summary.unknownCodes = chunk;
+            summary.notSentCodes = codes.slice(i + BULK_CHUNK_SIZE);
+            break;
+          }
+
+          toast.loading(
+            progressText(Math.min(i + BULK_CHUNK_SIZE, codes.length)),
+            { id: toastId }
+          );
+        }
+      } finally {
+        toast.dismiss(toastId);
+      }
+
+      return summary;
+    },
+    onSuccess: (summary) => {
+      const successCount = summary.results.filter((r) => r.success).length;
+      if (successCount === summary.total) {
         toast.success(
-          `Đã gửi ${res.successCount}/${res.total} hóa đơn vào hàng đợi Misa`
+          `Đã gửi ${successCount}/${summary.total} hóa đơn vào hàng đợi Misa`
         );
-      } else if (res.successCount > 0) {
-        toast.success(
-          `Đã gửi ${res.successCount}/${res.total} hóa đơn vào hàng đợi Misa, ${res.failedCount} thất bại`
+      } else if (successCount > 0) {
+        // Không dùng màu xanh khi còn hóa đơn chưa gửi được, tránh hiểu nhầm.
+        toast.warning(
+          `Đã gửi ${successCount}/${summary.total} hóa đơn vào hàng đợi Misa, ${summary.total - successCount} chưa gửi được`
         );
       } else {
-        toast.error(`Tất cả ${res.total} hóa đơn đẩy thất bại`);
+        toast.error(`Chưa gửi được hóa đơn nào trong ${summary.total} hóa đơn`);
       }
       invalidate();
     },

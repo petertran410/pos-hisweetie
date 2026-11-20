@@ -9,6 +9,7 @@ import {
   buildPrintDocumentHtml,
 } from "@/lib/utils/print";
 import { waitForPrintFonts } from "@/lib/utils/print-font";
+import { PRINT_FRAME_SANDBOX } from "@/lib/utils/html-safety";
 
 interface MobilePrintPreviewModalProps {
   templateFor: string;
@@ -137,6 +138,7 @@ export function MobilePrintPreviewModal({
             <iframe
               ref={iframeRef}
               srcDoc={srcDoc}
+              sandbox={PRINT_FRAME_SANDBOX}
               onLoad={async () => {
                 // Mobile chỉ cho in ngay trong thao tác bấm, nên chờ font in
                 // tải xong trước khi bật nút In.

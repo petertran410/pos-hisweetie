@@ -709,7 +709,7 @@ export function PurchaseOrderForm({
     setProductionSearch("");
     if (next && !sourceProduction && products.length > 0) {
       const res = await Swal.fire({
-        title: `Nhập từ phiếu ${next.code}?`,
+        titleText: `Nhập từ phiếu ${next.code}?`,
         text: "Danh sách hàng đang nhập sẽ được thay bằng thành phẩm của phiếu sản xuất.",
         icon: "question",
         showCancelButton: true,

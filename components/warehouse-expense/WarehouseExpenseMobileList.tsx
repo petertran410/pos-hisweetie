@@ -20,6 +20,10 @@ import {
   isVpsgManualOpen,
   officeVoucherDetails,
 } from "@/lib/internal-finance/office";
+import {
+  FUEL_ADVANCE_USED_LABEL,
+  isFuelAdvanceUsed,
+} from "@/lib/internal-finance/vehicle-constants";
 import { formatCurrency } from "@/lib/utils";
 import {
   CardAction,
@@ -269,6 +273,10 @@ export function WarehouseExpenseMobileList({
               ) : row.cashIssued ? (
                 <span className="rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700">
                   Đã chi
+                </span>
+              ) : isFuelAdvanceUsed(row) ? (
+                <span className="rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700">
+                  {FUEL_ADVANCE_USED_LABEL}
                 </span>
               ) : row.weeklyBatch ? (
                 <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">

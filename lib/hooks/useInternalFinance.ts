@@ -11,6 +11,8 @@ import {
   type InternalFinanceResponse,
   type InternalFinanceQuery,
   type LarkApprovalQuery,
+  type FuelAdvanceEntryInput,
+  type FuelAdvanceQuery,
   type SalaryAdvanceQuery,
   type VehicleEntryQuery,
   type VehicleEntryUpdateInput,
@@ -209,6 +211,48 @@ export function useSalaryAdvances(params: SalaryAdvanceQuery) {
     queryKey: ["internal-finance", "salary-advances", params],
     queryFn: () => internalFinanceApi.salaryAdvances(params),
     placeholderData: (previous) => previous,
+  });
+}
+
+/** Sổ tiền ứng xăng xe Kho HN trong khoảng ngày. */
+export function useFuelAdvance(params: FuelAdvanceQuery) {
+  return useQuery({
+    queryKey: ["internal-finance", "fuel-advance", params],
+    queryFn: () => internalFinanceApi.fuelAdvance(params),
+    placeholderData: (previous) => previous,
+  });
+}
+
+/** Nhập khoản ứng xăng Kho HN đã đi tiền ngoài đơn PHIẾU CHI (không ghi quỹ). */
+export function useCreateFuelAdvanceEntry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: FuelAdvanceEntryInput) =>
+      internalFinanceApi.createFuelAdvanceEntry(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["internal-finance", "fuel-advance"],
+      });
+      toast.success("Đã nhập khoản ứng xăng");
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, "Nhập khoản ứng thất bại")),
+  });
+}
+
+export function useCancelFuelAdvanceEntry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: number; reason: string }) =>
+      internalFinanceApi.cancelFuelAdvanceEntry(id, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["internal-finance", "fuel-advance"],
+      });
+      toast.success("Đã hủy khoản ứng");
+    },
+    onError: (error) =>
+      toast.error(errorMessage(error, "Hủy khoản ứng thất bại")),
   });
 }
 
@@ -827,10 +871,16 @@ export function useCancelWarehouseReceipt() {
     mutationFn: ({
       id,
       cancelCashFlows,
+      reason,
     }: {
       id: number;
       cancelCashFlows: boolean;
-    }) => internalFinanceApi.cancelWarehouseReceipt(id, { cancelCashFlows }),
+      reason: string;
+    }) =>
+      internalFinanceApi.cancelWarehouseReceipt(id, {
+        cancelCashFlows,
+        reason,
+      }),
     onSuccess: () => {
       invalidateInternalFinance(queryClient);
       queryClient.invalidateQueries({ queryKey: ["customers"] });
