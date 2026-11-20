@@ -4,31 +4,46 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Reorder, useDragControls } from "motion/react";
 import { toast } from "sonner";
-import { AlertTriangle, CheckCircle2, ChevronDown, ExternalLink, GripVertical, Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ExternalLink, GripVertical, Plus, Search, Trash2, Upload } from "lucide-react";
 import { publicPriceApi } from "@/lib/api/public-price";
 import { productsApi } from "@/lib/api/products";
 import { usePriceBooks } from "@/lib/hooks/usePriceBooks";
 import { usePermission } from "@/lib/hooks/usePermissions";
 import { confirmAction } from "@/lib/chat/confirm";
 import {
-  PRICE_GROUPS,
+  PRICE_GROUP_ICON_LABEL,
+  PRICE_GROUP_MAX,
   PRICE_TAG_LABEL,
   PUBLIC_PRICE_URL,
   REGION_PARAM,
   type PriceCatalogEntry,
+  type PriceGroupConfig,
+  type PriceGroupIcon,
   type PriceGroupKey,
   type PriceItemConfig,
   type PricePageConfig,
   type PriceRegionKey,
+  type PriceSpecInfo,
   type PriceTag,
 } from "@/lib/public-price/types";
 import { formatVnd, guessGroup, isHttpsUrl, knownBrandLabel } from "@/lib/public-price/utils";
 import { PriceListView } from "./PriceListView";
 
 const KEY = ["public-price-page"];
-const GROUP_DOT: Record<PriceGroupKey, string> = { tea: "#1D8A8A", jam: "#7B4F2E", top: "#4A4A4A", froz: "#0090C0" };
+const GROUP_DOT: Record<PriceGroupIcon, string> = { tea: "#1D8A8A", jam: "#7B4F2E", top: "#4A4A4A", froz: "#0090C0", pow: "#A8681A" };
+const GROUP_ICONS = Object.keys(PRICE_GROUP_ICON_LABEL) as PriceGroupIcon[];
 
-type CatalogMap = Record<number, Omit<PriceCatalogEntry, "price"> & { price?: PriceCatalogEntry["price"] }>;
+/** Sản phẩm vừa thêm chưa có giá / thông số cho tới khi bản xem trước trả về */
+type CatalogMap = Record<
+  number,
+  Omit<PriceCatalogEntry, "price" | "images" | "auto"> & Partial<Pick<PriceCatalogEntry, "price" | "images" | "auto">>
+>;
+type SpecKey = keyof PriceSpecInfo;
+const SPEC_FIELDS: { key: SpecKey; label: string; max: number }[] = [
+  { key: "size", label: "Khối lượng", max: 30 },
+  { key: "spec", label: "Quy cách", max: 60 },
+  { key: "unit", label: "Đơn vị tính", max: 20 },
+];
 
 function Switch({ on, onChange, label, disabled }: { on: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
   return (
@@ -71,6 +86,8 @@ export function PublicPriceSettings() {
   /** Sản phẩm vừa thêm, trước khi bản xem trước trả thông tin về */
   const [added, setAdded] = useState<CatalogMap>({});
   const [previewRegion, setPreviewRegion] = useState<PriceRegionKey>("S");
+  /** Nhóm vừa thêm: đặt con trỏ vào ô tên */
+  const [focusGroup, setFocusGroup] = useState<PriceGroupKey | null>(null);
 
   // Nạp cấu hình từ server (lần đầu, sau khi lưu / xuất bản / hoàn tác).
   const [loaded, setLoaded] = useState<typeof admin>(undefined);
@@ -121,6 +138,23 @@ export function PublicPriceSettings() {
   const set = (patch: Partial<PricePageConfig>) => setConfig((c) => (c ? { ...c, ...patch } : c));
   const setRegion = (key: PriceRegionKey, patch: Partial<PricePageConfig["regions"][number]>) =>
     set({ regions: config.regions.map((r) => (r.key === key ? { ...r, ...patch } : r)) });
+  const patchGroup = (key: PriceGroupKey, patch: Partial<PriceGroupConfig>) =>
+    set({ groups: config.groups.map((g) => (g.key === key ? { ...g, ...patch } : g)) });
+  const addGroup = () => {
+    const key = `g${Date.now().toString(36)}`;
+    set({ groups: [...config.groups, { key, name: "Nhóm mới", icon: "top", visible: true }] });
+    setFocusGroup(key);
+  };
+  /** Xoá nhóm: sản phẩm trong nhóm chuyển sang nhóm đầu tiên còn lại. */
+  const removeGroup = async (g: PriceGroupConfig) => {
+    const target = config.groups.find((x) => x.key !== g.key);
+    if (!target) return;
+    const n = config.items.filter((it) => it.group === g.key).length;
+    if (n && !(await confirmAction(`Xoá nhóm “${g.name}”? ${n} sản phẩm trong nhóm sẽ chuyển sang nhóm “${target.name}”.`, { danger: true, confirmText: "Xoá nhóm" }))) return;
+    setConfig((c) =>
+      c ? { ...c, groups: c.groups.filter((x) => x.key !== g.key), items: c.items.map((it) => (it.group === g.key ? { ...it, group: target.key } : it)) } : c
+    );
+  };
   const setItem = (productId: number, patch: Partial<PriceItemConfig>) =>
     set({ items: config.items.map((it) => (it.productId === productId ? { ...it, ...patch } : it)) });
 
@@ -138,7 +172,7 @@ export function PublicPriceSettings() {
     discard.mutate();
   };
 
-  const addProduct = (p: { id: number; code: string; name: string; tradeMarkId?: number | null; tradeMark?: { id: number; name: string } | null; images?: { image: string; isPrimary?: boolean }[]; isActive?: boolean }) => {
+  const addProduct = (p: { id: number; code: string; name: string; tradeMarkId?: number | null; tradeMark?: { id: number; name: string } | null; images?: { id?: number; image: string; isPrimary?: boolean }[]; isActive?: boolean }) => {
     if (config.items.some((it) => it.productId === p.id)) {
       toast.info("Sản phẩm đã có trong bảng giá");
       return;
@@ -154,19 +188,29 @@ export function PublicPriceSettings() {
         isActive: p.isActive ?? true,
         tradeMarkId: tmId,
         tradeMarkName: p.tradeMark?.name ?? null,
+        images: (p.images ?? [])
+          .filter((i): i is { id: number; image: string; isPrimary?: boolean } => i.id != null)
+          .sort((a, b) => Number(!!b.isPrimary) - Number(!!a.isPrimary) || a.id - b.id)
+          .map(({ id, image }) => ({ id, image })),
       },
     }));
     const brands =
       tmId != null && !config.brands.some((b) => b.tradeMarkId === tmId)
         ? [...config.brands, { tradeMarkId: tmId, label: knownBrandLabel(p.tradeMark?.name ?? ""), visible: true }]
         : config.brands;
+    // Gợi ý theo tên: nhóm mặc định cùng mã → nhóm cùng kiểu biểu tượng → nhóm đầu
+    const icon = guessGroup(p.name);
+    const group = (config.groups.find((g) => g.key === icon) ?? config.groups.find((g) => g.icon === icon) ?? config.groups[0]).key;
     set({
       brands,
-      items: [...config.items, { productId: p.id, group: guessGroup(p.name), visible: true, tag: null, hidePrice: [], name: "", desc: "" }],
+      items: [...config.items, { productId: p.id, group, visible: true, tag: null, hidePrice: [], name: "", desc: "", imageId: null, brandId: null, size: "", spec: "", unit: "" }],
     });
   };
 
-  const usedBrandIds = new Set(config.items.map((it) => catalog[it.productId]?.tradeMarkId).filter((x): x is number => x != null));
+  // Thương hiệu hiển thị: chọn riêng (nếu còn trong danh sách) hoặc thương hiệu của sản phẩm — giống backend
+  const brandOfItem = (it: PriceItemConfig) =>
+    it.brandId != null && config.brands.some((b) => b.tradeMarkId === it.brandId) ? it.brandId : (catalog[it.productId]?.tradeMarkId ?? null);
+  const usedBrandIds = new Set(config.items.map(brandOfItem).filter((x): x is number => x != null));
   const brandRows = config.brands.filter((b) => usedBrandIds.has(b.tradeMarkId));
   const shownCount = (g: PriceGroupKey) => config.items.filter((it) => it.group === g && it.visible).length;
 
@@ -332,7 +376,7 @@ export function PublicPriceSettings() {
                           onChange={(e) => set({ brands: config.brands.map((x) => (x.tradeMarkId === b.tradeMarkId ? { ...x, label: e.target.value } : x)) })}
                           className="flex-1 min-w-0 h-8 border rounded-md px-2 text-sm"
                         />
-                        <span className="text-xs text-gray-600 shrink-0">{config.items.filter((it) => catalog[it.productId]?.tradeMarkId === b.tradeMarkId).length} SP</span>
+                        <span className="text-xs text-gray-600 shrink-0">{config.items.filter((it) => brandOfItem(it) === b.tradeMarkId).length} SP</span>
                         <Switch on={b.visible} label={`Hiển thị ${b.label}`} disabled={!canEdit} onChange={(v) => set({ brands: config.brands.map((x) => (x.tradeMarkId === b.tradeMarkId ? { ...x, visible: v } : x)) })} />
                       </Reorder.Item>
                     ))}
@@ -342,18 +386,54 @@ export function PublicPriceSettings() {
             </div>
           </div>
 
+          {/* Nhóm sản phẩm */}
+          <Card
+            title={`Nhóm sản phẩm · ${config.groups.length}/${PRICE_GROUP_MAX}`}
+            right={
+              canEdit ? (
+                <button
+                  type="button"
+                  onClick={addGroup}
+                  disabled={config.groups.length >= PRICE_GROUP_MAX}
+                  className="h-9 px-3 border rounded-lg text-sm flex items-center gap-1.5 hover:bg-gray-50 disabled:opacity-50">
+                  <Plus className="w-4 h-4" /> Thêm nhóm
+                </button>
+              ) : null
+            }>
+            <Reorder.Group
+              axis="y"
+              values={config.groups.map((g) => g.key)}
+              onReorder={(keys: PriceGroupKey[]) => set({ groups: keys.map((k) => config.groups.find((g) => g.key === k)!) })}
+              className="divide-y">
+              {config.groups.map((g, gi) => (
+                <GroupRow
+                  key={g.key}
+                  index={gi}
+                  group={g}
+                  count={config.items.filter((it) => it.group === g.key).length}
+                  canEdit={canEdit}
+                  canRemove={config.groups.length > 1}
+                  autoFocus={g.key === focusGroup}
+                  onChange={(patch) => patchGroup(g.key, patch)}
+                  onRemove={() => removeGroup(g)}
+                />
+              ))}
+            </Reorder.Group>
+            <p className="px-4 py-2 border-t text-xs text-gray-600">Kéo ⋮⋮ để đổi thứ tự tab trên trang public. Biểu tượng quyết định màu và hình minh hoạ của nhóm. Xoá nhóm thì sản phẩm trong nhóm chuyển sang nhóm đầu tiên còn lại.</p>
+          </Card>
+
           {/* Sản phẩm */}
           <Card
             title={`Sản phẩm hiển thị · ${shown}/${config.items.length} đang hiện`}
             right={canEdit ? <ProductPicker onPick={addProduct} existing={new Set(config.items.map((it) => it.productId))} /> : null}>
             <div className="divide-y">
-              {PRICE_GROUPS.map((g, gi) => {
+              {config.groups.map((g, gi) => {
                 const groupItems = config.items.filter((it) => it.group === g.key);
-                const hidden = config.hiddenGroups.includes(g.key);
+                const hidden = !g.visible;
                 return (
                   <div key={g.key}>
                     <div className="flex items-center gap-2 px-4 py-2 bg-[#f0fbfc]">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ background: GROUP_DOT[g.key] }} />
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ background: GROUP_DOT[g.icon] }} />
                       <span className="font-bold text-sm text-brand-dark">
                         {gi + 1}. {g.name}
                       </span>
@@ -365,7 +445,7 @@ export function PublicPriceSettings() {
                         on={!hidden}
                         label={`Hiển thị nhóm ${g.name}`}
                         disabled={!canEdit}
-                        onChange={(v) => set({ hiddenGroups: v ? config.hiddenGroups.filter((x) => x !== g.key) : [...config.hiddenGroups, g.key] })}
+                        onChange={(v) => patchGroup(g.key, { visible: v })}
                       />
                     </div>
                     {groupItems.length === 0 ? (
@@ -383,6 +463,8 @@ export function PublicPriceSettings() {
                             key={it.productId}
                             item={it}
                             entry={catalog[it.productId]}
+                            groups={config.groups}
+                            brands={config.brands}
                             regionNames={Object.fromEntries(config.regions.map((r) => [r.key, r.name])) as Record<PriceRegionKey, string>}
                             canEdit={canEdit}
                             onChange={(patch) => setItem(it.productId, patch)}
@@ -446,9 +528,86 @@ function PreviewPhone({ children }: { children: (frame: HTMLDivElement | null) =
   );
 }
 
+/** Một dòng nhóm: kéo đổi thứ tự, biểu tượng, tên, ẩn/hiện, xoá. */
+function GroupRow({
+  index,
+  group: g,
+  count,
+  canEdit,
+  canRemove,
+  autoFocus,
+  onChange,
+  onRemove,
+}: {
+  index: number;
+  group: PriceGroupConfig;
+  count: number;
+  canEdit: boolean;
+  canRemove: boolean;
+  autoFocus: boolean;
+  onChange: (patch: Partial<PriceGroupConfig>) => void;
+  onRemove: () => void;
+}) {
+  const controls = useDragControls();
+  const empty = !g.name.trim();
+  return (
+    <Reorder.Item value={g.key} dragListener={false} dragControls={controls} className={`flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1.5 text-sm ${g.visible ? "bg-white" : "bg-gray-50"}`}>
+      <button
+        type="button"
+        aria-label={`Kéo để đổi thứ tự nhóm ${g.name}`}
+        disabled={!canEdit}
+        onPointerDown={(e) => canEdit && controls.start(e)}
+        className="w-6 h-9 flex items-center justify-center text-gray-400 cursor-grab touch-none disabled:cursor-default">
+        <GripVertical className="w-4 h-4" />
+      </button>
+      <span className="w-5 text-gray-600 tabular-nums">{index + 1}.</span>
+      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: GROUP_DOT[g.icon] }} aria-hidden="true" />
+      <select
+        aria-label={`Biểu tượng nhóm ${g.name}`}
+        value={g.icon}
+        disabled={!canEdit}
+        onChange={(e) => onChange({ icon: e.target.value as PriceGroupIcon })}
+        className="h-9 border rounded-md px-1.5 bg-white">
+        {GROUP_ICONS.map((ic) => (
+          <option key={ic} value={ic}>
+            {PRICE_GROUP_ICON_LABEL[ic]}
+          </option>
+        ))}
+      </select>
+      <input
+        aria-label="Tên nhóm"
+        value={g.name}
+        maxLength={40}
+        disabled={!canEdit}
+        autoFocus={autoFocus}
+        onFocus={(e) => autoFocus && g.name === "Nhóm mới" && e.currentTarget.select()}
+        onChange={(e) => onChange({ name: e.target.value })}
+        aria-invalid={empty}
+        title={empty ? "Nhập tên nhóm" : undefined}
+        className={`flex-[1_1_180px] min-w-0 h-9 border rounded-md px-2 ${empty ? "border-red-500" : ""}`}
+      />
+      <span className="w-12 text-right text-xs text-gray-600 shrink-0">{count} SP</span>
+      <Switch on={g.visible} label={`Hiển thị nhóm ${g.name}`} disabled={!canEdit} onChange={(v) => onChange({ visible: v })} />
+      {canEdit && (
+        <button
+          type="button"
+          aria-label={`Xoá nhóm ${g.name}`}
+          title={canRemove ? undefined : "Cần giữ ít nhất 1 nhóm"}
+          disabled={!canRemove}
+          onClick={onRemove}
+          className="w-9 h-9 flex items-center justify-center rounded text-gray-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-500">
+          <Trash2 className="w-4 h-4" />
+        </button>
+      )}
+    </Reorder.Item>
+  );
+}
+
 function ItemRow({
   item,
   entry,
+  groups,
+  brands,
   regionNames,
   canEdit,
   onChange,
@@ -456,6 +615,8 @@ function ItemRow({
 }: {
   item: PriceItemConfig;
   entry?: CatalogMap[number];
+  groups: PriceGroupConfig[];
+  brands: PricePageConfig["brands"];
   regionNames: Record<PriceRegionKey, string>;
   canEdit: boolean;
   onChange: (patch: Partial<PriceItemConfig>) => void;
@@ -465,6 +626,12 @@ function ItemRow({
   const [open, setOpen] = useState(false);
   const price = (k: PriceRegionKey) => (item.hidePrice.includes(k) ? "Liên hệ" : formatVnd(entry?.price?.[k]));
   const toggleHide = (k: PriceRegionKey, v: boolean) => onChange({ hidePrice: v ? [...item.hidePrice, k] : item.hidePrice.filter((x) => x !== k) });
+  const images = entry?.images ?? [];
+  // Ảnh đã chọn (còn tồn tại) hoặc ảnh chính — giống cách backend chọn ảnh khi xuất bản
+  const chosen = images.find((i) => i.id === item.imageId) ?? images[0];
+  const thumb = chosen?.image ?? entry?.image ?? null;
+  const ownBrand = brands.find((b) => b.tradeMarkId === entry?.tradeMarkId)?.label || entry?.tradeMarkName || "";
+  const pickedBrand = brands.find((b) => b.tradeMarkId === item.brandId);
   return (
     <Reorder.Item value={item.productId} dragListener={false} dragControls={controls} className="bg-white text-sm">
       <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 ${item.visible ? "" : "bg-gray-50"}`}>
@@ -476,23 +643,34 @@ function ItemRow({
           className="w-6 h-9 flex items-center justify-center text-gray-400 cursor-grab touch-none disabled:cursor-default">
           <GripVertical className="w-4 h-4" />
         </button>
-        <span className={`w-10 h-10 rounded-md border bg-white overflow-hidden flex items-center justify-center shrink-0 ${item.visible ? "" : "opacity-50"}`}>
-          {entry?.image ? (
+        <button
+          type="button"
+          aria-label="Chọn ảnh hiển thị trên trang public"
+          title="Chọn ảnh hiển thị trên trang public"
+          onClick={() => setOpen(true)}
+          className={`w-10 h-10 rounded-md border bg-white overflow-hidden flex items-center justify-center shrink-0 hover:border-brand ${item.visible ? "" : "opacity-50"}`}>
+          {thumb ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={entry.image} alt="" className="w-full h-full object-contain" />
+            <img src={thumb} alt="" className="w-full h-full object-contain" />
           ) : (
             <span className="text-[10px] text-gray-500">Chưa ảnh</span>
           )}
-        </span>
-        <span className={`flex-[1_1_220px] min-w-0 ${item.visible ? "" : "opacity-60"}`}>
+        </button>
+        {/* Bấm tên để mở/đóng phần sửa (như nút bút chì) */}
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+          className={`flex-[1_1_220px] min-w-0 text-left rounded hover:text-brand-dark ${item.visible ? "" : "opacity-60"}`}>
           <span className="block font-medium truncate" title={entry?.fullName}>
             {item.name || entry?.fullName || `#${item.productId}`}
           </span>
           <span className="block text-xs text-gray-600">
             {entry?.code} · {entry?.tradeMarkName ?? "—"}
+            {pickedBrand && <span className="text-brand-dark"> → hiện {pickedBrand.label}</span>}
             {entry && !entry.isActive && <span className="ml-1 text-red-600">· ngừng kinh doanh</span>}
           </span>
-        </span>
+        </button>
         <span className="w-24 text-right tabular-nums" title={`Giá ${regionNames.N}`}>
           <span className="block text-[11px] text-gray-500">{regionNames.N}</span>
           {price("N")}
@@ -501,8 +679,8 @@ function ItemRow({
           <span className="block text-[11px] text-gray-500">{regionNames.S}</span>
           {price("S")}
         </span>
-        <select aria-label="Nhóm" value={item.group} disabled={!canEdit} onChange={(e) => onChange({ group: e.target.value as PriceGroupKey })} className="h-8 border rounded-md px-1.5 bg-white">
-          {PRICE_GROUPS.map((g) => (
+        <select aria-label="Nhóm" value={item.group} disabled={!canEdit} onChange={(e) => onChange({ group: e.target.value })} className="h-8 border rounded-md px-1.5 bg-white">
+          {groups.map((g) => (
             <option key={g.key} value={g.key}>
               {g.name}
             </option>
@@ -517,9 +695,6 @@ function ItemRow({
           ))}
         </select>
         <Switch on={item.visible} label="Hiển thị sản phẩm" disabled={!canEdit} onChange={(v) => onChange({ visible: v })} />
-        <button type="button" aria-label="Sửa tên, mô tả, ẩn giá" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="w-9 h-9 flex items-center justify-center rounded hover:bg-gray-100">
-          {open ? <ChevronDown className="w-4 h-4 rotate-180" /> : <Pencil className="w-4 h-4" />}
-        </button>
         {canEdit && (
           <button type="button" aria-label="Bỏ khỏi bảng giá" onClick={onRemove} className="w-9 h-9 flex items-center justify-center rounded text-gray-500 hover:bg-red-50 hover:text-red-600">
             <Trash2 className="w-4 h-4" />
@@ -528,10 +703,78 @@ function ItemRow({
       </div>
       {open && (
         <div className="grid gap-2 px-12 pb-3 sm:grid-cols-2">
+          <div className="flex flex-col gap-1 sm:col-span-2">
+            <span id={`ppc-img-${item.productId}`} className="text-xs font-medium text-gray-600">
+              Ảnh hiển thị trên trang public
+            </span>
+            {images.length === 0 ? (
+              <p className="text-sm text-gray-600">Sản phẩm chưa có ảnh. Thêm ảnh ở Hàng hóa › Danh sách sản phẩm.</p>
+            ) : (
+              <div role="radiogroup" aria-labelledby={`ppc-img-${item.productId}`} className="flex flex-wrap gap-2">
+                {images.map((img, i) => {
+                  const on = img.id === chosen?.id;
+                  return (
+                    <button
+                      key={img.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      aria-label={i === 0 ? "Ảnh chính" : `Ảnh ${i + 1}`}
+                      disabled={!canEdit}
+                      // Chọn ảnh chính → lưu null: đổi ảnh chính trong Danh sách sản phẩm thì trang public theo luôn
+                      onClick={() => onChange({ imageId: i === 0 ? null : img.id })}
+                      className={`relative w-16 h-16 rounded-md border-2 bg-white overflow-hidden ${on ? "border-brand" : "border-gray-200 hover:border-gray-400"}`}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={img.image} alt="" className="w-full h-full object-contain" loading="lazy" />
+                      {i === 0 && <span className="absolute left-0 right-0 bottom-0 bg-black/60 text-white text-[10px] leading-4 text-center">Ảnh chính</span>}
+                      {on && <CheckCircle2 className="absolute top-0.5 right-0.5 w-4 h-4 text-brand-dark bg-white rounded-full" aria-hidden="true" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-gray-600">Tên hiển thị (để trống = tách từ tên POS)</span>
-            <input value={item.name} disabled={!canEdit} onChange={(e) => onChange({ name: e.target.value })} className="h-9 border rounded-md px-2" />
+            <input value={item.name} disabled={!canEdit} placeholder={entry?.auto?.name} onChange={(e) => onChange({ name: e.target.value })} className="h-9 border rounded-md px-2" />
           </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-600">Thương hiệu hiển thị</span>
+            <select
+              value={pickedBrand ? String(pickedBrand.tradeMarkId) : ""}
+              disabled={!canEdit}
+              onChange={(e) => onChange({ brandId: e.target.value ? Number(e.target.value) : null })}
+              className="h-9 border rounded-md px-2 bg-white">
+              <option value="">Theo sản phẩm{ownBrand ? ` (${ownBrand})` : ""}</option>
+              {brands.map((b) => (
+                <option key={b.tradeMarkId} value={b.tradeMarkId}>
+                  {b.label || `#${b.tradeMarkId}`}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="grid gap-2 sm:col-span-2 sm:grid-cols-3">
+            {SPEC_FIELDS.map((f) => {
+              const auto = entry?.auto?.[f.key] ?? "";
+              const id = `ppc-${f.key}-${item.productId}`;
+              return (
+                <div key={f.key} className="flex flex-col gap-1">
+                  <label htmlFor={id} className="text-xs font-medium text-gray-600">
+                    {f.label} (để trống = tự động)
+                  </label>
+                  <input
+                    id={id}
+                    value={item[f.key]}
+                    maxLength={f.max}
+                    disabled={!canEdit}
+                    placeholder={auto || "Không hiển thị"}
+                    onChange={(e) => onChange({ [f.key]: e.target.value })}
+                    className="h-9 border rounded-md px-2"
+                  />
+                </div>
+              );
+            })}
+          </div>
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium text-gray-600">Ẩn giá → hiện “Liên hệ”</span>
             <div className="flex gap-4 h-9 items-center">

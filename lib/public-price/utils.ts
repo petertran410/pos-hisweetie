@@ -1,4 +1,4 @@
-import type { PriceGroupKey } from "./types";
+import type { PriceGroupIcon } from "./types";
 
 /** Bỏ dấu, chữ thường — để so khớp tên (giống backend public-price.util). */
 export const normText = (s: string | null | undefined) =>
@@ -10,11 +10,12 @@ export const normText = (s: string | null | undefined) =>
     .toLowerCase()
     .trim();
 
-/** Gợi ý nhóm khi thêm sản phẩm vào bảng giá. */
-export function guessGroup(fullName: string): PriceGroupKey {
+/** Gợi ý kiểu nhóm khi thêm sản phẩm vào bảng giá. */
+export function guessGroup(fullName: string): PriceGroupIcon {
   const n = normText(fullName);
   if (/tu dong|dong lanh/.test(n)) return "froz";
   if (/\b(mut|siro|syrup|sot|puree)\b/.test(n)) return "jam";
+  if (/\bbot\b/.test(n)) return "pow";
   if (/\b(tra|olong|o long|matcha|hong tra)\b/.test(n)) return "tea";
   return "top";
 }

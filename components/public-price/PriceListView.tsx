@@ -18,6 +18,8 @@ import {
   PRICE_GROUPS,
   PRICE_TAG_LABEL,
   REGION_PARAM,
+  isGroupIcon,
+  type PriceGroupIcon,
   type PriceGroupKey,
   type PriceRegionKey,
   type PriceTag,
@@ -44,12 +46,13 @@ const TAG_ICON: Record<PriceTag, string> = {
   hot: "M12 21c-4 0-6-2.8-6-6 0-3 2-4.5 3-7 1 1.5 2 2 3 2 0-3 1-5 2-6 3 3 4 6.5 4 9.5 0 3.5-2 7.5-6 7.5z",
   sale: "M19 5 5 19M4.5 7a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0zM14.5 17a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0z",
 };
-/** Minh hoạ nhóm (khung 48): lá trà · chai syrup · ly trân châu · bông tuyết */
-const GROUP_ICON: Record<PriceGroupKey, string> = {
+/** Minh hoạ nhóm (khung 48): lá trà · chai syrup · ly trân châu · bông tuyết · túi bột (dự phòng khi ảnh lỗi) */
+const GROUP_ICON: Record<PriceGroupIcon, string> = {
   tea: "M8 38C8 18 20 8 40 8c0 20-10 32-30 32M8 40 28 20",
   jam: "M19 6h10v6l4 6v22a4 4 0 0 1-4 4H19a4 4 0 0 1-4-4V18l4-6zM15 26h18M24 30c-2 3-3 4-3 6a3 3 0 0 0 6 0c0-2-1-3-3-6z",
   top: "M10 14h28l-3 26a3 3 0 0 1-3 3H16a3 3 0 0 1-3-3zM8 14h32M16 34a3 3 0 1 0 6 0a3 3 0 1 0-6 0zM25 35a3 3 0 1 0 6 0a3 3 0 1 0-6 0zM21 28a3 3 0 1 0 6 0a3 3 0 1 0-6 0zM26 14l5-8",
   froz: "M24 6v36M8.4 15l31.2 18M8.4 33 39.6 15M19 9l5 4 5-4M19 39l5-4 5 4",
+  pow: "M14 6h20l2 4v28a4 4 0 0 1-4 4H16a4 4 0 0 1-4-4V10zM12 14h24",
 };
 
 function Ui({ d, className = "pp-i" }: { d: string; className?: string }) {
@@ -60,17 +63,17 @@ function Ui({ d, className = "pp-i" }: { d: string; className?: string }) {
   );
 }
 /** Icon nhóm dạng ảnh (thay cho nét vẽ) */
-const GROUP_IMG: Partial<Record<PriceGroupKey, string>> = { jam: "/brands/price/icon-jam.webp" };
+const GROUP_IMG: Partial<Record<PriceGroupIcon, string>> = { jam: "/brands/price/icon-jam.webp", pow: "/brands/price/icon-pow.webp" };
 
-function Ill({ group, className }: { group: PriceGroupKey; className?: string }) {
-  const img = GROUP_IMG[group];
+function Ill({ icon, className }: { icon: PriceGroupIcon; className?: string }) {
+  const img = GROUP_IMG[icon];
   if (img) {
     // eslint-disable-next-line @next/next/no-img-element
     return <img className={`${className ?? ""} pp-ill-img`} src={img} alt="" aria-hidden="true" width={128} height={128} />;
   }
   return (
     <svg className={className} viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d={GROUP_ICON[group]} />
+      <path d={GROUP_ICON[icon]} />
     </svg>
   );
 }
@@ -126,7 +129,12 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
   const { spring, transition } = useMotionTokens();
 
   const regions = data.regions.length ? data.regions : [{ key: "N" as const, name: "Miền Bắc", listName: "", hotline: "" }];
-  const groups = data.groups.length ? data.groups : PRICE_GROUPS.map(({ key, name }) => ({ key, name }));
+  const groups = data.groups.length ? data.groups : PRICE_GROUPS.map(({ key, name }) => ({ key, name, icon: key }));
+  // Bản xuất bản cũ chưa có `icon`: nhóm mặc định có mã trùng kiểu hiển thị
+  const iconOf = (key?: PriceGroupKey): PriceGroupIcon => {
+    const g = groups.find((x) => x.key === key);
+    return g?.icon ?? (key && isGroupIcon(key) ? key : "top");
+  };
   // Mặc định Miền Nam (khi URL không ghi ?region= và máy chưa nhớ lựa chọn)
   const pickRegion = (k?: PriceRegionKey | null) =>
     k && regions.some((r) => r.key === k) ? k : regions.some((r) => r.key === "S") ? "S" : regions[0].key;
@@ -134,7 +142,9 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
   const [regionState, setRegionState] = useState<PriceRegionKey>(() => pickRegion(initialRegion));
   const region = regionProp ? pickRegion(regionProp) : regionState;
   const R = regions.find((r) => r.key === region) ?? regions[0];
-  const [group, setGroup] = useState<PriceGroupKey>(groups[0].key);
+  const [groupState, setGroup] = useState<PriceGroupKey>(groups[0].key);
+  // Xem trước trong POS: nhóm đang chọn có thể vừa bị xoá → về nhóm đầu
+  const group = groups.some((g) => g.key === groupState) ? groupState : groups[0].key;
   const [brand, setBrand] = useState<number | null>(null);
   const [q, setQ] = useState("");
   const dq = useDeferredValue(q);
@@ -495,17 +505,21 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
           </div>
 
           <div className="pp-stk">
-            <div className="pp-tabs" role="group" aria-label="Nhóm sản phẩm" style={{ ["--pp-cols" as string]: groups.length }}>
+            <div className="pp-tabs" role="group" aria-label="Nhóm sản phẩm">
               {groups.map((g) => {
                 const on = g.key === group;
-                const def = PRICE_GROUPS.find((x) => x.key === g.key);
+                const def = PRICE_GROUPS.find((x) => x.name === g.name);
                 return (
                   <motion.button
                     key={g.key}
                     type="button"
-                    className={`pp-tab ppg-${g.key}`}
+                    className={`pp-tab ppg-${iconOf(g.key)}`}
                     aria-pressed={on}
-                    onClick={() => setGroup(g.key)}
+                    onClick={(e) => {
+                      setGroup(g.key);
+                      // Nhiều nhóm thì thanh tab cuộn ngang: kéo tab vừa chọn vào tầm nhìn
+                      e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest", behavior: reduce ? "auto" : "smooth" });
+                    }}
                     initial={{ transform: "scale(1)" }}
                     whileTap={{ transform: `scale(${reduce ? 1 : scale.press})` }}
                     transition={spring.press}>
@@ -515,7 +529,7 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
                       initial={false}
                       animate={{ opacity: on ? 1 : 0.6, transform: on && !reduce ? "translateY(-1px) scale(1.08)" : "translateY(0px) scale(1)" }}
                       transition={spring.pop}>
-                      <Ill group={g.key} className="pp-tab-ic" />
+                      <Ill icon={iconOf(g.key)} className="pp-tab-ic" />
                     </motion.span>
                     <span className="pp-tab-label-2">
                       {def?.lines[0] ?? g.name}
@@ -538,10 +552,10 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
             </div>
           </div>
 
-          <section className={`pp-list ppg-${group}`} aria-live="polite">
+          <section className={`pp-list ppg-${iconOf(group)}`} aria-live="polite">
             <div className="pp-sh">
               <span className="pp-sh-ic">
-                <Ill group={group} className="pp-i" />
+                <Ill icon={iconOf(group)} className="pp-i" />
               </span>
               <h2>{groupName}</h2>
               <span className="pp-sh-ct">{items.length} sản phẩm</span>
@@ -551,7 +565,7 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
                 {/* initial={false}: lần vẽ đầu (HTML từ server) hiện thẻ ngay; đổi nhóm/lọc/tìm thì thẻ mới mới chạy hiệu ứng vào */}
                 <AnimatePresence mode="popLayout" initial={false}>
                   {items.map((p, i) => (
-                    <ProductCard key={`${p.id}`} product={p} region={region} index={i} brand={brandName(p.brandId)} onOpen={() => setSheetId(p.id)} />
+                    <ProductCard key={`${p.id}`} product={p} icon={iconOf(p.group)} region={region} index={i} brand={brandName(p.brandId)} onOpen={() => setSheetId(p.id)} />
                   ))}
                 </AnimatePresence>
               </div>
@@ -575,9 +589,9 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
       <Drawer.Root open={sheetId != null && !desktop} onOpenChange={(o) => !o && setSheetId(null)} container={portalContainer}>
         <Drawer.Portal container={portalContainer}>
           <Drawer.Overlay className="pp-portal pp-overlay" />
-          <Drawer.Content className={`pp-portal pp-drawer ppg-${sheet?.group ?? "tea"}`} aria-describedby={undefined}>
+          <Drawer.Content className={`pp-portal pp-drawer ppg-${iconOf(sheet?.group)}`} aria-describedby={undefined}>
             <Drawer.Handle className="pp-drawer-handle" />
-            {sheet && <SheetBody product={sheet} region={region} regionName={R.name} hotline={R.hotline} brand={brandName(sheet.brandId)} TitleTag={Drawer.Title} />}
+            {sheet && <SheetBody product={sheet} region={region} regionName={R.name} hotline={R.hotline} brand={brandName(sheet.brandId)} icon={iconOf(sheet.group)} groupName={groups.find((g) => g.key === sheet.group)?.name ?? ""} TitleTag={Drawer.Title} />}
             <div className="pp-sheet-cta">
               <div className="pp-cta-in">{ctaButtons}</div>
             </div>
@@ -587,11 +601,11 @@ function PriceList({ data, initialRegion, syncUrl = false, scrollRoot = null, po
       <Dialog.Root open={sheetId != null && desktop} onOpenChange={(o) => !o && setSheetId(null)}>
         <Dialog.Portal container={portalContainer}>
           <Dialog.Overlay className="pp-portal pp-overlay" />
-          <Dialog.Content className={`pp-portal pp-dialog ppg-${sheet?.group ?? "tea"}`} aria-describedby={undefined}>
+          <Dialog.Content className={`pp-portal pp-dialog ppg-${iconOf(sheet?.group)}`} aria-describedby={undefined}>
             <Dialog.Close className="pp-sheet-x" aria-label="Đóng">
               <Ui d={UI.x} />
             </Dialog.Close>
-            {sheet && <SheetBody product={sheet} region={region} regionName={R.name} hotline={R.hotline} brand={brandName(sheet.brandId)} TitleTag={Dialog.Title} />}
+            {sheet && <SheetBody product={sheet} region={region} regionName={R.name} hotline={R.hotline} brand={brandName(sheet.brandId)} icon={iconOf(sheet.group)} groupName={groups.find((g) => g.key === sheet.group)?.name ?? ""} TitleTag={Dialog.Title} />}
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
@@ -610,7 +624,7 @@ function Price({ value, unit, className }: { value: number; unit: string; classN
   );
 }
 
-function Photo({ product, alt }: { product: PublicPriceProduct; alt: string }) {
+function Photo({ product, icon, alt }: { product: PublicPriceProduct; icon: PriceGroupIcon; alt: string }) {
   const [ok, setOk] = useState(true);
   const src = ok ? product.image : null;
   return (
@@ -620,7 +634,7 @@ function Photo({ product, alt }: { product: PublicPriceProduct; alt: string }) {
         // eslint-disable-next-line @next/next/no-img-element
         <img className="pp-ph-img" src={src} alt={alt} loading="lazy" onError={() => setOk(false)} />
       ) : (
-        <Ill group={product.group} className="pp-ph-ill" />
+        <Ill icon={icon} className="pp-ph-ill" />
       )}
       {product.size && <span className="pp-sz">{product.size}</span>}
       {product.tag && (
@@ -633,7 +647,7 @@ function Photo({ product, alt }: { product: PublicPriceProduct; alt: string }) {
   );
 }
 
-function ProductCard({ product: p, region, index, brand, onOpen }: { product: PublicPriceProduct; region: PriceRegionKey; index: number; brand: string; onOpen: () => void }) {
+function ProductCard({ product: p, icon, region, index, brand, onOpen }: { product: PublicPriceProduct; icon: PriceGroupIcon; region: PriceRegionKey; index: number; brand: string; onOpen: () => void }) {
   const reduce = useShouldReduceMotion();
   const { spring, transition } = useMotionTokens();
   const price = p.price[region];
@@ -649,13 +663,13 @@ function ProductCard({ product: p, region, index, brand, onOpen }: { product: Pu
       <div className="pp-card-lift">
         <motion.button
           type="button"
-          className={`pp-card ppg-${p.group}`}
+          className={`pp-card ppg-${icon}`}
           onClick={onOpen}
           aria-label={`${p.name}, ${brand}, ${price == null ? "Liên hệ" : `${price.toLocaleString("vi-VN")} đồng`}`}
           initial={{ transform: "scale(1)" }}
           whileTap={{ transform: `scale(${reduce ? 1 : scale.choice})` }}
           transition={spring.press}>
-          <Photo product={p} alt="" />
+          <Photo product={p} icon={icon} alt="" />
           <span className="pp-cb">
             {brand && <span className="pp-br">{brand}</span>}
             <span className="pp-nm">{p.name}</span>
@@ -682,6 +696,8 @@ function SheetBody({
   regionName,
   hotline,
   brand,
+  icon,
+  groupName,
   TitleTag,
 }: {
   product: PublicPriceProduct;
@@ -689,14 +705,15 @@ function SheetBody({
   regionName: string;
   hotline: string;
   brand: string;
+  icon: PriceGroupIcon;
+  groupName: string;
   TitleTag: React.ElementType;
 }) {
   const price = p.price[region];
-  const groupName = PRICE_GROUPS.find((g) => g.key === p.group)?.name ?? "";
   return (
     <div className="pp-sheet-scroll">
       <div className="pp-shi">
-        <Photo product={{ ...p, tag: null, size: p.size }} alt={p.name} />
+        <Photo product={{ ...p, tag: null, size: p.size }} icon={icon} alt={p.name} />
       </div>
       <div className="pp-sb">
         <div className="pp-tags">
@@ -707,7 +724,7 @@ function SheetBody({
             </span>
           )}
           <span className="pp-gtag">
-            <Ill group={p.group} />
+            <Ill icon={icon} />
             {groupName}
           </span>
         </div>
