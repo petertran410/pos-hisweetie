@@ -22,7 +22,7 @@ import {
   type PriceRegionKey,
   type PriceTag,
 } from "@/lib/public-price/types";
-import { formatVnd, guessGroup, knownBrandLabel } from "@/lib/public-price/utils";
+import { formatVnd, guessGroup, isHttpsUrl, knownBrandLabel } from "@/lib/public-price/utils";
 import { PriceListView } from "./PriceListView";
 
 const KEY = ["public-price-page"];
@@ -126,6 +126,7 @@ export function PublicPriceSettings() {
 
   const dirty = localDirty || admin.dirty;
   const pendingPublish = publish.isPending || save.isPending || discard.isPending;
+  const zaloInvalid = !!config.zaloUrl.trim() && !isHttpsUrl(config.zaloUrl);
   const shown = preview?.data.products.length ?? 0;
 
   const doPublish = async () => {
@@ -204,13 +205,13 @@ export function PublicPriceSettings() {
           </a>
           {canEdit && (
             <>
-              <button type="button" onClick={() => save.mutate(config)} disabled={!localDirty || pendingPublish} className="h-9 px-3 border rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50">
+              <button type="button" onClick={() => save.mutate(config)} disabled={!localDirty || pendingPublish || zaloInvalid} className="h-9 px-3 border rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50">
                 Lưu nháp
               </button>
               <button
                 type="button"
                 onClick={doPublish}
-                disabled={!dirty || pendingPublish}
+                disabled={!dirty || pendingPublish || zaloInvalid}
                 className="h-9 px-4 rounded-lg text-sm font-semibold bg-brand text-brand-dark hover:bg-brand-bright flex items-center gap-1.5 disabled:opacity-50">
                 <Upload className="w-4 h-4" /> {publish.isPending ? "Đang xuất bản…" : "Xuất bản"}
               </button>
@@ -272,7 +273,12 @@ export function PublicPriceSettings() {
             </div>
             <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-t text-sm">
               <label htmlFor="ppc-zalo" className="font-medium w-40">Link Zalo OA (chung)</label>
-              <input id="ppc-zalo" value={config.zaloUrl} disabled={!canEdit} onChange={(e) => set({ zaloUrl: e.target.value })} placeholder="https://zalo.me/…" className="flex-1 min-w-[220px] h-9 border rounded-md px-2" />
+              <input id="ppc-zalo" value={config.zaloUrl} disabled={!canEdit} onChange={(e) => set({ zaloUrl: e.target.value })} placeholder="https://zalo.me/…" aria-invalid={zaloInvalid} aria-describedby={zaloInvalid ? "ppc-zalo-err" : undefined} className={`flex-1 min-w-[220px] h-9 border rounded-md px-2 ${zaloInvalid ? "border-red-500" : ""}`} />
+              {zaloInvalid && (
+                <p id="ppc-zalo-err" className="w-full text-xs text-red-600">
+                  Link phải bắt đầu bằng https:// (VD: https://zalo.me/…). Sửa link trước khi lưu nháp hoặc xuất bản.
+                </p>
+              )}
             </div>
           </Card>
 

@@ -29,4 +29,13 @@ export function knownBrandLabel(tradeMarkName: string): string {
   return tradeMarkName;
 }
 
+/** Link gắn vào nút trên trang public phải là https:// (backend bỏ link khác khi lưu). */
+export function isHttpsUrl(s: string): boolean {
+  try {
+    return new URL(s.trim()).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export const formatVnd = (n: number | null | undefined) => (n == null ? "—" : n.toLocaleString("vi-VN"));
