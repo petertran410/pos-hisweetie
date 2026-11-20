@@ -27,6 +27,7 @@ import {
   List,
   ShoppingCart,
   FileSpreadsheet,
+  Lock,
 } from "lucide-react";
 import {
   PosProductImportModal,
@@ -71,6 +72,7 @@ import { getPriceWarning, type PriceWarning } from "@/lib/utils/price-warning";
 import { formatCurrency } from "@/lib/utils";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import Swal from "sweetalert2";
+import { escapeHtml } from "@/lib/utils/html-safety";
 import {
   getConversionValue,
   normalizeQuantityUnit,
@@ -175,6 +177,10 @@ export interface Tab {
   sourceOrderId?: number;
   sourceOrder?: any;
   isEditMode?: boolean;
+  // Trạng thái đơn khi mở tab "Sửa ĐH". Khác Phiếu tạm → khóa thêm/sửa/xóa dòng hàng.
+  orderStatus?: number;
+  // Ngày đặt của chính đơn trong tab "Sửa ĐH". BE dùng làm ngày tính KM khi lưu.
+  orderDate?: string;
   selectedAddressId?: number | null;
   soldById: number | null;
   consignStatus?: string;
@@ -192,6 +198,9 @@ export interface Tab {
 
 const STORAGE_KEY = "pos-tabs";
 const EDIT_STORAGE_KEY = "pos-edit-state";
+
+const ITEMS_LOCKED_MESSAGE =
+  "Đơn hàng đã xác nhận, không thể thêm hoặc sửa sản phẩm. Vui lòng chuyển đơn về Phiếu tạm ở trang Đặt hàng rồi chỉnh sửa.";
 
 const getPriceBookStorageKey = (userId?: number) =>
   `pos-selected-price-book-${userId || "default"}`;
@@ -444,11 +453,11 @@ const buildMissingLinesHtml = (missing: MissingOrderLine[]): string => {
     .map((m) => {
       const badgeText =
         LINE_TYPE_BADGE[m.lineType] ||
-        (m.promotionName ? `KM: ${m.promotionName}` : "");
+        (m.promotionName ? `KM: ${escapeHtml(m.promotionName)}` : "");
       const badge = badgeText
         ? ` <span style="display:inline-block;background:#fee2e2;color:#b91c1c;font-size:11px;padding:1px 6px;border-radius:8px;margin-left:4px">${badgeText}</span>`
         : "";
-      return `<li style="margin-bottom:2px">${m.productName || "(Không tên)"}${badge}</li>`;
+      return `<li style="margin-bottom:2px">${escapeHtml(m.productName || "(Không tên)")}${badge}</li>`;
     })
     .join("");
   return `<ul style="text-align:left;margin-top:8px;padding-left:18px;font-size:14px">${rows}</ul>`;
@@ -686,6 +695,18 @@ export default function BanHangPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId) || tabs[0];
+  // Chỉ đơn Phiếu tạm mới được thêm/sửa/xóa dòng hàng trong tab "Sửa ĐH".
+  const itemsLocked =
+    activeTab?.type === "order" &&
+    !!activeTab.isEditMode &&
+    activeTab.orderStatus != null &&
+    activeTab.orderStatus !== ORDER_STATUS.PENDING;
+  /** Trả về true (và báo lý do) nếu tab đang khóa dòng hàng → caller dừng lại. */
+  const blockIfItemsLocked = () => {
+    if (!itemsLocked) return false;
+    toast.warning(ITEMS_LOCKED_MESSAGE);
+    return true;
+  };
   useRegisterCustomerInView(
     activeTab?.selectedCustomer,
     "Bán hàng (tab đang mở)"
@@ -1496,7 +1517,7 @@ export default function BanHangPage() {
     const listItems = mismatched
       .map(
         (m) =>
-          `<li style="margin-bottom:2px">${m.item.product?.name ?? ""}: giá gần nhất <strong>${formatCurrency(
+          `<li style="margin-bottom:2px">${escapeHtml(m.item.product?.name ?? "")}: giá gần nhất <strong>${formatCurrency(
             m.warning.latestPrice
           )} VNĐ</strong></li>`
       )
@@ -1641,6 +1662,8 @@ export default function BanHangPage() {
         documentId: tab.documentId,
         type: tab.type,
         code: tab.code || tab.documentId.toString(),
+        orderStatus: tab.orderStatus,
+        orderDate: tab.orderDate,
         cartItems: tab.cartItems,
         selectedCustomer: tab.selectedCustomer,
         orderNote: tab.orderNote,
@@ -1718,6 +1741,8 @@ export default function BanHangPage() {
               selectedAddressId: editState.selectedAddressId ?? null,
               documentId: editState.documentId,
               isEditMode: true,
+              orderStatus: editState.orderStatus ?? undefined,
+              orderDate: editState.orderDate ?? undefined,
             };
 
             const editKey = getEditStorageKey(docId, type);
@@ -1752,6 +1777,8 @@ export default function BanHangPage() {
     priceBookId: number | null,
     priceBookName: string | null
   ) => {
+    // Đổi bảng giá sẽ tính lại đơn giá mọi dòng → coi như sửa sản phẩm.
+    if (blockIfItemsLocked()) return;
     const storageKey = getPriceBookStorageKey(user?.id);
     if (priceBookId !== null) {
       localStorage.setItem(storageKey, priceBookId.toString());
@@ -2087,7 +2114,11 @@ export default function BanHangPage() {
       return;
     }
 
-    const cartItems: CartItem[] = restoredState
+    // Đơn không còn Phiếu tạm thì dòng hàng bị khóa → luôn lấy dòng hàng từ
+    // server, bỏ dòng hàng nháp cũ trong localStorage (có thể đã sửa trước khi xác nhận).
+    const useRestoredItems =
+      restoredState && existingOrder.status === ORDER_STATUS.PENDING;
+    const cartItems: CartItem[] = useRestoredItems
       ? restoredState.cartItems.map((item: CartItem) => ({
           ...item,
           rowId:
@@ -2101,6 +2132,8 @@ export default function BanHangPage() {
       type: "order",
       label: `Sửa ĐH #${existingOrder.code}`,
       code: existingOrder.code,
+      orderStatus: existingOrder.status,
+      orderDate: existingOrder.orderDate,
       cartItems,
       selectedCustomer: restoredState
         ? restoredState.selectedCustomer
@@ -2734,6 +2767,7 @@ export default function BanHangPage() {
     enabled: boolean,
     matchedProductIds: number[]
   ) => {
+    if (blockIfItemsLocked()) return;
     const matchedSet = new Set(matchedProductIds);
     setTabs((prevTabs) =>
       prevTabs.map((tab) => {
@@ -2790,6 +2824,7 @@ export default function BanHangPage() {
     promotionId: number,
     selections: CumulativeGiftSelection[]
   ) => {
+    if (blockIfItemsLocked()) return;
     setTabs((prevTabs) =>
       prevTabs.map((tab) =>
         tab.id === activeTabId
@@ -3493,6 +3528,7 @@ export default function BanHangPage() {
     quantity: number = 1,
     soldExpiryDate?: string
   ) => {
+    if (blockIfItemsLocked()) return;
     const selectedPriceBookId = activeTab.selectedPriceBookId;
 
     let productPrice = Number(product.basePrice);
@@ -3552,6 +3588,7 @@ export default function BanHangPage() {
   // Thêm nhiều dòng từ file Excel trong 1 lần cập nhật (effect KM chỉ chạy 1 lần).
   // Giá/giảm giá đã được modal tính sẵn theo bảng giá + quyền sửa giá.
   const addImportedItemsToCart = (lines: ImportedCartLine[]) => {
+    if (blockIfItemsLocked()) return;
     if (!lines.length) return;
     const stamp = Date.now();
     const newItems: CartItem[] = lines.map((line, index) => ({
@@ -3578,6 +3615,7 @@ export default function BanHangPage() {
   };
 
   const openImportModal = () => {
+    if (blockIfItemsLocked()) return;
     if (!selectedBranch) {
       toast.error("Vui lòng chọn chi nhánh trước khi import sản phẩm");
       return;
@@ -3586,6 +3624,7 @@ export default function BanHangPage() {
   };
 
   const updateCartItem = (rowId: string, updates: Partial<CartItem>) => {
+    if (blockIfItemsLocked()) return;
     updateActiveTab({
       cartItems: activeTab.cartItems.map((item) =>
         item.rowId === rowId ? { ...item, ...updates } : item
@@ -3594,12 +3633,14 @@ export default function BanHangPage() {
   };
 
   const removeFromCart = (rowId: string) => {
+    if (blockIfItemsLocked()) return;
     updateActiveTab({
       cartItems: activeTab.cartItems.filter((item) => item.rowId !== rowId),
     });
   };
 
   const duplicateCartItem = (item: CartItem) => {
+    if (blockIfItemsLocked()) return;
     const index = activeTab.cartItems.findIndex((i) => i.rowId === item.rowId);
     const newItem: CartItem = {
       rowId: `${item.product.id}_${item.conditionType || "normal"}_${Date.now()}_${Math.random()}`,
@@ -3671,11 +3712,6 @@ export default function BanHangPage() {
     }
 
     if (activeTab.type === "order") {
-      if (!existingOrder) {
-        toast.error("Không tìm thấy thông tin đơn hàng");
-        return;
-      }
-
       isSubmittingRef.current = true;
       setIsSubmitting(true);
       try {
@@ -3686,30 +3722,40 @@ export default function BanHangPage() {
         // không cho lưu để tránh kéo ngược trạng thái đơn từ cache cũ.
         if (!(await assertOrderNotInvoiced(activeTab.documentId))) return;
 
-        // Ghi log phương thức thanh toán (append-only) sau khi lưu đơn thành công.
-        const savePaymentNote = async (
-          kind: "order" | "invoice",
-          id: number
-        ) => {
-          const payload = {
-            paymentType: activeTab.paymentNoteType!,
-            ...(activeTab.paymentNoteType === "cash"
-              ? { amount: activeTab.paymentNoteAmount ?? 0 }
-              : {}),
-          } as { paymentType: "cash" | "transfer"; amount?: number };
-          if (kind === "order") await paymentNotesApi.createOrder(id, payload);
-          else await paymentNotesApi.createInvoice(id, payload);
-        };
-
         const actualPayment = activeTab.paymentAmount || 0;
+        // Tiền khách trả + phương thức thanh toán (CK/TM) gửi CÙNG request lưu
+        // đơn: BE ghi trong 1 transaction, trước bước kiểm tra công nợ. Lưu lỗi
+        // thì không còn phiếu thu lẻ (bấm lưu lại không tạo phiếu trùng), và TM
+        // vừa chọn được tính ngay khi kiểm tra "thu tiền mặt khi giao".
+        const payments =
+          actualPayment > 0
+            ? (activeTab.paymentMethods?.length
+                ? activeTab.paymentMethods
+                : [{ method: "cash", amount: actualPayment }]
+              )
+                .filter((payment) => Number(payment.amount) > 0)
+                .map((payment) => ({
+                  amount: Number(payment.amount),
+                  paymentMethod: payment.method,
+                  accountId: payment.accountId,
+                }))
+            : [];
+        const paymentNote = {
+          paymentType: activeTab.paymentNoteType!,
+          ...(activeTab.paymentNoteType === "cash"
+            ? { amount: activeTab.paymentNoteAmount ?? 0 }
+            : {}),
+        };
 
         const orderData = {
           customerId: activeTab.selectedCustomer.id,
           branchId: selectedBranch?.id,
           soldById: activeTab.soldById ?? user?.id,
           priceBookId: activeTab.selectedPriceBookId ?? 0,
-          orderDate: existingOrder.orderDate,
-          orderStatus: existingOrder.orderStatus,
+          // Không lấy từ `existingOrder`: đó là đơn theo ?orderId= trên URL, có thể
+          // khác đơn của tab đang lưu. Ngày lấy từ chính tab (BE dùng làm ngày tính
+          // KM); không gửi orderStatus → BE giữ nguyên trạng thái.
+          orderDate: activeTab.orderDate,
           description: activeTab.orderNote,
           paidAmount: actualPayment,
           discountAmount: Number(activeTab.discount) || 0,
@@ -3768,30 +3814,15 @@ export default function BanHangPage() {
             height: Number(activeTab.deliveryInfo.height) || 10,
             noteForDriver: activeTab.deliveryInfo.noteForDriver,
           },
+          payments,
+          paymentNote,
         };
 
         try {
-          if (actualPayment > 0) {
-            const payments =
-              activeTab.paymentMethods && activeTab.paymentMethods.length > 0
-                ? activeTab.paymentMethods
-                : [{ method: "cash", amount: actualPayment }];
-
-            for (const payment of payments) {
-              await createOrderPayment.mutateAsync({
-                orderId: activeTab.documentId,
-                amount: payment.amount,
-                paymentMethod: payment.method,
-                accountId: payment.accountId,
-              });
-            }
-          }
-
           await updateOrder.mutateAsync({
             id: activeTab.documentId,
             data: orderData,
           });
-          await savePaymentNote("order", activeTab.documentId);
 
           const key = getEditStorageKey(activeTab.documentId, "order");
           localStorage.removeItem(key);
@@ -4594,13 +4625,17 @@ export default function BanHangPage() {
       ══════════════════════════════════════════ */}
       <div className="hidden lg:flex px-4 py-3 items-center gap-4 flex-shrink-0">
         <div className="flex-1 max-w-xl flex items-center gap-2">
-          <div className="flex-1 min-w-0">
-            <ProductSearchDropdown
-              onAddProduct={addToCart}
-              selectedPriceBookId={activeTab.selectedPriceBookId}
-            />
-          </div>
-          {importButton}
+          {!itemsLocked && (
+            <>
+              <div className="flex-1 min-w-0">
+                <ProductSearchDropdown
+                  onAddProduct={addToCart}
+                  selectedPriceBookId={activeTab.selectedPriceBookId}
+                />
+              </div>
+              {importButton}
+            </>
+          )}
         </div>
         {tabsRow}
       </div>
@@ -4610,15 +4645,17 @@ export default function BanHangPage() {
       ══════════════════════════════════════════ */}
       <div className="lg:hidden px-2 pt-1.5 pb-1.5 flex flex-col gap-1.5 flex-shrink-0">
         {tabsRow}
-        <div className="flex items-center gap-1.5">
-          <div className="flex-1 min-w-0">
-            <ProductSearchDropdown
-              onAddProduct={addToCart}
-              selectedPriceBookId={activeTab.selectedPriceBookId}
-            />
+        {!itemsLocked && (
+          <div className="flex items-center gap-1.5">
+            <div className="flex-1 min-w-0">
+              <ProductSearchDropdown
+                onAddProduct={addToCart}
+                selectedPriceBookId={activeTab.selectedPriceBookId}
+              />
+            </div>
+            {importButton}
           </div>
-          {importButton}
-        </div>
+        )}
       </div>
 
       {/* ══════════════════════════════════════════
@@ -4632,6 +4669,12 @@ export default function BanHangPage() {
               className={`${
                 mobilePosView === "items" ? "flex" : "hidden"
               } lg:flex flex-col w-full lg:w-[60%] min-h-0 flex-1 lg:flex-none`}>
+              {itemsLocked && (
+                <div className="flex-shrink-0 flex items-start gap-2 px-3 py-2 bg-amber-100 text-amber-700 text-sm">
+                  <Lock className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>{ITEMS_LOCKED_MESSAGE}</span>
+                </div>
+              )}
               <OrderItemsList
                 cartItems={activeTab.cartItems}
                 onUpdateItem={updateCartItem}
@@ -4644,6 +4687,7 @@ export default function BanHangPage() {
                 selectedCustomerId={activeTab.selectedCustomer?.id}
                 canEditPrice={canEditPrice}
                 canEditDiscount={canEditDiscount}
+                itemsLocked={itemsLocked}
                 canViewInventory={canViewInventory}
                 priceWarnings={priceWarnings}
                 documentType={activeTab.type}

@@ -21,7 +21,7 @@ import {
   Plus,
   SquarePen,
 } from "lucide-react";
-import Swal from "sweetalert2";
+import Swal, { type SweetAlertOptions } from "sweetalert2";
 import { ColumnToggle } from "@/components/shared/ColumnToggle";
 import { CodeLink } from "@/components/shared/CodeLink";
 import type {
@@ -609,7 +609,16 @@ export function WarehouseCashTable({
 
   const handleCancelReceipt = async (row: WarehouseReceipt) => {
     const cashFlows = receiptCashFlows(row);
+    // Bắt buộc nhập lý do hủy: lưu vào phiếu và Cài đặt → Lịch sử.
+    const reasonInput: SweetAlertOptions = {
+      input: "textarea",
+      inputPlaceholder: "Lý do hủy phiếu",
+      inputAttributes: { maxlength: "500" },
+      inputValidator: (value) =>
+        value?.trim() ? undefined : "Cần nhập lý do hủy",
+    };
     let cancelCashFlows = false;
+    let reason = "";
 
     if (cashFlows.length > 0) {
       const result = await Swal.fire({
@@ -627,9 +636,13 @@ export function WarehouseCashTable({
         confirmButtonColor: "#dc2626",
         denyButtonColor: "#059669",
         cancelButtonColor: "#6b7280",
+        ...reasonInput,
+        // Nút "Không - Giữ phiếu thu" cũng phải nhập lý do.
+        returnInputValueOnDeny: true,
       });
       if (result.isDismissed) return;
       cancelCashFlows = result.isConfirmed;
+      reason = String(result.value ?? "").trim();
     } else {
       const result = await Swal.fire({
         title: "Xác nhận hủy phiếu tiền mặt kho",
@@ -640,12 +653,14 @@ export function WarehouseCashTable({
         cancelButtonText: "Hủy bỏ",
         confirmButtonColor: "#dc2626",
         cancelButtonColor: "#6b7280",
+        ...reasonInput,
       });
       if (!result.isConfirmed) return;
+      reason = String(result.value ?? "").trim();
     }
 
     try {
-      await cancelReceipt.mutateAsync({ id: row.id, cancelCashFlows });
+      await cancelReceipt.mutateAsync({ id: row.id, cancelCashFlows, reason });
     } catch {
       // Hook đã hiển thị lỗi từ backend.
     }

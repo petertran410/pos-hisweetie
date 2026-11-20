@@ -74,6 +74,22 @@ export const ENTRY_STATUS_LABELS: Record<string, string> = {
   CANCELLED: "Đã hủy",
 };
 
+/** Phiếu xăng Kho HN đủ 2 tick: đã trừ vào tiền ứng xăng (không chi riêng). */
+export const isFuelAdvanceUsed = (entry: {
+  fuelAdvance?: boolean;
+  status: string;
+  managerReviewedAt?: string | null;
+  accountantReviewedAt?: string | null;
+}) =>
+  Boolean(
+    entry.fuelAdvance &&
+    entry.managerReviewedAt &&
+    entry.accountantReviewedAt &&
+    !["CANCELLED", "REJECTED"].includes(entry.status),
+  );
+
+export const FUEL_ADVANCE_USED_LABEL = "Trừ tiền ứng xăng";
+
 const OPEN_STATUSES = [
   "PENDING_ACCOUNTANT",
   "ACCOUNTANT_APPROVED",

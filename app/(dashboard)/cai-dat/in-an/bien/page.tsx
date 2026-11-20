@@ -8,6 +8,7 @@ import { PrintTemplateEditorModal } from "@/components/print-templates/PrintTemp
 import { PrintPreviewPane } from "@/components/print-templates/PrintPreviewPane";
 import { replaceTokensWithDummy } from "@/components/print-templates/dummy-data";
 import { ActionGuard } from "@/components/permissions/ActionGuard";
+import { sanitizePrintHtml } from "@/lib/utils/html-safety";
 
 const TABS: Array<{ key: string; label: string }> = [
   { key: "order", label: "Đặt hàng" },
@@ -150,7 +151,9 @@ export default function PrintTemplatesPage() {
           {selectedTemplate ? (
             <div
               className="border rounded p-4 text-sm font-mono whitespace-pre-wrap break-words bg-gray-50"
-              dangerouslySetInnerHTML={{ __html: selectedTemplate.content }}
+              dangerouslySetInnerHTML={{
+                __html: sanitizePrintHtml(selectedTemplate.content),
+              }}
             />
           ) : (
             <div className="text-gray-400 text-sm">

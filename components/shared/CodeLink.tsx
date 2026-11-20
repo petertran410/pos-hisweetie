@@ -33,7 +33,8 @@ export type CodeEntity =
   | "packing-slip"
   | "debt-offset"
   | "promotion"
-  | "product-quality";
+  | "product-quality"
+  | "vehicle-entry";
 
 const ROUTES: Record<CodeEntity, string> = {
   invoice: "/don-hang/hoa-don",
@@ -63,6 +64,8 @@ const ROUTES: Record<CodeEntity, string> = {
   "debt-offset": "/don-hang/can-tru-cong-no",
   promotion: "/khach-hang/khuyen-mai",
   "product-quality": "/san-pham/chat-luong-hang-hoa",
+  // Phiếu xăng dầu / chăm sóc xe: trang Xe cộ tìm theo mã.
+  "vehicle-entry": "/tai-chinh/xe-co",
 };
 
 /**

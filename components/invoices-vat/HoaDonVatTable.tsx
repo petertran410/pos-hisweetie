@@ -11,6 +11,7 @@ import {
   useRetryVouchers,
   useDeleteVoucher,
   useCreateVouchersBulk,
+  type MisaBulkPushSummary,
 } from "@/lib/hooks/useMisa";
 import {
   ChevronDown,
@@ -48,6 +49,7 @@ import {
   type ColumnConfig,
 } from "@/lib/hooks/useColumnVisibility";
 import Swal from "sweetalert2";
+import { escapeHtml } from "@/lib/utils/html-safety";
 
 interface HoaDonVatTableProps {
   filters: any;
@@ -734,10 +736,60 @@ export function HoaDonVatTable({
       createVouchersBulk.mutate(
         { invoiceCodes: selectedCodes, buyerOverrides },
         {
-          onSuccess: () => setSelectedIds([]),
+          onSuccess: (summary) => {
+            setSelectedIds([]);
+            showBulkPushIssues(summary);
+          },
         }
       );
     }
+  };
+
+  // Liệt kê rõ từng hóa đơn chưa gửi được (kèm lý do) sau khi đẩy hàng loạt.
+  const showBulkPushIssues = (summary: MisaBulkPushSummary) => {
+    const failed = summary.results.filter((r) => !r.success);
+    if (
+      failed.length === 0 &&
+      summary.unknownCodes.length === 0 &&
+      summary.notSentCodes.length === 0
+    ) {
+      return;
+    }
+
+    const section = (title: string, rows: string[]) =>
+      rows.length === 0
+        ? ""
+        : `<p class="font-semibold text-gray-800 mt-3 mb-1">${escapeHtml(title)}</p>
+           <ul class="space-y-1">${rows.join("")}</ul>`;
+    const codeRow = (code: string, reason?: string) =>
+      `<li><span class="font-medium">${escapeHtml(code)}</span>${
+        reason
+          ? `<span class="text-gray-500">: ${escapeHtml(reason)}</span>`
+          : ""
+      }</li>`;
+
+    Swal.fire({
+      title: "Có hóa đơn chưa gửi được lên Misa",
+      html: `<div class="text-left text-sm max-h-80 overflow-y-auto">
+        ${section(
+          `Lỗi (${failed.length}) - có thể đẩy lại`,
+          failed.map((r) => codeRow(r.invoiceCode, r.message))
+        )}
+        ${section(
+          `Chưa rõ kết quả (${summary.unknownCodes.length}) - kiểm tra cột trạng thái sau ít phút`,
+          summary.unknownCodes.map((code) =>
+            codeRow(code, summary.stopError || undefined)
+          )
+        )}
+        ${section(
+          `Chưa gửi (${summary.notSentCodes.length})`,
+          summary.notSentCodes.map((code) => codeRow(code))
+        )}
+      </div>`,
+      icon: "warning",
+      confirmButtonText: "Đóng",
+      confirmButtonColor: "#2563eb",
+    });
   };
 
   // Filter dùng cho export: bám theo bộ lọc hiện tại (search + filter sidebar +

@@ -399,7 +399,8 @@ export function ConfirmStockModal({
     try {
       await printEntity("return_order", returnOrder.id);
     } catch (e: any) {
-      Swal.fire("Lỗi", e?.message || "In thất bại", "error");
+      // text: thông báo lỗi hiện dạng chữ (tham số thứ 2 dạng rút gọn là HTML).
+      Swal.fire({ title: "Lỗi", text: e?.message || "In thất bại", icon: "error" });
     } finally {
       setIsPrinting(false);
     }

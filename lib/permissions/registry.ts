@@ -114,6 +114,7 @@ export const ROUTE_PERMISSIONS: Record<
     { resource: "vehicles", action: "view" },
     { resource: "vehicles", action: "create" },
   ],
+  "/tai-chinh/tien-ung-xang": { resource: "vehicles", action: "view" },
   "/tai-chinh/bien-dong-so-du": { resource: "sepay", action: "view" },
   "/ban-hang": [
     { resource: "orders", action: "create" },
@@ -410,6 +411,12 @@ export const NAV_CONFIG: NavSection[] = [
           { resource: "vehicles", action: "view" },
           { resource: "vehicles", action: "create" },
         ],
+      },
+      {
+        key: "fuel-advance",
+        label: "Tiền ứng xăng xe",
+        href: "/tai-chinh/tien-ung-xang",
+        permission: { resource: "vehicles", action: "view" },
       },
       {
         key: "sepay-transactions",

@@ -7,7 +7,11 @@ import type {
   VehicleEntryKind,
 } from "@/lib/api/internal-finance";
 import { formatDateOnly, formatVnDateTime } from "@/lib/internal-finance/dates";
-import { ENTRY_STATUS_LABELS } from "@/lib/internal-finance/vehicle-constants";
+import {
+  ENTRY_STATUS_LABELS,
+  FUEL_ADVANCE_USED_LABEL,
+  isFuelAdvanceUsed,
+} from "@/lib/internal-finance/vehicle-constants";
 import { formatCurrency } from "@/lib/utils";
 import {
   CardAction,
@@ -149,12 +153,18 @@ export function VehicleEntryMobileList({
               muted={cancelled}
               highlight={highlightId === row.id}
               badge={
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                    STATUS_CLASS[row.status] || "bg-gray-100 text-gray-600"
-                  }`}>
-                  {ENTRY_STATUS_LABELS[row.status] || row.status}
-                </span>
+                isFuelAdvanceUsed(row) ? (
+                  <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700">
+                    {FUEL_ADVANCE_USED_LABEL}
+                  </span>
+                ) : (
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                      STATUS_CLASS[row.status] || "bg-gray-100 text-gray-600"
+                    }`}>
+                    {ENTRY_STATUS_LABELS[row.status] || row.status}
+                  </span>
+                )
               }
               title={row.vehicle?.label || row.vehicleName || "-"}
               meta={

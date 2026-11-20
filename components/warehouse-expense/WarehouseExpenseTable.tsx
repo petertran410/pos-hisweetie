@@ -22,6 +22,10 @@ import {
   isVpsgManualOpen,
   officeVoucherDetails,
 } from "@/lib/internal-finance/office";
+import {
+  FUEL_ADVANCE_USED_LABEL,
+  isFuelAdvanceUsed,
+} from "@/lib/internal-finance/vehicle-constants";
 import { formatCurrency } from "@/lib/utils";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -661,6 +665,11 @@ export function WarehouseExpenseTable({
                         ) : row.cashIssued ? (
                           <span className="font-medium text-green-700">
                             Đã chi
+                          </span>
+                        ) : isFuelAdvanceUsed(row) ? (
+                          // Phiếu xăng Kho HN: tiền đã ra khỏi quỹ lúc chi đơn ứng xăng.
+                          <span className="font-medium text-green-700">
+                            {FUEL_ADVANCE_USED_LABEL}
                           </span>
                         ) : (
                           <span className="text-gray-400">Chưa chi</span>

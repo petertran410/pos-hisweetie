@@ -431,7 +431,9 @@ export function OrderDetailRow({ orderId, colSpan }: OrderDetailRowProps) {
     order.status === ORDER_STATUS.COMPLETED ||
     order.status === ORDER_STATUS.CANCELLED;
 
-  const isStatusEditable = !isFinalState && !hasDeliveryInvoice;
+  // Dropdown chỉ có "Phiếu tạm"/"Đã xác nhận" → chỉ hiện cho 2 trạng thái này.
+  // "Đã ra 1 phần hóa đơn" không được kéo ngược về Phiếu tạm/Đã xác nhận bằng tay.
+  const isStatusEditable = isManualEditable && !hasDeliveryInvoice;
   const shippingFee =
     Number((order as typeof order & { shippingFee?: number }).shippingFee) || 0;
 

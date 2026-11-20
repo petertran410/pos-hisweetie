@@ -59,6 +59,8 @@ export interface InternalFinanceEntry {
   cashIssuedAt: string | null;
   cashIssuedReason?: string | null;
   cashIssuer?: { id: number; name: string } | null;
+  /** Phiếu xăng Kho HN từ 14/11/2026: trừ vào tiền ứng xăng, không vào Approval tuần. */
+  fuelAdvance?: boolean;
   cancelReason?: string | null;
   cancelledAt?: string | null;
   canceller?: { id: number; name: string } | null;
@@ -442,6 +444,67 @@ export interface SalaryAdvanceRow {
   } | null;
 }
 
+export interface FuelAdvanceQuery {
+  fromDate?: string;
+  toDate?: string;
+}
+
+interface FuelAdvanceRowBase {
+  id: number;
+  /** Ứng xăng: ngày duyệt đơn; phiếu xăng: lúc đủ 2 tick. */
+  at: string;
+  amount: number;
+  /** Số tiền ứng còn lại sau dòng này. */
+  balance: number;
+}
+
+export type FuelAdvanceRow =
+  | (FuelAdvanceRowBase & {
+      kind: "ADVANCE";
+      /** LARK: đơn PHIẾU CHI đã duyệt; MANUAL: khoản ứng nhập tay, không ghi quỹ. */
+      source: "LARK" | "MANUAL";
+      description: string | null;
+      requesterName: string | null;
+      method: string | null;
+      cashSource: string | null;
+      /** Phần tiền mặt trừ quỹ; null: chuyển khoản, không ghi quỹ. */
+      cashAmount: number | null;
+    })
+  | (FuelAdvanceRowBase & {
+      kind: "FUEL";
+      code: string;
+      occurredAt: string;
+      vehicle: string | null;
+      creatorId: number | null;
+      creatorName: string | null;
+    });
+
+export interface FuelAdvanceEntryInput {
+  /** YYYY-MM-DD */
+  occurredAt: string;
+  amount: number;
+  note?: string;
+}
+
+export interface FuelAdvanceCreator {
+  creatorId: number | null;
+  creatorName: string | null;
+  count: number;
+  amount: number;
+}
+
+export interface FuelAdvanceResponse {
+  branchId: number;
+  /** Ngày bắt đầu tính tiền ứng xăng. */
+  startDate: string;
+  opening: number;
+  advanced: number;
+  used: number;
+  closing: number;
+  rows: FuelAdvanceRow[];
+  byCreator: FuelAdvanceCreator[];
+}
+
 export interface SalaryAdvanceQuery {
   branchIds?: number[];
   status?: string;
@@ -688,6 +751,17 @@ export const internalFinanceApi = {
   ): Promise<SalaryAdvanceResponse> =>
     apiClient.get("/internal-finance/salary-advances", params),
 
+  fuelAdvance: (params?: FuelAdvanceQuery): Promise<FuelAdvanceResponse> =>
+    apiClient.get("/internal-finance/fuel-advance", params),
+
+  createFuelAdvanceEntry: (payload: FuelAdvanceEntryInput) =>
+    apiClient.post("/internal-finance/fuel-advance/entries", payload),
+
+  cancelFuelAdvanceEntry: (id: number, reason: string) =>
+    apiClient.put(`/internal-finance/fuel-advance/entries/${id}/cancel`, {
+      reason,
+    }),
+
   warehouseExpenseBatchPage: (
     params?: InternalFinanceQuery,
   ): Promise<{
@@ -852,7 +926,7 @@ export const internalFinanceApi = {
 
   cancelWarehouseReceipt: (
     id: number,
-    payload: { cancelCashFlows: boolean },
+    payload: { cancelCashFlows: boolean; reason: string },
   ): Promise<WarehouseReceipt> =>
     apiClient.put(`/internal-finance/warehouse-receipts/${id}/cancel`, payload),
 

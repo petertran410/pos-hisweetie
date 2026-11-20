@@ -103,6 +103,8 @@ export interface LeadFilters {
   statuses?: string;
   provinceCode?: string;
   salePicId?: number;
+  /** Tên kênh, phân tách dấu phẩy */
+  channels?: string;
   /** Đã gắn khách POS */
   linked?: "true" | "false";
   from?: string;

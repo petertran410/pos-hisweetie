@@ -7,9 +7,10 @@ import { auditLogsApi } from "@/lib/api/audit-logs";
 import { Filter, X, Calendar, Search } from "lucide-react";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { MiniCalendar } from "@/components/ui/MiniCalendar";
+import { FilterSearchableSelect } from "@/components/ui/filters";
 
+// "Tất cả" là placeholder/dòng bỏ chọn của FilterSearchableSelect.
 const CATEGORY_OPTIONS = [
-  { value: "", label: "Tất cả" },
   { value: "order", label: "Đơn hàng" },
   { value: "invoice", label: "Hóa đơn" },
   { value: "return_order", label: "Phiếu trả hàng" },
@@ -26,10 +27,10 @@ const CATEGORY_OPTIONS = [
   { value: "user", label: "Người dùng" },
   { value: "branch", label: "Chi nhánh" },
   { value: "setting", label: "Cài đặt" },
+  { value: "internal_finance", label: "Tài chính nội bộ" },
 ];
 
 const SEVERITY_OPTIONS = [
-  { value: "", label: "Tất cả" },
   { value: "info", label: "Thông tin" },
   { value: "warning", label: "Cảnh báo" },
   { value: "critical", label: "Quan trọng" },
@@ -168,38 +169,34 @@ export default function AuditLogsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Phân loại
                 </label>
-                <select
+                <FilterSearchableSelect
+                  options={CATEGORY_OPTIONS}
                   value={filters.category}
-                  onChange={(e) => {
-                    setFilters({ ...filters, category: e.target.value });
+                  onChange={(category) => {
+                    setFilters({ ...filters, category });
                     setPage(1);
                   }}
-                  className="w-full px-3 py-2 border rounded-lg text-sm">
-                  {CATEGORY_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Tất cả"
+                  searchPlaceholder="Tìm phân loại..."
+                  size="form"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Mức độ
                 </label>
-                <select
+                <FilterSearchableSelect
+                  options={SEVERITY_OPTIONS}
                   value={filters.severity}
-                  onChange={(e) => {
-                    setFilters({ ...filters, severity: e.target.value });
+                  onChange={(severity) => {
+                    setFilters({ ...filters, severity });
                     setPage(1);
                   }}
-                  className="w-full px-3 py-2 border rounded-lg text-sm">
-                  {SEVERITY_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Tất cả"
+                  searchPlaceholder="Tìm mức độ..."
+                  size="form"
+                />
               </div>
 
               <div ref={dateRef} className="contents">
@@ -224,7 +221,7 @@ export default function AuditLogsPage() {
                     <span>
                       {filters.startDate
                         ? new Date(
-                            filters.startDate + "T00:00:00"
+                            filters.startDate + "T00:00:00",
                           ).toLocaleDateString("vi-VN", {
                             day: "2-digit",
                             month: "2-digit",
@@ -254,9 +251,7 @@ export default function AuditLogsPage() {
                   </label>
                   <button
                     type="button"
-                    onClick={() =>
-                      setOpenCal(openCal === "end" ? null : "end")
-                    }
+                    onClick={() => setOpenCal(openCal === "end" ? null : "end")}
                     className={`w-full flex items-center justify-between px-3 py-2 border rounded-lg text-sm transition-all ${
                       filters.endDate
                         ? "border-blue-300 bg-blue-50 text-gray-800"
@@ -269,7 +264,7 @@ export default function AuditLogsPage() {
                     <span>
                       {filters.endDate
                         ? new Date(
-                            filters.endDate + "T00:00:00"
+                            filters.endDate + "T00:00:00",
                           ).toLocaleDateString("vi-VN", {
                             day: "2-digit",
                             month: "2-digit",

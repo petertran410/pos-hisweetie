@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth";
-import { logout } from "@/lib/auth/session";
+import { LOGOUT_FAILED_MESSAGE, logout } from "@/lib/auth/session";
 import { toast } from "sonner";
 import { BranchSelector } from "./BranchSelector";
 import { SepayNotificationBell } from "../sepay/SepayNotificationBell";
@@ -43,10 +43,17 @@ export function DashboardHeader() {
   const posActions = useFilteredPosActions();
   const { anyReport } = useReportAccess();
 
+  const loggingOut = useRef(false);
   const handleLogout = async () => {
-    // Thu hồi refresh token phía server + đăng xuất mọi tab.
-    toast.success("Đã đăng xuất");
-    await logout();
+    if (loggingOut.current) return;
+    loggingOut.current = true;
+    // Thu hồi refresh token phía server + đăng xuất mọi tab; chỉ báo thành
+    // công khi máy chủ xác nhận.
+    const toastId = toast.loading("Đang đăng xuất...");
+    const revoked = await logout();
+    loggingOut.current = false;
+    if (revoked) toast.success("Đã đăng xuất", { id: toastId });
+    else toast.error(LOGOUT_FAILED_MESSAGE, { id: toastId });
   };
 
   const closeMobileMenu = () => setShowMobileMenu(false);
@@ -148,6 +155,7 @@ export function DashboardHeader() {
       { label: "Đơn Lark Approval", href: "/tai-chinh/don-lark-approval" },
       { label: "Tạm ứng lương", href: "/tai-chinh/tam-ung-luong" },
       { label: "Xăng dầu & chăm sóc xe", href: "/tai-chinh/xe-co" },
+      { label: "Tiền ứng xăng xe", href: "/tai-chinh/tien-ung-xang" },
       { label: "Biến động số dư", href: "/tai-chinh/bien-dong-so-du" },
     ],
     [],

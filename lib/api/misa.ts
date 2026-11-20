@@ -95,15 +95,20 @@ export const misaApi = {
   createVouchersBulk: (
     invoiceCodes: string[],
     buyerOverrides?: Record<string, MisaBuyerOverride>,
-    force?: boolean
+    force?: boolean,
+    timeoutMs?: number
   ): Promise<MisaBulkVoucherResult> => {
-    return apiClient.post(`/misa/voucher/bulk-create`, {
-      invoiceCodes,
-      ...(buyerOverrides && Object.keys(buyerOverrides).length > 0
-        ? { buyerOverrides }
-        : {}),
-      ...(force ? { force: true } : {}),
-    });
+    return apiClient.post(
+      `/misa/voucher/bulk-create`,
+      {
+        invoiceCodes,
+        ...(buyerOverrides && Object.keys(buyerOverrides).length > 0
+          ? { buyerOverrides }
+          : {}),
+        ...(force ? { force: true } : {}),
+      },
+      timeoutMs
+    );
   },
   /** Đẩy 1 hóa đơn lên Misa (sinh chứng từ bán hàng) */
   createVoucher: (

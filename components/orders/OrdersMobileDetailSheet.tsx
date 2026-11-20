@@ -146,7 +146,9 @@ export function OrdersMobileDetailSheet({
     order?.status === ORDER_STATUS.COMPLETED ||
     order?.status === ORDER_STATUS.CANCELLED;
 
-  const isStatusEditable = !isFinalState && !hasDeliveryInvoice;
+  // Dropdown chỉ có "Phiếu tạm"/"Đã xác nhận" → chỉ hiện (và chỉ gửi status khi lưu)
+  // cho 2 trạng thái này. "Đã ra 1 phần hóa đơn" không được đổi tay.
+  const isStatusEditable = isManualEditable && !hasDeliveryInvoice;
 
   const canCancelOrder =
     order?.status === ORDER_STATUS.PENDING ||
@@ -383,7 +385,7 @@ export function OrdersMobileDetailSheet({
                 {/* Trạng thái — dropdown nếu editable */}
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-400">Trạng thái</span>
-                  {isManualEditable && isStatusEditable ? (
+                  {isStatusEditable ? (
                     <div className="relative" ref={statusDropdownRef}>
                       <button
                         onClick={() => setShowStatusDropdown((v) => !v)}

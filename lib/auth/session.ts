@@ -143,17 +143,40 @@ export function ensureAccessToken(): Promise<boolean> {
   return ensuring;
 }
 
-/** Đăng xuất: thu hồi refresh token phía server rồi xóa phiên ở mọi tab. */
-export async function logout() {
-  try {
-    await fetch(`${API_URL}/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-    });
-  } catch {
-    // vẫn xóa phiên phía trình duyệt
+export const LOGOUT_FAILED_MESSAGE =
+  "Chưa đăng xuất được trên máy chủ. Thiết bị này vẫn đang đăng nhập, vui lòng thử lại.";
+
+/**
+ * Đăng xuất: chỉ xóa phiên ở trình duyệt (mọi tab) khi máy chủ xác nhận đã thu
+ * hồi refresh token — cookie HttpOnly chỉ máy chủ mới vô hiệu hóa được. Máy chủ
+ * trả 200 cả khi phiên đã hết hạn. Trả false nếu chưa thu hồi được: thiết bị
+ * vẫn đang đăng nhập, phiên ở trình duyệt giữ nguyên.
+ */
+export async function logout(): Promise<boolean> {
+  const attempts = 3;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10_000);
+    try {
+      const res = await fetch(`${API_URL}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+        signal: controller.signal,
+      });
+      if (res.ok) {
+        endSession(undefined, "logout");
+        return true;
+      }
+    } catch {
+      // Mạng lỗi / quá thời gian: thử lại.
+    } finally {
+      clearTimeout(timer);
+    }
+    if (attempt < attempts - 1) {
+      await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+    }
   }
-  endSession(undefined, "logout");
+  return false;
 }
 
 let listenersInstalled = false;

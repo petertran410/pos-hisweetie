@@ -66,6 +66,7 @@ import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import { useBranchStore } from "@/lib/store/branch";
 import { formatCurrency } from "@/lib/utils";
 
+import { escapeHtml } from "@/lib/utils/html-safety";
 function WarehouseExpenseScreen() {
   const router = useRouter();
   const pathname = usePathname();
@@ -224,7 +225,7 @@ function WarehouseExpenseScreen() {
   const handleCancel = async (row: InternalFinanceEntry) => {
     const result = await Swal.fire({
       title: "Hủy phiếu chi kho",
-      html: `<p class="text-sm text-gray-600">Hủy phiếu <strong>${row.code}</strong> (${formatCurrency(row.amount)}). Phiếu đã hủy không được tổng hợp tuần và không ghi quỹ.</p>`,
+      html: `<p class="text-sm text-gray-600">Hủy phiếu <strong>${escapeHtml(row.code)}</strong> (${formatCurrency(row.amount)}). Phiếu đã hủy không được tổng hợp tuần và không ghi quỹ.</p>`,
       input: "textarea",
       inputPlaceholder: "Lý do hủy phiếu",
       inputAttributes: { maxlength: "500" },
@@ -257,6 +258,8 @@ function WarehouseExpenseScreen() {
   const canMarkIssuedRow = (row: InternalFinanceEntry) =>
     canAction("mark_issued", row.branchId) &&
     !row.cashIssued &&
+    // Phiếu xăng Kho HN trừ vào tiền ứng xăng, không chi riêng.
+    !row.fuelAdvance &&
     (inApprovedBatch(row) ||
       isExpenseCheckOpen(row) ||
       isOfficeManualOpen(row));
@@ -307,8 +310,8 @@ function WarehouseExpenseScreen() {
       const result = await Swal.fire({
         title: checked ? "Kế toán duyệt phiếu chi?" : "Bỏ duyệt phiếu chi?",
         html: checked
-          ? `<p class="text-sm text-gray-600">Phiếu <strong>${row.code}</strong> thành Đã chi và trừ quỹ VPSG <strong>${formatCurrency(row.amount)}</strong>.</p>`
-          : `<p class="text-sm text-gray-600">Phiếu <strong>${row.code}</strong> quay về chờ duyệt, hoàn lại quỹ VPSG <strong>${formatCurrency(row.amount)}</strong>.</p>`,
+          ? `<p class="text-sm text-gray-600">Phiếu <strong>${escapeHtml(row.code)}</strong> thành Đã chi và trừ quỹ VPSG <strong>${formatCurrency(row.amount)}</strong>.</p>`
+          : `<p class="text-sm text-gray-600">Phiếu <strong>${escapeHtml(row.code)}</strong> quay về chờ duyệt, hoàn lại quỹ VPSG <strong>${formatCurrency(row.amount)}</strong>.</p>`,
         icon: "question",
         showCancelButton: true,
         confirmButtonText: checked ? "Duyệt" : "Bỏ duyệt",
@@ -364,7 +367,7 @@ function WarehouseExpenseScreen() {
             html: `<p class="mb-2 text-sm text-gray-600">Các phiếu sau không tick được:</p><ul class="max-h-60 overflow-auto text-left text-sm">${result.skipped
               .map(
                 (item) =>
-                  `<li class="py-0.5"><strong>${item.code}</strong>: ${item.reason}</li>`,
+                  `<li class="py-0.5"><strong>${escapeHtml(item.code)}</strong>: ${escapeHtml(item.reason)}</li>`,
               )
               .join("")}</ul>`,
             confirmButtonText: "Đóng",
@@ -451,7 +454,7 @@ function WarehouseExpenseScreen() {
       // Văn phòng không có Approval tuần: xác nhận là trừ quỹ luôn.
       const result = await Swal.fire({
         title: "Xác nhận đã chi?",
-        html: `<p class="text-sm text-gray-600">Trừ quỹ văn phòng <strong>${formatCurrency(row.amount)}</strong> cho phiếu <strong>${row.code}</strong>.</p>`,
+        html: `<p class="text-sm text-gray-600">Trừ quỹ văn phòng <strong>${formatCurrency(row.amount)}</strong> cho phiếu <strong>${escapeHtml(row.code)}</strong>.</p>`,
         icon: "question",
         showCancelButton: true,
         confirmButtonText: "Xác nhận Đã chi",

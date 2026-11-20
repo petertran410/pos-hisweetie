@@ -97,7 +97,7 @@ export function PriceBookDropdown({
           .map((pb) => `"${pb.name}"`)
           .join(", ");
         const result = await Swal.fire({
-          title: `Chuyển sang bảng giá "${targetName}"?`,
+          titleText: `Chuyển sang bảng giá "${targetName}"?`,
           text: `Khách hàng "${customerName}" không thuộc bảng giá "${targetName}"${
             ownNames ? ` (khách thuộc bảng giá ${ownNames})` : ""
           }. Lần chuyển này sẽ được ghi vào Lịch sử thao tác.`,

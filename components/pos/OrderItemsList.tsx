@@ -74,6 +74,8 @@ interface CartItemsListProps {
   selectedCustomerId?: number;
   canEditPrice?: boolean;
   canEditDiscount?: boolean;
+  // Khóa thêm/sửa/xóa dòng hàng (đơn không còn Phiếu tạm). Ghi chú đơn vẫn sửa được.
+  itemsLocked?: boolean;
   canViewInventory?: boolean;
   priceWarnings?: Record<string, PriceWarning | null>;
   documentType?: "order" | "invoice" | "consignment";
@@ -107,6 +109,7 @@ export function OrderItemsList({
   selectedCustomerId,
   canEditPrice = true,
   canEditDiscount = true,
+  itemsLocked = false,
   canViewInventory = true,
   priceWarnings,
   documentType,
@@ -474,7 +477,8 @@ export function OrderItemsList({
         {documentType !== "consignment" && (
           <ColdCargoSummary items={cartItems} className="mb-3" />
         )}
-        <div className="space-y-2">
+        {/* disabled → mọi input/button trong dòng hàng bị khóa một lượt */}
+        <fieldset disabled={itemsLocked} className="min-w-0 space-y-2">
           {productLineGroups.map((group) => {
             const hasStockWarning = group.some((line) => getStockWarning(line));
             return (
@@ -637,16 +641,26 @@ export function OrderItemsList({
                               );
                             })()}
 
-                          <NoteDropdown
-                            value={item.note || ""}
-                            onChange={(note) =>
-                              onUpdateItem(item.rowId, { note })
-                            }
-                            templates={noteTemplates}
-                            onCreateTemplate={handleCreateTemplate}
-                            onEditTemplate={handleEditTemplate}
-                            canManageTemplates={canManageNoteTemplates}
-                          />
+                          {/* Trigger của NoteDropdown là <div onClick> nên fieldset
+                          disabled không chặn được → khi khóa chỉ hiện chữ. */}
+                          {itemsLocked ? (
+                            item.note ? (
+                              <div className="text-xs lg:text-sm text-gray-500 min-h-[18px] lg:min-h-[20px]">
+                                {item.note}
+                              </div>
+                            ) : null
+                          ) : (
+                            <NoteDropdown
+                              value={item.note || ""}
+                              onChange={(note) =>
+                                onUpdateItem(item.rowId, { note })
+                              }
+                              templates={noteTemplates}
+                              onCreateTemplate={handleCreateTemplate}
+                              onEditTemplate={handleEditTemplate}
+                              canManageTemplates={canManageNoteTemplates}
+                            />
+                          )}
                         </div>
 
                         <div className="flex-shrink-0 flex items-center gap-1">
@@ -687,12 +701,14 @@ export function OrderItemsList({
                                   branchId={selectedBranch?.id}
                                 />
                               )}
-                              <button
-                                onClick={() => onDuplicateItem(item)}
-                                className="p-1 hover:bg-green-50 rounded transition-colors"
-                                title="Thêm dòng mới cho sản phẩm này">
-                                <Copy className="w-4 h-4 text-green-600" />
-                              </button>
+                              {!itemsLocked && (
+                                <button
+                                  onClick={() => onDuplicateItem(item)}
+                                  className="p-1 hover:bg-green-50 rounded transition-colors"
+                                  title="Thêm dòng mới cho sản phẩm này">
+                                  <Copy className="w-4 h-4 text-green-600" />
+                                </button>
+                              )}
                               {/* KM cộng dồn: điều khiển ở khối "Khuyến mãi của đơn hàng"
                           phía trên, KHÔNG hiện nút trên card (tránh 2 lối bật/tắt).
                           Chỉ hiện nút cho KM thường (per-row). */}
@@ -807,11 +823,13 @@ export function OrderItemsList({
                                     </button>
                                   );
                                 })}
-                              <button
-                                onClick={() => onRemoveItem(item.rowId)}
-                                className="p-1 hover:bg-red-50 rounded transition-colors">
-                                <Trash2 className="w-4 h-4 text-red-500" />
-                              </button>
+                              {!itemsLocked && (
+                                <button
+                                  onClick={() => onRemoveItem(item.rowId)}
+                                  className="p-1 hover:bg-red-50 rounded transition-colors">
+                                  <Trash2 className="w-4 h-4 text-red-500" />
+                                </button>
+                              )}
                             </>
                           )}
                         </div>
@@ -1029,9 +1047,9 @@ export function OrderItemsList({
                               Chiết khấu
                             </span>
                             <span
-                              className={`text-md ${canEditDiscount ? "cursor-pointer hover:text-brand" : ""} ${item.discount > 0 ? "text-red-500" : "text-gray-400"}`}
+                              className={`text-md ${canEditDiscount && !itemsLocked ? "cursor-pointer hover:text-brand" : ""} ${item.discount > 0 ? "text-red-500" : "text-gray-400"}`}
                               onClick={
-                                canEditDiscount
+                                canEditDiscount && !itemsLocked
                                   ? () => handleOpenDiscountModal(item)
                                   : undefined
                               }>
@@ -1092,7 +1110,7 @@ export function OrderItemsList({
               </div>
             );
           })}
-        </div>
+        </fieldset>
       </div>
 
       <div className="m-2 lg:m-3 border p-2 lg:p-3 flex-shrink-0 rounded-xl shadow-xl">
