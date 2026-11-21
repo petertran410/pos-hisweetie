@@ -28,9 +28,10 @@ import {
 import { InternalFinanceWeeklyPanel } from "@/components/internal-finance/InternalFinanceWeeklyPanel";
 import { useBranches } from "@/lib/hooks/useBranches";
 import {
-  useCreateWarehouseExpenseApproval,
+  useSendWeeklyApproval,
   useWarehouseExpenseBatchPage,
 } from "@/lib/hooks/useInternalFinance";
+import { WeeklyLateEntriesDialog } from "@/components/internal-finance/WeeklyLateEntriesDialog";
 import { useFinanceAccess } from "@/lib/internal-finance/finance-access";
 import {
   useFollowHeaderBranch,
@@ -130,7 +131,8 @@ export default function ApprovalTuanPage() {
     [access],
   );
   const canPrepareAny = BRANCH_IDS.some((id) => can("prepare", id));
-  const createApproval = useCreateWarehouseExpenseApproval();
+  // Gửi Approval: kiểm tra phiếu đủ tick sau lần Tổng hợp trước khi gửi.
+  const sender = useSendWeeklyApproval();
   const [creatingId, setCreatingId] = useState<number | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const isMobile = useIsMobile(768);
@@ -397,13 +399,12 @@ export default function ApprovalTuanPage() {
                 {row.status === "READY" && can("submit", row.branchId) && (
                   <CardAction
                     tone="primary"
-                    disabled={createApproval.isPending}
+                    disabled={sender.isPending}
                     onClick={() => {
                       setCreatingId(row.id);
-                      createApproval.mutate(
-                        { id: row.id },
-                        { onSettled: () => setCreatingId(null) },
-                      );
+                      void sender.send(row.id, {
+                        onSettled: () => setCreatingId(null),
+                      });
                     }}>
                     {creatingId === row.id ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -566,13 +567,12 @@ export default function ApprovalTuanPage() {
                               can("submit", row.branchId) ? (
                                 <button
                                   type="button"
-                                  disabled={createApproval.isPending}
+                                  disabled={sender.isPending}
                                   onClick={() => {
                                     setCreatingId(row.id);
-                                    createApproval.mutate(
-                                      { id: row.id },
-                                      { onSettled: () => setCreatingId(null) },
-                                    );
+                                    void sender.send(row.id, {
+                                      onSettled: () => setCreatingId(null),
+                                    });
                                   }}
                                   className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-brand px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-dark disabled:opacity-50">
                                   {creatingId === row.id ? (
@@ -639,6 +639,14 @@ export default function ApprovalTuanPage() {
         <CancelWeeklyBatchDialog
           batch={cancelling}
           onClose={() => setCancelling(null)}
+        />
+      )}
+      {sender.late && (
+        <WeeklyLateEntriesDialog
+          late={sender.late}
+          loading={sender.isPending}
+          onConfirm={sender.confirmLate}
+          onClose={sender.closeLate}
         />
       )}
     </FinancePageGuard>

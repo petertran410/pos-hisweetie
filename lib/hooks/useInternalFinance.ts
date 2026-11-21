@@ -21,6 +21,7 @@ import {
   type WarehouseReceipt,
   type WarehouseReceiptInput,
   type WarehouseReceiptQuery,
+  type WeeklyLateEntries,
 } from "@/lib/api/internal-finance";
 
 const errorMessage = (error: unknown, fallback: string) =>
@@ -326,7 +327,11 @@ export function useCreateWarehouseExpenseApproval() {
       payload,
     }: {
       id: number;
-      payload?: { detailUrl?: string; viewUrl?: string };
+      payload?: {
+        detailUrl?: string;
+        viewUrl?: string;
+        allowLateEntries?: boolean;
+      };
     }) => internalFinanceApi.createWarehouseExpenseApproval(id, payload),
     onSuccess: () => {
       invalidateInternalFinance(queryClient);
@@ -335,6 +340,71 @@ export function useCreateWarehouseExpenseApproval() {
     onError: (error) =>
       toast.error(errorMessage(error, "Gửi Approval thất bại")),
   });
+}
+
+type SendCallbacks = { onSuccess?: () => void; onSettled?: () => void };
+
+/**
+ * Gửi Approval tuần kho: trước khi gửi kiểm tra phiếu đã đủ tick sau lần Tổng
+ * hợp gần nhất. Có phiếu như vậy thì trả về `late` để hiện hộp thoại (Vẫn tạo
+ * approval Lark / Đóng); không có thì gửi luôn.
+ */
+export function useSendWeeklyApproval() {
+  const queryClient = useQueryClient();
+  const createApproval = useCreateWarehouseExpenseApproval();
+  const [checkingId, setCheckingId] = useState<number | null>(null);
+  const [late, setLate] = useState<{
+    batchId: number;
+    data: WeeklyLateEntries;
+    callbacks?: SendCallbacks;
+  } | null>(null);
+
+  const send = async (batchId: number, callbacks?: SendCallbacks) => {
+    setCheckingId(batchId);
+    let data: WeeklyLateEntries;
+    try {
+      data = await queryClient.fetchQuery({
+        queryKey: ["warehouse-expenses", "late-entries", batchId],
+        queryFn: () => internalFinanceApi.warehouseBatchLateEntries(batchId),
+        staleTime: 0,
+      });
+    } catch (error) {
+      toast.error(errorMessage(error, "Không kiểm tra được phiếu của batch"));
+      callbacks?.onSettled?.();
+      return;
+    } finally {
+      setCheckingId(null);
+    }
+    if (data.count > 0) {
+      setLate({ batchId, data, callbacks });
+      callbacks?.onSettled?.();
+      return;
+    }
+    createApproval.mutate({ id: batchId }, callbacks);
+  };
+
+  /** Hộp thoại: người gửi chọn "Vẫn tạo approval Lark". */
+  const confirmLate = () => {
+    if (!late) return;
+    const { batchId, callbacks } = late;
+    createApproval.mutate(
+      { id: batchId, payload: { allowLateEntries: true } },
+      {
+        onSuccess: () => {
+          setLate(null);
+          callbacks?.onSuccess?.();
+        },
+      },
+    );
+  };
+
+  return {
+    send,
+    late: late?.data ?? null,
+    confirmLate,
+    closeLate: () => setLate(null),
+    isPending: checkingId !== null || createApproval.isPending,
+  };
 }
 
 export function useCancelWarehouseExpense() {
