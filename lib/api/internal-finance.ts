@@ -444,6 +444,18 @@ export interface SalaryAdvanceRow {
   } | null;
 }
 
+export interface WeeklyLateEntries {
+  count: number;
+  amount: number;
+  entries: Array<{
+    id: number;
+    code: string;
+    occurredAt: string;
+    amount: number;
+    description: string | null;
+  }>;
+}
+
 export interface FuelAdvanceQuery {
   fromDate?: string;
   toDate?: string;
@@ -801,9 +813,20 @@ export const internalFinanceApi = {
       payload,
     ),
 
+  /** Phiếu đủ tick sau lần Tổng hợp gần nhất của batch kho (chưa vào batch). */
+  warehouseBatchLateEntries: (id: number): Promise<WeeklyLateEntries> =>
+    apiClient.get(
+      `/internal-finance/warehouse-expenses/weekly-batches/${id}/late-entries`,
+    ),
+
   createWarehouseExpenseApproval: (
     id: number,
-    payload?: { detailUrl?: string; viewUrl?: string },
+    payload?: {
+      detailUrl?: string;
+      viewUrl?: string;
+      /** Vẫn gửi dù có phiếu tick muộn. */
+      allowLateEntries?: boolean;
+    },
   ): Promise<unknown> =>
     apiClient.post(
       `/internal-finance/warehouse-expenses/weekly-batches/${id}/create-approval`,

@@ -13,8 +13,8 @@ import { formatCurrency } from "@/lib/utils";
 import { displayDescription } from "@/lib/internal-finance/display";
 import { useBranches } from "@/lib/hooks/useBranches";
 import {
-  useCreateWarehouseExpenseApproval,
   usePrepareWarehouseExpenseBatch,
+  useSendWeeklyApproval,
   useWarehouseExpenseBatch,
   useWarehouseExpenseBatches,
   useWarehouseExpenseCarryOver,
@@ -29,6 +29,7 @@ import {
   canCancelBatch,
 } from "@/lib/internal-finance/weekly-batch";
 import { ApprovalHistoryList } from "./WeeklyBatchNotes";
+import { WeeklyLateEntriesDialog } from "./WeeklyLateEntriesDialog";
 import { WeeklyBatchEntryGroups } from "./WeeklyBatchEntryGroups";
 import {
   isoWeekOf,
@@ -178,7 +179,8 @@ export function InternalFinanceWeeklyPanel({
   // Đang xem batch đã hủy: chỉ xem, ẩn phần tổng hợp tuần để không nhầm là
   // thao tác trên batch đó. Muốn gom lại thì bấm "Tổng hợp lại tuần này".
   const viewingCancelled = selectedBatch.data?.status === "CANCELLED";
-  const createApproval = useCreateWarehouseExpenseApproval();
+  // Gửi Approval: kiểm tra phiếu đủ tick sau lần Tổng hợp trước khi gửi.
+  const sender = useSendWeeklyApproval();
 
   // Mở/chọn một batch thì chi nhánh và khoảng ngày theo batch đó, để hủy xong
   // bấm "Chuẩn bị tổng hợp tuần" là gom lại đúng tuần vừa hủy.
@@ -220,11 +222,25 @@ export function InternalFinanceWeeklyPanel({
   };
 
   const createWeeklyApproval = (batchId: number) => {
-    createApproval.mutate(
-      { id: batchId },
+    void sender.send(batchId, {
+      onSuccess: () => setSelectedBatchId(batchId),
+    });
+  };
+
+  // Gom lại đúng tuần của batch đang xem: phiếu mới đủ tick vào batch, batch
+  // chưa gửi được cập nhật tại chỗ (không phải hủy rồi tạo lại).
+  const regatherBatch = (target: {
+    branchId: number;
+    weekStart: string;
+    weekEnd: string;
+  }) => {
+    prepare.mutate(
       {
-        onSuccess: () => setSelectedBatchId(batchId),
+        branchId: target.branchId,
+        weekStart: vnDateKey(target.weekStart),
+        weekEnd: vnDateKey(target.weekEnd),
       },
+      { onSuccess: (updated) => setSelectedBatchId(updated.id) },
     );
   };
 
@@ -628,7 +644,8 @@ export function InternalFinanceWeeklyPanel({
                   </div>
                   {((can("prepare", batch.branchId) && canCancelBatch(batch)) ||
                     (batch.status === "READY" &&
-                      can("submit", batch.branchId))) && (
+                      (can("submit", batch.branchId) ||
+                        can("prepare", batch.branchId)))) && (
                     <div className="mt-3 flex flex-wrap justify-end gap-2">
                       {can("prepare", batch.branchId) &&
                         canCancelBatch(batch) && (
@@ -640,13 +657,28 @@ export function InternalFinanceWeeklyPanel({
                           </button>
                         )}
                       {batch.status === "READY" &&
+                        !batch.approvalRequestId &&
+                        can("prepare", batch.branchId) && (
+                          <button
+                            type="button"
+                            onClick={() => regatherBatch(batch)}
+                            disabled={prepare.isPending || sender.isPending}
+                            title="Gom thêm phiếu mới đủ tick của tuần này vào batch"
+                            className="inline-flex items-center gap-2 rounded-lg border border-brand px-3 py-2 text-xs font-medium text-brand hover:bg-brand-soft disabled:opacity-50">
+                            {prepare.isPending && (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            )}
+                            Tổng hợp lại
+                          </button>
+                        )}
+                      {batch.status === "READY" &&
                         can("submit", batch.branchId) && (
                           <button
                             type="button"
                             onClick={() => createWeeklyApproval(batch.id)}
-                            disabled={createApproval.isPending}
+                            disabled={sender.isPending || prepare.isPending}
                             className="inline-flex items-center gap-2 rounded-lg bg-brand px-3 py-2 text-xs font-medium text-white disabled:opacity-50">
-                            {createApproval.isPending && (
+                            {sender.isPending && (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             )}
                             Tạo approval Lark
@@ -739,6 +771,14 @@ export function InternalFinanceWeeklyPanel({
           onClose={() => setCancelOpen(false)}
           // Giữ chi nhánh và khoảng ngày để chỉnh rồi tổng hợp lại.
           onCancelled={() => setSelectedBatchId(null)}
+        />
+      )}
+      {sender.late && (
+        <WeeklyLateEntriesDialog
+          late={sender.late}
+          loading={sender.isPending}
+          onConfirm={sender.confirmLate}
+          onClose={sender.closeLate}
         />
       )}
     </div>
