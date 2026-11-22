@@ -10,6 +10,8 @@
     "postinstall": "cp -r node_modules/tinymce public/tinymce"
   },
   "dependencies": {
+    "@ag-ui/client": "1.0.4",
+    "@ag-ui/core": "1.0.4",
     "@animate-ui/react": "2.4.2",
     "@radix-ui/react-avatar": "^1.0.4",
     "@radix-ui/react-checkbox": "^1.0.4",

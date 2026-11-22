@@ -129,6 +129,7 @@ export const ROUTE_PERMISSIONS: Record<
   "/san-pham/kiem-kho": { resource: "stock_audits", action: "view" },
   "/cai-dat/in-an": { resource: "print_templates", action: "view" },
   "/cai-dat/mau-bao-gia": { resource: "quote_templates", action: "view" },
+  "/tro-ly": { resource: "ai_assistant", action: "use" },
 };
 
 export const NAV_CONFIG: NavSection[] = [

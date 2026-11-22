@@ -74,6 +74,8 @@ html {
   --dt-color-cyan-soft: #a8d8e0;
   --dt-color-cyan-pale: #c5e4e8;
   --dt-color-cyan-bg: #e8f4f5;
+  /* Nền khung Trợ lý AI */
+  --dt-color-ai-surface: #e3f1f3;
   --dt-color-border: #d0e5e8;
   --dt-color-border-strong: #7aa5a8;
   --dt-color-price: #0d3b42;
@@ -116,6 +118,7 @@ html {
   --dt-color-cyan-soft: #a8d8e0;
   --dt-color-cyan-pale: #c5e4e8;
   --dt-color-cyan-bg: #e0f2f4;
+  --dt-color-ai-surface: #e3f1f3;
   --dt-color-border: #d3e2e5;
   --dt-color-border-strong: #7d979c;
   --dt-color-price: #0d3b42;
@@ -158,6 +161,7 @@ html {
   --dt-color-cyan-soft: #b9d2f5;
   --dt-color-cyan-pale: #cfe0f8;
   --dt-color-cyan-bg: #e5effc;
+  --dt-color-ai-surface: #e6eef8;
   --dt-color-border: #d9e0ea;
   --dt-color-border-strong: #8492a6;
   --dt-color-price: #0b2b5a;
@@ -201,6 +205,7 @@ html {
   --dt-color-cyan-soft: #cbe0da;
   --dt-color-cyan-pale: #d7e8e3;
   --dt-color-cyan-bg: #e2eeea;
+  --dt-color-ai-surface: #e6efeb;
   --dt-color-border: #e3d7c4;
   --dt-color-border-strong: #978a76;
   --dt-color-price: #0d3b42;
@@ -261,6 +266,7 @@ html {
   --dt-color-cyan-soft: #1e4c53;
   --dt-color-cyan-pale: #1a424a;
   --dt-color-cyan-bg: #173a40;
+  --dt-color-ai-surface: #122c31;
   --dt-color-border: #2e3d41;
   --dt-color-border-strong: #71878b;
   --dt-color-price: #cfe8eb;

@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { BranchSelector } from "./BranchSelector";
 import { SepayNotificationBell } from "../sepay/SepayNotificationBell";
 import { ChatSidebarToggle } from "../chat/ZaloChatSidebar";
+import { AiAssistantButton } from "../ai-assistant/AiAssistantButton";
 import { PaletteSwitcher } from "./PaletteSwitcher";
 import {
   useFilteredPosActions,
@@ -371,6 +372,8 @@ export function DashboardHeader() {
               </div>
             )}
 
+            <AiAssistantButton variant="desktop" />
+
             <BranchSelector />
 
             <SepayNotificationBell />
@@ -436,6 +439,7 @@ export function DashboardHeader() {
           <div className="flex items-center gap-1">
             <SepayNotificationBell />
             <ChatSidebarToggle />
+            <AiAssistantButton variant="mobile" />
             <PaletteSwitcher />
             {posActions.length > 0 && (
               <Link

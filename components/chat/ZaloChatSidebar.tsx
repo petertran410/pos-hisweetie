@@ -49,7 +49,15 @@ import { useEscapeClose } from "@/lib/hooks/useEscapeClose";
  * Sidebar chat Zalo (Smax) mép phải. Desktop: đẩy nội dung (rail 44px khi thu
  * gọn); mobile: sheet toàn màn hình mở từ nút trên header.
  */
-export function ZaloChatSidebar() {
+export function ZaloChatSidebar({
+  embedded = false,
+  reserveWidth = 0,
+}: {
+  // Nằm trong dock có tab của RightDock: luôn mở rộng, bề rộng do dock giữ
+  embedded?: boolean;
+  // Bề rộng khung khác đặt cạnh (Trợ lý AI) cần chừa thêm bên trái
+  reserveWidth?: number;
+} = {}) {
   const canView = useCan("smax_chat", "view");
   const isClient = useIsClient();
   const isMobile = useIsMobile();
@@ -83,7 +91,7 @@ export function ZaloChatSidebar() {
   if (!open)
     return <CollapsedRail customer={customer} onExpand={() => setOpen(true)} />;
 
-  return <ResizableAside onClose={() => setOpen(false)} />;
+  return <ResizableAside onClose={() => setOpen(false)} embedded={embedded} reserveWidth={reserveWidth} />;
 }
 
 const PANEL_MIN_WIDTH = 360;
@@ -97,7 +105,15 @@ const CHAT_MIN_WIDTH = 360;
 const POS_MIN_WIDTH = 220;
 
 /** Khung chat kéo mép trái để mở rộng / thu hẹp; bấm đúp mép để về mặc định. */
-function ResizableAside({ onClose }: { onClose: () => void }) {
+function ResizableAside({
+  onClose,
+  embedded = false,
+  reserveWidth = 0,
+}: {
+  onClose: () => void;
+  embedded?: boolean;
+  reserveWidth?: number;
+}) {
   const panelWidth = useChatSidebarStore((s) => s.panelWidth);
   const setPanelWidth = useChatSidebarStore((s) => s.setPanelWidth);
   const ref = useRef<HTMLElement>(null);
@@ -143,11 +159,22 @@ function ResizableAside({ onClose }: { onClose: () => void }) {
   return (
     <aside
       ref={ref}
-      className={`chat-ui relative shrink-0 border-l bg-white flex min-h-0 ${
-        panelWidth ? "" : "w-[420px] min-[1440px]:w-[720px]"
+      className={`chat-ui relative bg-white flex min-h-0 ${
+        embedded
+          ? "min-w-0 flex-1"
+          : `shrink-0 border-l ${panelWidth ? "" : reserveWidth ? "w-[420px]" : "w-[420px] min-[1440px]:w-[720px]"}`
       } ${resizing ? "select-none" : ""}`}
-      // Chừa tối thiểu 480px cho màn hình POS bên trái (html zoom 0.85 → bù viewport)
-      style={{ ...(panelWidth ? { width: panelWidth } : {}), maxWidth: "calc(100vw / 0.85 - 480px)" }}
+      // Chừa tối thiểu 480px (+ khung đặt cạnh) cho màn hình POS bên trái (html zoom 0.85 → bù viewport);
+      // trong dock có tab thì dock giữ bề rộng
+      style={
+        embedded
+          ? undefined
+          : {
+              // Đặt cạnh trợ lý AI: chat thu về tối đa 420px (giữ bề rộng đã kéo cho lúc mở một mình)
+              ...(panelWidth ? { width: reserveWidth ? Math.min(panelWidth, 420) : panelWidth } : {}),
+              maxWidth: `calc(100vw / 0.85 - ${480 + reserveWidth}px)`,
+            }
+      }
     >
       <div
         role="separator"
