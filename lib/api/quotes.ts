@@ -34,6 +34,9 @@ export const quotesApi = {
   /** Nhân bản — cũng là "Dùng mẫu này" từ Thư viện (bản mới là Nháp của người bấm). */
   duplicate: (id: number) => apiClient.post<Quote>(`/quotes/${id}/duplicate`),
 
+  /** Nhân bản mẫu thư viện thành mẫu thư viện mới (TV…). */
+  duplicateLibrary: (id: number) => apiClient.post<Quote>(`/quotes/${id}/duplicate-library`),
+
   /** File .xlsx theo bố cục sheet báo giá tổng hợp. */
   exportExcel: async (id: number): Promise<Blob> => {
     const res = await fetch(`${API_URL}/quotes/${id}/export/excel`, { headers: getAuthHeaders() });

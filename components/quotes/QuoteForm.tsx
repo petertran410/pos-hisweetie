@@ -8,6 +8,7 @@ import { ProductSearchDropdown } from "@/components/pos/ProductSearchDropdown";
 import { CustomerSearch } from "@/components/pos/CustomerSearch";
 import { PriceBookDropdown } from "@/components/pos/PriceBookDropdown";
 import { DatePickerInput } from "@/components/ui/DatePickerInput";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { usePriceBook } from "@/lib/hooks/usePriceBooks";
 import { useQuote, useSaveQuote, useSetQuoteStatus } from "@/lib/hooks/useQuotes";
 import { libraryFor, toPayload } from "@/lib/api/quotes";
@@ -132,6 +133,9 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
   const [autoTitle, setAutoTitle] = useState(!quoteId);
   const [customer, setCustomer] = useState<PosCustomer | null>(null);
   const [preview, setPreview] = useState(false);
+  // Mẫu thư viện (Thư viện › Sửa mẫu): không gắn khách, không đổi trạng thái, bắt buộc ngành hàng
+  const library = !!existing?.isLibrary;
+  const backHref = library ? "/khach-hang/bao-gia?tab=library" : "/khach-hang/bao-gia";
   const { data: templates = [], isLoading: templatesLoading } = useQuoteTemplates();
   const tpl = templates.find((t) => t.id === draft.templateId) ?? null;
   /** Mẫu chọn được (Cài đặt › Mẫu báo giá): đang sử dụng, cộng mẫu báo giá này đang dùng (kể cả đã ngừng). */
@@ -252,6 +256,7 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
   // ── Lưu ────────────────────────────────────────────────────────────
   const submit = async () => {
     if (!draft.items.length) return toast.error("Báo giá chưa có sản phẩm");
+    if (library && !draft.category) return toast.error("Chọn ngành hàng cho mẫu thư viện");
     if (draft.customer?.id === null && !draft.customer.name.trim())
       return toast.error("Nhập tên khách hàng (khách chưa có trong POS)");
     if (draft.validUntil && draft.validUntil < draft.appliedFrom)
@@ -282,15 +287,15 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
       {/* Header: đóng + tìm sản phẩm (như tạo đơn) */}
       <div className="bg-white border-b px-3 lg:px-4 py-2 flex items-center gap-3 flex-shrink-0">
         <button
-          onClick={() => router.push("/khach-hang/bao-gia")}
+          onClick={() => router.push(backHref)}
           aria-label="Đóng"
           className="p-2 hover:bg-gray-100 rounded-lg shrink-0">
           <X className="w-5 h-5" />
         </button>
         <h2 className="text-base lg:text-lg font-semibold shrink-0 whitespace-nowrap">
-          {existing ? `Báo giá ${existing.code}` : "Tạo báo giá"}
+          {existing ? `${library ? "Mẫu thư viện" : "Báo giá"} ${existing.code}` : "Tạo báo giá"}
         </h2>
-        {existing && (
+        {existing && !library && (
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${QUOTE_STATUS_COLOR[status]}`}>
             {QUOTE_STATUS_LABEL[status]}
           </span>
@@ -313,6 +318,23 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
         {/* Cột phải: khách, bảng giá, mẫu, thời hạn, nội dung in */}
         <div className="w-full lg:w-[36%] bg-white border-l flex flex-col min-h-0">
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {library ? (
+              <Row label="Ngành hàng">
+                <SearchableSelect
+                  options={(Object.keys(QUOTE_CATEGORY_LABEL) as QuoteCategory[]).map((c) => ({
+                    value: c,
+                    label: QUOTE_CATEGORY_LABEL[c],
+                  }))}
+                  value={draft.category ?? ""}
+                  onChange={(v) => patch({ category: (v || null) as QuoteCategory | null })}
+                  placeholder="Chọn ngành hàng"
+                  size="sm"
+                />
+                <p className="text-[11px] text-gray-500">
+                  Mẫu dùng chung trong Thư viện; Sale bấm “Dùng mẫu này” để tạo báo giá từ mẫu.
+                </p>
+              </Row>
+            ) : (
             <Row label="Khách hàng · Bảng giá nguồn">
               {guest ? (
                 <div className="border rounded-lg p-3 space-y-2 bg-gray-50">
@@ -392,6 +414,7 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
                 </>
               )}
             </Row>
+            )}
 
             <Row label="Mẫu báo giá">
               <select
@@ -490,7 +513,7 @@ export function QuoteForm({ quoteId }: { quoteId?: number }) {
               </label>
             )}
 
-            {existing && QUOTE_STATUS_NEXT[status].length > 0 && (
+            {existing && !library && QUOTE_STATUS_NEXT[status].length > 0 && (
               <Row label="Cập nhật trạng thái">
                 <div className="flex flex-wrap gap-2">
                   {QUOTE_STATUS_NEXT[status].map((s) => (

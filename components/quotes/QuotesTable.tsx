@@ -7,7 +7,14 @@ import { Copy, Eye, FileText, Info, Pencil, Plus, Sparkles, Trash2 } from "lucid
 import { CustomTooltip } from "@/components/ui/CustomTooltip";
 import { confirmAction } from "@/lib/chat/confirm";
 import { FilterMultiSelect } from "@/components/ui/filters";
-import { useDeleteQuote, useDuplicateQuote, useQuote, useQuotes } from "@/lib/hooks/useQuotes";
+import { useCan } from "@/lib/hooks/useCan";
+import {
+  useDeleteQuote,
+  useDuplicateLibraryQuote,
+  useDuplicateQuote,
+  useQuote,
+  useQuotes,
+} from "@/lib/hooks/useQuotes";
 import type { QuoteCategory, QuoteFilters, QuoteListItem, QuoteRegion } from "@/lib/types/quote";
 import {
   QUOTE_CATEGORY_LABEL,
@@ -88,6 +95,10 @@ function IconButton({
 export function QuotesTable({ filters, onChange }: Props) {
   const router = useRouter();
   const library = filters.tab === "library";
+  // Sửa mẫu thư viện: Trưởng Bộ Phận Sale (xem mọi báo giá + sửa báo giá)
+  const canUpdate = useCan("quotes", "update");
+  const canViewAll = useCan("quotes", "view_all");
+  const canEditLibrary = canUpdate && canViewAll;
   const { data, isLoading } = useQuotes(filters);
   const rows = data?.data ?? [];
   const total = data?.total ?? 0;
@@ -116,6 +127,7 @@ export function QuotesTable({ filters, onChange }: Props) {
   const [previewId, setPreviewId] = useState<number | null>(null);
   const { data: preview } = useQuote(previewId);
   const duplicate = useDuplicateQuote();
+  const duplicateLibrary = useDuplicateLibraryQuote();
   const remove = useDeleteQuote();
 
   const removeQuote = async (q: QuoteListItem) => {
@@ -126,6 +138,13 @@ export function QuotesTable({ filters, onChange }: Props) {
     if (!ok) return;
     await remove.mutateAsync(q.id);
     toast.success(`Đã xoá ${q.code}`);
+  };
+
+  /** Nhân bản mẫu thư viện → mẫu thư viện mới, mở để sửa. */
+  const copyLibrary = async (q: QuoteListItem) => {
+    const created = await duplicateLibrary.mutateAsync(q.id);
+    toast.success(`Đã nhân bản mẫu ${q.code} thành ${created.code}`);
+    router.push(`/khach-hang/bao-gia/${created.id}`);
   };
 
   const copyFrom = async (q: QuoteListItem) => {
@@ -306,6 +325,19 @@ export function QuotesTable({ filters, onChange }: Props) {
                           <IconButton title="Xem trước" onClick={() => setPreviewId(q.id)}>
                             <Eye className="w-4 h-4" />
                           </IconButton>
+                          {canEditLibrary && (
+                            <>
+                              <IconButton title="Sửa mẫu" onClick={() => router.push(`/khach-hang/bao-gia/${q.id}`)}>
+                                <Pencil className="w-4 h-4" />
+                              </IconButton>
+                              <IconButton
+                                title={duplicateLibrary.isPending ? "Đang nhân bản…" : "Nhân bản mẫu"}
+                                disabled={duplicateLibrary.isPending}
+                                onClick={() => copyLibrary(q)}>
+                                <Copy className="w-4 h-4" />
+                              </IconButton>
+                            </>
+                          )}
                           <button
                             onClick={() => copyFrom(q)}
                             disabled={duplicate.isPending}

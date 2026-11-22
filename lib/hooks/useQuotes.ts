@@ -45,6 +45,15 @@ export function useDuplicateQuote() {
   });
 }
 
+export function useDuplicateLibraryQuote() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (id: number) => quotesApi.duplicateLibrary(id),
+    onSuccess: invalidate,
+    onError: (e: Error) => toast.error(e.message || "Không nhân bản được mẫu"),
+  });
+}
+
 export function useDeleteQuote() {
   const invalidate = useInvalidate();
   return useMutation({
