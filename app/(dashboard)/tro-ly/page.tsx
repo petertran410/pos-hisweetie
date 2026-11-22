@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Search, Sparkles, Trash2 } from "lucide-react";
 import { PagePermissionGuard } from "@/components/permissions/PagePermissionGuard";
 import { AiAssistantChat } from "@/components/ai-assistant/AiAssistantChat";
+import { AiShareButton } from "@/components/ai-assistant/AiShareButton";
 import { useActiveChatCustomer } from "@/components/ai-assistant/AiAssistantPanel";
 import { pageSuggestions, useHasPermission } from "@/components/ai-assistant/page-suggestions";
 import {
@@ -176,6 +177,14 @@ function AssistantWorkspace() {
       </nav>
 
       <section aria-label="Hội thoại" className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {current !== null && !opened.isError && (
+          <div className="flex shrink-0 items-center gap-2 border-b bg-white px-4 py-2 sm:px-6">
+            <p className="m-0 min-w-0 flex-1 truncate text-sm font-medium text-brand-dark">
+              {opened.data?.title ?? items.find((item) => item.id === current)?.title ?? "Hội thoại"}
+            </p>
+            <AiShareButton conversationId={current} tone="light" />
+          </div>
+        )}
         {opened.isError ? (
           <div className="p-6">
             <p className="m-0 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">

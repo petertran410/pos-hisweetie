@@ -13,6 +13,7 @@ const TITLE_MAP: Array<{ prefix: string; title: string }> = [
   // Bán hàng
   { prefix: "/ban-hang", title: "Bán hàng" },
   { prefix: "/tro-ly", title: "Trợ lý AI" },
+  { prefix: "/chia-se-tro-ly", title: "Hội thoại được chia sẻ" },
 
   // Đơn hàng
   { prefix: "/don-hang/dat-hang", title: "Đặt hàng" },

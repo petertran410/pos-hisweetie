@@ -12,7 +12,14 @@ export type AiChatConfig = {
 };
 export type AiConversationSummary = { id: number; title: string; createdAt: string; updatedAt: string };
 export type AiStoredMessage = { id: number; role: "user" | "assistant"; content: string; toolNames: string[]; createdAt: string };
-export type AiConversationDetail = AiConversationSummary & { messages: AiStoredMessage[] };
+export type AiShareLink = { token: string; updatedAt: string };
+export type AiConversationDetail = AiConversationSummary & { messages: AiStoredMessage[]; share: AiShareLink | null };
+/** Hội thoại người khác chia sẻ (bản chụp tới lúc chia sẻ). */
+export type AiSharedConversation = { title: string; ownerName: string; sharedAt: string; messages: AiStoredMessage[] };
+
+/** Link xem hội thoại được chia sẻ (cần đăng nhập POS). */
+export const aiShareUrl = (token: string) =>
+  `${typeof window !== "undefined" ? window.location.origin : ""}/chia-se-tro-ly/${token}`;
 
 /** `STATE_SNAPSHOT` của trợ lý: hội thoại đã lưu ứng với thread. */
 export type AssistantState = { conversation?: { id: number; title: string } };
@@ -43,6 +50,7 @@ export const TOOL_SHORT: Record<string, string> = {
   leads_summary: "Tổng hợp lead",
   quotes_summary: "Tổng hợp báo giá",
   revenue_summary: "Tổng hợp doanh thu",
+  smax_chats: "Tin nhắn Smax",
 };
 
 const toolShort = (name: string) => TOOL_SHORT[name] ?? "Tra cứu dữ liệu";

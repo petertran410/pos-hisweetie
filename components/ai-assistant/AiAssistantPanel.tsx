@@ -12,6 +12,7 @@ import { useAiConfig, useAiConversation, useRefreshAiConfig } from "@/lib/hooks/
 import { resolveTitle } from "@/components/layout/PageTitle";
 import { turnsFromStored, type AiForwardedProps } from "@/lib/ai/ai-chat";
 import { AiAssistantChat } from "./AiAssistantChat";
+import { AiShareButton } from "./AiShareButton";
 import { pageSuggestions, useHasPermission } from "./page-suggestions";
 
 /** Tên trang cho "Đang xem: …" (cùng bảng tiêu đề tab trình duyệt). */
@@ -123,6 +124,7 @@ export function AiAssistantPanel({ layout, onClose, className = "" }: { layout: 
         >
           Mới
         </button>
+        <AiShareButton conversationId={conversationId} tone="dark" />
         <Link
           href={conversationId !== null ? `/tro-ly?c=${conversationId}` : "/tro-ly"}
           aria-label="Mở rộng ra trang Trợ lý AI"

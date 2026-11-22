@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Link2Off, Loader2, RotateCw, UserPlus } from "lucide-react";
+import { AlarmClock, Link2Off, Loader2, RotateCw, Sparkles, UserPlus } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { aiComposeApi, THREAD_LABEL_META, threadLabelApi, type ThreadLabel } from "@/lib/ai/ai-compose";
+import { waitLabel } from "@/lib/chat/waitAlert";
 import { useRecentChats, useRefreshRecentChats } from "@/lib/hooks/useSmaxChat";
 import { useChatSidebarStore, type ChatCustomerRef } from "@/lib/store/chatSidebar";
 import type { LooseThread, RecentChat, ZaloContactKind } from "@/lib/types/smaxChat";
@@ -94,7 +97,13 @@ export function useOpenRecentChat(onOpen: Props["onOpen"], onOpenThread: (t: Loo
   return { open };
 }
 
-type ListFilter = "all" | "unlinked" | "group";
+type ListFilter = "all" | "unlinked" | "group" | "action" | `label:${ThreadLabel}`;
+
+const LABEL_KEYS: ThreadLabel[] = ["order", "price", "complaint", "delivery"];
+
+/** Cần xử lý: khách chờ lâu, hoặc nhãn còn mới cho biết khách đang chờ bên bán (không tính "Khác"). */
+const needsAction = (c: RecentChat) =>
+  !!c.waiting || (!!c.aiLabel && !c.aiLabel.stale && c.aiLabel.pending && c.aiLabel.label !== "other");
 
 /**
  * Hội thoại mới nhất trên kênh Zalo đang chọn, khớp với khách POS để mở nhanh.
@@ -132,13 +141,60 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid, query = "" }: P
   const isUnread = (c: RecentChat) => c.unread || newCount(c.tid, c.messageCount) > 0;
   const isUnlinked = (c: RecentChat) => c.match?.type !== "linked";
   const passes = (c: RecentChat) =>
-    filter === "unread" ? isUnread(c) : filter === "unlinked" ? isUnlinked(c) : filter === "group" ? c.isGroup : true;
+    filter === "unread"
+      ? isUnread(c)
+      : filter === "unlinked"
+        ? isUnlinked(c)
+        : filter === "group"
+          ? c.isGroup
+          : filter === "action"
+            ? needsAction(c)
+            : filter.startsWith("label:")
+              ? c.aiLabel?.label === filter.slice(6)
+              : true;
   const counts = {
     unread: items.filter(isUnread).length,
     unlinked: items.filter(isUnlinked).length,
     group: items.filter((c) => c.isGroup).length,
+    action: items.filter(needsAction).length,
   };
-  const shown = items.filter(passes);
+  const labelCounts = LABEL_KEYS.map((k) => ({ k, n: items.filter((c) => c.aiLabel?.label === k).length })).filter(
+    (x) => x.n > 0
+  );
+
+  // "Phân loại" (AI, chỉ khi bấm): các hội thoại đang tải, chưa có nhãn / nhãn cũ trước, tối đa 30 / kênh
+  const queryClient = useQueryClient();
+  const canSendChat = useCan("smax_chat", "send");
+  const aiStatus = useQuery({
+    queryKey: ["aiComposeStatus"],
+    queryFn: aiComposeApi.status,
+    enabled: canSendChat,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const [classifying, setClassifying] = useState(false);
+  const classify = async () => {
+    const byPage = new Map<string, RecentChat[]>();
+    for (const c of items) byPage.set(c.pagePid, [...(byPage.get(c.pagePid) ?? []), c]);
+    setClassifying(true);
+    let labeled = 0;
+    try {
+      for (const [page, list] of byPage) {
+        const ordered = [...list].sort((a, b) => Number(!!a.aiLabel && !a.aiLabel.stale) - Number(!!b.aiLabel && !b.aiLabel.stale));
+        labeled += (await threadLabelApi.classify(page, ordered.slice(0, 30).map((c) => c.tid))).labeled;
+      }
+      toast.success(labeled ? `Đã phân loại ${labeled} hội thoại` : "Các hội thoại đã có nhãn mới nhất");
+      queryClient.invalidateQueries({ queryKey: ["smaxRecentChats"] });
+      queryClient.invalidateQueries({ queryKey: ["aiComposeStatus"] });
+    } catch (e) {
+      toast.error((e as Error).message || "Không phân loại được");
+    } finally {
+      setClassifying(false);
+    }
+  };
+  // Khách chờ lâu: ghim đầu danh sách, luôn hiện (không theo bộ lọc, không tắt được), lâu nhất trước
+  const urgent = items.filter((c) => c.waiting).sort((a, b) => b.waiting!.minutes - a.waiting!.minutes);
+  const shown = items.filter((c) => passes(c) && !c.waiting);
 
   // Tìm theo tên Zalo / tên nhóm (không tìm nội dung): lọc ngay trong danh sách đã tải,
   // rồi bổ sung kết quả Smax tìm trên toàn bộ hội thoại (~2-3s)
@@ -179,11 +235,17 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid, query = "" }: P
   const chips: { key: ListFilter | "unread"; label: string; count?: number }[] = [
     { key: "all", label: "Tất cả" },
     { key: "unread", label: "Chưa đọc", count: counts.unread },
+    { key: "action", label: "Cần xử lý", count: counts.action },
     { key: "unlinked", label: "Chưa gắn POS", count: counts.unlinked },
     { key: "group", label: "Nhóm", count: counts.group },
+    ...labelCounts.map(({ k, n }) => ({ key: `label:${k}` as ListFilter, label: THREAD_LABEL_META[k].text, count: n })),
   ];
   const emptyText =
-    filter === "unread"
+    filter === "action"
+      ? "Không có hội thoại cần xử lý (bấm \"Phân loại\" để AI gắn nhãn các hội thoại đang tải)."
+      : filter.startsWith("label:")
+        ? "Không có hội thoại mang nhãn này."
+        : filter === "unread"
       ? "Không có hội thoại chưa đọc."
       : filter === "unlinked"
         ? "Mọi hội thoại đã tải đều đã gắn khách POS."
@@ -199,12 +261,22 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid, query = "" }: P
     <section aria-label={searching ? "Hội thoại khớp tìm kiếm" : "Đang chat gần đây"}>
       <div className="mb-2 flex items-center gap-2">
         <h3 className="text-xs font-semibold uppercase text-gray-500">{searching ? "Hội thoại" : "Đang chat gần đây"}</h3>
+        {canSendChat && aiStatus.data?.enabled && !searching && items.length > 0 && (
+          <button
+            onClick={() => void classify()}
+            disabled={classifying}
+            title="AI gắn nhãn Đặt hàng / Hỏi giá / Khiếu nại / Hỏi giao hàng cho các hội thoại đang tải (tính 1 lượt AI)"
+            className="ml-auto flex h-7 items-center gap-1 rounded px-1.5 text-xs font-medium text-brand-deep hover:bg-cyan-bg disabled:opacity-50">
+            {classifying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            {classifying ? "Đang phân loại…" : "Phân loại"}
+          </button>
+        )}
         <button
           onClick={refresh}
           disabled={isFetching}
           title="Tải lại"
           aria-label="Tải lại danh sách hội thoại"
-          className="ml-auto flex h-7 w-7 items-center justify-center rounded text-gray-500 hover:bg-gray-100 disabled:opacity-50">
+          className={`${canSendChat && aiStatus.data?.enabled && !searching && items.length > 0 ? "" : "ml-auto"} flex h-7 w-7 items-center justify-center rounded text-gray-500 hover:bg-gray-100 disabled:opacity-50`}>
           <RotateCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
         </button>
       </div>
@@ -302,8 +374,24 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid, query = "" }: P
         </p>
       ) : (
         <>
+          {urgent.length > 0 && (
+            <section aria-label="Cần trả lời gấp" className="mb-2 rounded-md border border-red-200 bg-red-50/60 p-1">
+              <h4 className="flex items-center gap-1.5 px-1.5 py-1 text-xs font-semibold text-red-700">
+                <AlarmClock className="h-3.5 w-3.5" aria-hidden />
+                Cần trả lời gấp ({urgent.length})
+                <span className="font-normal text-red-600/80">· khách chờ quá 30 phút giờ làm</span>
+              </h4>
+              <ul className="flex flex-col">
+                {urgent.map((c) => (
+                  <li key={c.tid}>
+                    <RecentChatRow c={c} onClick={() => open(c)} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           {shown.length === 0 ? (
-            <p className="text-sm text-gray-500">{emptyText}</p>
+            urgent.length === 0 && <p className="text-sm text-gray-500">{emptyText}</p>
           ) : (
             <ul className="flex flex-col">
               {shown.map((c) => (
@@ -377,6 +465,21 @@ export function RecentChatRow({ c, onClick }: { c: RecentChat; onClick: () => vo
           }`}>
           {c.lastMessage || "…"}
         </span>
+        {c.aiLabel && c.aiLabel.label !== "other" && (
+          <span
+            className={`mt-0.5 inline-flex max-w-full items-center gap-1 rounded border px-1 text-[11px] ${THREAD_LABEL_META[c.aiLabel.label].className} ${c.aiLabel.stale ? "opacity-50" : ""}`}
+            title={`${c.aiLabel.manual ? "Gắn tay" : "AI"}: ${c.aiLabel.reason ?? ""}${c.aiLabel.stale ? " (nhãn cũ — đã có tin mới)" : ""}`}>
+            {THREAD_LABEL_META[c.aiLabel.label].text}
+            {c.aiLabel.pending && !c.aiLabel.stale && <span aria-label="khách đang chờ">•</span>}
+          </span>
+        )}
+        {c.waiting && (
+          <span className="flex items-center gap-1 text-xs font-medium text-red-600">
+            <AlarmClock className="h-3 w-3 shrink-0" aria-hidden />
+            {waitLabel(c.waiting.minutes)}
+            {c.waiting.upset && <span className="rounded bg-red-100 px-1 text-[11px]">Có thể đang bực</span>}
+          </span>
+        )}
         {m?.type === "linked" && (
           <span className="block truncate text-xs text-brand">{linkedChatLabel(m)}</span>
         )}
