@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth";
 import { logout } from "@/lib/auth/session";
@@ -34,6 +34,21 @@ export function DashboardHeader() {
   // ── Desktop states (giữ nguyên) ──
   const [hoveredMenu, setHoveredMenu] = useState<string | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  // Menu tài khoản: bấm ra ngoài khung hoặc Esc thì đóng
+  useEffect(() => {
+    if (!showUserMenu) return;
+    const onDown = (e: PointerEvent) => {
+      if (!userMenuRef.current?.contains(e.target as Node)) setShowUserMenu(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setShowUserMenu(false);
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [showUserMenu]);
   // ── Mobile states (thêm mới) ──
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [expandedMobileSection, setExpandedMobileSection] = useState<
@@ -378,7 +393,7 @@ export function DashboardHeader() {
 
             <SepayNotificationBell />
 
-            <div className="relative">
+            <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center gap-2 px-3 py-2 hover:bg-brand-header-hover rounded transition-colors">
