@@ -384,8 +384,11 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid, query = "" }: P
               </h4>
               <ul className="flex flex-col">
                 {urgent.map((c) => (
-                  <li key={c.tid}>
-                    <RecentChatRow c={c} onClick={() => open(c)} />
+                  <li key={c.tid} className="flex items-center gap-1">
+                    <div className="min-w-0 flex-1">
+                      <RecentChatRow c={c} onClick={() => open(c)} />
+                    </div>
+                    {canSendChat && <SkipWaitButton c={c} />}
                   </li>
                 ))}
               </ul>
@@ -503,6 +506,37 @@ export function RecentChatRow({ c, onClick }: { c: RecentChat; onClick: () => vo
       </span>
     )}
     </div>
+  );
+}
+
+/** Bỏ khỏi "Cần trả lời gấp" (vd tin khách không cần trả lời). Dùng chung mọi người; khách nhắn tin mới thì báo lại. */
+function SkipWaitButton({ c }: { c: RecentChat }) {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const skip = async () => {
+    if (!c.waiting) return;
+    setBusy(true);
+    try {
+      await smaxChatApi.skipWait({ pagePid: c.pagePid, tid: c.tid, since: c.waiting.since });
+      queryClient.setQueriesData<{ items: RecentChat[] }>({ queryKey: ["smaxRecentChats"] }, (d) =>
+        d && { ...d, items: d.items.map((i) => (i.tid === c.tid && i.pagePid === c.pagePid ? { ...i, waiting: null } : i)) }
+      );
+      toast.success(`Đã bỏ "${c.name}" khỏi Cần trả lời gấp`);
+    } catch (err) {
+      toast.error((err as Error).message || "Không bỏ qua được");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={skip}
+      disabled={busy}
+      title="Không cần trả lời — bỏ khỏi mục này đến khi khách nhắn tin mới"
+      className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-50">
+      {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-label="Đang bỏ qua" /> : "Bỏ qua"}
+    </button>
   );
 }
 
