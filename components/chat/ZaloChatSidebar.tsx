@@ -1104,6 +1104,8 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
   // Khung hẹp: Thông tin POS mở dạng lớp phủ thay cho cột bên phải
   const wide = useContext(PanelWideContext);
   const [posOpen, setPosOpen] = useState(false);
+  // Đang kéo một mục từ Thông tin POS (khung phủ): nền mờ cho chuột xuyên qua để thả vào ô soạn
+  const [posDragging, setPosDragging] = useState(false);
   useEscapeClose(() => setPosOpen(false), posOpen && !wide);
 
   const channels = ctx.myChannels;
@@ -1248,10 +1250,19 @@ function ChannelChat({ ctx }: { ctx: ChatContext }) {
     <div className="relative flex flex-1 min-h-0 flex-col">
       {posOpen && !wide && (
         <>
-          <div className="absolute inset-0 z-20 bg-black/20" onClick={() => setPosOpen(false)} />
+          <div
+            className={`absolute inset-0 z-20 bg-black/20 ${posDragging ? "pointer-events-none" : ""}`}
+            onClick={() => setPosOpen(false)}
+          />
           <section
             aria-label="Thông tin POS"
             className="absolute inset-x-0 top-0 z-30 flex max-h-[80%] flex-col border-b bg-white shadow-lg"
+            onDragStartCapture={() => setPosDragging(true)}
+            onDragEndCapture={(e) => {
+              setPosDragging(false);
+              // Thả vào ô soạn thành công → đóng khung để thấy nội dung vừa chèn
+              if (e.dataTransfer.dropEffect !== "none") setPosOpen(false);
+            }}
           >
             <div className="flex items-center justify-between border-b px-3 py-1.5">
               <h3 className="text-xs font-semibold uppercase text-gray-500">Thông tin POS</h3>

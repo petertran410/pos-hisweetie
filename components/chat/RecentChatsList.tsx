@@ -8,7 +8,7 @@ import { waitLabel } from "@/lib/chat/waitAlert";
 import { useRecentChats, useRefreshRecentChats } from "@/lib/hooks/useSmaxChat";
 import { useChatSidebarStore, type ChatCustomerRef } from "@/lib/store/chatSidebar";
 import type { LooseThread, RecentChat, ZaloContactKind } from "@/lib/types/smaxChat";
-import { markSeen, newCount } from "@/lib/chat/seen";
+import { markSeen, newCount, rememberUnseenOnOpen } from "@/lib/chat/seen";
 import { ZaloAvatar } from "./ZaloAvatar";
 import { GroupMark, ThreadKindIcon, ThreadKindLogo } from "./ThreadKindIcon";
 import { MetaAiSwitch } from "./MetaAiSwitch";
@@ -83,6 +83,7 @@ export function linkedChatLabel(m: Extract<RecentChat["match"], { type: "linked"
  */
 export function useOpenRecentChat(onOpen: Props["onOpen"], onOpenThread: (t: LooseThread) => void) {
   const open = (c: RecentChat) => {
+    rememberUnseenOnOpen(c.tid, newCount(c.tid, c.messageCount));
     markSeen(c.tid, c.messageCount);
     if (c.match?.type === "linked") {
       onOpen(c.match.customer, {

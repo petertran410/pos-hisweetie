@@ -18,7 +18,7 @@ import { ChatComposer } from "./ChatComposer";
 import { ChatThreadHeader } from "./ChatThreadHeader";
 import { ZaloAvatar } from "./ZaloAvatar";
 import { stickerUrl } from "@/lib/chat/stickers";
-import { markSeen, newCount } from "@/lib/chat/seen";
+import { forgetUnseenOnOpen, markSeen, newCount, peekUnseenOnOpen } from "@/lib/chat/seen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { SendConfirmDialog } from "./SendConfirmDialog";
 import { MessageMenu } from "./MessageMenu";
@@ -186,14 +186,19 @@ export function ChatThread({
       toast.error((e as Error).message || "Không đổi được nhãn");
     }
   };
-  // Số tin chưa đọc lúc mở (trước khi đánh dấu đã xem) — cho gợi ý "Tóm tắt N tin chưa đọc"
+  // Số tin chưa đọc lúc mở — cho gợi ý "Tóm tắt N tin chưa đọc". Mở từ danh sách "Đang chat gần đây"
+  // thì danh sách đã đánh dấu đã xem trước khi khung chat dựng → lấy số tin mới ngay trước lần đánh dấu đó
   const [unreadAtOpen] = useState(() => {
+    const opened = peekUnseenOnOpen(source.tid);
+    if (opened !== undefined) return opened;
     for (const [, d] of queryClient.getQueriesData<{ items: RecentChat[] }>({ queryKey: ["smaxRecentChats"] })) {
       const hit = d?.items.find((i) => i.tid === source.tid);
       if (hit) return newCount(source.tid, hit.messageCount);
     }
     return 0;
   });
+  // Đã đọc số tin mới lúc mở → xoá, lần mở sau (không qua danh sách) không dùng lại số cũ
+  useEffect(() => forgetUnseenOnOpen(source.tid), [source.tid]);
   useEffect(() => {
     let found: RecentChat["waiting"] = null;
     let label: RecentChat["aiLabel"] = null;
