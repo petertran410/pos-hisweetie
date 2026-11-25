@@ -10,6 +10,7 @@ import { formatDateOnly, formatVnDateTime } from "@/lib/internal-finance/dates";
 import {
   ENTRY_STATUS_LABELS,
   FUEL_ADVANCE_USED_LABEL,
+  FUEL_NORM_TOLERANCE,
   isFuelAdvanceUsed,
 } from "@/lib/internal-finance/vehicle-constants";
 import { formatCurrency } from "@/lib/utils";
@@ -37,22 +38,65 @@ const numberCell = (value: number | string | null | undefined, digits = 0) => {
 const CHECK_CLASS: Record<string, string> = {
   NORMAL: "bg-green-100 text-green-700",
   ABNORMAL: "bg-red-100 text-red-700",
+  UNSET: "bg-gray-100 text-gray-500",
+};
+const CHECK_TEXT: Record<string, string> = {
+  NORMAL: "Bình thường",
+  ABNORMAL: "Bất thường",
+  UNSET: "Chưa đặt",
 };
 
+const ODO_CHECK_TITLE: Record<string, string> = {
+  BACKWARD:
+    "ODO lệch thứ tự ngày: cao hơn các lần đổ sau hoặc thấp hơn các lần đổ trước. Đối chiếu ảnh đồng hồ.",
+  JUMP: "Km tới lần đổ sau quá xa: ODO nhập sai hoặc thiếu phiếu xăng ở giữa.",
+};
+
+const formatRate = (value: number, digits: number) =>
+  value.toLocaleString("en-US", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+
 export function CheckBadges({ metrics }: { metrics?: FuelMetrics | null }) {
-  if (!metrics || (!metrics.consumptionCheck && !metrics.costCheck)) {
-    return <span className="text-xs text-gray-400">Chờ lần đổ sau</span>;
-  }
+  // Định mức: L/100km của phiếu lệch quá ±FUEL_NORM_TOLERANCE so với định mức xe.
+  const consumption = metrics?.consumptionCheck
+    ? metrics.consumptionCheck
+    : metrics?.litersPer100Km != null && metrics.norm === null
+      ? "UNSET"
+      : null;
+  const liters =
+    metrics?.litersPer100Km != null
+      ? `Phiếu này: ${formatRate(metrics.litersPer100Km, 2)} L/100km`
+      : "";
   const badges: Array<[string, string | null, string]> = [
     [
+      "ODO",
+      metrics?.odoCheck ? "ABNORMAL" : null,
+      metrics?.odoCheck ? ODO_CHECK_TITLE[metrics.odoCheck] : "",
+    ],
+    [
       "Định mức",
-      metrics.consumptionCheck,
-      metrics.normMin !== null && metrics.normMax !== null
-        ? `Ngưỡng l/100km: ${metrics.normMin.toFixed(2)} – ${metrics.normMax.toFixed(2)}`
+      consumption,
+      metrics?.norm != null
+        ? `${liters} · Định mức: ${formatRate(metrics.norm, 2)} ± ${FUEL_NORM_TOLERANCE} L/100km (${formatRate(metrics.norm - FUEL_NORM_TOLERANCE, 2)} – ${formatRate(metrics.norm + FUEL_NORM_TOLERANCE, 2)})`
+        : `${liters} · Xe chưa đặt định mức: vào Danh sách xe → Sửa để đặt`,
+    ],
+    [
+      "đ/km",
+      metrics?.costCheck ?? null,
+      metrics?.costPerKm != null
+        ? `Phiếu này: ${formatRate(metrics.costPerKm, 0)} đ/km, so với ngưỡng đ/km đặt trên xe`
         : "",
     ],
-    ["đ/km", metrics.costCheck, "So với ngưỡng đ/km đặt trên xe"],
   ];
+  if (!badges.some(([, check]) => check)) {
+    return (
+      <span className="text-xs text-gray-400">
+        {metrics?.nextOdo == null ? "Chờ lần đổ sau" : "Chưa đủ dữ liệu"}
+      </span>
+    );
+  }
   return (
     <div className="flex flex-col items-start gap-1">
       {badges.map(([label, check, title]) =>
@@ -61,7 +105,7 @@ export function CheckBadges({ metrics }: { metrics?: FuelMetrics | null }) {
             key={label}
             title={title}
             className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${CHECK_CLASS[check]}`}>
-            {label}: {check === "NORMAL" ? "Bình thường" : "Bất thường"}
+            {label}: {CHECK_TEXT[check]}
           </span>
         ) : null,
       )}
@@ -325,7 +369,7 @@ export function VehicleEntryTable({
           {
             key: "nextOdo",
             label: "ODO kỳ sau",
-            width: "100px",
+            width: "110px",
             align: "right",
             render: (row) => numberCell(row.metrics?.nextOdo),
           },

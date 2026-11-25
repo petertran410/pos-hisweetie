@@ -12,6 +12,8 @@ export interface Vehicle {
   driver?: { id: number; name: string } | null;
   costPerKmMin: number | string | null;
   costPerKmMax: number | string | null;
+  /** Định mức tiêu hao chuẩn (L/100km), cho phép lệch ±FUEL_NORM_TOLERANCE. */
+  fuelNorm: number | string | null;
   oilChangeIntervalKm: number | null;
   isActive: boolean;
   note: string | null;
@@ -21,6 +23,9 @@ export interface Vehicle {
   lastOilChangeOdo: number | null;
   kmSinceOilChange: number | null;
   oilChangeDue: boolean;
+  /** Tổng lít ÷ tổng km × 100 của tối đa 10 lần đổ gần nhất; null khi chưa đủ dữ liệu. */
+  recentLitersPer100Km: number | null;
+  recentFuelSamples: number;
 }
 
 export interface VehicleInput {
@@ -32,6 +37,7 @@ export interface VehicleInput {
   driverId?: number | null;
   costPerKmMin?: number | null;
   costPerKmMax?: number | null;
+  fuelNorm?: number | null;
   oilChangeIntervalKm?: number | null;
   note?: string | null;
 }
