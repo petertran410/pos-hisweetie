@@ -8,7 +8,14 @@ import { ColumnToggle } from "@/components/shared/ColumnToggle";
 import { useColumnToggle } from "@/lib/hooks/useColumnToggle";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { CarFront, ListChecks, Plus, SlidersHorizontal } from "lucide-react";
+import {
+  CarFront,
+  Download,
+  ListChecks,
+  Loader2,
+  Plus,
+  SlidersHorizontal,
+} from "lucide-react";
 import Swal from "sweetalert2";
 import { VehicleFinanceForm } from "@/components/internal-finance/VehicleFinanceForm";
 import { FinancePageGuard } from "@/components/permissions/FinancePageGuard";
@@ -30,6 +37,7 @@ import type {
 import { useBranches } from "@/lib/hooks/useBranches";
 import {
   useCancelVehicleEntry,
+  useExportVehicleEntries,
   useVehicleEntries,
 } from "@/lib/hooks/useInternalFinance";
 import { useVehicles } from "@/lib/hooks/useVehicles";
@@ -150,6 +158,7 @@ function VehicleScreen() {
   const [attachmentRow, setAttachmentRow] = useState<VehicleEntry | null>(null);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
   const cancelEntry = useCancelVehicleEntry();
+  const { exportFile, isExporting } = useExportVehicleEntries();
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
@@ -178,6 +187,13 @@ function VehicleScreen() {
       canVehicle(access, "manage", id),
   ).map((id) => ({ id, name: branchName(id) }));
   const canView = viewBranches.length > 0;
+  // Xuất file cần cả quyền xem lẫn quyền xuất ở cùng chi nhánh (như Phiếu chi
+  // kho). Lọc một kho: cần quyền ở kho đó; tất cả kho: ít nhất một kho.
+  const canExportAt = (id: number) =>
+    canVehicle(access, "view", id) && canVehicle(access, "export", id);
+  const canExport = filters.branchId
+    ? canExportAt(filters.branchId)
+    : VEHICLE_BRANCH_IDS.some(canExportAt);
   const defaultBranchId =
     filters.branchId ||
     (selectedBranch && VEHICLE_BRANCH_IDS.includes(selectedBranch.id)
@@ -327,6 +343,8 @@ function VehicleScreen() {
             onOpenVehicles={
               allBranches.length > 0 ? () => setShowVehicles(true) : undefined
             }
+            onExport={canExport ? () => void exportFile(query) : undefined}
+            isExporting={isExporting}
             highlightId={linkedRow?.id}
             cancellingId={cancellingId}
             editBlockReason={editBlockReason}
@@ -394,6 +412,21 @@ function VehicleScreen() {
                     className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 md:hidden">
                     <SlidersHorizontal className="h-4 w-4" />
                     Bộ lọc
+                  </button>
+                )}
+                {canExport && (
+                  <button
+                    type="button"
+                    onClick={() => void exportFile(query)}
+                    disabled={isExporting}
+                    title="Xuất Excel toàn bộ phiếu theo bộ lọc đang chọn"
+                    className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    {isExporting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    Xuất file
                   </button>
                 )}
                 {canView && (

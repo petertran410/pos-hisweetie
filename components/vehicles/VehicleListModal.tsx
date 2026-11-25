@@ -14,6 +14,7 @@ import {
 import { formatDateOnly } from "@/lib/internal-finance/dates";
 import {
   FUEL_NORM_TOLERANCE,
+  FUEL_RECENT_MONTHS,
   FUEL_TYPE_LABELS,
   VEHICLE_TYPE_LABELS,
   canVehicle,
@@ -265,7 +266,7 @@ function VehicleForm({
         />
         <span className="font-normal text-gray-500">
           {vehicle?.recentLitersPer100Km != null
-            ? `Thực tế gần đây: ${formatLiters(vehicle.recentLitersPer100Km)} L/100km (trung bình ${vehicle.recentFuelSamples} lần đổ)`
+            ? `Thực tế ${FUEL_RECENT_MONTHS} tháng gần nhất: ${formatLiters(vehicle.recentLitersPer100Km)} L/100km (${vehicle.recentFuelSamples} lần đổ)`
             : `Lệch quá ±${FUEL_NORM_TOLERANCE} so với mức này thì phiếu xăng bị “Bất thường”`}
         </span>
       </label>
@@ -328,9 +329,10 @@ export function VehicleListModal({
               Danh sách xe
             </h2>
             <p className="mt-0.5 text-xs text-gray-500">
-              ODO, hạn đăng kiểm, bảo hiểm, km từ lần thay nhớt và L/100km thực
-              tế lấy từ các phiếu xe. Phiếu xăng có L/100km lệch quá ±
-              {FUEL_NORM_TOLERANCE} so với định mức của xe là “Bất thường”.
+              ODO, hạn đăng kiểm, bảo hiểm, km từ lần thay nhớt và L/100km{" "}
+              {FUEL_RECENT_MONTHS} tháng gần nhất lấy từ các phiếu xe. Phiếu
+              xăng có L/100km lệch quá ±{FUEL_NORM_TOLERANCE} so với định mức
+              của xe là “Bất thường”.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -392,7 +394,7 @@ export function VehicleListModal({
                   "Hạn bảo hiểm",
                   "Km từ lần thay nhớt",
                   "Ngưỡng đ/km",
-                  "L/100km thực tế",
+                  `L/100km ${FUEL_RECENT_MONTHS} tháng gần nhất`,
                   "Định mức L/100km",
                   "",
                 ].map((label) => (
@@ -515,7 +517,7 @@ export function VehicleListModal({
                         className="whitespace-nowrap px-3 py-2.5 tabular-nums"
                         title={
                           vehicle.recentFuelSamples
-                            ? `Tổng lít ÷ tổng km của ${vehicle.recentFuelSamples} lần đổ gần nhất`
+                            ? `Tổng lít ÷ tổng km của ${vehicle.recentFuelSamples} lần đổ trong ${FUEL_RECENT_MONTHS} tháng gần nhất`
                             : undefined
                         }>
                         {vehicle.recentLitersPer100Km != null ? (

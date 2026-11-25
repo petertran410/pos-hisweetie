@@ -77,15 +77,16 @@ export function useWarehouseExpensePayerSummary(
   });
 }
 
-/** Xuất Excel toàn bộ phiếu chi kho khớp bộ lọc (bỏ phân trang). */
-export function useExportWarehouseExpenses() {
+/**
+ * Tải file Excel từ một endpoint xuất file theo bộ lọc của bảng (bỏ phân
+ * trang). Tên file lấy từ header Content-Disposition của backend.
+ */
+function useExportFile<T extends object>(path: string, fallbackName: string) {
   const [isExporting, setIsExporting] = useState(false);
-  const exportFile = async (params: WarehouseExpenseQuery) => {
+  const exportFile = async (params: T) => {
     setIsExporting(true);
     try {
-      const url = new URL(
-        `${API_URL}/internal-finance/warehouse-expenses/export`,
-      );
+      const url = new URL(`${API_URL}${path}`);
       for (const [key, value] of Object.entries(params)) {
         if (key === "page" || key === "limit") continue;
         if (value !== undefined && value !== null && value !== "")
@@ -116,7 +117,7 @@ export function useExportWarehouseExpenses() {
       );
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = match ? match[1].trim() : "PhieuChiKho.xlsx";
+      link.download = match ? match[1].trim() : fallbackName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -129,6 +130,22 @@ export function useExportWarehouseExpenses() {
     }
   };
   return { exportFile, isExporting };
+}
+
+/** Xuất Excel toàn bộ phiếu chi kho khớp bộ lọc (bỏ phân trang). */
+export function useExportWarehouseExpenses() {
+  return useExportFile<WarehouseExpenseQuery>(
+    "/internal-finance/warehouse-expenses/export",
+    "PhieuChiKho.xlsx",
+  );
+}
+
+/** Xuất Excel toàn bộ phiếu xe (xăng dầu / chăm sóc xe) khớp bộ lọc. */
+export function useExportVehicleEntries() {
+  return useExportFile<VehicleEntryQuery>(
+    "/internal-finance/vehicle-entries/export",
+    "XeCo.xlsx",
+  );
 }
 
 export function useWarehouseExpenseBatches(params: InternalFinanceQuery) {
