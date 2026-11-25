@@ -29,6 +29,9 @@ export const VEHICLE_ATTACHMENT_KIND = {
 
 export const VEHICLE_BRANCH_IDS = [6, 1];
 
+/** Chênh lệch cho phép (L/100km) quanh định mức xe, cả hai chiều; khớp FUEL_NORM_TOLERANCE ở backend. */
+export const FUEL_NORM_TOLERANCE = 1;
+
 export const VEHICLE_TYPE_LABELS: Record<string, string> = {
   CAR: "Ô tô",
   MOTORBIKE: "Xe máy",

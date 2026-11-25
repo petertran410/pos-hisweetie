@@ -266,15 +266,20 @@ export interface WarehouseExpenseInput {
 export type VehicleEntryKind = "FUEL" | "VEHICLE_CARE";
 
 export interface FuelMetrics {
+  /** ODO của lần đổ liền trước theo ngày (bỏ qua phiếu ODO lệch thứ tự). */
   prevOdo: number | null;
+  /** ODO của lần đổ kế tiếp theo ngày (bỏ qua phiếu ODO lệch thứ tự). */
   nextOdo: number | null;
+  /** Km từ lần đổ này tới lần đổ kế tiếp (quãng đường chạy bằng xăng vừa đổ). */
   kmInPeriod: number | null;
-  prevAmount: number | null;
-  nextLiters: number | null;
+  /** Số tiền của chính phiếu ÷ km tới lần đổ kế tiếp. */
   costPerKm: number | null;
+  /** Số lít của chính phiếu ÷ km tới lần đổ kế tiếp × 100: số dùng để so định mức. */
   litersPer100Km: number | null;
-  normMin: number | null;
-  normMax: number | null;
+  /** Định mức L/100km của xe (cho phép lệch ±FUEL_NORM_TOLERANCE); null khi chưa đặt. */
+  norm: number | null;
+  /** BACKWARD: ODO lệch thứ tự ngày; JUMP: km tới lần đổ kế tiếp quá xa. */
+  odoCheck: "BACKWARD" | "JUMP" | null;
   consumptionCheck: "NORMAL" | "ABNORMAL" | null;
   costCheck: "NORMAL" | "ABNORMAL" | null;
 }
