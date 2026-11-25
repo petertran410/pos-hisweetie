@@ -20,6 +20,21 @@ export function useVehicles(
   });
 }
 
+/**
+ * Báo cáo tổng hợp xăng dầu theo xe. Khóa nằm dưới "vehicle-entries" để tự làm
+ * mới khi thêm/sửa/hủy phiếu xe hoặc sửa xe (định mức).
+ */
+export function useVehicleFuelSummary(
+  params: { branchId?: number } = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: ["vehicle-entries", "fuel-summary", params],
+    queryFn: () => vehiclesApi.fuelSummary(params),
+    enabled,
+  });
+}
+
 const invalidateVehicles = (queryClient: ReturnType<typeof useQueryClient>) => {
   queryClient.invalidateQueries({ queryKey: ["vehicles"] });
   // Ngưỡng đ/km và tên xe ảnh hưởng tới cột kiểm tra của phiếu xăng.
