@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Save, Send, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { vi } from "@/lib/dashboard/format";
 import {
   dailyReportApi,
   type DailyChatReport as Report,
-  type DailySavedDay,
+  type DailySavedReport,
 } from "@/lib/ai/daily-report";
 import { LeadCard } from "@/components/reports/lead/leadUi";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
@@ -25,6 +25,15 @@ const hm = (iso: string) =>
     hour: "2-digit",
     minute: "2-digit",
   });
+/** "18:00" nếu cùng ngày báo cáo, "09:15 25/11" nếu gửi / lưu vào ngày khác. */
+const when = (day: string, iso: string) => {
+  const vnDay = new Date(new Date(iso).getTime() + 7 * 3_600_000)
+    .toISOString()
+    .slice(0, 10);
+  return vnDay === day
+    ? hm(iso)
+    : `${hm(iso)} ${vnDay.slice(8, 10)}/${vnDay.slice(5, 7)}`;
+};
 const todayVn = () =>
   new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10);
 const muted = { color: "var(--dt-text-muted)" };
@@ -253,19 +262,27 @@ export function DailyChatReport({
 }) {
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<"saved" | "preview">("saved");
-  const [picked, setPicked] = useState<string | null>(initialDay ?? null);
+  const [picked, setPicked] = useState<number | null>(null);
   const [previewDay, setPreviewDay] = useState(todayVn());
 
   const days = useQuery({
     queryKey: ["dailyChatReportDays"],
-    queryFn: dailyReportApi.savedDays,
+    queryFn: dailyReportApi.savedReports,
   });
-  // Mặc định: ngày trên link (Lark) hoặc ngày gửi gần nhất
-  const day = picked ?? days.data?.[0]?.day ?? null;
+  // Mặc định: bản đã gửi của ngày trên link (Lark), không có thì bản mới nhất
+  const list = days.data ?? [];
+  const entry =
+    list.find((d) => d.id === picked) ??
+    (initialDay
+      ? (list.find((d) => d.day === initialDay && d.sent) ??
+        list.find((d) => d.day === initialDay))
+      : undefined) ??
+    list[0];
+  const day = entry?.day ?? null;
   const saved = useQuery({
-    queryKey: ["dailyChatReport", day],
-    queryFn: () => dailyReportApi.saved(day!),
-    enabled: mode === "saved" && !!day,
+    queryKey: ["dailyChatReport", entry?.id],
+    queryFn: () => dailyReportApi.saved(entry!.id),
+    enabled: mode === "saved" && !!entry,
   });
   const preview = useQuery({
     queryKey: ["dailyChatReportPreview"],
@@ -284,9 +301,83 @@ export function DailyChatReport({
     }
   };
 
-  const meta: DailySavedDay | undefined = days.data?.find((d) => d.day === day);
+  const meta: DailySavedReport | undefined = entry;
   const p = preview.data;
   const running = p?.status === "running";
+  const [sending, setSending] = useState(false);
+
+  /** Hỏi xác nhận trước khi gửi Lark: báo gửi trùng ngày / gửi hôm nay trước 18:00. */
+  const confirmSend = (reportDay: string) => {
+    const sentBefore = list.find((d) => d.day === reportDay && d.sent);
+    const notes = [
+      `Gửi báo cáo chat ngày ${dmy(reportDay)} vào nhóm Lark "Báo cáo Sale Chat"?`,
+      sentBefore
+        ? `Ngày này đã gửi lúc ${when(sentBefore.day, sentBefore.at)} — nhóm sẽ nhận thêm một bản.`
+        : "",
+      reportDay === todayVn() && new Date().getHours() < 18
+        ? "Gửi bây giờ thì 18:00 hôm nay sẽ không tự gửi nữa (tin nhắn sau lúc này không có trong báo cáo)."
+        : "",
+    ].filter(Boolean);
+    return window.confirm(notes.join("\n\n"));
+  };
+
+  /** Gửi bản đã lưu đang xem vào nhóm Lark (đúng nội dung lúc lưu). */
+  const sendSaved = async () => {
+    if (!entry || !day || !confirmSend(day)) return;
+    setSending(true);
+    try {
+      await dailyReportApi.sendSaved(entry.id);
+      queryClient.invalidateQueries({ queryKey: ["dailyChatReportDays"] });
+      queryClient.invalidateQueries({
+        queryKey: ["dailyChatReport", entry.id],
+      });
+      toast.success(`Đã gửi báo cáo ${dmy(day)} vào nhóm Lark`);
+    } catch (e) {
+      toast.error((e as Error).message || "Không gửi được vào Lark");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  /** Gửi bản xem trước đang xem vào nhóm Lark (hỏi xác nhận: gửi trùng ngày / hôm nay trước 18:00). */
+  const sendPreview = async () => {
+    if (!p || p.status !== "done") return;
+    if (!confirmSend(p.day)) return;
+    setSending(true);
+    try {
+      const res = await dailyReportApi.sendPreview();
+      queryClient.setQueryData(["dailyChatReportPreview"], {
+        ...p,
+        sentAt: res.sentAt,
+      });
+      queryClient.invalidateQueries({ queryKey: ["dailyChatReportDays"] });
+      toast.success(`Đã gửi báo cáo ${dmy(p.day)} vào nhóm Lark`);
+    } catch (e) {
+      toast.error((e as Error).message || "Không gửi được vào Lark");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const [saving, setSaving] = useState(false);
+  /** Lưu bản xem trước đang xem (không gửi Lark) — xem lại ở "Bản đã lưu / gửi". */
+  const savePreview = async () => {
+    if (!p || p.status !== "done") return;
+    setSaving(true);
+    try {
+      const res = await dailyReportApi.savePreview();
+      queryClient.setQueryData(["dailyChatReportPreview"], {
+        ...p,
+        savedAt: res.savedAt,
+      });
+      queryClient.invalidateQueries({ queryKey: ["dailyChatReportDays"] });
+      toast.success(`Đã lưu bản xem trước ${dmy(p.day)}`);
+    } catch (e) {
+      toast.error((e as Error).message || "Không lưu được");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="flex-1 min-w-0 overflow-y-auto">
@@ -306,24 +397,24 @@ export function DailyChatReport({
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 text-[13px]">
             <span style={{ color: "var(--dt-text-secondary)" }}>
-              Bản đã gửi
+              Bản đã lưu / gửi
             </span>
-            <div className="w-[220px]">
+            <div className="w-[290px]">
               <SearchableSelect
                 size="sm"
-                options={(days.data ?? []).map((d) => ({
-                  value: d.day,
-                  label: `${dmy(d.day)} · gửi ${hm(d.sentAt)}`,
+                options={list.map((d) => ({
+                  value: String(d.id),
+                  label: `${dmy(d.day)} · ${d.sent ? "gửi Lark" : "đã lưu"} ${when(d.day, d.at)}`,
                 }))}
-                value={mode === "saved" ? (day ?? "") : ""}
+                value={mode === "saved" && entry ? String(entry.id) : ""}
                 onChange={(v) => {
-                  setPicked(v);
+                  setPicked(Number(v));
                   setMode("saved");
                 }}
                 placeholder={
                   mode === "preview"
                     ? "Đang xem bản xem trước"
-                    : "Chưa có báo cáo đã gửi"
+                    : "Chưa có bản đã lưu / gửi"
                 }
                 searchPlaceholder="Tìm ngày…"
                 disabled={!days.data?.length}
@@ -385,9 +476,50 @@ export function DailyChatReport({
             </LeadCard>
           ) : p.report ? (
             <>
-              <p className="text-[12.5px]" style={muted}>
-                Bản xem trước ngày <b>{dmy(p.day)}</b> — chưa gửi Lark.
-              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-[12.5px] m-0" style={muted}>
+                  Bản xem trước ngày <b>{dmy(p.day)}</b> —{" "}
+                  {p.sentAt
+                    ? `đã gửi Lark lúc ${hm(p.sentAt)}.`
+                    : "chưa gửi Lark."}
+                  {p.savedAt && !p.sentAt
+                    ? ` Đã lưu lúc ${hm(p.savedAt)}.`
+                    : ""}
+                </p>
+                {!p.sentAt && !p.savedAt && (
+                  <button
+                    type="button"
+                    onClick={savePreview}
+                    disabled={saving}
+                    title="Lưu bản này để xem lại sau (không gửi Lark, không ảnh hưởng lần gửi 18:00)"
+                    className="dt-btn-ghost inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium disabled:opacity-50"
+                  >
+                    {saving ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5" />
+                    )}
+                    {saving ? "Đang lưu…" : "Lưu"}
+                  </button>
+                )}
+                {!p.sentAt && (
+                  <button
+                    type="button"
+                    onClick={sendPreview}
+                    disabled={sending}
+                    title="Gửi đúng bản đang xem vào nhóm Lark Báo cáo Sale Chat (không chạy AI lại)"
+                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-semibold text-white disabled:opacity-50"
+                    style={{ background: "var(--dt-primary)" }}
+                  >
+                    {sending ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Send className="w-3.5 h-3.5" />
+                    )}
+                    {sending ? "Đang gửi…" : "Gửi vào Lark"}
+                  </button>
+                )}
+              </div>
               <ReportView report={p.report} />
             </>
           ) : null
@@ -396,18 +528,47 @@ export function DailyChatReport({
             <Loader2 className="w-4 h-4 animate-spin" /> Đang tải…
           </p>
         ) : !day ? (
-          <LeadCard title="Chưa có báo cáo đã gửi">
+          <LeadCard title="Chưa có bản đã lưu / gửi">
             <p className="text-[13px] py-4" style={muted}>
-              Báo cáo gửi nhóm Lark lúc 18:00 sẽ được lưu ở đây. Có thể tạo bản
-              xem trước cho một ngày bất kỳ.
+              Báo cáo gửi nhóm Lark lúc 18:00 và bản xem trước đã lưu sẽ hiện ở
+              đây. Có thể tạo bản xem trước cho một ngày bất kỳ.
             </p>
           </LeadCard>
         ) : saved.data?.report ? (
           <>
-            <p className="text-[12.5px]" style={muted}>
-              Bản đã gửi nhóm Lark lúc <b>{hm(saved.data.sentAt!)}</b> ngày{" "}
-              {dmy(day)}.
-            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-[12.5px] m-0" style={muted}>
+                Báo cáo ngày <b>{dmy(day)}</b> —{" "}
+                {saved.data.sent
+                  ? `đã gửi nhóm Lark lúc ${when(day, saved.data.at!)}`
+                  : `bản xem trước lưu lúc ${when(day, saved.data.at!)}, ${
+                      saved.data.sentLaterAt
+                        ? `đã gửi Lark lúc ${when(day, saved.data.sentLaterAt)}`
+                        : "chưa gửi Lark"
+                    }`}
+                {saved.data.by && saved.data.by !== "System"
+                  ? ` · ${saved.data.by}`
+                  : ""}
+                .
+              </p>
+              {!saved.data.sent && !saved.data.sentLaterAt && (
+                <button
+                  type="button"
+                  onClick={sendSaved}
+                  disabled={sending}
+                  title="Gửi đúng bản đã lưu này vào nhóm Lark Báo cáo Sale Chat"
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-semibold text-white disabled:opacity-50"
+                  style={{ background: "var(--dt-primary)" }}
+                >
+                  {sending ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Send className="w-3.5 h-3.5" />
+                  )}
+                  {sending ? "Đang gửi…" : "Gửi vào Lark"}
+                </button>
+              )}
+            </div>
             <ReportView report={saved.data.report} />
           </>
         ) : (
