@@ -28,6 +28,8 @@
 }
 /* POS thu nhỏ cả app (html zoom 0.85); trang public cho khách giữ cỡ thật */
 html:has(.pp-page) { zoom: 1; }
+/* Desktop: mặc định thu 90% */
+@media (min-width: 1024px) { html:has(.pp-page) { zoom: 0.9; } }
 .ppg-tea { --g: var(--pp-teal); --gt: rgba(29, 138, 138, 0.22); }
 .ppg-jam { --g: var(--pp-brown); --gt: rgba(123, 79, 46, 0.2); }
 .ppg-top { --g: var(--pp-gray); --gt: rgba(74, 74, 74, 0.16); }
@@ -229,7 +231,8 @@ html:has(.pp-page) { zoom: 1; }
 /* ===== Desktop ===== */
 @container pp (min-width: 1024px) {
   .pp { --pp-mini: 88px; background: var(--pp-bg); }
-  .pp-wrap { width: min(1200px, calc(100% - 48px)); margin: 0 auto; }
+  /* Luôn full chiều rộng (kể cả khi zoom trình duyệt): không chặn max-width */
+  .pp-wrap { width: calc(100% - 48px); margin: 0 auto; }
   .pp-mini { display: none; }
   .pp-hdr { position: sticky; top: 0; z-index: 40; padding: 0; box-shadow: 0 2px 12px rgba(26, 32, 44, 0.18); }
   .pp-hdr .pp-deco { height: 100%; width: 60%; }
@@ -262,7 +265,8 @@ html:has(.pp-page) { zoom: 1; }
   .pp-cn { position: relative !important; top: auto; right: auto; margin-left: 2px; }
   .pp-sh { padding: 24px 0 12px; }
   .pp-sh h2 { font-size: 22px; }
-  .pp-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; padding: 0 0 32px; }
+  /* Màn càng rộng càng nhiều cột, thẻ giữ cỡ vừa phải */
+  .pp-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; padding: 0 0 32px; }
   .pp-cb { padding: 16px; }
   .pp-nm { font-size: 16px; }
   .pp-es { margin: 16px 0; }

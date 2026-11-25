@@ -506,18 +506,18 @@ export function VehicleShipmentSidebar({ filters, setFilters }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBranchIds]);
 
-  // Sync chi nhánh từ header.
-  const isFirstRenderRef = useRef(true);
+  // Sync chi nhánh từ header (chỉ khi đang bám đúng 1 chi nhánh).
+  // Mốc so sánh là chi nhánh mà lựa chọn hiện tại đang bám theo, KHÔNG phải
+  // chi nhánh trên header lúc mount: đổi chi nhánh làm PagePermissionGuard gỡ
+  // sidebar trong lúc tải quyền mới, rồi gắn lại với filters.branchIds cũ của
+  // page → lần chạy đầu phải thấy lệch và bám theo chi nhánh mới.
   const lastSyncedBranchIdRef = useRef<number | null>(
-    selectedBranch?.id ?? null
+    selectedBranchIds.length === 1
+      ? selectedBranchIds[0]
+      : (selectedBranch?.id ?? null)
   );
   useEffect(() => {
     const cur = selectedBranch?.id ?? null;
-    if (isFirstRenderRef.current) {
-      isFirstRenderRef.current = false;
-      lastSyncedBranchIdRef.current = cur;
-      return;
-    }
     if (cur !== lastSyncedBranchIdRef.current) {
       lastSyncedBranchIdRef.current = cur;
       setSelectedBranchIds((prev) =>

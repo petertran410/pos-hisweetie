@@ -24,12 +24,17 @@ export function LeadFormModal({
   initial,
   onClose,
   onSaved,
+  aiHints,
 }: {
   lead?: Lead;
   initial?: LeadInput;
   onClose: () => void;
   onSaved?: (lead: Lead) => void;
+  /** AI đã điền sẵn từ hội thoại: các ô đã điền và các ô AI chưa chắc (tô vàng). */
+  aiHints?: { filled: string[]; unsure: string[] };
 }) {
+  // Ô AI chưa chắc → viền vàng để nhân viên kiểm trước khi lưu
+  const unsure = (field: string) => (aiHints?.unsure.includes(field) ? "rounded-md ring-2 ring-amber-300 ring-offset-1" : "");
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const { data: users } = useUsers();
   const { provinces, communes } = useNewLocations();
@@ -159,8 +164,14 @@ export function LeadFormModal({
         </div>
 
         <div className="flex-1 overflow-auto p-5 space-y-4">
+          {aiHints && aiHints.filled.length > 0 && (
+            <p className="rounded-md border border-cyan-pale bg-ai-surface px-3 py-2 text-xs text-brand-dark">
+              ✨ AI đã điền sẵn từ hội thoại: {aiHints.filled.join(", ")}.
+              {aiHints.unsure.length > 0 && " Ô viền vàng là AI chưa chắc —"} kiểm tra trước khi lưu.
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
+            <div className={`col-span-2 ${unsure("name")}`}>
               <label className={label}>Tên *</label>
               <input value={name} onChange={(e) => setName(e.target.value)} className={input} autoFocus />
             </div>
@@ -231,7 +242,7 @@ export function LeadFormModal({
               placeholder={!source ? "Chọn nguồn trước" : channelOptions.length ? "— Chọn kênh —" : "Không có kênh"}
             />
           </div>
-          <div>
+          <div className={unsure("category")}>
             <label className={label}>Phân loại *</label>
             {chips(options(LEAD_CATEGORY_LABEL), category, setCategory)}
           </div>
@@ -243,7 +254,7 @@ export function LeadFormModal({
           )}
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
+            <div className={unsure("province")}>
               <label className={label}>Tỉnh/Thành</label>
               <FilterSearchableSelect
                 size="form"
@@ -256,7 +267,7 @@ export function LeadFormModal({
                 placeholder="— Chọn tỉnh/thành —"
               />
             </div>
-            <div>
+            <div className={unsure("ward")}>
               <label className={label}>Phường/Xã</label>
               <FilterSearchableSelect
                 size="form"
@@ -268,7 +279,7 @@ export function LeadFormModal({
             </div>
           </div>
 
-          <div>
+          <div className={unsure("need")}>
             <label className={label}>Nhu cầu</label>
             <textarea value={need} onChange={(e) => setNeed(e.target.value)} rows={2} className={input} />
           </div>

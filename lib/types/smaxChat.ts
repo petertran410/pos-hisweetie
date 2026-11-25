@@ -231,6 +231,16 @@ export interface RecentChat {
   lastMessage: string;
   lastMessageAt: string | null;
   unread: boolean;
+  // Khách chờ quá 30 phút giờ làm (T2–T6 8–18h, T7 8–12h) chưa được trả lời; null = không cần báo
+  waiting?: { minutes: number; since: string; upset: boolean } | null;
+  // Nhãn phân loại (AI khi bấm "Phân loại" hoặc gắn tay); stale = có tin mới sau lúc gắn
+  aiLabel?: {
+    label: "order" | "price" | "complaint" | "delivery" | "other";
+    reason: string | null;
+    pending: boolean;
+    manual: boolean;
+    stale: boolean;
+  } | null;
   // Tổng số tin của thread — "tin mới" = chênh lệch so với lần xem gần nhất trên POS
   messageCount: number;
   avatar: string | null;

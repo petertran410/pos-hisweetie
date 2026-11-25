@@ -43,6 +43,10 @@ export const smaxChatApi = {
   passControlAI: (body: { pagePid: string; tid: string; confirmed?: boolean }) =>
     apiClient.post("/smax/chat/threads/meta-ai", body),
 
+  // Bỏ qua cảnh báo "Cần trả lời gấp" (since = lúc khách nhắn tin đang chờ; tin mới thì báo lại)
+  skipWait: (body: { pagePid: string; tid: string; since: string }) =>
+    apiClient.post("/smax/chat/threads/skip-wait", body),
+
   // recall = thu hồi cả 2 phía; delete = xoá phía mình
   messageAction: (body: { pagePid: string; tid: string; pid: string; action: "recall" | "delete"; confirmed?: boolean }) =>
     apiClient.post("/smax/chat/threads/message-action", body),

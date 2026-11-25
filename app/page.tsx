@@ -35,6 +35,10 @@ import {
 } from "@/components/dashboard/DashSelect";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { DashboardMobileView } from "@/components/dashboard/mobile/DashboardMobileView";
+import { AiAssistantPanel } from "@/components/ai-assistant/AiAssistantPanel";
+import { useAiAssistantStore } from "@/lib/store/aiAssistant";
+import { useAiConfig } from "@/lib/hooks/useAiAssistant";
+import { useIsClient, useIsMobile } from "@/lib/hooks/useIsMobile";
 import {
   DollarSign,
   TrendingUp,
@@ -193,7 +197,8 @@ function HomeContent() {
   const tasks = useQuery({
     queryKey: ["dash-tasks", taskTab, branchId, taskStatus],
     queryFn: () =>
-      dashboardApi.getTasks(taskTab, branchId, 500, taskStatus || undefined),
+      // limit 0 = lấy hết (phân trang / tìm / sắp xếp ở TaskTabs)
+      dashboardApi.getTasks(taskTab, branchId, 0, taskStatus || undefined),
     enabled,
   });
 
@@ -277,7 +282,8 @@ function HomeContent() {
   ];
 
   return (
-    <div>
+    // Desktop: khung cao cố định (như layout dashboard) để Trợ lý AI nằm cạnh, nội dung cuộn bên trong
+    <div className="md:flex md:flex-col md:h-[calc(100vh/0.85)]">
       <DashboardHeader />
 
       {/* ── Mobile (dưới md) ── */}
@@ -287,7 +293,8 @@ function HomeContent() {
 
       {/* ── Desktop (từ md) ── */}
       {/* palette-orig: giữ sáng trong bảng Tối cho tới khi biểu đồ chuyển sang biến màu (đợt 2). */}
-      <div className="hidden md:block dt-dash palette-orig min-h-[calc(100vh-56px)] overflow-auto">
+      <div className="hidden md:flex flex-1 min-h-0">
+      <div className="dt-dash palette-orig min-w-0 flex-1 overflow-auto">
         {/* Subbar */}
         <div className="flex items-center gap-[14px] flex-wrap px-7 pt-4 pb-[14px]">
           <div className="mr-auto">
@@ -745,6 +752,30 @@ function HomeContent() {
           </div>
         </div>
       </div>
+      <HomeAiPanel side />
+      </div>
+      <HomeAiPanel />
     </div>
+  );
+}
+
+/**
+ * Trợ lý AI trên trang Tổng quan (trang này nằm ngoài layout dashboard nên không có RightDock):
+ * `side` — cột 400px cạnh nội dung (desktop); không `side` — sheet toàn màn hình (điện thoại / tablet).
+ */
+function HomeAiPanel({ side = false }: { side?: boolean }) {
+  const isClient = useIsClient();
+  const isMobile = useIsMobile();
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+  const { available } = useAiConfig();
+  const open = useAiAssistantStore((s) => s.open && s.ownerId === userId);
+  const setOpen = useAiAssistantStore((s) => s.setOpen);
+  if (!isClient || !available || !open || side === isMobile) return null;
+  return (
+    <AiAssistantPanel
+      layout={side ? "side" : "sheet"}
+      onClose={() => setOpen(false, userId)}
+      className={side ? "" : "z-[55]"}
+    />
   );
 }

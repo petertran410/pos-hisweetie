@@ -123,6 +123,10 @@ const config: Config = {
           pale: "var(--dt-color-cyan-pale)",
           bg: "var(--dt-color-cyan-bg)",
         },
+        // Nền khung Trợ lý AI (bg-ai-surface)
+        ai: {
+          surface: "var(--dt-color-ai-surface)",
+        },
         gold: {
           DEFAULT: "var(--dt-color-gold)",
           light: "var(--dt-color-gold-light)",

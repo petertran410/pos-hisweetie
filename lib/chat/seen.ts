@@ -36,3 +36,20 @@ export function markSeen(tid: string, messageCount: number) {
   map[tid] = messageCount;
   write(map);
 }
+
+// Bấm mở hội thoại từ danh sách sẽ đánh dấu đã xem trước khi khung chat kịp đếm tin mới →
+// ghi lại số tin mới lúc bấm để khung chat đọc (gợi ý "Tóm tắt N tin chưa đọc"), đọc xong thì xoá.
+const unseenOnOpen = new Map<string, number>();
+
+export function rememberUnseenOnOpen(tid: string, count: number) {
+  unseenOnOpen.set(tid, count);
+}
+
+/** Số tin mới lúc bấm mở hội thoại từ danh sách; undefined nếu không mở từ danh sách. */
+export function peekUnseenOnOpen(tid: string): number | undefined {
+  return unseenOnOpen.get(tid);
+}
+
+export function forgetUnseenOnOpen(tid: string) {
+  unseenOnOpen.delete(tid);
+}

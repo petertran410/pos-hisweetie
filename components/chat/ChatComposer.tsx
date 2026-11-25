@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   AlertCircle,
+  Sparkles,
   FileText,
   Images,
   Loader2,
@@ -50,6 +51,15 @@ import { filterMembers, findMentions, MentionMenu } from "./MentionMenu";
 import { norm, type QuickOption } from "./QuickInsertMenu";
 import { addRecentEmoji, addRecentSticker } from "@/lib/chat/stickers";
 import { CustomTooltip } from "@/components/ui/CustomTooltip";
+import { useQuery } from "@tanstack/react-query";
+import {
+  aiComposeApi,
+  AI_READ_IMAGE_EVENT,
+  type ComposeMode,
+  type ComposeRequest,
+  type RewriteStyle,
+} from "@/lib/ai/ai-compose";
+import { AiComposeMenu, AiComposePanel, type AiComposeState } from "./AiCompose";
 
 const MAX_FILES = 10;
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -76,6 +86,11 @@ interface Props {
   onCancelReply?: () => void;
   // Nhóm Zalo cá nhân: gõ "@" để tag thành viên (không truyền = tắt)
   mentionMembers?: MentionMember[];
+  // Hội thoại đang mở (kênh + tid): AI soạn nháp đọc tin của hội thoại này
+  aiTarget?: { pagePid: string; tid: string } | null;
+  // Số tin chưa đọc lúc mở hội thoại (gợi ý "Tóm tắt N tin chưa đọc") và cuộn tới tin
+  unreadAtOpen?: number;
+  onJump?: (messageId: string) => void;
 }
 
 // Bản nháp chữ theo hội thoại, giữ trong phiên (không lưu xuống máy)
@@ -117,6 +132,9 @@ export function ChatComposer({
   replyTo,
   onCancelReply,
   mentionMembers,
+  aiTarget,
+  unreadAtOpen = 0,
+  onJump,
 }: Props) {
   const [text, setText] = useState(() => drafts.get(draftKey) ?? "");
   const [items, setItems] = useState<Item[]>([]);
@@ -320,6 +338,75 @@ export function ChatComposer({
   const mention = slash?.char === "@";
   const members = mention ? filterMembers(mentionMembers ?? [], slash.query) : [];
   const count = mention ? members.length : options.length;
+
+  // ── AI soạn nháp (nút ✨): chỉ soạn vào ô, người dùng tự gửi ──
+  const canAi = useCan("smax_chat", "send");
+  const aiStatus = useQuery({
+    queryKey: ["aiComposeStatus"],
+    queryFn: aiComposeApi.status,
+    enabled: canAi && !!aiTarget,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const [ai, setAi] = useState<AiComposeState | null>(null);
+  const [aiQr, setAiQr] = useState<string | null>(null);
+  const aiRun = useRef(0);
+  // focus: soạn trả lời riêng một câu (từ bản tóm tắt)
+  const runAi = async (mode: ComposeMode, style?: RewriteStyle, focus?: string, extra?: Partial<ComposeRequest>) => {
+    if (!aiTarget) return;
+    const run = ++aiRun.current;
+    setAi({ mode, style, focus, extra, loading: true });
+    const body = {
+      mode,
+      pagePid: aiTarget.pagePid,
+      tid: aiTarget.tid,
+      customerId: ctx?.customer.id,
+      ...(mode === "summary" ? { unreadCount: unreadAtOpen } : {}),
+      ...(focus ? { draft: focus } : {}),
+      ...extra,
+    };
+    try {
+      let next: Partial<AiComposeState>;
+      if (mode === "order") next = { order: await aiComposeApi.order(body) };
+      else if (mode === "summary") next = { summary: await aiComposeApi.summary(body) };
+      else if (mode === "image") next = { image: await aiComposeApi.image(body) };
+      else if (mode === "quick") next = { quickIds: (await aiComposeApi.quick(body)).ids };
+      else if (mode === "reminder") {
+        // Khối công nợ dựng như "/ công nợ" (số liệu POS + tài khoản), AI chỉ viết lời nhắc quanh nó
+        const debt = await buildQuickMessage({ type: "debt" }, ctx, perms, branchId);
+        setAiQr(debt.qrImageUrl ?? null);
+        next = await aiComposeApi.drafts({ ...body, facts: debt.text });
+      } else next = await aiComposeApi.drafts({ ...body, ...(mode === "rewrite" ? { draft: text, style } : {}) });
+      if (run === aiRun.current) setAi({ mode, style, focus, extra, loading: false, ...next });
+    } catch (e) {
+      if (run === aiRun.current) setAi({ mode, style, focus, extra, loading: false, error: (e as Error).message || "AI chưa soạn được" });
+    } finally {
+      if (run === aiRun.current) aiStatus.refetch();
+    }
+  };
+  // "AI đọc ảnh" từ menu tin nhắn (ChatThread)
+  useEffect(() => {
+    const onRead = (e: Event) => {
+      const { messageId, imageUrl } = (e as CustomEvent<{ messageId: string; imageUrl: string }>).detail;
+      void runAi("image", undefined, undefined, { messageId, imageUrl });
+    };
+    window.addEventListener(AI_READ_IMAGE_EVENT, onRead);
+    return () => window.removeEventListener(AI_READ_IMAGE_EVENT, onRead);
+  });
+  const closeAi = () => {
+    aiRun.current += 1;
+    setAi(null);
+  };
+  const applyAiDraft = (draft: string) => {
+    setText(draft);
+    if (ai?.mode === "reminder" && aiQr) setQrImageUrl(aiQr);
+    closeAi();
+    requestAnimationFrame(() => {
+      const el = textRef.current;
+      el?.focus();
+      el?.setSelectionRange(draft.length, draft.length);
+    });
+  };
 
   const detectSlash = (value: string, caret: number) => {
     // Đang mở: giữ nguyên vị trí "/", chuỗi tìm là đoạn tới con trỏ (cho phép khoảng trắng)
@@ -652,6 +739,31 @@ export function ChatComposer({
           </button>
         </div>
       )}
+      {!ai && canAi && aiTarget && aiStatus.data?.enabled && unreadAtOpen >= 10 && !disabled && (
+        <button
+          type="button"
+          onClick={() => void runAi("summary")}
+          className="mb-2 flex items-center gap-1.5 rounded-md border border-brand-border bg-ai-surface px-2.5 py-1 text-xs font-medium text-brand-deep hover:border-brand"
+        >
+          <Sparkles className="h-3.5 w-3.5 text-brand" aria-hidden />
+          Tóm tắt {unreadAtOpen} tin chưa đọc
+        </button>
+      )}
+      {ai && (
+        <AiComposePanel
+          state={ai}
+          onRetry={() => void runAi(ai.mode, ai.style, ai.focus, ai.extra)}
+          onClose={closeAi}
+          onUse={applyAiDraft}
+          onJump={(id) => onJump?.(id)}
+          onReplyTo={(question) => void runAi("reply", undefined, question)}
+          onRun={(mode) => void runAi(mode)}
+          onQuick={(reply) => {
+            closeAi();
+            void insertQuick({ type: "text", text: reply.content, media: reply.media });
+          }}
+        />
+      )}
       {pickerOpen && !disabled && (
         <EmojiStickerPicker
           threadStickerIds={threadStickerIds}
@@ -952,6 +1064,16 @@ export function ChatComposer({
               <Smile className="w-4 h-4" />
             </button>
           </CustomTooltip>
+          {canAi && aiTarget && aiStatus.data?.enabled && (
+            <AiComposeMenu
+              disabled={disabled || !!ai?.loading}
+              hasCustomer={!!ctx}
+              debt={ctx?.debt ?? null}
+              hasDraft={!!text.trim()}
+              unread={unreadAtOpen}
+              onPick={(mode, style) => void runAi(mode, style)}
+            />
+          )}
           <span className="ml-auto min-w-0 truncate px-1 text-xs text-gray-500" aria-hidden>
             {focused && !disabled ? "Enter gửi · Shift+Enter xuống dòng" : ""}
           </span>

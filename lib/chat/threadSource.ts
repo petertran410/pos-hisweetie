@@ -9,6 +9,8 @@ export interface ThreadSource {
   key: string;
   kind: ZaloContactKind;
   zaloId: string;
+  // Kênh Smax của hội thoại (AI soạn nháp đọc tin theo kênh + tid)
+  pagePid: string;
   // tid hội thoại trên Smax + nền tảng kênh (sticker, cảm xúc, thu hồi, kết bạn chỉ Zalo cá nhân)
   tid: string;
   platform: string;
@@ -43,6 +45,7 @@ export function customerSource(
   const tid = contactTid(contact);
   return {
     key: `c-${customerId}-${pagePid}-${contact.id}`,
+    pagePid,
     kind: contact.kind,
     zaloId: contact.zaloId,
     tid,
@@ -65,6 +68,7 @@ export function customerSource(
 export function looseSource(t: LooseThread): ThreadSource {
   return {
     key: `t-${t.pagePid}-${t.tid}`,
+    pagePid: t.pagePid,
     kind: t.isGroup ? "group" : "user",
     zaloId: t.zaloId,
     tid: t.tid,
