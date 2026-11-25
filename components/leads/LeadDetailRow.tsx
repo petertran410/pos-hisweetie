@@ -365,6 +365,9 @@ function ChannelsTab({ lead }: { lead: LeadDetail }) {
   const queryClient = useQueryClient();
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const canUpdate = useCan("leads", "update");
+  // Tên kênh Smax (vd "Diệp Trà - Ms Mai Phương"): phân biệt 2 hội thoại cùng khách trên 2 tài khoản Zalo
+  const { data: channels } = useQuery({ queryKey: ["leadChannels"], queryFn: () => leadsApi.channels(), staleTime: 5 * 60_000 });
+  const channelName = (pagePid: string) => channels?.find((ch) => ch.pagePid === pagePid)?.name;
   const open = (c: LeadConversation) => {
     const st = useChatSidebarStore.getState();
     st.openLoose(
@@ -410,6 +413,7 @@ function ChannelsTab({ lead }: { lead: LeadDetail }) {
           )}
           <span className="min-w-0 flex-1 truncate">
             {platformLabel(c.platform)} · {c.name || c.tid}
+            {channelName(c.pagePid) && <span className="text-gray-500"> — kênh {channelName(c.pagePid)}</span>}
           </span>
           <button onClick={() => open(c)} className="rounded px-2 py-1 text-brand hover:bg-cyan-bg">
             Mở trong khung chat
