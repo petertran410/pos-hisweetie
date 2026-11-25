@@ -6,7 +6,7 @@ export type AiChatConfig = {
   enabled: boolean;
   ready: boolean;
   remaining: number | null;
-  rateLimitPerDay: number | null;
+  rateLimitPerHour: number | null;
   maxQuestionChars: number;
   retentionDays: number | null;
 };
