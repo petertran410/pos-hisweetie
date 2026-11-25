@@ -27,6 +27,7 @@ import {
   VEHICLE_ENTRY_COLUMNS,
   VehicleEntryTable,
 } from "@/components/vehicles/VehicleEntryTable";
+import { VehicleFuelSummaryTable } from "@/components/vehicles/VehicleFuelSummaryTable";
 import { VehicleListModal } from "@/components/vehicles/VehicleListModal";
 import { WarehouseCashAttachmentsModal } from "@/components/warehouse-cash/WarehouseCashAttachmentsModal";
 import type {
@@ -40,7 +41,7 @@ import {
   useExportVehicleEntries,
   useVehicleEntries,
 } from "@/lib/hooks/useInternalFinance";
-import { useVehicles } from "@/lib/hooks/useVehicles";
+import { useVehicleFuelSummary, useVehicles } from "@/lib/hooks/useVehicles";
 import {
   VEHICLE_BRANCH_IDS,
   canVehicle,
@@ -89,6 +90,9 @@ function VehicleScreen() {
   const selectedBranch = useBranchStore((state) => state.selectedBranch);
   const { data: branchData } = useBranches();
   const [kind, setKind] = useState<VehicleEntryKind>(linkKind || "FUEL");
+  // Tab "Tổng hợp" (báo cáo xăng dầu theo xe, chỉ trên máy tính). `kind` giữ tab
+  // danh sách trước đó để nút "Tạo phiếu xe" vẫn mở đúng loại phiếu.
+  const [summary, setSummary] = useState(false);
   const headerBranchId = useHeaderBranchId(VEHICLE_BRANCH_IDS, (id) =>
     canVehicle(access, "view", id),
   );
@@ -135,6 +139,7 @@ function VehicleScreen() {
   if (codeParam !== seenCode) {
     setSeenCode(codeParam);
     if (codeParam) {
+      setSummary(false);
       if (linkKind) setKind(linkKind);
       setSearch(codeParam);
       setDebouncedSearch(codeParam);
@@ -221,7 +226,12 @@ function VehicleScreen() {
           },
     [codeParam, debouncedSearch, filters, kind, limit, page],
   );
-  const entries = useVehicleEntries(query, canView);
+  const showSummary = summary && !isMobile;
+  const entries = useVehicleEntries(query, canView && !showSummary);
+  const fuelSummary = useVehicleFuelSummary(
+    { branchId: filters.branchId },
+    canView && showSummary,
+  );
   const vehicles = useVehicles(
     { includeInactive: true },
     allBranches.length > 0,
@@ -304,6 +314,7 @@ function VehicleScreen() {
             branches={viewBranches}
             vehicles={vehicles.data || []}
             storageKey={STORAGE_KEY}
+            summary={showSummary}
             mobileOpen={showFilters}
             onMobileClose={() => setShowFilters(false)}
             onChange={changeFilters}
@@ -378,19 +389,36 @@ function VehicleScreen() {
                       type="button"
                       onClick={() => {
                         setKind(tab.kind);
+                        setSummary(false);
                         setPage(1);
                         clearCodeParam();
                       }}
                       className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                        kind === tab.kind
+                        !showSummary && kind === tab.kind
                           ? "bg-brand text-white"
                           : "text-gray-600 hover:bg-gray-50"
                       }`}>
                       {tab.label}
                     </button>
                   ))}
+                  {canView && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSummary(true);
+                        clearCodeParam();
+                      }}
+                      title="Tổng hợp xăng dầu theo xe: định mức, thực tế 2 tháng gần nhất, chênh lệch đơn giá"
+                      className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                        showSummary
+                          ? "bg-brand text-white"
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}>
+                      Tổng hợp
+                    </button>
+                  )}
                 </div>
-                {canView && (
+                {canView && !showSummary && (
                   <input
                     value={search}
                     onChange={(event) => {
@@ -414,7 +442,7 @@ function VehicleScreen() {
                     Bộ lọc
                   </button>
                 )}
-                {canExport && (
+                {canExport && !showSummary && (
                   <button
                     type="button"
                     onClick={() => void exportFile(query)}
@@ -429,7 +457,7 @@ function VehicleScreen() {
                     Xuất file
                   </button>
                 )}
-                {canView && (
+                {canView && !showSummary && (
                   <ColumnToggle
                     key={kind}
                     columns={columnToggle.columns}
@@ -462,6 +490,12 @@ function VehicleScreen() {
                 Tài khoản chỉ có quyền tạo phiếu xe. Bấm “Tạo phiếu xe” để nhập
                 phiếu xăng dầu hoặc chăm sóc xe.
               </div>
+            ) : showSummary ? (
+              <VehicleFuelSummaryTable
+                data={fuelSummary.data}
+                isLoading={fuelSummary.isLoading}
+                error={fuelSummary.isError ? fuelSummary.error : undefined}
+              />
             ) : (
               <>
                 <div className="flex shrink-0 items-center justify-end gap-4 border-b px-4 py-2 text-sm">

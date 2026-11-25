@@ -53,6 +53,7 @@ export function VehicleEntrySidebar({
   onMobileClose,
   onChange,
   onClear,
+  summary = false,
 }: {
   kind: VehicleEntryKind;
   filters: VehicleEntryFilters;
@@ -64,6 +65,8 @@ export function VehicleEntrySidebar({
   onMobileClose: () => void;
   onChange: (patch: Partial<VehicleEntryFilters>) => void;
   onClear: () => void;
+  /** Tab "Tổng hợp": kỳ cố định 2 tháng gần nhất, chỉ lọc theo chi nhánh. */
+  summary?: boolean;
 }) {
   const time = useSavedTimeRange(storageKey, onChange);
   const activeCount = [
@@ -93,6 +96,37 @@ export function VehicleEntrySidebar({
     />
   );
 
+  const branchFilter = (
+    <FilterSection label="Chi nhánh">
+      {select(
+        filters.branchId ? String(filters.branchId) : "",
+        branches.map((branch) => ({
+          value: String(branch.id),
+          label: branch.name,
+        })),
+        "Tất cả chi nhánh",
+        (value) =>
+          onChange({
+            branchId: value ? Number(value) : undefined,
+            vehicleId: undefined,
+          }),
+      )}
+    </FilterSection>
+  );
+
+  if (summary) {
+    // Không đụng bộ lọc thời gian/xe/trạng thái của hai tab danh sách.
+    return (
+      <FinanceFilterSidebar
+        activeCount={filters.branchId ? 1 : 0}
+        onClear={() => onChange({ branchId: undefined, vehicleId: undefined })}
+        mobileOpen={mobileOpen}
+        onMobileClose={onMobileClose}>
+        {branchFilter}
+      </FinanceFilterSidebar>
+    );
+  }
+
   return (
     <FinanceFilterSidebar
       activeCount={activeCount}
@@ -108,21 +142,7 @@ export function VehicleEntrySidebar({
         onChange={time.change}
       />
       <FilterDivider />
-      <FilterSection label="Chi nhánh">
-        {select(
-          filters.branchId ? String(filters.branchId) : "",
-          branches.map((branch) => ({
-            value: String(branch.id),
-            label: branch.name,
-          })),
-          "Tất cả chi nhánh",
-          (value) =>
-            onChange({
-              branchId: value ? Number(value) : undefined,
-              vehicleId: undefined,
-            }),
-        )}
-      </FilterSection>
+      {branchFilter}
       <FilterSection label="Xe">
         {select(
           filters.vehicleId ? String(filters.vehicleId) : "",
