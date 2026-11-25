@@ -230,8 +230,8 @@ export function DashboardHeader() {
         {/* ═══════════════════════════════════════════════
             DESKTOP LAYOUT — hidden dưới lg
         ════════════════════════════════════════════════ */}
-        <div className="hidden lg:flex items-center flex-1 h-full">
-          <div className="px-4 flex items-center gap-8">
+        <div className="hidden lg:flex items-center flex-1 min-w-0 h-full">
+          <div className="px-2 xl:px-4 flex items-center gap-4 xl:gap-8">
             <Link href="/" className="font-bold text-lg">
               Hisweetie
             </Link>
@@ -239,7 +239,7 @@ export function DashboardHeader() {
             <nav className="flex items-center gap-1">
               <Link
                 href="/"
-                className="px-4 py-2 hover:bg-brand-header-hover rounded transition-colors">
+                className="whitespace-nowrap px-2 xl:px-4 py-2 hover:bg-brand-header-hover rounded transition-colors">
                 Tổng quan
               </Link>
 
@@ -248,7 +248,7 @@ export function DashboardHeader() {
                   className="relative"
                   onMouseEnter={() => setHoveredMenu("products")}
                   onMouseLeave={() => setHoveredMenu(null)}>
-                  <button className="px-4 py-2 hover:bg-brand-header-hover rounded transition-colors">
+                  <button className="whitespace-nowrap px-2 xl:px-4 py-2 hover:bg-brand-header-hover rounded transition-colors">
                     Hàng hóa
                   </button>
                   {hoveredMenu === "products" && (
@@ -283,7 +283,7 @@ export function DashboardHeader() {
                   className="relative"
                   onMouseEnter={() => setHoveredMenu("orders")}
                   onMouseLeave={() => setHoveredMenu(null)}>
-                  <button className="px-4 py-2 hover:bg-brand-header-hover rounded transition-colors">
+                  <button className="whitespace-nowrap px-2 xl:px-4 py-2 hover:bg-brand-header-hover rounded transition-colors">
                     Đơn hàng
                   </button>
                   {hoveredMenu === "orders" && (
@@ -309,7 +309,7 @@ export function DashboardHeader() {
                   className="relative"
                   onMouseEnter={() => setHoveredMenu("customers")}
                   onMouseLeave={() => setHoveredMenu(null)}>
-                  <button className="px-4 py-2 hover:bg-brand-header-hover rounded transition-colors">
+                  <button className="whitespace-nowrap px-2 xl:px-4 py-2 hover:bg-brand-header-hover rounded transition-colors">
                     Khách hàng
                   </button>
                   {hoveredMenu === "customers" && (
@@ -335,7 +335,7 @@ export function DashboardHeader() {
                   className="relative"
                   onMouseEnter={() => setHoveredMenu("finance")}
                   onMouseLeave={() => setHoveredMenu(null)}>
-                  <button className="px-4 py-2 hover:bg-brand-header-hover rounded transition-colors">
+                  <button className="whitespace-nowrap px-2 xl:px-4 py-2 hover:bg-brand-header-hover rounded transition-colors">
                     Tài chính
                   </button>
                   {hoveredMenu === "finance" && (
@@ -359,14 +359,15 @@ export function DashboardHeader() {
               {anyReport && (
                 <Link
                   href="/bao-cao"
-                  className="px-4 py-2 hover:bg-brand-header-hover rounded transition-colors">
+                  className="whitespace-nowrap px-2 xl:px-4 py-2 hover:bg-brand-header-hover rounded transition-colors">
                   Báo cáo
                 </Link>
               )}
             </nav>
           </div>
 
-          <div className="ml-auto px-4 flex items-center gap-4">
+          {/* Màn hình hẹp hơn xl: thu khoảng cách; chỉ ô chi nhánh được co (tên dài thành "…") */}
+          <div className="ml-auto min-w-0 px-2 xl:px-4 flex items-center gap-2 xl:gap-3 2xl:gap-4">
             <PaletteSwitcher />
 
             {posActions.length > 0 && (
@@ -374,7 +375,7 @@ export function DashboardHeader() {
                 className="relative"
                 onMouseEnter={() => setHoveredMenu("pos")}
                 onMouseLeave={() => setHoveredMenu(null)}>
-                <button className="px-4 py-2 bg-white text-brand-header-pill rounded-lg hover:bg-cyan-bg transition-colors font-semibold">
+                <button className="whitespace-nowrap px-3 xl:px-4 py-2 bg-white text-brand-header-pill rounded-lg hover:bg-cyan-bg transition-colors font-semibold">
                   🛒 Bán hàng
                 </button>
                 {hoveredMenu === "pos" && (

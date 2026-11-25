@@ -25,15 +25,6 @@ const formatNumber = (value: number | null | undefined, digits = 0) =>
 const numberCell = (value: number | null | undefined, digits = 0) =>
   formatNumber(value, digits) ?? dash;
 
-/** Số có dấu: tăng (tốn thêm tiền) màu đỏ, giảm màu xanh. */
-const signedCell = (value: number | null | undefined) => {
-  if (value === null || value === undefined) return dash;
-  const text = formatNumber(Math.abs(value)) as string;
-  if (value > 0) return <span className="text-red-600">+{text}</span>;
-  if (value < 0) return <span className="text-green-700">-{text}</span>;
-  return <span className="text-gray-500">0</span>;
-};
-
 const vnDate = (iso?: string | null) =>
   iso
     ? new Date(iso).toLocaleDateString("vi-VN", {
@@ -58,8 +49,8 @@ type Column = {
 
 /**
  * Báo cáo tổng hợp xăng dầu theo xe (sheet "Tổng hợp" của file "Báo cáo lái xe
- * - Xăng dầu"): định mức quản lý kho đặt, thực tế 2 tháng gần nhất và chênh lệch
- * đơn giá. Nhóm theo kho, mỗi kho một dòng tổng.
+ * - Xăng dầu"): cài đặt hiện tại của xe và thực tế 2 tháng gần nhất. Nhóm theo
+ * kho, mỗi kho một dòng tổng.
  */
 export function VehicleFuelSummaryTable({
   data,
@@ -112,7 +103,7 @@ export function VehicleFuelSummaryTable({
     {
       key: "norm",
       label: "Định mức (L/100km)",
-      hint: `Định mức tiêu hao quản lý kho đặt cho xe (Danh sách xe), cho phép lệch ±${tolerance} L/100km.`,
+      hint: `Định mức tiêu hao đang cài cho xe trong Danh sách xe, cho phép lệch ±${tolerance} L/100km.`,
       width: "130px",
       align: "right",
       render: (row) =>
@@ -178,58 +169,10 @@ export function VehicleFuelSummaryTable({
       total: (total) => numberCell(total.litersPer100Km, 2),
     },
   ];
-  const priceColumns: Column[] = [
-    {
-      key: "avgUnitPrice",
-      label: "Đơn giá TB (đ/lít)",
-      hint: "Bình quân theo số lít của mọi lần đổ trong kỳ (đơn giá trên phiếu; thiếu thì số tiền ÷ số lít).",
-      width: "130px",
-      align: "right",
-      render: (row) => numberCell(row.avgUnitPrice),
-      total: (total) => numberCell(total.avgUnitPrice),
-    },
-    {
-      key: "currentUnitPrice",
-      label: "Đơn giá hiện tại",
-      hint: "Đơn giá của lần đổ gần nhất.",
-      width: "120px",
-      align: "right",
-      render: (row) =>
-        row.currentUnitPrice === null ? (
-          dash
-        ) : (
-          <span title={`Lần đổ ngày ${vnDate(row.currentPriceAt)}`}>
-            {formatNumber(row.currentUnitPrice)}
-          </span>
-        ),
-    },
-    {
-      key: "priceDiff",
-      label: "Chênh lệch đơn giá",
-      hint: "Đơn giá hiện tại − đơn giá trung bình.",
-      width: "130px",
-      align: "right",
-      render: (row) => signedCell(row.priceDiff),
-    },
-    {
-      key: "monthlyExtraCost",
-      label: "Tiền chênh lệch do tăng giá (tháng)",
-      hint: `Chênh lệch đơn giá × (số lít trong kỳ ÷ ${months} tháng).`,
-      width: "170px",
-      align: "right",
-      render: (row) => signedCell(row.monthlyExtraCost),
-      total: (total) => (
-        <span className="font-semibold">
-          {signedCell(total.monthlyExtraCost)}
-        </span>
-      ),
-    },
-  ];
   const groups: Array<{ label: string; columns: Column[] }> = [
     { label: "", columns: vehicleColumns },
-    { label: "Quản lý kho", columns: normColumns },
+    { label: "Cài đặt hiện tại", columns: normColumns },
     { label: `Thực tế ${months} tháng gần nhất`, columns: actualColumns },
-    { label: "Chênh lệch", columns: priceColumns },
   ];
   const columns = groups.flatMap((group) => group.columns);
   const labelSpan = vehicleColumns.length + normColumns.length;

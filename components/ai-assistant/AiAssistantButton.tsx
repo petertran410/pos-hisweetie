@@ -51,7 +51,8 @@ export function AiAssistantButton({ variant }: { variant: "desktop" | "mobile" }
       }`}
     >
       <Sparkles className="w-4 h-4" aria-hidden />
-      Trợ lý AI
+      {/* Dưới xl chỉ còn biểu tượng (tên ở title) để header không tràn */}
+      <span className="hidden xl:inline whitespace-nowrap">Trợ lý AI</span>
     </button>
   );
 }

@@ -513,20 +513,20 @@ export function PurchaseOrderSidebar({
   }, [selectedBranchIds]);
 
   // Sync với chi nhánh đang chọn ở DashboardHeader: khi đổi chi nhánh, tick lại
-  // chi nhánh đó. Skip lần mount đầu để không ghi đè lựa chọn ban đầu. Chỉ ghi
-  // đè khi đang ở chế độ "bám theo header" (đúng 1 chi nhánh); nếu user đang lọc
-  // nhiều chi nhánh (>=2) hoặc "Tất cả chi nhánh" (rỗng) thì giữ nguyên.
-  const isFirstRenderRef = useRef(true);
+  // chi nhánh đó. Chỉ ghi đè khi đang ở chế độ "bám theo header" (đúng 1 chi
+  // nhánh); nếu user đang lọc nhiều chi nhánh (>=2) hoặc "Tất cả chi nhánh"
+  // (rỗng) thì giữ nguyên.
+  // Mốc so sánh là chi nhánh mà lựa chọn hiện tại đang bám theo, KHÔNG phải
+  // chi nhánh trên header lúc mount: đổi chi nhánh làm PagePermissionGuard gỡ
+  // sidebar trong lúc tải quyền mới, rồi gắn lại với filters.branchIds cũ của
+  // page → lần chạy đầu phải thấy lệch và bám theo chi nhánh mới.
   const lastSyncedBranchIdRef = useRef<number | null>(
-    selectedBranch?.id ?? null
+    selectedBranchIds.length === 1
+      ? selectedBranchIds[0]
+      : (selectedBranch?.id ?? null)
   );
   useEffect(() => {
     const currentBranchId = selectedBranch?.id ?? null;
-    if (isFirstRenderRef.current) {
-      isFirstRenderRef.current = false;
-      lastSyncedBranchIdRef.current = currentBranchId;
-      return;
-    }
     if (currentBranchId !== lastSyncedBranchIdRef.current) {
       lastSyncedBranchIdRef.current = currentBranchId;
       setSelectedBranchIds((prev) =>

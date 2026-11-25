@@ -55,7 +55,7 @@ export interface VehicleFuelSummaryRow {
   vehicleType: string;
   fuelType: string | null;
   isActive: boolean;
-  /** Định mức quản lý kho đặt (L/100km). */
+  /** Định mức đang cài cho xe (L/100km). */
   fuelNorm: number | null;
   /** Tổng km đã đi trong kỳ (mỗi lần đổ: km tới lần đổ kế tiếp). */
   km: number | null;
@@ -64,12 +64,6 @@ export interface VehicleFuelSummaryRow {
   litersPer100Km: number | null;
   samples: number;
   consumptionCheck: "NORMAL" | "ABNORMAL" | null;
-  avgUnitPrice: number | null;
-  currentUnitPrice: number | null;
-  currentPriceAt: string | null;
-  priceDiff: number | null;
-  /** Chênh lệch đơn giá × (lít trong kỳ ÷ số tháng). */
-  monthlyExtraCost: number | null;
 }
 
 export interface VehicleFuelSummaryTotal {
@@ -77,8 +71,6 @@ export interface VehicleFuelSummaryTotal {
   km: number | null;
   liters: number | null;
   litersPer100Km: number | null;
-  avgUnitPrice: number | null;
-  monthlyExtraCost: number | null;
 }
 
 export interface VehicleFuelSummary {

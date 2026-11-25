@@ -115,12 +115,14 @@ export function BranchSelector({
   };
 
   return (
-    <div className={`relative ${fullWidth ? "w-full" : ""}`} ref={dropdownRef}>
+    // Trên header: rộng tối thiểu 200px từ xl, nhưng là ô duy nhất được co khi thiếu chỗ (tên cắt "…")
+    <div className={`relative ${fullWidth ? "w-full" : "min-w-[8rem]"}`} ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={isLoading}
+        title={selectedBranch?.name}
         className={`flex items-center gap-2 px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 text-black disabled:opacity-70 ${
-          fullWidth ? "w-full" : "min-w-[200px]"
+          fullWidth ? "w-full" : "w-full xl:min-w-[200px]"
         }`}>
         <svg
           className="w-5 h-5"
