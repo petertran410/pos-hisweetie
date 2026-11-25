@@ -32,6 +32,9 @@ export const VEHICLE_BRANCH_IDS = [6, 1];
 /** Chênh lệch cho phép (L/100km) quanh định mức xe, cả hai chiều; khớp FUEL_NORM_TOLERANCE ở backend. */
 export const FUEL_NORM_TOLERANCE = 1;
 
+/** Số tháng gần nhất dùng cho "L/100km thực tế"; khớp FUEL_RECENT_MONTHS ở backend. */
+export const FUEL_RECENT_MONTHS = 2;
+
 export const VEHICLE_TYPE_LABELS: Record<string, string> = {
   CAR: "Ô tô",
   MOTORBIKE: "Xe máy",
@@ -161,7 +164,7 @@ export const vehicleCancelBlockReason = (
 export const vehicleScope = (branchId: number) =>
   branchId === 6 ? "hn" : branchId === 1 ? "sg" : null;
 
-export type VehicleAction = "view" | "create" | "update" | "manage";
+export type VehicleAction = "view" | "create" | "update" | "manage" | "export";
 
 /** Quyền xe cộ theo vai trò × chi nhánh (xem useFinanceAccess). */
 export const canVehicle = (

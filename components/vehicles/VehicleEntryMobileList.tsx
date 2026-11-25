@@ -45,6 +45,8 @@ export function VehicleEntryMobileList({
   onPageChange,
   onCreate,
   onOpenVehicles,
+  onExport,
+  isExporting = false,
   highlightId,
   cancellingId,
   editBlockReason,
@@ -70,6 +72,9 @@ export function VehicleEntryMobileList({
   onPageChange: (page: number) => void;
   onCreate?: () => void;
   onOpenVehicles?: () => void;
+  /** Xuất Excel toàn bộ phiếu theo bộ lọc (không có thì ẩn nút). */
+  onExport?: () => void;
+  isExporting?: boolean;
   highlightId?: number | null;
   cancellingId: number | null;
   editBlockReason: (row: VehicleEntry) => string | null;
@@ -89,15 +94,26 @@ export function VehicleEntryMobileList({
       activeFilterCount={activeFilterCount}
       onOpenFilter={notice ? undefined : onOpenFilter}
       actions={
-        onOpenVehicles && (
-          <button
-            type="button"
-            onClick={onOpenVehicles}
-            className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium text-gray-700">
-            <ListChecks className="h-3.5 w-3.5" />
-            Danh sách xe
-          </button>
-        )
+        <>
+          {onOpenVehicles && (
+            <button
+              type="button"
+              onClick={onOpenVehicles}
+              className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium text-gray-700">
+              <ListChecks className="h-3.5 w-3.5" />
+              Danh sách xe
+            </button>
+          )}
+          {!notice && onExport && (
+            <button
+              type="button"
+              onClick={onExport}
+              disabled={isExporting}
+              className="rounded-lg border px-2.5 py-1.5 text-xs font-medium text-gray-700 disabled:opacity-50">
+              {isExporting ? "Đang xuất..." : "Xuất file"}
+            </button>
+          )}
+        </>
       }
       tabs={
         <div className="grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">

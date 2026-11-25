@@ -23,7 +23,7 @@ export interface Vehicle {
   lastOilChangeOdo: number | null;
   kmSinceOilChange: number | null;
   oilChangeDue: boolean;
-  /** Tổng lít ÷ tổng km × 100 của tối đa 10 lần đổ gần nhất; null khi chưa đủ dữ liệu. */
+  /** Tổng lít ÷ tổng km × 100 của các lần đổ trong FUEL_RECENT_MONTHS tháng gần nhất; null khi không có. */
   recentLitersPer100Km: number | null;
   recentFuelSamples: number;
 }

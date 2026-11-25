@@ -221,6 +221,7 @@ const RESOURCE_ACTION_LABELS: Record<string, string> = {
   "vpsg_cash:cancel": "Hủy ghi quỹ VPSG",
   "warehouse_expense:request_review": "Ghi chú & tag người xem lại",
   "warehouse_expense:export": "Xuất file Excel",
+  "vehicles:export": "Xuất file Excel",
   "warehouse_cash:confirm_amount": "Xác nhận số tiền thực nhận",
   // Khách hàng không xóa thật, chỉ ngừng hoạt động (isActive = false)
   "customers:delete": "Ngừng hoạt động",
