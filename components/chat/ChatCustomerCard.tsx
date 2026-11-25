@@ -7,6 +7,7 @@ import type { ChatContext } from "@/lib/types/smaxChat";
 import { LEAD_SOURCE_LABEL, leadHref } from "@/lib/leads/constants";
 import { JourneyStepper, stageMilestones } from "@/components/journey/JourneyStepper";
 import { QUICK_ITEM_MIME, type QuickItem } from "@/lib/chat/quickInsert";
+import { UpsellSuggestions } from "./UpsellSuggestions";
 
 /** Kéo dòng vào ô soạn tin để chèn thông tin (như menu "/"). */
 const dragProps = (item: QuickItem) => ({
@@ -192,6 +193,8 @@ export function ChatCustomerCard({ context }: { context: ChatContext }) {
           )}
         </div>
       )}
+
+      <UpsellSuggestions customerId={customer.id} />
     </div>
   );
 }

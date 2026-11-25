@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { BranchSelector } from "./BranchSelector";
 import { SepayNotificationBell } from "../sepay/SepayNotificationBell";
 import { ChatSidebarToggle } from "../chat/ZaloChatSidebar";
+import { AiAssistantButton } from "../ai-assistant/AiAssistantButton";
 import { PaletteSwitcher } from "./PaletteSwitcher";
 import {
   useFilteredPosActions,
@@ -33,6 +34,21 @@ export function DashboardHeader() {
   // ── Desktop states (giữ nguyên) ──
   const [hoveredMenu, setHoveredMenu] = useState<string | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  // Menu tài khoản: bấm ra ngoài khung hoặc Esc thì đóng
+  useEffect(() => {
+    if (!showUserMenu) return;
+    const onDown = (e: PointerEvent) => {
+      if (!userMenuRef.current?.contains(e.target as Node)) setShowUserMenu(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setShowUserMenu(false);
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [showUserMenu]);
   // ── Mobile states (thêm mới) ──
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [expandedMobileSection, setExpandedMobileSection] = useState<
@@ -379,11 +395,13 @@ export function DashboardHeader() {
               </div>
             )}
 
+            <AiAssistantButton variant="desktop" />
+
             <BranchSelector />
 
             <SepayNotificationBell />
 
-            <div className="relative">
+            <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center gap-2 px-3 py-2 hover:bg-brand-header-hover rounded transition-colors">
@@ -444,6 +462,7 @@ export function DashboardHeader() {
           <div className="flex items-center gap-1">
             <SepayNotificationBell />
             <ChatSidebarToggle />
+            <AiAssistantButton variant="mobile" />
             <PaletteSwitcher />
             {posActions.length > 0 && (
               <Link

@@ -12,6 +12,7 @@ import {
   ClipboardList,
   TrendingUp,
   Target,
+  MessageCircle,
 } from "lucide-react";
 import {
   useReportAccess,
@@ -63,6 +64,13 @@ const REPORT_GROUPS: ReportGroup[] = [
     label: "Lead",
     href: "/bao-cao/lead",
     icon: Target,
+    available: true,
+  },
+  {
+    key: "smax",
+    label: "Smax chat",
+    href: "/bao-cao/smax",
+    icon: MessageCircle,
     available: true,
   },
   {

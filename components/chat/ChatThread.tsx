@@ -1,7 +1,10 @@
 "use client";
 
 import { createContext, Fragment, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, Check, Copy, Download, FileText, Forward, MoreHorizontal, PanelRight, Play, Quote, RotateCw, X } from "lucide-react";
+import { AlarmClock, ArrowDown, Check, Copy, Download, FileText, Forward, MoreHorizontal, PanelRight, Play, Quote, RotateCw, X } from "lucide-react";
+import { waitLabel } from "@/lib/chat/waitAlert";
+import { aiComposeApi, requestImageRead, THREAD_LABEL_META, threadLabelApi, type ThreadLabel } from "@/lib/ai/ai-compose";
+import { useCan } from "@/lib/hooks/useCan";
 import { createPortal } from "react-dom";
 import type { ThreadSource } from "@/lib/chat/threadSource";
 import type {
@@ -15,7 +18,7 @@ import { ChatComposer } from "./ChatComposer";
 import { ChatThreadHeader } from "./ChatThreadHeader";
 import { ZaloAvatar } from "./ZaloAvatar";
 import { stickerUrl } from "@/lib/chat/stickers";
-import { markSeen } from "@/lib/chat/seen";
+import { forgetUnseenOnOpen, markSeen, newCount, peekUnseenOnOpen } from "@/lib/chat/seen";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { SendConfirmDialog } from "./SendConfirmDialog";
 import { MessageMenu } from "./MessageMenu";
@@ -151,12 +154,66 @@ export function ChatThread({
   );
   const items = useMemo(() => groupAlbums(shownMessages), [shownMessages]);
 
-  // Đang mở hội thoại → coi như đã xem: cập nhật mốc "tin mới" theo số tin Smax đếm
-  useEffect(() => {
+  // Đang mở hội thoại → coi như đã xem: cập nhật mốc "tin mới" theo số tin Smax đếm.
+  // Cùng lúc lấy cảnh báo khách chờ lâu của hội thoại này (danh sách gần đây tính sẵn)
+  const [waiting, setWaiting] = useState<RecentChat["waiting"]>(null);
+  const [aiLabel, setAiLabel] = useState<RecentChat["aiLabel"]>(null);
+  // "AI đọc ảnh" trong menu tin: người gửi được tin + AI đang bật
+  const canSendChat = useCan("smax_chat", "send");
+  const aiStatus = useQuery({
+    queryKey: ["aiComposeStatus"],
+    queryFn: aiComposeApi.status,
+    enabled: canSendChat,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const canAiRead = canSendChat && !!aiStatus.data?.enabled;
+  const firstImage = (list: ChatMessage[]) => {
+    for (const m of list) {
+      const a = m.attachments.find((x) => isImage(x) || (x.thumbnail && !isVideo(x)));
+      if (a) return { messageId: m.id, url: a.url };
+    }
+    return null;
+  };
+  const [labelEditing, setLabelEditing] = useState(false);
+  const changeLabel = async (label: ThreadLabel) => {
+    setLabelEditing(false);
+    try {
+      await threadLabelApi.set(source.pagePid, source.tid, label);
+      setAiLabel({ label, reason: "Nhân viên gắn tay", pending: label !== "other", manual: true, stale: false });
+      queryClient.invalidateQueries({ queryKey: ["smaxRecentChats"] });
+    } catch (e) {
+      toast.error((e as Error).message || "Không đổi được nhãn");
+    }
+  };
+  // Số tin chưa đọc lúc mở — cho gợi ý "Tóm tắt N tin chưa đọc". Mở từ danh sách "Đang chat gần đây"
+  // thì danh sách đã đánh dấu đã xem trước khi khung chat dựng → lấy số tin mới ngay trước lần đánh dấu đó
+  const [unreadAtOpen] = useState(() => {
+    const opened = peekUnseenOnOpen(source.tid);
+    if (opened !== undefined) return opened;
     for (const [, d] of queryClient.getQueriesData<{ items: RecentChat[] }>({ queryKey: ["smaxRecentChats"] })) {
       const hit = d?.items.find((i) => i.tid === source.tid);
-      if (hit) markSeen(source.tid, hit.messageCount);
+      if (hit) return newCount(source.tid, hit.messageCount);
     }
+    return 0;
+  });
+  // Đã đọc số tin mới lúc mở → xoá, lần mở sau (không qua danh sách) không dùng lại số cũ
+  useEffect(() => forgetUnseenOnOpen(source.tid), [source.tid]);
+  useEffect(() => {
+    let found: RecentChat["waiting"] = null;
+    let label: RecentChat["aiLabel"] = null;
+    for (const [, d] of queryClient.getQueriesData<{ items: RecentChat[] }>({ queryKey: ["smaxRecentChats"] })) {
+      const hit = d?.items.find((i) => i.tid === source.tid);
+      if (hit) {
+        markSeen(source.tid, hit.messageCount);
+        found ??= hit.waiting ?? null;
+        label ??= hit.aiLabel ?? null;
+      }
+    }
+    setAiLabel(label);
+    // Tin cuối giờ là của mình → hết cảnh báo ngay, không chờ danh sách tải lại
+    const last = latest.data?.messages.at(-1);
+    setWaiting(last?.fromMe ? null : found);
   }, [latest.data, source.tid, queryClient]);
   // Tên + avatar người gửi: gộp dần qua các lần poll (tin cũ tải thêm không kèm bảng này)
   const [senders, setSenders] = useState<NonNullable<ChatMessagesPage["senders"]>>({});
@@ -509,6 +566,45 @@ export function ChatThread({
         takeOver={takeOver}
         onTakeOverChange={setTakeOver}
       />
+      {waiting && (
+        <div role="status" className="flex items-center gap-1.5 border-b border-red-200 bg-red-50 px-3 py-1.5 text-xs text-red-700">
+          <AlarmClock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span>
+            Khách {waitLabel(waiting.minutes).toLowerCase()} (giờ làm) chưa được trả lời
+            {waiting.upset ? " · tin cuối có dấu hiệu sốt ruột/bực" : ""}
+          </span>
+        </div>
+      )}
+      {aiLabel && (
+        <div className="flex flex-wrap items-center gap-1.5 border-b bg-white px-3 py-1 text-xs text-gray-600">
+          <span
+            className={`rounded border px-1 text-[11px] ${THREAD_LABEL_META[aiLabel.label].className} ${aiLabel.stale ? "opacity-50" : ""}`}>
+            {THREAD_LABEL_META[aiLabel.label].text}
+          </span>
+          <span className="min-w-0 flex-1 truncate" title={aiLabel.reason ?? ""}>
+            {aiLabel.manual ? "Gắn tay" : "AI"}
+            {aiLabel.reason && !aiLabel.manual ? `: ${aiLabel.reason}` : ""}
+            {aiLabel.stale ? " · nhãn cũ (đã có tin mới)" : ""}
+          </span>
+          {labelEditing ? (
+            <span className="flex flex-wrap gap-1">
+              {(Object.keys(THREAD_LABEL_META) as ThreadLabel[]).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => void changeLabel(k)}
+                  className={`rounded border px-1.5 text-[11px] hover:opacity-80 ${THREAD_LABEL_META[k].className}`}>
+                  {THREAD_LABEL_META[k].text}
+                </button>
+              ))}
+            </span>
+          ) : (
+            <button type="button" onClick={() => setLabelEditing(true)} className="text-brand hover:underline">
+              Đổi nhãn
+            </button>
+          )}
+        </div>
+      )}
       <div className="relative flex flex-1 min-h-0 flex-col">
       <div
         ref={scrollRef}
@@ -726,6 +822,9 @@ export function ChatThread({
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
           mentionMembers={mentionMembers}
+          aiTarget={{ pagePid: source.pagePid, tid: source.tid }}
+          unreadAtOpen={unreadAtOpen}
+          onJump={(id) => jumpTo({ id } as ChatMessage)}
         />
       )}
 
@@ -738,10 +837,14 @@ export function ChatThread({
           hasMedia={menu.messages.some((m) => m.attachments.length)}
           canRecall={canReact && menu.messages.every(canRecallMessage)}
           canDelete={canReact}
+          canAiRead={canAiRead && !!firstImage(menu.messages)}
           onClose={() => setMenu(null)}
           onAction={(a) => {
             const list = menu.messages;
-            if (a === "reply") setReplyTo(list[list.length - 1]);
+            if (a === "ai-read") {
+              const img = firstImage(list);
+              if (img) requestImageRead(img.messageId, img.url);
+            } else if (a === "reply") setReplyTo(list[list.length - 1]);
             else if (a === "forward") setForwarding(list);
             else if (a === "copy") copyMessages(list);
             else if (a === "download") downloadMessagesMedia(list);

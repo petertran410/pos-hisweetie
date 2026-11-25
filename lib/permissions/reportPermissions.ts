@@ -14,7 +14,8 @@ export type ReportGroupKey =
   | "tai-chinh"
   | "cuoi-ngay"
   | "phan-tich"
-  | "lead";
+  | "lead"
+  | "smax";
 
 // Map (group, viewTypeValue) → key quyền backend (reports:xxx).
 // Phải khớp VIEWTYPE_KEY_MAP trong reports-permission.guard.ts.
@@ -64,6 +65,11 @@ export const REPORT_VIEWTYPE_PERMISSION: Record<
   // Phạm vi số liệu vẫn theo quyền lead: không có leads:update → chỉ lead giao cho mình.
   lead: {
     _all: "reports:lead",
+  },
+  // Smax chat (thống kê dùng chat trong POS): quyền riêng reports:smax.
+  // Không có quyền xem dữ liệu NV khác → backend chỉ trả số liệu của chính mình (ownOnly).
+  smax: {
+    _all: "reports:smax",
   },
   // Tài chính gộp 1 quyền cho cả nhóm.
   "tai-chinh": {

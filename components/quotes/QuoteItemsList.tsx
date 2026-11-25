@@ -1,7 +1,8 @@
 "use client";
 
-import { Fragment, useState } from "react";
-import { ChevronDown, ChevronRight, Layers, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { Reorder, useDragControls } from "motion/react";
+import { ChevronDown, ChevronRight, GripVertical, Layers, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { NumericInput } from "@/components/ui/NumericInput";
 import { ColdBadge } from "./ColdBadge";
 import type { QuoteCategory, QuoteItem, QuoteTier } from "@/lib/types/quote";
@@ -21,6 +22,22 @@ type Props = {
   onAddGroup: (category: QuoteCategory) => void;
   priceBookName: string;
 };
+
+/** Một sản phẩm (dòng + khung giá mở rộng) = 1 tbody kéo thả được; chỉ kéo bằng tay nắm để không vướng ô nhập. */
+function SortableRows({
+  id,
+  children,
+}: {
+  id: string;
+  children: (startDrag: (e: React.PointerEvent) => void) => React.ReactNode;
+}) {
+  const controls = useDragControls();
+  return (
+    <Reorder.Item as="tbody" value={id} dragListener={false} dragControls={controls} className="relative bg-white">
+      {children((e) => controls.start(e))}
+    </Reorder.Item>
+  );
+}
 
 const UNITS = ["thùng", "túi", "hộp", "gói", "bao", "kg"];
 
@@ -224,6 +241,11 @@ export function QuoteItemsList({ items, onChange, onAddGroup, priceBookName }: P
   const [open, setOpen] = useState<string | null>(null);
   const [groupMenu, setGroupMenu] = useState(false);
   const cols = tierColumns(items);
+  /** Khung trống theo định nghĩa của dòng khác có cùng khoá (nhãn, số lượng, đơn vị). */
+  const missingTier = (key: string): QuoteTier => {
+    const def = items.flatMap((x) => x.tiers).find((t) => t.key === key)!;
+    return { ...def, price: null, manual: false };
+  };
   const manualCount = items.reduce((n, it) => n + it.tiers.filter((t) => t.manual).length, 0);
 
   const setItem = (id: string, next: QuoteItem) => onChange(items.map((it) => (it.id === id ? next : it)));
@@ -302,7 +324,12 @@ export function QuoteItemsList({ items, onChange, onAddGroup, priceBookName }: P
             Tìm sản phẩm ở ô phía trên, hoặc bấm “Thêm cả nhóm hàng”.
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <Reorder.Group
+            as="table"
+            axis="y"
+            values={items.map((it) => it.id)}
+            onReorder={(ids: string[]) => onChange(ids.map((id) => items.find((it) => it.id === id)!))}
+            className="w-full text-sm">
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr className="text-xs text-gray-500 uppercase tracking-wide">
                 <th className="w-8" />
@@ -323,13 +350,22 @@ export function QuoteItemsList({ items, onChange, onAddGroup, priceBookName }: P
                 <th className="w-10" />
               </tr>
             </thead>
-            <tbody>
               {items.map((it, i) => {
                 const expanded = open === it.id;
                 return (
-                  <Fragment key={it.id}>
+                  <SortableRows key={it.id} id={it.id}>
+                    {(startDrag) => (
+                    <>
                     <tr className={`border-b ${expanded ? "bg-brand-soft" : "hover:bg-gray-50"}`}>
-                      <td className="pl-2">
+                      <td className="pl-1 whitespace-nowrap">
+                        <button
+                          type="button"
+                          aria-label={`Kéo để đổi thứ tự ${it.productName}`}
+                          title="Kéo để đổi thứ tự"
+                          onPointerDown={startDrag}
+                          className="p-1 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing touch-none align-middle">
+                          <GripVertical className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => setOpen(expanded ? null : it.id)}
                           aria-label={expanded ? "Thu gọn khung giá" : "Sửa khung giá"}
@@ -410,7 +446,21 @@ export function QuoteItemsList({ items, onChange, onAddGroup, priceBookName }: P
                         return (
                           <td key={c.key} className="px-2 py-2">
                             {k < 0 ? (
-                              <div className="text-right text-gray-300">—</div>
+                              // Dòng chưa có khung này (vd file Excel để trống ô) → nhập giá thì thêm khung, theo thứ tự cột
+                              <PriceCell
+                                tier={missingTier(c.key)}
+                                base={it.priceBookPrice}
+                                onPrice={(price) =>
+                                  setItem(it.id, {
+                                    ...it,
+                                    tiers: [...it.tiers, { ...missingTier(c.key), price, manual: true }].sort(
+                                      (x, y) =>
+                                        cols.findIndex((col) => col.key === x.key) -
+                                        cols.findIndex((col) => col.key === y.key)
+                                    ),
+                                  })
+                                }
+                              />
                             ) : (
                               <PriceCell
                                 tier={it.tiers[k]}
@@ -448,11 +498,12 @@ export function QuoteItemsList({ items, onChange, onAddGroup, priceBookName }: P
                         </td>
                       </tr>
                     )}
-                  </Fragment>
+                  </>
+                    )}
+                  </SortableRows>
                 );
               })}
-            </tbody>
-          </table>
+          </Reorder.Group>
         )}
       </div>
     </div>

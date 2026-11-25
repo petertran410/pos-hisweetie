@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { UserPlus, X } from "lucide-react";
+import { Loader2, Sparkles, UserPlus, X } from "lucide-react";
+import { aiComposeApi, matchPlace, type LeadInfo } from "@/lib/ai/ai-compose";
+import { useNewLocations } from "@/lib/hooks/useNewLocations";
 import { toast } from "sonner";
 import { smaxChatApi } from "@/lib/api/smaxChat";
 import { apiClient } from "@/lib/config/api";
@@ -151,6 +153,57 @@ function LinkCustomerBar({
   const { channels } = useActiveChannel();
   const [creatingLead, setCreatingLead] = useState(false);
   const userId = useAuthStore((s) => s.user?.id ?? null);
+  // "AI điền": đọc hội thoại → điền sẵn form lead (ô AI chưa chắc tô vàng)
+  const canSendChat = useCan("smax_chat", "send");
+  const aiStatus = useQuery({
+    queryKey: ["aiComposeStatus"],
+    queryFn: aiComposeApi.status,
+    enabled: canSendChat,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const canAiFill = canSendChat && !!aiStatus.data?.enabled;
+  const { provinces, communes } = useNewLocations();
+  const [aiLead, setAiLead] = useState<{
+    initial: { name?: string; category?: NonNullable<LeadInfo["category"]>; provinceCode?: string; provinceName?: string; wardCode?: string; wardName?: string; need?: string };
+    hints: { filled: string[]; unsure: string[] };
+  } | null>(null);
+  const [aiLeadLoading, setAiLeadLoading] = useState(false);
+  const fillLeadWithAi = async () => {
+    setAiLeadLoading(true);
+    try {
+      const info = await aiComposeApi.lead({ mode: "lead", pagePid: thread.pagePid, tid: thread.tid });
+      const province = matchPlace(info.province, provinces);
+      const ward = province ? matchPlace(info.ward, communes.filter((c) => c.provinceCode === province.code)) : undefined;
+      const labels: Record<string, string> = { name: "tên", category: "phân loại", province: "tỉnh/thành", ward: "phường/xã", need: "nhu cầu" };
+      const filled = [
+        info.name && "name",
+        info.category && "category",
+        province && "province",
+        ward && "ward",
+        info.need && "need",
+      ].filter((f): f is string => !!f);
+      setAiLead({
+        initial: {
+          ...(info.name ? { name: info.name } : {}),
+          ...(info.category ? { category: info.category } : {}),
+          ...(province ? { provinceCode: province.code, provinceName: province.name } : {}),
+          ...(ward ? { wardCode: ward.code, wardName: ward.name } : {}),
+          ...(info.need ? { need: info.need } : {}),
+        },
+        hints: {
+          filled: filled.map((f) => labels[f]),
+          unsure: filled.filter((f) => info.unsure.includes(f as LeadInfo["unsure"][number])),
+        },
+      });
+      if (!filled.length) toast.info("AI chưa đọc được thông tin nào từ hội thoại — điền tay");
+      setCreatingLead(true);
+    } catch (e) {
+      toast.error((e as Error).message || "AI chưa đọc được hội thoại");
+    } finally {
+      setAiLeadLoading(false);
+    }
+  };
   const inView = useCustomersInViewStore((s) => s.entries);
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
@@ -232,8 +285,10 @@ function LinkCustomerBar({
 
   const leadForm = creatingLead && (
     <LeadFormModal
+      aiHints={aiLead?.hints}
       initial={{
-        name: zaloName,
+        ...aiLead?.initial,
+        name: aiLead?.initial.name ?? zaloName,
         phone: thread.phones?.[0]?.replace(/^\+?84(?=\d{9}$)/, "0"),
         source: PLATFORM_TO_SOURCE[thread.platform ?? "zaloweb"],
         channelPid: thread.pagePid,
@@ -246,13 +301,27 @@ function LinkCustomerBar({
           name: zaloName,
         },
       }}
-      onClose={() => setCreatingLead(false)}
+      onClose={() => {
+        setCreatingLead(false);
+        setAiLead(null);
+      }}
       onSaved={(lead) => {
         // Hội thoại đang mở mang nhãn lead ngay (không chờ tải lại danh sách)
         const st = useChatSidebarStore.getState();
         if (st.loose?.tid === thread.tid) st.openLoose({ ...thread, lead: { id: lead.id, name: lead.name, status: lead.status } }, userId);
       }}
     />
+  );
+
+  const aiLeadButton = canAiFill && (
+    <button
+      onClick={() => void fillLeadWithAi()}
+      disabled={aiLeadLoading}
+      title="AI đọc hội thoại, điền sẵn tên quán, phân loại, tỉnh/phường, nhu cầu vào form tạo lead"
+      className="flex shrink-0 items-center gap-1 rounded-md border border-violet-300 bg-white px-2 py-0.5 text-xs font-medium text-violet-700 hover:bg-violet-50 disabled:opacity-50">
+      {aiLeadLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+      AI điền
+    </button>
   );
 
   if (!linkMode) {
@@ -272,11 +341,14 @@ function LinkCustomerBar({
           </Link>
         ) : (
           canCreateLead && (
-            <button
-              onClick={() => setCreatingLead(true)}
-              className="shrink-0 rounded-md bg-violet-600 px-3 py-1 text-xs font-medium text-white hover:bg-violet-700">
-              + Tạo lead
-            </button>
+            <>
+              {aiLeadButton}
+              <button
+                onClick={() => setCreatingLead(true)}
+                className="shrink-0 rounded-md bg-violet-600 px-3 py-1 text-xs font-medium text-white hover:bg-violet-700">
+                + Tạo lead
+              </button>
+            </>
           )
         )}
         {canManage && (
@@ -311,12 +383,15 @@ function LinkCustomerBar({
         ) : (
           canCreateLead &&
           !thread.isGroup && (
+            <>
+            {aiLeadButton}
             <button
               onClick={() => setCreatingLead(true)}
               title="Khách tiềm năng chưa có đơn — tạo lead mang sẵn hội thoại này"
               className="shrink-0 rounded-md border border-violet-300 bg-white px-2 py-0.5 text-xs font-medium text-violet-700 hover:bg-violet-50">
               + Tạo lead
             </button>
+            </>
           )
         )}
         {hideButton}

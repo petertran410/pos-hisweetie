@@ -133,6 +133,7 @@ export const ACTION_LABELS: Record<string, string> = {
   financial: "Xem báo cáo tài chính",
   customer: "Báo cáo khách hàng",
   lead: "Báo cáo Lead",
+  smax: "Báo cáo Smax chat",
   analytics_business: "Phân tích - Kinh doanh",
   analytics_management: "Phân tích - Quản trị",
   analytics_customer: "Phân tích - Khách hàng",
@@ -330,6 +331,11 @@ export const REPORT_SUBGROUPS: ReportSubgroup[] = [
     actions: ["lead"],
   },
   {
+    key: "reports_smax",
+    label: "Báo cáo Smax chat",
+    actions: ["smax"],
+  },
+  {
     key: "reports_financial",
     label: "Báo cáo tài chính",
     actions: ["financial", "export_financial"],
@@ -411,6 +417,7 @@ export const REPORT_LEAF_LABELS: Record<string, string> = {
   supplier_info: "Tổng hợp NCC",
   financial: "Xem báo cáo tài chính",
   lead: "Xem báo cáo Lead",
+  smax: "Xem báo cáo Smax chat",
   // Quyền xuất Excel theo nhóm.
   export_eod: "Xuất Excel",
   export_sale: "Xuất Excel",

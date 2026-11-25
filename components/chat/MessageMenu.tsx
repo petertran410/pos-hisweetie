@@ -3,9 +3,18 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useEscapeClose } from "@/lib/hooks/useEscapeClose";
-import { CheckSquare, Copy, Download, Forward, MessageSquareText, Reply, Trash2, Undo2 } from "lucide-react";
+import { CheckSquare, Copy, Download, Forward, MessageSquareText, Reply, Trash2, Undo2, Sparkles } from "lucide-react";
 
-export type MessageMenuAction = "reply" | "forward" | "copy" | "download" | "select" | "jump" | "recall" | "delete";
+export type MessageMenuAction =
+  | "reply"
+  | "forward"
+  | "copy"
+  | "download"
+  | "select"
+  | "jump"
+  | "recall"
+  | "delete"
+  | "ai-read";
 
 interface Props {
   x: number;
@@ -19,6 +28,8 @@ interface Props {
   // Menu của ảnh/tệp trong "Thông tin hội thoại": không chọn nhiều, có "Xem tin nhắn gốc", nhãn riêng
   canSelect?: boolean;
   canJump?: boolean;
+  // Tin có ảnh + được dùng AI: "AI đọc ảnh" (chuyển khoản / phiếu gửi hàng / hàng lỗi)
+  canAiRead?: boolean;
   labels?: Partial<Record<MessageMenuAction, string>>;
   onAction: (a: MessageMenuAction) => void;
   onClose: () => void;
@@ -38,6 +49,7 @@ export function MessageMenu({
   canDelete,
   canSelect = true,
   canJump = false,
+  canAiRead = false,
   labels,
   onAction,
   onClose,
@@ -73,6 +85,7 @@ export function MessageMenu({
     { key: "forward", label: "Chuyển tiếp", icon: Forward, show: true },
     { key: "copy", label: "Sao chép", icon: Copy, show: hasText },
     { key: "download", label: "Tải ảnh / tệp", icon: Download, show: hasMedia },
+    { key: "ai-read", label: "AI đọc ảnh", icon: Sparkles, show: canAiRead },
     { key: "select", label: "Chọn nhiều tin", icon: CheckSquare, show: canSelect },
     { key: "jump", label: "Xem tin nhắn gốc", icon: MessageSquareText, show: canJump },
     { key: "recall", label: "Thu hồi", icon: Undo2, show: canRecall, danger: true },

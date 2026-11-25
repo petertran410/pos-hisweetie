@@ -6,7 +6,7 @@ import { RouteGuard } from "@/components/layout/RouteGuard";
 import { DashboardHeader } from "@/components/layout/DashboardHeader";
 import { SepayPendingNotifier } from "@/components/sepay/SepayPendingNotifier";
 import { RealtimeSync } from "@/lib/realtime/useRealtimeSync";
-import { ZaloChatSidebar } from "@/components/chat/ZaloChatSidebar";
+import { RightDock } from "@/components/layout/RightDock";
 
 export default function DashboardLayout({
   children,
@@ -23,7 +23,7 @@ export default function DashboardLayout({
             <DashboardHeader />
             <div className="flex flex-1 min-h-0">
               <main className="flex-1 min-w-0 overflow-hidden">{children}</main>
-              <ZaloChatSidebar />
+              <RightDock />
             </div>
           </div>
           <SepayPendingNotifier />

@@ -43,6 +43,9 @@ import {
   useConsignment,
 } from "@/lib/hooks/useConsignments";
 import { priceBooksApi } from "@/lib/api";
+import { productsApi } from "@/lib/api/products";
+import { apiClient } from "@/lib/config/api";
+import { takePosOrderDraft } from "@/lib/ai/ai-compose";
 import { ordersApi } from "@/lib/api/orders";
 import { INVOICE_STATUS } from "@/lib/types/invoice";
 import {
@@ -656,6 +659,8 @@ export default function BanHangPage() {
   const consignmentId = searchParams.get("consignmentId");
   const copyOrderId = searchParams.get("copyOrderId");
   const copyInvoiceId = searchParams.get("copyInvoiceId");
+  // Đơn nháp AI soạn từ chat Smax (lib/ai/ai-compose.ts)
+  const aiOrderDraft = searchParams.get("aiOrderDraft");
   const tabType = searchParams.get("type") as TabType | null;
   const fromPage = searchParams.get("from"); // nguồn gốc navigate: "dat-hang", "hoa-don", hoặc null
   const router = useRouter();
@@ -2657,6 +2662,61 @@ export default function BanHangPage() {
     fromPageRef.current = "dat-hang";
     router.replace("/ban-hang", { scroll: false });
   }, [copySourceOrder?.id, copyOrderId, isInitialized, canCreateOrder]);
+
+  // ── AI: đơn đặt hàng nháp từ chat Smax → tab Đặt hàng mới (chưa lưu, nhân viên kiểm tra rồi lưu) ──
+  const aiDraftHandled = useRef(false);
+  useEffect(() => {
+    if (!aiOrderDraft || !isInitialized || aiDraftHandled.current) return;
+    aiDraftHandled.current = true;
+    const draft = takePosOrderDraft();
+    router.replace("/ban-hang", { scroll: false });
+    if (!draft) return;
+    if (!canCreateOrder) {
+      toast.error("Bạn không có quyền tạo đơn hàng");
+      return;
+    }
+    void (async () => {
+      const [customer, products] = await Promise.all([
+        draft.customerId
+          ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            apiClient.get<any>(`/customers/${draft.customerId}`).catch(() => null)
+          : null,
+        Promise.all(draft.items.map((i) => productsApi.getProduct(i.productId).catch(() => null))),
+      ]);
+      const stamp = Date.now();
+      const cartItems: CartItem[] = draft.items.flatMap((item, index) => {
+        const product = products[index];
+        if (!product) return [];
+        return [
+          {
+            rowId: `${product.id}_normal__${stamp}_${index}`,
+            product,
+            quantity: item.quantity,
+            quantityUnit: "base",
+            conversionValueSnapshot: getConversionValue(product),
+            price: item.price ?? Number(product.basePrice),
+            discount: 0,
+            conditionType: "normal",
+          } as CartItem,
+        ];
+      });
+      const tab: Tab = {
+        ...getDefaultTab("order"),
+        id: `tab-ai-order-${stamp}`,
+        label: `AI_${customer?.code ?? "Đơn hàng"}`,
+        cartItems,
+        selectedCustomer: customer,
+        selectedPriceBookId: draft.priceBookId,
+        selectedPriceBookName: draft.priceBookName,
+        orderNote: draft.note,
+      };
+      setTabs((prev) => [...prev, tab]);
+      setActiveTabId(tab.id);
+      if (cartItems.length < draft.items.length)
+        toast.warning("Có sản phẩm không tải được, kiểm tra lại giỏ hàng");
+      else toast.success("Đã điền sẵn đơn từ chat: kiểm tra lại rồi lưu");
+    })();
+  }, [aiOrderDraft, isInitialized, canCreateOrder]);
 
   // ── COPY: copy hóa đơn → tab mới Copy_<code>, type=invoice, fromPage="hoa-don" ──
   useEffect(() => {

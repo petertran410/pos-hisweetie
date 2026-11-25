@@ -45,7 +45,7 @@ function timeLabel(t: TimeRangeState) {
 }
 
 /** Nút chọn thời gian: tái dùng nguyên TimeRangeFilter của trang Bán hàng, đặt trong popover. */
-function TimePopover({
+export function TimePopover({
   value,
   onChange,
 }: {
