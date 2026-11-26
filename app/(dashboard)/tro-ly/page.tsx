@@ -202,7 +202,7 @@ function AssistantWorkspace() {
             conversationId={current}
             initialTurns={current === null || current === ownNew ? [] : openedTurns}
             remaining={config.remaining}
-            rateLimitPerDay={config.rateLimitPerDay}
+            rateLimitPerHour={config.rateLimitPerHour}
             maxQuestionChars={config.maxQuestionChars}
             context={{ page: { path: "/tro-ly", title: "Trợ lý AI" }, ...(chatCustomer ? { chatCustomerId: chatCustomer.id } : {}) }}
             suggestions={pageSuggestions("/", can, Boolean(chatCustomer))}

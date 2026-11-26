@@ -23,7 +23,7 @@ export type AiAssistantChatProps = {
   initialTurns: AiTurn[];
   /** Số câu còn được hỏi trong hôm nay; null khi không rõ / không giới hạn. */
   remaining: number | null;
-  rateLimitPerDay: number | null;
+  rateLimitPerHour: number | null;
   maxQuestionChars: number;
   /** Trang đang mở + khách đang chat: gửi kèm để "trang này", "khách này" có nghĩa. */
   context: AiForwardedProps;
@@ -306,7 +306,7 @@ export function AiAssistantChat(props: AiAssistantChatProps) {
   const quota =
     remaining === null
       ? "Câu trả lời do AI tạo, hãy kiểm tra lại trên trang tương ứng"
-      : `Còn ${Math.max(0, remaining)}${props.rateLimitPerDay ? `/${props.rateLimitPerDay}` : ""} câu hôm nay`;
+      : `Còn ${Math.max(0, remaining)}${props.rateLimitPerHour ? `/${props.rateLimitPerHour}` : ""} câu trong 1 giờ`;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ai-surface">
