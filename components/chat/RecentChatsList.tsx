@@ -174,9 +174,12 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid, query = "" }: P
     retry: false,
   });
   const [classifying, setClassifying] = useState(false);
+  // Kênh đã bật phân loại từng tin: nhãn tự động, không dùng nút "Phân loại" (chỉ còn cho kênh chưa bật)
+  const intelPages = new Set(data?.intelPagePids ?? []);
+  const classifiable = items.filter((c) => !intelPages.has(c.pagePid));
   const classify = async () => {
     const byPage = new Map<string, RecentChat[]>();
-    for (const c of items) byPage.set(c.pagePid, [...(byPage.get(c.pagePid) ?? []), c]);
+    for (const c of classifiable) byPage.set(c.pagePid, [...(byPage.get(c.pagePid) ?? []), c]);
     setClassifying(true);
     let labeled = 0;
     try {
@@ -243,7 +246,9 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid, query = "" }: P
   ];
   const emptyText =
     filter === "action"
-      ? "Không có hội thoại cần xử lý (bấm \"Phân loại\" để AI gắn nhãn các hội thoại đang tải)."
+      ? classifiable.length
+        ? "Không có hội thoại cần xử lý (bấm \"Phân loại\" để AI gắn nhãn các hội thoại đang tải)."
+        : "Không có hội thoại cần xử lý."
       : filter.startsWith("label:")
         ? "Không có hội thoại mang nhãn này."
         : filter === "unread"
@@ -262,7 +267,7 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid, query = "" }: P
     <section aria-label={searching ? "Hội thoại khớp tìm kiếm" : "Đang chat gần đây"}>
       <div className="mb-2 flex items-center gap-2">
         <h3 className="text-xs font-semibold uppercase text-gray-500">{searching ? "Hội thoại" : "Đang chat gần đây"}</h3>
-        {canSendChat && aiStatus.data?.enabled && !searching && items.length > 0 && (
+        {canSendChat && aiStatus.data?.enabled && !searching && classifiable.length > 0 && (
           <button
             onClick={() => void classify()}
             disabled={classifying}
@@ -277,7 +282,7 @@ export function RecentChatsList({ onOpen, onOpenThread, pagePid, query = "" }: P
           disabled={isFetching}
           title="Tải lại"
           aria-label="Tải lại danh sách hội thoại"
-          className={`${canSendChat && aiStatus.data?.enabled && !searching && items.length > 0 ? "" : "ml-auto"} flex h-7 w-7 items-center justify-center rounded text-gray-500 hover:bg-gray-100 disabled:opacity-50`}>
+          className={`${canSendChat && aiStatus.data?.enabled && !searching && classifiable.length > 0 ? "" : "ml-auto"} flex h-7 w-7 items-center justify-center rounded text-gray-500 hover:bg-gray-100 disabled:opacity-50`}>
           <RotateCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
         </button>
       </div>
@@ -472,7 +477,7 @@ export function RecentChatRow({ c, onClick }: { c: RecentChat; onClick: () => vo
         {c.aiLabel && c.aiLabel.label !== "other" && (
           <span
             className={`mt-0.5 inline-flex max-w-full items-center gap-1 rounded border px-1 text-[11px] ${THREAD_LABEL_META[c.aiLabel.label].className} ${c.aiLabel.stale ? "opacity-50" : ""}`}
-            title={`${c.aiLabel.manual ? "Gắn tay" : "AI"}: ${c.aiLabel.reason ?? ""}${c.aiLabel.stale ? " (nhãn cũ — đã có tin mới)" : ""}`}>
+            title={`${c.aiLabel.manual ? "Gắn tay" : c.aiLabel.auto ? "Tự động" : "AI"}: ${c.aiLabel.reason ?? ""}${c.aiLabel.stale ? (c.aiLabel.auto ? " (đang phân loại tin mới)" : " (nhãn cũ — đã có tin mới)") : ""}`}>
             {THREAD_LABEL_META[c.aiLabel.label].text}
             {c.aiLabel.pending && !c.aiLabel.stale && <span aria-label="khách đang chờ">•</span>}
           </span>

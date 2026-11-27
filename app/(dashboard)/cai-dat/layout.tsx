@@ -17,6 +17,7 @@ import {
   MessageCircle,
   FileSpreadsheet,
   Bell,
+  Sparkles,
 } from "lucide-react";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import "@/app/dashboard.css";
@@ -100,6 +101,12 @@ export default function SettingsLayout({
       label: "Smax",
       icon: MessageCircle,
       permission: { resource: "settings", action: "update" },
+    },
+    {
+      href: "/cai-dat/phan-tich-tin-nhan",
+      label: "Phân tích tin nhắn",
+      icon: Sparkles,
+      permission: { resource: "message_intel", action: "view" },
     },
     {
       href: "/cai-dat/thong-bao-lark",
