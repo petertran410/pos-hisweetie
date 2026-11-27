@@ -84,6 +84,7 @@ import {
 } from "@/components/pos/quantity-utils";
 import {
   applyLinePriceReduction,
+  canReduceLinePrice,
   findLineVatMissing,
   fromSavedLinePrice,
   getLineTotal,
@@ -816,6 +817,84 @@ export default function BanHangPage() {
     });
     return map;
   }, [activeTab?.cartItems, pricesByProduct]);
+
+  // ── SP trừ 8% mặc định (SP007601): bổ sung giá bảng giá cho dòng chưa có ──
+  // Dòng mở lại từ đơn/HĐ đã lưu, giỏ cũ trong trình duyệt… không biết giá bảng
+  // giá → lấy theo bảng giá của tab (đơn/HĐ: bảng giá của chính chứng từ).
+  // - Đơn giá đang BẰNG giá bảng giá (chưa trừ 8%, vd đơn lập trước khi có tính
+  //   năng) → trừ 8% vào đơn giá.
+  // - Đơn giá khác (đã trừ sẵn khi lưu sau khi có tính năng, hoặc sửa tay) → giữ
+  //   nguyên, chỉ gắn listPrice để hiện "giá cũ".
+  // Đơn đang khóa dòng (không còn Phiếu tạm) → bỏ qua; khi chuyển sang HĐ sẽ chạy.
+  const listPriceRequestedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!activeTab || itemsLocked) return;
+    const tabId = activeTab.id;
+    const priceBookId = activeTab.selectedPriceBookId;
+    const lines = (activeTab.cartItems || []).filter(
+      (it) =>
+        canReduceLinePrice(it) &&
+        it.listPrice == null &&
+        !listPriceRequestedRef.current.has(`${tabId}:${it.rowId}`)
+    );
+    if (lines.length === 0) return;
+    lines.forEach((it) =>
+      listPriceRequestedRef.current.add(`${tabId}:${it.rowId}`)
+    );
+
+    void (async () => {
+      const resolved = await Promise.all(
+        lines.map(async (it) => {
+          // Giống addToCart: không có trong bảng giá / lỗi → dùng giá gốc.
+          let listPrice = Number(it.product?.basePrice) || 0;
+          if (priceBookId && priceBookId !== 0) {
+            try {
+              const priceInfo = await priceBooksApi.getPriceForProduct({
+                productId: it.product.id,
+                branchId: selectedBranch?.id,
+                priceBookId,
+              });
+              if (priceInfo.priceBookId === priceBookId) {
+                listPrice = Number(priceInfo.price);
+              }
+            } catch (error) {
+              console.error("Error fetching product price:", error);
+            }
+          }
+          return [it.rowId, listPrice] as const;
+        })
+      );
+      const listPriceByRow = new Map(resolved);
+      setTabs((prev) =>
+        prev.map((t) =>
+          t.id !== tabId
+            ? t
+            : {
+                ...t,
+                cartItems: t.cartItems.map((it) => {
+                  const listPrice = listPriceByRow.get(it.rowId);
+                  if (listPrice == null || it.listPrice != null) return it;
+                  const unreduced = Math.abs(Number(it.price) - listPrice) < 0.5;
+                  return {
+                    ...it,
+                    listPrice,
+                    ...(unreduced
+                      ? { price: applyLinePriceReduction(it.product, listPrice) }
+                      : {}),
+                  };
+                }),
+              }
+        )
+      );
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    activeTab?.id,
+    activeTab?.cartItems,
+    activeTab?.selectedPriceBookId,
+    itemsLocked,
+    selectedBranch?.id,
+  ]);
 
   // ════════════════════════════════════════════════════════════
   // KHUYẾN MÃI TỰ ĐỘNG (inline, KiotViet-style)
