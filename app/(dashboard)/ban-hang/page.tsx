@@ -83,8 +83,8 @@ import {
   type CartQuantityUnit,
 } from "@/components/pos/quantity-utils";
 import {
+  applyLegacyReduction,
   applyLinePriceReduction,
-  canReduceLinePrice,
   findLineVatMissing,
   fromSavedLinePrice,
   getLineTotal,
@@ -102,8 +102,11 @@ export interface CartItem {
   // % GTGT chọn trên dòng (0 | 5) — chỉ SP trong LINE_VAT_PRODUCT_CODES.
   // price/discount ở giỏ luôn là giá CHƯA cộng GTGT (xem lib/utils/line-vat.ts).
   lineVatRate?: number;
-  // Giá bảng giá trước khi trừ 8% mặc định (SP trong LINE_VAT_PRODUCT_CODES) —
-  // chỉ để hiển thị "giá cũ", không gửi BE.
+  // Dòng của chứng từ CŨ (DB line_vat_rate NULL, SP trong LINE_VAT_PRODUCT_CODES):
+  // trừ 8% một lần khi mở; listPrice = giá trước khi trừ (hiện "giá cũ").
+  // Chỉ dùng ở FE, không gửi BE.
+  legacyLine?: boolean;
+  legacyReduced?: boolean;
   listPrice?: number;
   note?: string;
   conditionType?: string; // "normal" | "damaged" | "near_expiry"
@@ -818,83 +821,35 @@ export default function BanHangPage() {
     return map;
   }, [activeTab?.cartItems, pricesByProduct]);
 
-  // ── SP trừ 8% mặc định (SP007601): bổ sung giá bảng giá cho dòng chưa có ──
-  // Dòng mở lại từ đơn/HĐ đã lưu, giỏ cũ trong trình duyệt… không biết giá bảng
-  // giá → lấy theo bảng giá của tab (đơn/HĐ: bảng giá của chính chứng từ).
-  // - Đơn giá đang BẰNG giá bảng giá (chưa trừ 8%, vd đơn lập trước khi có tính
-  //   năng) → trừ 8% vào đơn giá.
-  // - Đơn giá khác (đã trừ sẵn khi lưu sau khi có tính năng, hoặc sửa tay) → giữ
-  //   nguyên, chỉ gắn listPrice để hiện "giá cũ".
-  // Đơn đang khóa dòng (không còn Phiếu tạm) → bỏ qua; khi chuyển sang HĐ sẽ chạy.
-  const listPriceRequestedRef = useRef<Set<string>>(new Set());
+  // ── Chứng từ CŨ có SP007601: trừ 8% vào đơn giá đúng 1 lần ──
+  // Dòng nạp từ DB có line_vat_rate NULL (lập trước khi có quy tắc mới) được
+  // fromSavedLinePrice đánh dấu legacyLine + listPrice (giá cũ). Ở đây trừ 8% vào
+  // đơn giá + giảm giá rồi đánh dấu legacyReduced; lưu xong DB có 0/5 → lần mở
+  // sau không còn là dòng cũ nên không bị trừ nữa. Đơn/HĐ mới không có dòng cũ.
+  // Đơn đang khóa dòng (không còn Phiếu tạm) → chưa trừ (BE chặn đổi dòng); khi
+  // chuyển sang tạo HĐ (hết khóa) sẽ trừ.
   useEffect(() => {
     if (!activeTab || itemsLocked) return;
+    const pending = (activeTab.cartItems || []).some(
+      (it) => it.legacyLine && !it.legacyReduced
+    );
+    if (!pending) return;
     const tabId = activeTab.id;
-    const priceBookId = activeTab.selectedPriceBookId;
-    const lines = (activeTab.cartItems || []).filter(
-      (it) =>
-        canReduceLinePrice(it) &&
-        it.listPrice == null &&
-        !listPriceRequestedRef.current.has(`${tabId}:${it.rowId}`)
-    );
-    if (lines.length === 0) return;
-    lines.forEach((it) =>
-      listPriceRequestedRef.current.add(`${tabId}:${it.rowId}`)
-    );
-
-    void (async () => {
-      const resolved = await Promise.all(
-        lines.map(async (it) => {
-          // Giống addToCart: không có trong bảng giá / lỗi → dùng giá gốc.
-          let listPrice = Number(it.product?.basePrice) || 0;
-          if (priceBookId && priceBookId !== 0) {
-            try {
-              const priceInfo = await priceBooksApi.getPriceForProduct({
-                productId: it.product.id,
-                branchId: selectedBranch?.id,
-                priceBookId,
-              });
-              if (priceInfo.priceBookId === priceBookId) {
-                listPrice = Number(priceInfo.price);
-              }
-            } catch (error) {
-              console.error("Error fetching product price:", error);
+    setTabs((prev) =>
+      prev.map((t) =>
+        t.id !== tabId
+          ? t
+          : {
+              ...t,
+              cartItems: t.cartItems.map((it) =>
+                it.legacyLine && !it.legacyReduced
+                  ? { ...it, ...applyLegacyReduction(it) }
+                  : it
+              ),
             }
-          }
-          return [it.rowId, listPrice] as const;
-        })
-      );
-      const listPriceByRow = new Map(resolved);
-      setTabs((prev) =>
-        prev.map((t) =>
-          t.id !== tabId
-            ? t
-            : {
-                ...t,
-                cartItems: t.cartItems.map((it) => {
-                  const listPrice = listPriceByRow.get(it.rowId);
-                  if (listPrice == null || it.listPrice != null) return it;
-                  const unreduced = Math.abs(Number(it.price) - listPrice) < 0.5;
-                  return {
-                    ...it,
-                    listPrice,
-                    ...(unreduced
-                      ? { price: applyLinePriceReduction(it.product, listPrice) }
-                      : {}),
-                  };
-                }),
-              }
-        )
-      );
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    activeTab?.id,
-    activeTab?.cartItems,
-    activeTab?.selectedPriceBookId,
-    itemsLocked,
-    selectedBranch?.id,
-  ]);
+      )
+    );
+  }, [activeTab, itemsLocked]);
 
   // ════════════════════════════════════════════════════════════
   // KHUYẾN MÃI TỰ ĐỘNG (inline, KiotViet-style)
@@ -1954,12 +1909,15 @@ export default function BanHangPage() {
           }
         }
 
-        // SP áp dụng: trừ 8% mặc định trên giá bảng giá mới.
-        return {
-          ...item,
-          listPrice: newPrice,
-          price: applyLinePriceReduction(item.product, newPrice),
-        };
+        // Dòng của chứng từ cũ: vẫn trừ 8% trên giá bảng giá mới. Đơn mới: giữ giá.
+        return item.legacyLine
+          ? {
+              ...item,
+              listPrice: newPrice,
+              price: applyLinePriceReduction(item.product, newPrice),
+              legacyReduced: true,
+            }
+          : { ...item, price: newPrice };
       })
     );
 
@@ -2745,7 +2703,8 @@ export default function BanHangPage() {
           Number(item.conversionValueSnapshot) > 0
             ? Number(item.conversionValueSnapshot)
             : getConversionValue(item.product),
-        ...fromSavedLinePrice(item),
+        // Copy sang đơn/HĐ MỚI → không trừ 8% (dòng cũ chỉ cần chọn lại GTGT).
+        ...fromSavedLinePrice(item, { asNewDocument: true }),
         note: item.note || "",
         conditionType: item.conditionType || "normal",
         soldExpiryDate: item.soldExpiryDate
@@ -2828,16 +2787,7 @@ export default function BanHangPage() {
             quantity: item.quantity,
             quantityUnit: "base",
             conversionValueSnapshot: getConversionValue(product),
-            // AI đã đưa giá → giữ nguyên; rơi về giá gốc → trừ 8% mặc định.
-            ...(item.price != null
-              ? { price: item.price }
-              : {
-                  listPrice: Number(product.basePrice),
-                  price: applyLinePriceReduction(
-                    product,
-                    Number(product.basePrice)
-                  ),
-                }),
+            price: item.price ?? Number(product.basePrice),
             discount: 0,
             conditionType: "normal",
           } as CartItem,
@@ -2885,7 +2835,8 @@ export default function BanHangPage() {
           Number(item.conversionValueSnapshot) > 0
             ? Number(item.conversionValueSnapshot)
             : getConversionValue(item.product),
-        ...fromSavedLinePrice(item),
+        // Copy sang đơn/HĐ MỚI → không trừ 8% (dòng cũ chỉ cần chọn lại GTGT).
+        ...fromSavedLinePrice(item, { asNewDocument: true }),
         note: item.note || "",
         conditionType: item.conditionType || "normal",
         soldExpiryDate: item.soldExpiryDate
@@ -3770,9 +3721,7 @@ export default function BanHangPage() {
                   quantity,
                   quantityUnit: "base",
                   conversionValueSnapshot: getConversionValue(product),
-                  // SP áp dụng: trừ 8% mặc định, giữ giá bảng giá ở listPrice.
-                  listPrice: productPrice,
-                  price: applyLinePriceReduction(product, productPrice),
+                  price: productPrice,
                   discount: 0,
                   conditionType,
                   soldExpiryDate,
@@ -3800,7 +3749,6 @@ export default function BanHangPage() {
       quantity: line.quantity,
       quantityUnit: line.quantityUnit,
       conversionValueSnapshot: getConversionValue(line.product),
-      listPrice: line.listPrice,
       price: line.price,
       discount: line.discount,
       note: line.note,
@@ -3853,6 +3801,9 @@ export default function BanHangPage() {
       quantityUnit: item.quantityUnit || "base",
       conversionValueSnapshot:
         item.conversionValueSnapshot || getConversionValue(item.product),
+      // Dòng thêm cho cùng chứng từ → giữ trạng thái "dòng cũ" như dòng gốc.
+      legacyLine: item.legacyLine,
+      legacyReduced: item.legacyReduced,
       listPrice: item.listPrice,
       price: item.price,
       discount: item.discount,
