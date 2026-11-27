@@ -83,6 +83,7 @@ import {
   type CartQuantityUnit,
 } from "@/components/pos/quantity-utils";
 import {
+  applyLinePriceReduction,
   findLineVatMissing,
   fromSavedLinePrice,
   getLineTotal,
@@ -100,6 +101,9 @@ export interface CartItem {
   // % GTGT chọn trên dòng (0 | 5) — chỉ SP trong LINE_VAT_PRODUCT_CODES.
   // price/discount ở giỏ luôn là giá CHƯA cộng GTGT (xem lib/utils/line-vat.ts).
   lineVatRate?: number;
+  // Giá bảng giá trước khi trừ 8% mặc định (SP trong LINE_VAT_PRODUCT_CODES) —
+  // chỉ để hiển thị "giá cũ", không gửi BE.
+  listPrice?: number;
   note?: string;
   conditionType?: string; // "normal" | "damaged" | "near_expiry"
   soldExpiryDate?: string | null; // null = lô chưa xác định NSX
@@ -1871,9 +1875,11 @@ export default function BanHangPage() {
           }
         }
 
+        // SP áp dụng: trừ 8% mặc định trên giá bảng giá mới.
         return {
           ...item,
-          price: newPrice,
+          listPrice: newPrice,
+          price: applyLinePriceReduction(item.product, newPrice),
         };
       })
     );
@@ -2743,7 +2749,16 @@ export default function BanHangPage() {
             quantity: item.quantity,
             quantityUnit: "base",
             conversionValueSnapshot: getConversionValue(product),
-            price: item.price ?? Number(product.basePrice),
+            // AI đã đưa giá → giữ nguyên; rơi về giá gốc → trừ 8% mặc định.
+            ...(item.price != null
+              ? { price: item.price }
+              : {
+                  listPrice: Number(product.basePrice),
+                  price: applyLinePriceReduction(
+                    product,
+                    Number(product.basePrice)
+                  ),
+                }),
             discount: 0,
             conditionType: "normal",
           } as CartItem,
@@ -3676,7 +3691,9 @@ export default function BanHangPage() {
                   quantity,
                   quantityUnit: "base",
                   conversionValueSnapshot: getConversionValue(product),
-                  price: productPrice,
+                  // SP áp dụng: trừ 8% mặc định, giữ giá bảng giá ở listPrice.
+                  listPrice: productPrice,
+                  price: applyLinePriceReduction(product, productPrice),
                   discount: 0,
                   conditionType,
                   soldExpiryDate,
@@ -3704,6 +3721,7 @@ export default function BanHangPage() {
       quantity: line.quantity,
       quantityUnit: line.quantityUnit,
       conversionValueSnapshot: getConversionValue(line.product),
+      listPrice: line.listPrice,
       price: line.price,
       discount: line.discount,
       note: line.note,
@@ -3756,6 +3774,7 @@ export default function BanHangPage() {
       quantityUnit: item.quantityUnit || "base",
       conversionValueSnapshot:
         item.conversionValueSnapshot || getConversionValue(item.product),
+      listPrice: item.listPrice,
       price: item.price,
       discount: item.discount,
       lineVatRate: item.lineVatRate,
