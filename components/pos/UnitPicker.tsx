@@ -9,6 +9,8 @@ interface UnitPickerProps {
   onChange: (value: string) => void;
   size?: "default" | "quantity";
   revealOnHover?: boolean;
+  // Chữ hiện khi `value` chưa khớp lựa chọn nào (bắt buộc chọn) — ô tô màu amber.
+  placeholder?: string;
 }
 
 export function UnitPicker({
@@ -17,6 +19,7 @@ export function UnitPicker({
   onChange,
   size = "default",
   revealOnHover = false,
+  placeholder,
 }: UnitPickerProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -32,6 +35,7 @@ export function UnitPicker({
 
   const selected = options.find((o) => o.value === value);
   const isQuantityPicker = size === "quantity";
+  const showPlaceholder = !selected && placeholder != null;
 
   return (
     <div
@@ -56,11 +60,13 @@ export function UnitPicker({
             ? isQuantityPicker
               ? "border-transparent bg-gray-200 text-gray-900"
               : "border-brand bg-brand-soft text-brand"
-            : isQuantityPicker
-              ? "text-gray-800"
-              : "border-gray-300 bg-gray-50 text-gray-700 hover:border-gray-400"
+            : showPlaceholder
+              ? "border-amber-300 bg-amber-100 text-amber-700"
+              : isQuantityPicker
+                ? "text-gray-800"
+                : "border-gray-300 bg-gray-50 text-gray-700 hover:border-gray-400"
         }`}>
-        <span>{selected?.label || value}</span>
+        <span>{showPlaceholder ? placeholder : selected?.label || value}</span>
         <ChevronDown
           className={`${isQuantityPicker ? "w-3.5 h-3.5" : "w-3 h-3"} shrink-0 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`}
         />

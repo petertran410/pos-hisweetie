@@ -7,7 +7,6 @@ import type {
   NppConfigInput,
   NppDecision,
   NppEvent,
-  NppImportResult,
   NppListParams,
   NppListResponse,
   NppReference,
@@ -109,11 +108,6 @@ export const newProductPriceApi = {
   getConfig: () => apiClient.get<NppConfig>(`${BASE}/config`),
   updateConfig: (body: NppConfigInput) =>
     apiClient.put<NppConfig>(`${BASE}/config`, body),
-  importLark: (body: {
-    dryRun: boolean;
-    downloadMedia?: boolean;
-    force?: boolean;
-  }) => apiClient.post<NppImportResult>(`${BASE}/import/lark`, body, 600_000),
   runReminders: (stage?: string) =>
     apiClient.post<Record<string, { tickets: number; recipients: number }>>(
       `${BASE}/reminders/run${stage ? `?stage=${stage}` : ""}`,

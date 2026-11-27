@@ -235,8 +235,7 @@ const RESOURCE_ACTION_LABELS: Record<string, string> = {
   "new_product_price:import": "Nhập từ Lark",
   "price_change:view": "Xem (kể cả giá vốn) & xử lý bước được giao",
   "price_change:create": "Tạo phiếu thay đổi giá",
-  "price_change:config": "Cấu hình người duyệt & gửi thử",
-  "price_change:import": "Nhập từ Lark",
+  "price_change:config": "Cấu hình người duyệt",
 };
 
 /** Nhãn action, có xét nhãn riêng theo resource (RESOURCE_ACTION_LABELS). */

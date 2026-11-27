@@ -7,7 +7,6 @@ import type {
   PcCurrentValues,
   PcDecision,
   PcEvent,
-  PcImportResult,
   PcListParams,
   PcListResponse,
   PcReference,
@@ -96,11 +95,11 @@ export const priceChangeApi = {
   getConfig: () => apiClient.get<PcConfig>(`${BASE}/config`),
   updateConfig: (body: PcConfigInput) =>
     apiClient.put<PcConfig>(`${BASE}/config`, body),
-  importLark: (body: {
-    dryRun: boolean;
-    downloadMedia?: boolean;
-    force?: boolean;
-  }) => apiClient.post<PcImportResult>(`${BASE}/import/lark`, body, 600_000),
+  /** Gửi nhắc việc ngay (kể cả khi đang tắt nhắc việc hằng ngày). */
+  runReminders: (stage?: string) =>
+    apiClient.post<Record<string, { tickets: number; recipients: number }>>(
+      `${BASE}/reminders/run${stage ? `?stage=${stage}` : ""}`,
+    ),
 
   uploadDocuments: async (files: File[]): Promise<NppAttachment[]> => {
     const fd = new FormData();

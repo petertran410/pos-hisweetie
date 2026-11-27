@@ -231,19 +231,18 @@ export function useUpdatePcConfig() {
   });
 }
 
-export function useImportPcFromLark() {
-  const refresh = useRefresh();
+export function useRunPcReminders() {
   return useMutation({
-    mutationFn: (body: {
-      dryRun: boolean;
-      downloadMedia?: boolean;
-      force?: boolean;
-    }) => priceChangeApi.importLark(body),
+    mutationFn: (stage?: string) => priceChangeApi.runReminders(stage),
     onSuccess: (res) => {
-      if (res.dryRun) return;
-      refresh();
-      toast.success(`Đã nhập: tạo ${res.created}, cập nhật ${res.updated}`);
+      const sent = Object.values(res).reduce((s, r) => s + r.recipients, 0);
+      const tickets = Object.values(res).reduce((s, r) => s + r.tickets, 0);
+      toast.success(
+        tickets
+          ? `Đã gửi nhắc việc tới ${sent} lượt người nhận`
+          : "Không có phiếu nào đang chờ duyệt",
+      );
     },
-    onError: errorToast("Nhập từ Lark lỗi"),
+    onError: errorToast("Không gửi được nhắc việc"),
   });
 }

@@ -48,6 +48,13 @@ import { ProductInventoryMobileSheet } from "./ProductInventoryMobileSheet";
 import { UnitPicker } from "./UnitPicker";
 import { ColdCargoBadge, ColdCargoSummary } from "../shared/ColdCargoBadge";
 import {
+  LINE_VAT_OPTIONS,
+  LINE_VAT_PLACEHOLDER,
+  canChooseLineVat,
+  getLineTotal,
+  getLineVatPickerValue,
+} from "@/lib/utils/line-vat";
+import {
   getItemOnHand as getItemOnHandHelper,
   getPromoStockWarning,
   getStockWarning as getStockWarningHelper,
@@ -896,10 +903,7 @@ export function OrderItemsList({
                             )}
                           </div>
                           <span className="text-sm font-semibold text-gray-900">
-                            {(
-                              (item.price - item.discount) *
-                              item.quantity
-                            ).toLocaleString()}
+                            {formatCurrency(getLineTotal(item))}
                           </span>
                         </div>
 
@@ -943,6 +947,23 @@ export function OrderItemsList({
                             <span className="text-xs text-red-500">
                               -{item.discount.toLocaleString()}
                             </span>
+                          )}
+                          {canChooseLineVat(item) && (
+                            <>
+                              <span className="text-xs text-gray-400">
+                                GTGT:
+                              </span>
+                              <UnitPicker
+                                value={getLineVatPickerValue(item)}
+                                placeholder={LINE_VAT_PLACEHOLDER}
+                                options={LINE_VAT_OPTIONS}
+                                onChange={(value) =>
+                                  onUpdateItem(item.rowId, {
+                                    lineVatRate: Number(value),
+                                  })
+                                }
+                              />
+                            </>
                           )}
                           {canEditDiscount && (
                             <button
@@ -1082,15 +1103,29 @@ export function OrderItemsList({
                               </span>
                             )}
                           </div>
+                          {canChooseLineVat(item) && (
+                            <div className="flex flex-col items-end min-w-[60px]">
+                              <span className="text-xs lg:text-sm text-gray-400 mb-0.5">
+                                GTGT
+                              </span>
+                              <UnitPicker
+                                value={getLineVatPickerValue(item)}
+                                placeholder={LINE_VAT_PLACEHOLDER}
+                                options={LINE_VAT_OPTIONS}
+                                onChange={(value) =>
+                                  onUpdateItem(item.rowId, {
+                                    lineVatRate: Number(value),
+                                  })
+                                }
+                              />
+                            </div>
+                          )}
                           <div className="flex flex-col items-end min-w-[60px]">
                             <span className="text-xs lg:text-sm text-gray-400 mb-0.5">
                               Thành tiền
                             </span>
                             <span className="text-md font-medium">
-                              {(
-                                (item.price - item.discount) *
-                                item.quantity
-                              ).toLocaleString()}
+                              {formatCurrency(getLineTotal(item))}
                             </span>
                           </div>
                         </div>

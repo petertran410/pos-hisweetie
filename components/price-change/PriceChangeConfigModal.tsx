@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, Loader2, Settings2, X } from "lucide-react";
+import { AlertTriangle, BellRing, Loader2, Settings2, X } from "lucide-react";
 import { FilterMultiSelect } from "@/components/ui/filters";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { useUsersForFilter } from "@/lib/hooks/useUsers";
 import {
   usePriceChangeConfig,
+  useRunPcReminders,
   useUpdatePcConfig,
 } from "@/lib/hooks/usePriceChange";
 import { PC_GROUP_HINT, PC_GROUP_LABEL } from "@/lib/price-change/constants";
@@ -15,7 +16,7 @@ import type { PcConfig, PcGroup } from "@/lib/types/price-change";
 
 const GROUPS = Object.keys(PC_GROUP_LABEL) as PcGroup[];
 
-/** Cấu hình người duyệt từng bước + gửi thử (khuôn NewProductPriceConfigModal). */
+/** Cấu hình người duyệt từng bước + nhóm Lark dạng topic (khuôn NewProductPriceConfigModal). */
 export function PriceChangeConfigModal({ onClose }: { onClose: () => void }) {
   const { data: config, isLoading } = usePriceChangeConfig();
   return createPortal(
@@ -59,14 +60,18 @@ function ConfigForm({
 }) {
   const { data: users } = useUsersForFilter();
   const save = useUpdatePcConfig();
+  const reminders = useRunPcReminders();
+  const [remindersEnabled, setRemindersEnabled] = useState(
+    config.remindersEnabled,
+  );
   const [approvers, setApprovers] = useState<Record<PcGroup, string[]>>(
     Object.fromEntries(
       GROUPS.map((g) => [g, (config.approvers[g] ?? []).map(String)]),
     ) as Record<PcGroup, string[]>,
   );
-  const [testRecipients, setTestRecipients] = useState<string[]>(
-    (config.testRecipients ?? []).map(String),
-  );
+  const [larkChatId, setLarkChatId] = useState(config.larkChatId ?? "");
+  const chatIdInvalid =
+    larkChatId.trim() !== "" && !/^oc_[A-Za-z0-9]+$/.test(larkChatId.trim());
   const userOpts = (users ?? []).map((u: { id: number; name: string }) => ({
     value: String(u.id),
     label: u.name,
@@ -82,7 +87,8 @@ function ConfigForm({
         approvers: Object.fromEntries(
           GROUPS.map((g) => [g, approvers[g].map(Number)]),
         ),
-        testRecipients: testRecipients.map(Number),
+        larkChatId: larkChatId.trim(),
+        remindersEnabled,
       },
       { onSuccess: onClose },
     );
@@ -90,42 +96,6 @@ function ConfigForm({
   return (
     <>
       <div className="flex-1 overflow-auto p-5 space-y-4 text-sm">
-        <div
-          className={`rounded-lg border px-3 py-2 ${testRecipients.length ? "border-amber-300 bg-amber-50" : ""}`}>
-          <label className={label}>Gửi thử — chỉ gửi mọi thông báo tới</label>
-          {config.testLocked ? (
-            <>
-              <p className="font-medium text-gray-800">
-                {userOpts
-                  .filter((o) => testRecipients.includes(o.value))
-                  .map((o) => o.label)
-                  .join(", ") || "(không có ai)"}
-              </p>
-              <p className="mt-1 text-xs text-amber-700">
-                Môi trường này (local) luôn gửi thử, không tắt được: máy chủ chỉ
-                cho gửi tin Lark tới người trong LARK_MESSAGE_ALLOWLIST (file
-                .env của backend).
-              </p>
-            </>
-          ) : (
-            <>
-              <FilterMultiSelect
-                options={userOpts}
-                values={testRecipients}
-                onChange={setTestRecipients}
-                placeholder="Tắt (gửi cho người nhận thật)"
-                searchPlaceholder="Tìm nhân viên..."
-                multiLabel={(n) => `${n} người`}
-                panelWidth={320}
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Khi có người ở đây, mọi tin Lark và thông báo trong app chỉ gửi
-                tới họ (tin ghi rõ người nhận thật). Bỏ trống để gửi thật cho
-                các nhóm bên dưới.
-              </p>
-            </>
-          )}
-        </div>
         <p className="text-xs text-gray-500">
           Bước Đề xuất do người tạo phiếu xử lý. Người trong nhóm nhận tin Lark
           khi phiếu tới bước của mình và được bấm duyệt / áp dụng.
@@ -158,6 +128,50 @@ function ConfigForm({
             </div>
           );
         })}
+        <div className="border-t pt-4">
+          <label className={label}>Nhóm chat Lark (dạng topic) — chat_id</label>
+          <input
+            value={larkChatId}
+            onChange={(e) => setLarkChatId(e.target.value)}
+            placeholder="oc_… (để trống = không gửi vào nhóm)"
+            className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand ${chatIdInvalid ? "border-red-300" : "border-gray-200"}`}
+          />
+          {chatIdInvalid ? (
+            <p className="mt-1 text-xs text-red-600">
+              chat_id phải có dạng oc_… (chỉ chữ và số).
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-gray-500">
+              Gửi song song với tin nhắn riêng: phiếu gửi duyệt lần đầu thì tạo
+              1 topic trong nhóm; mỗi lần chuyển bước, trả lời trong topic đó và
+              tag người phụ trách bước. Bot phải là thành viên nhóm.
+            </p>
+          )}
+        </div>
+        <div className="border-t pt-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={remindersEnabled}
+                onChange={(e) => setRemindersEnabled(e.target.checked)}
+                className="accent-brand"
+              />
+              Nhắc việc hằng ngày (17:00 Kế toán trưởng, CEO, Phòng Dữ Liệu)
+            </label>
+            <LoadingButton
+              loading={reminders.isPending}
+              onClick={() => reminders.mutate(undefined)}
+              className="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 text-gray-600">
+              <BellRing className="w-4 h-4" /> Gửi nhắc việc ngay
+            </LoadingButton>
+          </div>
+          <p className="mt-1 text-xs text-gray-500">
+            Mỗi người trong nhóm nhận 1 tin nhắn riêng liệt kê các phiếu đang
+            chờ ở bước của mình (kèm số ngày đã chờ), gồm cả phiếu chưa từng
+            được báo.
+          </p>
+        </div>
       </div>
       <div className="flex items-center justify-between gap-2 px-5 py-3 border-t">
         <span className="text-xs text-gray-400">
@@ -171,8 +185,9 @@ function ConfigForm({
           </button>
           <LoadingButton
             loading={save.isPending}
+            disabled={chatIdInvalid}
             onClick={submit}
-            className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium">
+            className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed">
             Lưu
           </LoadingButton>
         </div>

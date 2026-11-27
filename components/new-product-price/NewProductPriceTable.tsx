@@ -1,17 +1,8 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
-import {
-  ChevronDown,
-  CloudDownload,
-  Plus,
-  Search,
-  Settings2,
-} from "lucide-react";
-import {
-  useNewProductPriceConfig,
-  useNewProductPrices,
-} from "@/lib/hooks/useNewProductPrice";
+import { ChevronDown, Plus, Search, Settings2 } from "lucide-react";
+import { useNewProductPrices } from "@/lib/hooks/useNewProductPrice";
 import {
   useColumnVisibility,
   type ColumnConfig,
@@ -152,7 +143,6 @@ export function NewProductPriceTable({
   openAction = false,
   onCreateClick,
   onConfigClick,
-  onImportClick,
 }: {
   filters: NppFilters;
   initialQuery?: string;
@@ -161,13 +151,9 @@ export function NewProductPriceTable({
   openAction?: boolean;
   onCreateClick: () => void;
   onConfigClick: () => void;
-  onImportClick: () => void;
 }) {
   const canCreate = useCan("new_product_price", "create");
   const canConfig = useCan("new_product_price", "config");
-  const canImport = useCan("new_product_price", "import");
-  const { data: config } = useNewProductPriceConfig();
-  const testing = (config?.testRecipients?.length ?? 0) > 0;
   const { columns, visibleColumns, toggleColumn } = useColumnVisibility(
     "newProductPriceColumns",
     DEFAULT_COLUMNS,
@@ -227,13 +213,6 @@ export function NewProductPriceTable({
           <h2 className="text-base font-semibold text-gray-900 whitespace-nowrap">
             Bảng giá sản phẩm mới
           </h2>
-          {testing && (
-            <span
-              title="Mọi thông báo chỉ gửi tới danh sách gửi thử (Cấu hình duyệt)"
-              className="px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 whitespace-nowrap">
-              Đang gửi thử
-            </span>
-          )}
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
@@ -250,13 +229,6 @@ export function NewProductPriceTable({
               onClick={onCreateClick}
               className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm font-medium flex items-center gap-1.5 whitespace-nowrap">
               <Plus className="w-4 h-4" /> Tạo đề xuất
-            </button>
-          )}
-          {canImport && (
-            <button
-              onClick={onImportClick}
-              className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center gap-1.5 whitespace-nowrap">
-              <CloudDownload className="w-4 h-4" /> Nhập từ Lark
             </button>
           )}
           {canConfig && (
