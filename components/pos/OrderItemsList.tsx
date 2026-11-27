@@ -986,14 +986,14 @@ export function OrderItemsList({
                         </div>
 
                         {/* Giá bảng giá cũ → giá đã trừ 8% mặc định */}
-                        {canReduceLinePrice(item) && (
+                        {canReduceLinePrice(item) && getLineListPrice(item) != null && (
                           <div className="text-xs text-gray-500">
                             Giá gốc{" "}
                             <span className="line-through text-gray-400">
-                              {formatCurrency(getLineListPrice(item))}
+                              {formatCurrency(getLineListPrice(item) ?? 0)}
                             </span>{" "}
                             → trừ {LINE_PRICE_REDUCTION_PERCENT}%:{" "}
-                            {formatCurrency(getLineReducedPrice(item))}
+                            {formatCurrency(getLineReducedPrice(item) ?? 0)}
                           </div>
                         )}
 
@@ -1087,16 +1087,16 @@ export function OrderItemsList({
                             </button>
                           </div>
                           {/* Giá bảng giá cũ → giá đã trừ 8% mặc định */}
-                          {canReduceLinePrice(item) && (
+                          {canReduceLinePrice(item) && getLineListPrice(item) != null && (
                             <div className="flex flex-col items-end min-w-[60px]">
                               <span className="text-xs lg:text-sm text-gray-400 mb-0.5">
                                 Giá trừ {LINE_PRICE_REDUCTION_PERCENT}%
                               </span>
                               <span className="text-md text-gray-700 whitespace-nowrap">
                                 <span className="mr-1 text-sm text-gray-400 line-through">
-                                  {formatCurrency(getLineListPrice(item))}
+                                  {formatCurrency(getLineListPrice(item) ?? 0)}
                                 </span>
-                                {formatCurrency(getLineReducedPrice(item))}
+                                {formatCurrency(getLineReducedPrice(item) ?? 0)}
                               </span>
                             </div>
                           )}

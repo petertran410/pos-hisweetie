@@ -74,18 +74,20 @@ export const applyLinePriceReduction = (
     : listPrice;
 
 /**
- * "Giá cũ" (giá bảng giá trước khi trừ 8%) để hiển thị. Dòng mở lại từ đơn đã
- * lưu không có listPrice → suy ngược từ đơn giá.
+ * "Giá cũ" (giá bảng giá trước khi trừ 8%) để hiển thị. KHÔNG suy ngược từ đơn
+ * giá (đơn lập trước khi có tính năng chưa trừ 8% → suy ngược ra sai): dòng chưa
+ * có listPrice thì trang Bán hàng tự lấy theo bảng giá, trong lúc chờ trả null.
  */
-export const getLineListPrice = (item: LineVatItem): number =>
-  item.listPrice ??
-  Math.round(
-    (Number(item.price) || 0) / (1 - LINE_PRICE_REDUCTION_PERCENT / 100)
-  );
+export const getLineListPrice = (item: LineVatItem): number | null =>
+  item.listPrice ?? null;
 
 /** "Giá đã trừ 8%" để hiển thị cạnh giá cũ (sửa tay đơn giá không đổi ô này). */
-export const getLineReducedPrice = (item: LineVatItem): number =>
-  applyLinePriceReduction(item.product, getLineListPrice(item));
+export const getLineReducedPrice = (item: LineVatItem): number | null => {
+  const listPrice = getLineListPrice(item);
+  return listPrice == null
+    ? null
+    : applyLinePriceReduction(item.product, listPrice);
+};
 
 /** % GTGT đang áp cho dòng (0 nếu dòng không được chọn GTGT hoặc chưa chọn). */
 export const getLineVatRate = (item: LineVatItem): number =>
