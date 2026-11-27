@@ -11,6 +11,7 @@ import {
   toBaseQuantity,
   type CartQuantityUnit,
 } from "@/components/pos/quantity-utils";
+import { applyLinePriceReduction } from "@/lib/utils/line-vat";
 
 /** Một dòng hợp lệ từ file, sẵn sàng để thêm vào giỏ. */
 export interface ImportedCartLine {
@@ -18,6 +19,8 @@ export interface ImportedCartLine {
   /** Số lượng theo đơn vị cơ bản (giống CartItem.quantity). */
   quantity: number;
   quantityUnit: CartQuantityUnit;
+  /** Giá bảng giá trước khi trừ 8% mặc định (để hiện "giá cũ" trên card). */
+  listPrice?: number;
   price: number;
   discount: number;
   note: string;
@@ -373,9 +376,11 @@ export function PosProductImportModal({
           quantityUnit === "carton" ? "Thùng" : getBaseUnitLabel(product);
         preview.displayQuantity = quantity;
 
-        const listPrice = inPriceBook
+        const bookPrice = inPriceBook
           ? bookPrices.get(product.id)!
           : Number(product.basePrice) || 0;
+        // SP chọn GTGT dòng (SP007601): giá mặc định trừ 8% như khi thêm vào giỏ.
+        const listPrice = applyLinePriceReduction(product, bookPrice);
         let price = listPrice;
         let discount = 0;
         if (row.priceRaw) {
@@ -399,6 +404,7 @@ export function PosProductImportModal({
           product,
           quantity: toBaseQuantity(quantity, quantityUnit, product),
           quantityUnit,
+          listPrice: bookPrice,
           price,
           discount,
           note: row.note,

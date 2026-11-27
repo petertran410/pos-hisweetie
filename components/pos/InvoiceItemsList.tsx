@@ -48,11 +48,17 @@ import { ColdCargoBadge, ColdCargoSummary } from "../shared/ColdCargoBadge";
 import { CartPromotionSummary } from "../promotions/CartPromotionSummary";
 import { UnitPicker } from "./UnitPicker";
 import {
+  LINE_PRICE_REDUCTION_PERCENT,
   LINE_VAT_OPTIONS,
   LINE_VAT_PLACEHOLDER,
   canChooseLineVat,
+  canReduceLinePrice,
+  getLineListPrice,
+  getLineReducedPrice,
   getLineTotal,
+  getLineUnitPrice,
   getLineVatPickerValue,
+  toNetUnitPrice,
 } from "@/lib/utils/line-vat";
 import {
   getItemOnHand as getItemOnHandHelper,
@@ -348,8 +354,9 @@ export function InvoiceItemsList({
 
   const getPriceInputValue = (item: CartItem): string => {
     const key = getCartItemKey(item);
-    // Đang edit → trả raw digits; không edit → format đẹp
-    return priceInputs[key] ?? formatCurrency(item.price - item.discount);
+    // Đang edit → trả raw digits; không edit → format đẹp.
+    // Đơn giá hiển thị đã gồm GTGT dòng (nếu có) → đơn giá × SL = thành tiền.
+    return priceInputs[key] ?? formatCurrency(getLineUnitPrice(item));
   };
 
   const handlePriceChange = (item: CartItem, value: string) => {
@@ -368,11 +375,15 @@ export function InvoiceItemsList({
     });
 
     if (raw === undefined) return;
-    const newEffective = parseNumberInput(raw);
-    if (newEffective <= 0) return;
+    const typed = parseNumberInput(raw);
+    if (typed <= 0) return;
+    // Giá gõ vào đã gồm GTGT dòng → đổi về giá chưa GTGT trước khi ghi giỏ.
+    const newEffective = toNetUnitPrice(item, typed);
 
     if (newEffective < item.price) {
-      onUpdateItem(item.rowId, { discount: item.price - newEffective });
+      onUpdateItem(item.rowId, {
+        discount: Math.round((item.price - newEffective) * 100) / 100,
+      });
     } else {
       onUpdateItem(item.rowId, { price: newEffective, discount: 0 });
     }
@@ -892,7 +903,7 @@ export function InvoiceItemsList({
                       />
                     ) : (
                       <span className="text-xs text-gray-700">
-                        {item.price.toLocaleString()}
+                        {formatCurrency(getLineUnitPrice(item))}
                       </span>
                     )}
                     {item.discount > 0 && (
@@ -923,6 +934,18 @@ export function InvoiceItemsList({
                       </button>
                     )}
                   </div>
+
+                  {/* Giá bảng giá cũ → giá đã trừ 8% mặc định */}
+                  {canReduceLinePrice(item) && (
+                    <div className="text-xs text-gray-500">
+                      Giá gốc{" "}
+                      <span className="line-through text-gray-400">
+                        {formatCurrency(getLineListPrice(item))}
+                      </span>{" "}
+                      → trừ {LINE_PRICE_REDUCTION_PERCENT}%:{" "}
+                      {formatCurrency(getLineReducedPrice(item))}
+                    </div>
+                  )}
 
                   {/* Cảnh báo lệch giá so với giá bán gần nhất */}
                   <PriceMismatchNote warning={priceWarnings?.[item.rowId]} />
@@ -1010,6 +1033,20 @@ export function InvoiceItemsList({
                         Giảm giá
                       </button>
                     </div>
+                    {/* Giá bảng giá cũ → giá đã trừ 8% mặc định */}
+                    {canReduceLinePrice(item) && (
+                      <div className="flex flex-col items-end min-w-[60px]">
+                        <span className="text-xs lg:text-sm text-gray-400 mb-0.5">
+                          Giá trừ {LINE_PRICE_REDUCTION_PERCENT}%
+                        </span>
+                        <span className="text-md text-gray-700 whitespace-nowrap">
+                          <span className="mr-1 text-sm text-gray-400 line-through">
+                            {formatCurrency(getLineListPrice(item))}
+                          </span>
+                          {formatCurrency(getLineReducedPrice(item))}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex flex-col items-end min-w-[60px]">
                       <span className="text-xs lg:text-sm text-gray-400 mb-0.5">
                         Chiết khấu
@@ -1026,6 +1063,24 @@ export function InvoiceItemsList({
                           : "0"}
                       </span>
                     </div>
+                    {/* GTGT đứng trước Đơn giá: đơn giá hiển thị đã gồm GTGT */}
+                    {canChooseLineVat(item) && (
+                      <div className="flex flex-col items-end min-w-[60px]">
+                        <span className="text-xs lg:text-sm text-gray-400 mb-0.5">
+                          GTGT
+                        </span>
+                        <UnitPicker
+                          value={getLineVatPickerValue(item)}
+                          placeholder={LINE_VAT_PLACEHOLDER}
+                          options={LINE_VAT_OPTIONS}
+                          onChange={(value) =>
+                            onUpdateItem(item.rowId, {
+                              lineVatRate: Number(value),
+                            })
+                          }
+                        />
+                      </div>
+                    )}
                     <div className="flex flex-col items-end min-w-[60px]">
                       <span className="text-xs lg:text-sm text-gray-400 mb-0.5">
                         Đơn giá
@@ -1046,27 +1101,10 @@ export function InvoiceItemsList({
                         />
                       ) : (
                         <span className="text-md text-gray-500">
-                          {(item.price - item.discount).toLocaleString()}
+                          {formatCurrency(getLineUnitPrice(item))}
                         </span>
                       )}
                     </div>
-                    {canChooseLineVat(item) && (
-                      <div className="flex flex-col items-end min-w-[60px]">
-                        <span className="text-xs lg:text-sm text-gray-400 mb-0.5">
-                          GTGT
-                        </span>
-                        <UnitPicker
-                          value={getLineVatPickerValue(item)}
-                          placeholder={LINE_VAT_PLACEHOLDER}
-                          options={LINE_VAT_OPTIONS}
-                          onChange={(value) =>
-                            onUpdateItem(item.rowId, {
-                              lineVatRate: Number(value),
-                            })
-                          }
-                        />
-                      </div>
-                    )}
                     <div className="flex flex-col items-end min-w-[60px]">
                       <span className="text-xs lg:text-sm text-gray-400 mb-0.5">
                         Thành tiền
