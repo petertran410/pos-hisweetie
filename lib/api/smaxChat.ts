@@ -55,7 +55,13 @@ export const smaxChatApi = {
 
   // q: tìm theo tên Zalo / tên nhóm trên toàn bộ hội thoại của kênh
   // fresh: bỏ qua cache ngắn của backend (nút ⟳)
-  getRecent: (pagePid?: string, limit?: number, q?: string, fresh?: boolean): Promise<{ items: RecentChat[] }> =>
+  // intelPagePids: kênh đã bật phân loại từng tin → nhãn tự động, ẩn nút "Phân loại"
+  getRecent: (
+    pagePid?: string,
+    limit?: number,
+    q?: string,
+    fresh?: boolean,
+  ): Promise<{ items: RecentChat[]; intelPagePids?: string[] }> =>
     apiClient.get("/smax/chat/recent", { pagePid, limit, q, fresh: fresh ? 1 : undefined }),
 
   getZaloProfile: (customerId: number, pagePid: string, contactId: number): Promise<ZaloProfile> =>

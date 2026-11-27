@@ -132,6 +132,7 @@ export const ROUTE_PERMISSIONS: Record<
   "/cai-dat/lich-su": { resource: "audit_logs", action: "view" },
   "/cai-dat/tich-hop-api": { resource: "settings", action: "update" },
   "/cai-dat/smax": { resource: "settings", action: "update" },
+  "/cai-dat/phan-tich-tin-nhan": { resource: "message_intel", action: "view" },
   "/san-pham/kiem-kho": { resource: "stock_audits", action: "view" },
   "/cai-dat/in-an": { resource: "print_templates", action: "view" },
   "/cai-dat/mau-bao-gia": { resource: "quote_templates", action: "view" },

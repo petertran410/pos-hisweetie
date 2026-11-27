@@ -8,6 +8,7 @@ import { LEAD_SOURCE_LABEL, leadHref } from "@/lib/leads/constants";
 import { JourneyStepper, stageMilestones } from "@/components/journey/JourneyStepper";
 import { QUICK_ITEM_MIME, type QuickItem } from "@/lib/chat/quickInsert";
 import { UpsellSuggestions } from "./UpsellSuggestions";
+import { CustomerIntelSummary } from "./CustomerIntelSummary";
 
 /** Kéo dòng vào ô soạn tin để chèn thông tin (như menu "/"). */
 const dragProps = (item: QuickItem) => ({
@@ -194,6 +195,7 @@ export function ChatCustomerCard({ context }: { context: ChatContext }) {
         </div>
       )}
 
+      <CustomerIntelSummary customerId={customer.id} />
       <UpsellSuggestions customerId={customer.id} />
     </div>
   );
