@@ -582,9 +582,9 @@ export function ChatThread({
             {THREAD_LABEL_META[aiLabel.label].text}
           </span>
           <span className="min-w-0 flex-1 truncate" title={aiLabel.reason ?? ""}>
-            {aiLabel.manual ? "Gắn tay" : "AI"}
+            {aiLabel.manual ? "Gắn tay" : aiLabel.auto ? "Tự động" : "AI"}
             {aiLabel.reason && !aiLabel.manual ? `: ${aiLabel.reason}` : ""}
-            {aiLabel.stale ? " · nhãn cũ (đã có tin mới)" : ""}
+            {aiLabel.stale ? (aiLabel.auto ? " · đang phân loại tin mới" : " · nhãn cũ (đã có tin mới)") : ""}
           </span>
           {labelEditing ? (
             <span className="flex flex-wrap gap-1">

@@ -240,6 +240,8 @@ export interface RecentChat {
     pending: boolean;
     manual: boolean;
     stale: boolean;
+    /** Nhãn tự động từ phân loại từng tin (Message Intelligence), không phải nút "Phân loại" */
+    auto?: boolean;
   } | null;
   // Tổng số tin của thread — "tin mới" = chênh lệch so với lần xem gần nhất trên POS
   messageCount: number;
