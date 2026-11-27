@@ -14,10 +14,16 @@
  *    lại đơn giá gốc. Xóa cột sau này không ảnh hưởng tiền đã lưu.
  *  - Dòng mới thêm vào giỏ để TRỐNG (`lineVatRate` undefined) → người dùng bắt
  *    buộc tự chọn 0% hoặc 5%; trang Bán hàng chặn lưu/tạo nếu còn dòng chưa chọn.
- *  - Giá lấy từ bảng giá mặc định TRỪ 8% (× 0,92) trước khi vào giỏ
- *    (`applyLinePriceReduction`); giá bảng giá gốc giữ ở `listPrice` để hiện
- *    "giá cũ". Ô Đơn giá trên card hiện giá ĐÃ GỒM GTGT (`getLineUnitPrice`) để
+ *  - Ô Đơn giá trên card hiện giá ĐÃ GỒM GTGT (`getLineUnitPrice`) để
  *    đơn giá × SL = thành tiền.
+ *
+ * Trừ 8% CHỈ cho chứng từ CŨ (lập trước khi có quy tắc mới), KHÔNG cho đơn/HĐ mới:
+ *  - DB: `line_vat_rate` NULL = dòng của chứng từ cũ (chưa qua POS mới). POS mới
+ *    luôn ghi 0/5 khi lưu → dòng có số không bao giờ bị trừ nữa (trừ đúng 1 lần).
+ *  - Nạp dòng NULL (`fromSavedLinePrice`) → `legacyLine` + `listPrice` = giá đã
+ *    lưu (giá cũ); trang Bán hàng trừ 8% vào đơn giá + giảm giá một lần
+ *    (`applyLegacyReduction`, trừ khi đơn đang khóa dòng) và bắt chọn GTGT.
+ *  - Đơn/HĐ mới (kể cả copy từ chứng từ cũ): giữ nguyên giá, không có ô "Giá trừ 8%".
  */
 
 export const LINE_VAT_PRODUCT_CODES = ["SP007601"];
@@ -32,6 +38,8 @@ interface LineVatItem {
   isPromoGift?: boolean;
   lineVatRate?: number;
   listPrice?: number;
+  legacyLine?: boolean;
+  legacyReduced?: boolean;
   price: number;
   discount: number;
   quantity: number;
@@ -39,13 +47,14 @@ interface LineVatItem {
 
 type LineVatProduct = { code?: string | null } | null | undefined;
 
-/** % trừ mặc định trên giá bảng giá của các SP trong LINE_VAT_PRODUCT_CODES. */
+/** % trừ trên giá của dòng chứng từ cũ (SP trong LINE_VAT_PRODUCT_CODES). */
 export const LINE_PRICE_REDUCTION_PERCENT = 8;
 
 const isLineVatProduct = (product: LineVatProduct): boolean =>
   LINE_VAT_PRODUCT_CODES.includes(String(product?.code ?? ""));
 
 interface SavedLine {
+  product?: { code?: string | null } | null;
   price?: number | string | null;
   discount?: number | string | null;
   lineVatRate?: number | string | null;
@@ -57,29 +66,32 @@ const round2 = (value: number) => Math.round(value * 100) / 100;
 export const canChooseLineVat = (item: LineVatItem): boolean =>
   !item.isPromoGift && isLineVatProduct(item.product);
 
-/** Dòng hiện ô "Giá trừ 8%" (cùng điều kiện với ô GTGT). */
-export const canReduceLinePrice = canChooseLineVat;
+/** Dòng của chứng từ cũ → hiện ô "Giá trừ 8%" (đơn/HĐ mới không có ô này). */
+export const canReduceLinePrice = (item: LineVatItem): boolean =>
+  canChooseLineVat(item) && !!item.legacyLine;
 
-/**
- * Giá bảng giá → giá mặc định vào giỏ: SP áp dụng thì trừ 8% (làm tròn đồng),
- * SP khác giữ nguyên. Chỉ gọi khi giá lấy từ bảng giá/giá gốc, KHÔNG gọi cho
- * dòng nạp từ đơn đã lưu (giá đã trừ sẵn).
- */
+/** Trừ 8% một số tiền (làm tròn đồng) nếu SP thuộc diện áp dụng. */
 export const applyLinePriceReduction = (
   product: LineVatProduct,
-  listPrice: number
+  amount: number
 ): number =>
   isLineVatProduct(product)
-    ? Math.round(listPrice * (1 - LINE_PRICE_REDUCTION_PERCENT / 100))
-    : listPrice;
+    ? Math.round(amount * (1 - LINE_PRICE_REDUCTION_PERCENT / 100))
+    : amount;
 
 /**
- * "Giá cũ" (giá bảng giá trước khi trừ 8%) để hiển thị. KHÔNG suy ngược từ đơn
- * giá (đơn lập trước khi có tính năng chưa trừ 8% → suy ngược ra sai): dòng chưa
- * có listPrice thì trang Bán hàng tự lấy theo bảng giá, trong lúc chờ trả null.
+ * Dòng chứng từ cũ → trừ 8% vào cả đơn giá và giảm giá (tức giá bán − 8%), đánh
+ * dấu đã trừ để không trừ lần nữa trong giỏ.
  */
+export const applyLegacyReduction = (item: LineVatItem) => ({
+  price: applyLinePriceReduction(item.product, Number(item.price) || 0),
+  discount: applyLinePriceReduction(item.product, Number(item.discount) || 0),
+  legacyReduced: true,
+});
+
+/** "Giá cũ" (đơn giá đã lưu của chứng từ cũ, trước khi trừ 8%) để hiển thị. */
 export const getLineListPrice = (item: LineVatItem): number | null =>
-  item.listPrice ?? null;
+  item.legacyLine ? (item.listPrice ?? null) : null;
 
 /** "Giá đã trừ 8%" để hiển thị cạnh giá cũ (sửa tay đơn giá không đổi ô này). */
 export const getLineReducedPrice = (item: LineVatItem): number | null => {
@@ -141,12 +153,41 @@ export const getLineTotal = (item: LineVatItem): number =>
 export const toNetUnitPrice = (item: LineVatItem, typedGross: number): number =>
   removeLineVat(typedGross, getLineVatRate(item));
 
-/** Dòng đơn/HĐ/ký gửi từ API → giá chưa GTGT cho giỏ + % GTGT đã chọn. */
-export const fromSavedLinePrice = (line: SavedLine) => {
+/**
+ * Dòng đơn/HĐ/ký gửi từ API → giá chưa GTGT cho giỏ + % GTGT đã chọn.
+ * SP áp dụng mà `lineVatRate` NULL = dòng chứng từ cũ:
+ *  - mặc định: `legacyLine` + `listPrice` (giá cũ), GTGT để trống bắt chọn; trang
+ *    Bán hàng sẽ trừ 8% một lần.
+ *  - `asNewDocument` (copy sang đơn/HĐ mới): giữ nguyên giá, không trừ 8%, GTGT
+ *    vẫn để trống bắt chọn.
+ */
+export const fromSavedLinePrice = (
+  line: SavedLine,
+  options: { asNewDocument?: boolean } = {}
+): {
+  price: number;
+  discount: number;
+  lineVatRate?: number;
+  legacyLine?: boolean;
+  listPrice?: number;
+} => {
+  const price = Number(line.price) || 0;
+  const discount = Number(line.discount) || 0;
+  if (line.lineVatRate == null && isLineVatProduct(line.product)) {
+    return options.asNewDocument
+      ? { price, discount, lineVatRate: undefined }
+      : {
+          price,
+          discount,
+          lineVatRate: undefined,
+          legacyLine: true,
+          listPrice: price,
+        };
+  }
   const lineVatRate = Number(line.lineVatRate) || 0;
   return {
-    price: removeLineVat(Number(line.price) || 0, lineVatRate),
-    discount: removeLineVat(Number(line.discount) || 0, lineVatRate),
+    price: removeLineVat(price, lineVatRate),
+    discount: removeLineVat(discount, lineVatRate),
     lineVatRate,
   };
 };
