@@ -5,13 +5,19 @@ import { useQuery } from "@tanstack/react-query";
 import { misaApi, MisaInventoryItem } from "@/lib/api/misa";
 
 interface MisaItemDropdownProps {
-  label: string;
+  /** Bỏ trống khi form tự vẽ nhãn bên ngoài. */
+  label?: string;
   placeholder: string;
   /** Mã Misa hiện đang liên kết (misa_code) */
   value?: string;
   /** Tên Misa hiện đang liên kết (misa_name) — dùng để hiển thị khi chưa search */
   valueName?: string;
   onChange: (item: MisaInventoryItem | null) => void;
+  /**
+   * Nguồn tìm vật tư (mặc định API Misa, cần quyền products:link_misa).
+   * Trang khác có endpoint riêng thì truyền vào đây.
+   */
+  fetchItems?: (search?: string) => Promise<MisaInventoryItem[]>;
 }
 
 export function MisaItemDropdown({
@@ -20,6 +26,7 @@ export function MisaItemDropdown({
   value,
   valueName,
   onChange,
+  fetchItems,
 }: MisaItemDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,8 +40,11 @@ export function MisaItemDropdown({
   }, [searchQuery]);
 
   const { data: items, isLoading } = useQuery({
-    queryKey: ["misa-inventory-items", debouncedQuery],
-    queryFn: () => misaApi.searchInventoryItems(debouncedQuery || undefined, 50),
+    queryKey: ["misa-inventory-items", debouncedQuery, !!fetchItems],
+    queryFn: () =>
+      fetchItems
+        ? fetchItems(debouncedQuery || undefined)
+        : misaApi.searchInventoryItems(debouncedQuery || undefined, 50),
     enabled: isOpen,
     staleTime: 60_000,
   });
@@ -72,7 +82,9 @@ export function MisaItemDropdown({
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <label className="block text-sm font-medium mb-1">{label}</label>
+      {label && (
+        <label className="block text-sm font-medium mb-1">{label}</label>
+      )}
 
       <button
         type="button"

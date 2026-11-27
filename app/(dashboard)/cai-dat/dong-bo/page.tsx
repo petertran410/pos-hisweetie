@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/config/api";
 import { RefreshCw, XCircle, Loader2, Database, ShieldCheck, Users, Package, AlertTriangle } from "lucide-react";
@@ -9,6 +9,17 @@ import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { useSyncMisaDictionary } from "@/lib/hooks/useMisa";
 import { useSyncSepayTransactions } from "@/lib/hooks/useSepay";
 import Swal from "sweetalert2";
+
+type CustomerLarkSyncStatus = {
+  running: boolean;
+  startedAt: string | null;
+  finishedAt: string | null;
+  success: number | null;
+  failed: number | null;
+  error: string | null;
+};
+
+const CUSTOMER_LARK_SYNC_STATUS_KEY = ["lark-customer-sync-status"];
 
 export default function SyncSettingsPage() {
   const queryClient = useQueryClient();
@@ -113,19 +124,57 @@ export default function SyncSettingsPage() {
   const syncMisaDictionary = useSyncMisaDictionary();
   const syncSepayTransactions = useSyncSepayTransactions();
 
-  // Đồng bộ khách hàng đang hoạt động lên Lark
-  const syncCustomersToLark = useMutation({
-    mutationFn: () =>
-      apiClient.post<{ ok: boolean; success: number; failed: number }>(
-        "/lark-sync/customers/sync-now",
-      ),
-    onSuccess: (res) => {
+  // Đồng bộ khách hàng đang hoạt động lên Lark. Backend chạy nền (hơn 1 phút,
+  // quá timeout request 30s) → web hỏi trạng thái mỗi 3s tới khi xong.
+  const { data: customerSyncStatus } = useQuery({
+    queryKey: CUSTOMER_LARK_SYNC_STATUS_KEY,
+    queryFn: () =>
+      apiClient.get<CustomerLarkSyncStatus>("/lark-sync/customers/sync-status"),
+    refetchInterval: (query) => (query.state.data?.running ? 3000 : false),
+  });
+  const customerSyncRunning = !!customerSyncStatus?.running;
+  // Chỉ hiện popup kết quả cho phiên vừa bấm trong tab này
+  const watchingCustomerSync = useRef(false);
+
+  useEffect(() => {
+    if (!watchingCustomerSync.current) return;
+    if (!customerSyncStatus || customerSyncStatus.running) return;
+    watchingCustomerSync.current = false;
+    if (customerSyncStatus.error) {
       Swal.fire({
-        title: "Đồng bộ hoàn tất",
-        text: `Thành công: ${res?.success ?? 0} — Thất bại: ${res?.failed ?? 0}`,
-        icon: "success",
+        title: "Đồng bộ thất bại",
+        text: customerSyncStatus.error,
+        icon: "error",
         confirmButtonColor: "#2563eb",
       });
+      return;
+    }
+    Swal.fire({
+      title: "Đồng bộ hoàn tất",
+      text: `Thành công: ${customerSyncStatus.success ?? 0} — Thất bại: ${customerSyncStatus.failed ?? 0}`,
+      icon: "success",
+      confirmButtonColor: "#2563eb",
+    });
+  }, [customerSyncStatus]);
+
+  const syncCustomersToLark = useMutation({
+    mutationFn: () =>
+      apiClient.post<{
+        ok: boolean;
+        started: boolean;
+        status: CustomerLarkSyncStatus;
+      }>("/lark-sync/customers/sync-now"),
+    onSuccess: (res) => {
+      watchingCustomerSync.current = true;
+      queryClient.setQueryData(CUSTOMER_LARK_SYNC_STATUS_KEY, res.status);
+      if (!res.started) {
+        Swal.fire({
+          title: "Đang đồng bộ",
+          text: "Đã có phiên đồng bộ khách hàng đang chạy. Kết quả sẽ hiện khi hoàn tất.",
+          icon: "info",
+          confirmButtonColor: "#2563eb",
+        });
+      }
     },
     onError: () => {
       Swal.fire({
@@ -140,7 +189,7 @@ export default function SyncSettingsPage() {
   const handleSyncCustomersToLark = async () => {
     const result = await Swal.fire({
       title: "Đồng bộ khách hàng lên Lark?",
-      text: "Đẩy toàn bộ khách hàng đang hoạt động lên bảng Lark (tên, mã, công nợ, tổng bán, doanh thu, địa chỉ, nhóm...). Quá trình có thể mất vài phút.",
+      text: "Đẩy toàn bộ khách hàng đang hoạt động lên bảng Lark (tên, mã, công nợ, tổng bán, doanh thu, địa chỉ, nhóm...). Quá trình chạy nền, có thể mất vài phút.",
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Đồng bộ ngay",
@@ -635,9 +684,9 @@ export default function SyncSettingsPage() {
 
                 <button
                   onClick={handleSyncCustomersToLark}
-                  disabled={syncCustomersToLark.isPending}
+                  disabled={syncCustomersToLark.isPending || customerSyncRunning}
                   className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-sky-600 text-white rounded-lg text-sm font-medium hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                  {syncCustomersToLark.isPending ? (
+                  {syncCustomersToLark.isPending || customerSyncRunning ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Đang đồng bộ...
@@ -651,35 +700,49 @@ export default function SyncSettingsPage() {
                 </button>
               </div>
 
-              {syncCustomersToLark.isSuccess && syncCustomersToLark.data && (
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  {[
-                    {
-                      label: "Thành công",
-                      value: syncCustomersToLark.data.success ?? 0,
-                    },
-                    {
-                      label: "Thất bại",
-                      value: syncCustomersToLark.data.failed ?? 0,
-                    },
-                  ].map((stat) => (
-                    <div
-                      key={stat.label}
-                      className="p-3 bg-gray-50 border rounded-lg text-center">
-                      <p className="text-xs text-gray-500">{stat.label}</p>
-                      <p className="text-lg font-semibold text-gray-900">
-                        {stat.value}
-                      </p>
+              {!customerSyncRunning &&
+                customerSyncStatus?.finishedAt &&
+                !customerSyncStatus.error && (
+                  <>
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      {[
+                        {
+                          label: "Thành công",
+                          value: customerSyncStatus.success ?? 0,
+                        },
+                        {
+                          label: "Thất bại",
+                          value: customerSyncStatus.failed ?? 0,
+                        },
+                      ].map((stat) => (
+                        <div
+                          key={stat.label}
+                          className="p-3 bg-gray-50 border rounded-lg text-center">
+                          <p className="text-xs text-gray-500">{stat.label}</p>
+                          <p className="text-lg font-semibold text-gray-900">
+                            {stat.value}
+                          </p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
+                    <p className="mt-2 text-xs text-gray-500">
+                      Lần đồng bộ gần nhất:{" "}
+                      {new Date(customerSyncStatus.finishedAt).toLocaleString(
+                        "vi-VN",
+                      )}
+                    </p>
+                  </>
+                )}
 
-              {syncCustomersToLark.isError && (
+              {(syncCustomersToLark.isError ||
+                (!customerSyncRunning && customerSyncStatus?.error)) && (
                 <div className="mt-4 flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                   <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                   <p className="text-sm text-red-700">
-                    Đồng bộ khách hàng lên Lark thất bại. Vui lòng thử lại.
+                    Đồng bộ khách hàng lên Lark thất bại
+                    {customerSyncStatus?.error
+                      ? `: ${customerSyncStatus.error}`
+                      : ". Vui lòng thử lại."}
                   </p>
                 </div>
               )}

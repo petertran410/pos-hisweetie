@@ -22,7 +22,7 @@ import {
  * - `masked`: không hiện giá trị (kể cả khi focus) — ô trống + `placeholder`,
  *   vẫn gõ được giá mới. Dùng cho giá user không có quyền xem.
  * - `onClear`: khi có, xóa trắng ô gọi `onClear()` thay vì `onValueChange(0)`
- *   (phân biệt "chưa nhập" với "nhập 0").
+ *   (phân biệt "chưa nhập" với "nhập 0"); truyền `value={NaN}` để hiện ô trống.
  */
 export function NumericInput({
   value,
@@ -56,7 +56,9 @@ export function NumericInput({
       ? ""
       : Number.isFinite(value)
         ? formatNumber(value, "en-US", { max: maxFractionDigits })
-        : "0";
+        : onClear
+          ? "" // có onClear = phân biệt "chưa nhập" → NaN hiện ô trống
+          : "0";
 
   const decimalPattern = useMemo(
     () =>
@@ -76,7 +78,7 @@ export function NumericInput({
       placeholder={placeholder}
       onFocus={(e) => {
         setFocused(true);
-        const nextRaw = !masked && value ? String(value) : "";
+        const nextRaw = !masked && Number.isFinite(value) && value ? String(value) : "";
         setRaw(
           formatWhileTyping
             ? formatNumberInput(nextRaw, maxFractionDigits)
