@@ -14,6 +14,7 @@ import {
 } from "@/lib/new-product-price/constants";
 import type {
   NppDelivery,
+  NppGroupDelivery,
   NppEvent,
   NppReference,
   NppTicketDetail,
@@ -108,8 +109,26 @@ function EventBody({ e }: { e: NppEvent }) {
   if (e.type === "NOTIFY") {
     const recipients = (data.recipients as NppDelivery[]) ?? [];
     const intended = (data.intended as { name: string }[] | undefined) ?? [];
+    const group = data.group as NppGroupDelivery | undefined;
     return (
       <div className="mt-1 flex flex-wrap gap-1">
+        {group && (
+          <span
+            title={
+              group.error ??
+              (group.mentioned?.length
+                ? `Tag: ${group.mentioned.join(", ")}`
+                : undefined)
+            }
+            className={`px-2 py-0.5 rounded text-xs font-medium ${DELIVERY_CLASS[group.status]}`}>
+            Nhóm Lark ·{" "}
+            {group.status === "SENT"
+              ? group.created || group.openedTopic
+                ? "Đã mở chủ đề"
+                : "Đã trả lời trong chủ đề"
+              : "Lỗi gửi"}
+          </span>
+        )}
         {data.testMode === true && (
           <span
             title={`Người nhận thật: ${intended.map((i) => i.name).join(", ") || "(chưa cấu hình)"}`}

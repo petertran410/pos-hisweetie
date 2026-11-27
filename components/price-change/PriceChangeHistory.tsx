@@ -22,7 +22,6 @@ const EVENT_LABEL: Record<string, string> = {
   APPLIED: "Áp dụng giá mới lên POS",
   ENDED: "Kết thúc phiếu",
   COMMENT: "Bình luận",
-  IMPORTED: "Nhập từ Lark",
   NOTIFY: "Gửi thông báo",
 };
 
@@ -56,13 +55,32 @@ function EventBody({ e }: { e: PcEvent }) {
         status: PcDeliveryStatus;
         error?: string;
       }[]) ?? [];
-    const intended = (data.intended as { name: string }[] | undefined) ?? [];
+    // Kết quả gửi vào chủ đề nhóm (TopicDelivery, chuẩn chung với Bảng giá SP mới)
+    const group = data.group as
+      | {
+          status: "SENT" | "ERROR";
+          created?: boolean;
+          mentioned?: string[];
+          error?: string;
+        }
+      | undefined;
     return (
       <div className="mt-1 flex flex-wrap gap-1">
-        {data.testMode === true && (
-          <span className="px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">
-            Gửi thử · người nhận thật:{" "}
-            {intended.map((i) => i.name).join(", ") || "chưa cấu hình"}
+        {group && (
+          <span
+            title={
+              group.error ??
+              (group.mentioned?.length
+                ? `Tag: ${group.mentioned.join(", ")}`
+                : undefined)
+            }
+            className={`px-2 py-0.5 rounded text-xs font-medium ${DELIVERY_CLASS[group.status]}`}>
+            Nhóm Lark ·{" "}
+            {group.status === "SENT"
+              ? group.created
+                ? "Đã mở chủ đề"
+                : "Đã trả lời trong chủ đề"
+              : "Lỗi gửi"}
           </span>
         )}
         {recipients.length === 0 && (

@@ -7,7 +7,6 @@ import { NewProductPriceSidebar } from "@/components/new-product-price/NewProduc
 import { NewProductPriceTable } from "@/components/new-product-price/NewProductPriceTable";
 import { NewProductPriceFormModal } from "@/components/new-product-price/NewProductPriceFormModal";
 import { NewProductPriceConfigModal } from "@/components/new-product-price/NewProductPriceConfigModal";
-import { NewProductPriceImportModal } from "@/components/new-product-price/NewProductPriceImportModal";
 import type { NppFilters } from "@/lib/types/new-product-price";
 
 /**
@@ -24,7 +23,6 @@ export default function NewProductPricePage() {
   const [filters, setFilters] = useState<NppFilters>({});
   const [creating, setCreating] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
   const onFilters = useCallback((f: NppFilters) => setFilters(f), []);
 
   return (
@@ -47,7 +45,6 @@ export default function NewProductPricePage() {
           openAction={openAction}
           onCreateClick={() => setCreating(true)}
           onConfigClick={() => setConfigOpen(true)}
-          onImportClick={() => setImportOpen(true)}
         />
       </div>
       {creating && (
@@ -55,9 +52,6 @@ export default function NewProductPricePage() {
       )}
       {configOpen && (
         <NewProductPriceConfigModal onClose={() => setConfigOpen(false)} />
-      )}
-      {importOpen && (
-        <NewProductPriceImportModal onClose={() => setImportOpen(false)} />
       )}
     </PagePermissionGuard>
   );

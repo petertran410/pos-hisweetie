@@ -157,6 +157,20 @@ export interface NppDelivery {
   error?: string;
 }
 
+/** Kết quả gửi vào chủ đề của phiếu trong nhóm Lark. */
+export interface NppGroupDelivery {
+  chatId: string;
+  rootMessageId?: string | null;
+  messageId?: string | null;
+  /** true = lần này mới mở chủ đề (chuẩn chung lark-sync/lark-topic.ts). */
+  created?: boolean;
+  /** Tên cũ của `created` (phiếu test trước khi chuẩn hóa). */
+  openedTopic?: boolean;
+  mentioned?: string[];
+  status: "SENT" | "ERROR";
+  error?: string;
+}
+
 export interface NppEvent {
   id: number;
   ticketId: number;
@@ -238,12 +252,9 @@ export interface NppConfig {
   approvers: Record<NppGroup, number[]>;
   priceTargets: Record<NppPriceTargetKey, NppPriceTarget>;
   costBranches: Record<NppCostGroupKey, number[]>;
+  /** Nhóm Lark dạng chủ đề nhận tin song song (mỗi phiếu 1 chủ đề). */
   larkChatId: string | null;
   remindersEnabled: boolean;
-  /** Gửi thử: khác rỗng → mọi thông báo chỉ gửi tới những user này. */
-  testRecipients: number[];
-  /** Máy chủ có LARK_MESSAGE_ALLOWLIST (local): luôn gửi thử, không tắt được. */
-  testLocked?: boolean;
   defaults: {
     priceTargets: NppPriceTargetKey[];
     costBranches: NppCostGroupKey[];
@@ -259,7 +270,6 @@ export interface NppConfigInput {
   costBranches?: Partial<Record<NppCostGroupKey, number[]>>;
   larkChatId?: string | null;
   remindersEnabled?: boolean;
-  testRecipients?: number[];
 }
 
 export interface NppApplyIssue {
@@ -317,18 +327,6 @@ export interface NppApplyPreview {
       moqUnit: "CARTON" | null;
     } | null;
   };
-}
-
-export interface NppImportResult {
-  dryRun: boolean;
-  totalFetched: number;
-  created: number;
-  updated: number;
-  skippedEditedInPos: number;
-  byStage: Record<string, number>;
-  unmatched: Record<string, string[]>;
-  media: { downloaded: number; skippedExisting: number; failed: number };
-  errors: { recordId: string; message: string }[];
 }
 
 /** Body PATCH: chỉ gửi trường đổi; null = xóa giá trị. */

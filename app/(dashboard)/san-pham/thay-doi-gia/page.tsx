@@ -7,7 +7,6 @@ import { PriceChangeSidebar } from "@/components/price-change/PriceChangeSidebar
 import { PriceChangeTable } from "@/components/price-change/PriceChangeTable";
 import { PriceChangeFormModal } from "@/components/price-change/PriceChangeFormModal";
 import { PriceChangeConfigModal } from "@/components/price-change/PriceChangeConfigModal";
-import { PriceChangeImportModal } from "@/components/price-change/PriceChangeImportModal";
 import { pcHref } from "@/lib/price-change/constants";
 import type { PcFilters } from "@/lib/types/price-change";
 
@@ -25,7 +24,6 @@ export default function PriceChangePage() {
   const [filters, setFilters] = useState<PcFilters>({});
   const [creating, setCreating] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
   const onFilters = useCallback((f: PcFilters) => setFilters(f), []);
 
   return (
@@ -48,7 +46,6 @@ export default function PriceChangePage() {
           openAction={openAction}
           onCreateClick={() => setCreating(true)}
           onConfigClick={() => setConfigOpen(true)}
-          onImportClick={() => setImportOpen(true)}
         />
       </div>
       {creating && (
@@ -59,9 +56,6 @@ export default function PriceChangePage() {
       )}
       {configOpen && (
         <PriceChangeConfigModal onClose={() => setConfigOpen(false)} />
-      )}
-      {importOpen && (
-        <PriceChangeImportModal onClose={() => setImportOpen(false)} />
       )}
     </PagePermissionGuard>
   );

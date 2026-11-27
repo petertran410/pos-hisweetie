@@ -51,8 +51,6 @@ export interface PcNamed {
 export interface PcTicket {
   id: number;
   code: string;
-  sourceRecordId: string | null;
-  importNotes: { field: string; value: string }[] | null;
   stage: PcStage;
   status: PcStatus;
   stageEnteredAt: string;
@@ -174,8 +172,10 @@ export interface PcCurrentValues {
 
 export interface PcConfig {
   approvers: Record<PcGroup, number[]>;
-  testRecipients: number[];
-  testLocked: boolean;
+  /** Nhóm Lark dạng topic (oc_…): mỗi phiếu 1 topic, mỗi bước tag người phụ trách. */
+  larkChatId: string | null;
+  /** Nhắc việc hằng ngày 17:00 (Kế toán trưởng, CEO, Phòng Dữ Liệu). */
+  remindersEnabled: boolean;
   updatedAt: string | null;
   updatedByName: string | null;
   members: { id: number; name: string; hasLark: boolean; isActive: boolean }[];
@@ -183,7 +183,9 @@ export interface PcConfig {
 
 export interface PcConfigInput {
   approvers?: Partial<Record<PcGroup, number[]>>;
-  testRecipients?: number[];
+  /** "" = tắt gửi nhóm. */
+  larkChatId?: string;
+  remindersEnabled?: boolean;
 }
 
 /** Body tạo / sửa phiếu: chỉ gửi giá mới, giá cũ do máy chủ chụp từ POS. */
@@ -226,16 +228,4 @@ export interface PcApplyPreview {
     cells: PcApplyCell[];
   }[];
   counts: { products: number; costCells: number; priceCells: number };
-}
-
-export interface PcImportResult {
-  dryRun: boolean;
-  totalFetched: number;
-  created: number;
-  updated: number;
-  skippedEditedInPos: number;
-  byStage: Record<string, number>;
-  unmatched: Record<string, string[]>;
-  media: { downloaded: number; skippedExisting: number; failed: number };
-  errors: { recordId: string; message: string }[];
 }

@@ -107,9 +107,6 @@ function ConfigForm({
   const [remindersEnabled, setRemindersEnabled] = useState(
     config.remindersEnabled,
   );
-  const [testRecipients, setTestRecipients] = useState<string[]>(
-    (config.testRecipients ?? []).map(String),
-  );
 
   const userOpts = (users ?? []).map((u: { id: number; name: string }) => ({
     value: String(u.id),
@@ -154,7 +151,6 @@ function ConfigForm({
         ),
         larkChatId: larkChatId.trim() || null,
         remindersEnabled,
-        testRecipients: testRecipients.map(Number),
       },
       { onSuccess: onClose },
     );
@@ -186,50 +182,6 @@ function ConfigForm({
       <div className="flex-1 overflow-auto p-5 space-y-4 text-sm">
         {tab === "approvers" && (
           <>
-            <div
-              className={`rounded-lg border px-3 py-2 ${testRecipients.length ? "border-amber-300 bg-amber-50" : ""}`}>
-              <label className={label}>
-                Gửi thử — chỉ gửi mọi thông báo tới
-              </label>
-              {config.testLocked ? (
-                <>
-                  <p className="font-medium text-gray-800">
-                    {userOpts
-                      .filter((o) => testRecipients.includes(o.value))
-                      .map((o) => o.label)
-                      .join(", ") || "(không có ai)"}
-                  </p>
-                  <p className="mt-1 text-xs text-amber-700">
-                    Môi trường này (local) luôn gửi thử, không tắt được: máy chủ
-                    chỉ cho gửi tin Lark tới người trong LARK_MESSAGE_ALLOWLIST
-                    (file .env của backend).
-                  </p>
-                </>
-              ) : (
-                <>
-                  <FilterMultiSelect
-                    options={userOpts}
-                    values={testRecipients}
-                    onChange={setTestRecipients}
-                    placeholder="Tắt (gửi cho người nhận thật)"
-                    searchPlaceholder="Tìm nhân viên..."
-                    multiLabel={(n) => `${n} người`}
-                    panelWidth={320}
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Khi có người ở đây, mọi tin Lark, thông báo trong app và
-                    nhắc việc chỉ gửi tới họ (tin ghi rõ người nhận thật), không
-                    gửi nhóm chat. Bỏ trống để gửi thật cho các nhóm bên dưới.
-                  </p>
-                </>
-              )}
-              {testRecipients.some((id) => noLark.has(id)) && (
-                <p className="mt-1 flex items-center gap-1 text-xs text-amber-700">
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                  Có người chưa liên kết Lark — chỉ nhận thông báo trong app.
-                </p>
-              )}
-            </div>
             <p className="text-xs text-gray-500">
               Bước Đề xuất do người tạo phiếu xử lý. Người trong nhóm nhận tin
               Lark khi phiếu tới bước, nhận nhắc việc hằng ngày và được bấm hoàn
@@ -267,15 +219,19 @@ function ConfigForm({
             })}
             <div>
               <label className={label}>
-                Nhóm chat Lark nhận tin “Kế toán trưởng duyệt giá vốn” (chat_id,
-                tùy chọn)
+                Nhóm Lark theo dõi phiếu (nhóm dạng chủ đề)
               </label>
               <input
                 value={larkChatId}
                 onChange={(e) => setLarkChatId(e.target.value)}
-                placeholder="oc_..."
+                placeholder="oc_… (bỏ trống = không gửi vào nhóm)"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
               />
+              <p className="mt-1 text-xs text-gray-500">
+                Phiếu được gửi đi sẽ mở 1 chủ đề trong nhóm. Mỗi lần tới bước
+                mới, người phụ trách được tag trong chủ đề đó. Tin nhắn riêng
+                vẫn gửi như cũ. Bot POS phải có trong nhóm.
+              </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <label className="flex items-center gap-2 text-sm text-gray-700">

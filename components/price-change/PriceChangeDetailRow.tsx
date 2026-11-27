@@ -2,7 +2,6 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
-  AlertTriangle,
   ClipboardCheck,
   CornerUpLeft,
   FileText,
@@ -184,15 +183,6 @@ export function PriceChangeDetailRow({
                     Lý do kết thúc: {ticket.endReason}
                   </p>
                 )}
-                {ticket.importNotes?.length ? (
-                  <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    Nhập từ Lark, chưa khớp dữ liệu POS:{" "}
-                    {ticket.importNotes
-                      .map((n) => `${n.field} (${n.value})`)
-                      .join(", ")}
-                  </p>
-                ) : null}
 
                 {/* Tabs */}
                 <div className="flex gap-1 mt-2">

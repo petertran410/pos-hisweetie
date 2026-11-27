@@ -255,23 +255,6 @@ export function useUpdateNppConfig() {
   });
 }
 
-export function useImportNppFromLark() {
-  const refresh = useRefresh();
-  return useMutation({
-    mutationFn: (body: {
-      dryRun: boolean;
-      downloadMedia?: boolean;
-      force?: boolean;
-    }) => newProductPriceApi.importLark(body),
-    onSuccess: (res) => {
-      if (res.dryRun) return;
-      refresh();
-      toast.success(`Đã nhập: tạo ${res.created}, cập nhật ${res.updated}`);
-    },
-    onError: errorToast("Nhập từ Lark lỗi"),
-  });
-}
-
 export function useRunNppReminders() {
   return useMutation({
     mutationFn: (stage?: string) => newProductPriceApi.runReminders(stage),
