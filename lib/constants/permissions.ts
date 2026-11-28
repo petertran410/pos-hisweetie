@@ -58,6 +58,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   stock_condition_transfers: "Chuyển loại tồn",
   settings: "Cài đặt hệ thống",
   smax_chat: "Chat Zalo (Smax)",
+  message_intel: "Phân tích tin nhắn (AI)",
   leads: "Lead",
   return_orders_price: "Giá nhập lại trả hàng",
   return_orders_total_prices: "Tổng tiền hàng trả hàng",
@@ -84,6 +85,8 @@ export const RESOURCE_LABELS: Record<string, string> = {
   link_misa: "Liên kết Misa",
   purchasing_planning: "Dự kiến đặt hàng",
   product_quality: "Chất lượng hàng hóa",
+  new_product_price: "Bảng giá sản phẩm mới",
+  price_change: "Thay đổi giá sản phẩm",
 };
 
 export const ACTION_LABELS: Record<string, string> = {
@@ -226,6 +229,13 @@ const RESOURCE_ACTION_LABELS: Record<string, string> = {
   "warehouse_cash:confirm_amount": "Xác nhận số tiền thực nhận",
   // Khách hàng không xóa thật, chỉ ngừng hoạt động (isActive = false)
   "customers:delete": "Ngừng hoạt động",
+  "new_product_price:view": "Xem & xử lý bước được giao",
+  "new_product_price:create": "Tạo đề xuất",
+  "new_product_price:config": "Cấu hình người duyệt & áp dụng giá",
+  "new_product_price:import": "Nhập từ Lark",
+  "price_change:view": "Xem (kể cả giá vốn) & xử lý bước được giao",
+  "price_change:create": "Tạo phiếu thay đổi giá",
+  "price_change:config": "Cấu hình người duyệt",
 };
 
 /** Nhãn action, có xét nhãn riêng theo resource (RESOURCE_ACTION_LABELS). */

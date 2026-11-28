@@ -111,6 +111,9 @@ export function CreateInvoiceFromConsignmentModal({
           discountRatio: Number(item.discountRatio),
           totalPrice:
             (Number(item.price) - Number(item.discount)) * quantity,
+          // Giữ lựa chọn GTGT dòng (giá phiếu ký gửi đã gồm GTGT); trống = dòng cũ.
+          lineVatRate:
+            item.lineVatRate == null ? null : Number(item.lineVatRate),
           note: item.note || undefined,
         };
       })

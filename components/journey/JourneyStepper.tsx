@@ -21,7 +21,10 @@ export function stageMilestones(lead: { status: LeadStatus; customerId: number |
 }
 
 /** Thanh mốc hành trình; compact = chỉ chấm (bảng, sidechat). */
-export function JourneyStepper({ milestones, compact = false }: { milestones: JourneyMilestone[]; compact?: boolean }) {
+/** Mốc dùng chung cho mọi luồng: `key` tự do, `active` = bước đang xử lý (chưa xong). */
+export type StepperMilestone = Omit<JourneyMilestone, "key"> & { key: string; active?: boolean };
+
+export function JourneyStepper({ milestones, compact = false }: { milestones: StepperMilestone[]; compact?: boolean }) {
   if (compact) {
     const doneCount = milestones.filter((m) => m.done).length;
     return (
@@ -40,7 +43,9 @@ export function JourneyStepper({ milestones, compact = false }: { milestones: Jo
           {milestones.map((m, i) => (
             <span key={m.key} className="inline-flex items-center">
               {i > 0 && <span className={`h-0.5 w-2.5 ${m.done ? "bg-brand" : "bg-gray-200"}`} />}
-              <span className={`h-2 w-2 rounded-full ${m.done ? "bg-brand" : "border border-gray-300 bg-white"}`} />
+              <span
+                className={`h-2 w-2 rounded-full ${m.done ? "bg-brand" : m.active ? "border border-brand bg-brand-soft" : "border border-gray-300 bg-white"}`}
+              />
             </span>
           ))}
         </span>
@@ -61,13 +66,16 @@ export function JourneyStepper({ milestones, compact = false }: { milestones: Jo
             className={`relative z-10 flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
               m.done
                 ? "bg-brand text-white"
-                : m.warn
+                : m.active
+                  ? "border-2 border-brand bg-brand-soft text-brand"
+                  : m.warn
                   ? "border-2 border-amber-400 bg-white text-amber-500"
                   : "border-2 border-gray-300 bg-white text-gray-400"
             }`}>
             {m.done ? <Check className="h-3.5 w-3.5" /> : i + 1}
           </span>
-          <span className={`mt-1 inline-flex items-center gap-1 text-xs font-medium ${m.done ? "text-gray-900" : "text-gray-400"}`}>
+          <span
+            className={`mt-1 inline-flex items-center gap-1 text-xs font-medium ${m.done || m.active ? "text-gray-900" : "text-gray-400"}`}>
             {m.label}
             {m.note && (
               <span className="rounded-full bg-amber-100 px-1.5 text-[10px] font-medium leading-4 text-amber-700">{m.note}</span>

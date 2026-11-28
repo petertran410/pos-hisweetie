@@ -82,6 +82,14 @@ import {
   supportsCartonUnit,
   type CartQuantityUnit,
 } from "@/components/pos/quantity-utils";
+import {
+  applyLegacyReduction,
+  applyLinePriceReduction,
+  findLineVatMissing,
+  fromSavedLinePrice,
+  getLineTotal,
+  getSavedLinePrice,
+} from "@/lib/utils/line-vat";
 
 export interface CartItem {
   rowId: string;
@@ -91,6 +99,15 @@ export interface CartItem {
   conversionValueSnapshot?: number;
   price: number;
   discount: number;
+  // % GTGT chọn trên dòng (0 | 5) — chỉ SP trong LINE_VAT_PRODUCT_CODES.
+  // price/discount ở giỏ luôn là giá CHƯA cộng GTGT (xem lib/utils/line-vat.ts).
+  lineVatRate?: number;
+  // Dòng của chứng từ CŨ (DB line_vat_rate NULL, SP trong LINE_VAT_PRODUCT_CODES):
+  // trừ 8% một lần khi mở; listPrice = giá trước khi trừ (hiện "giá cũ").
+  // Chỉ dùng ở FE, không gửi BE.
+  legacyLine?: boolean;
+  legacyReduced?: boolean;
+  listPrice?: number;
   note?: string;
   conditionType?: string; // "normal" | "damaged" | "near_expiry"
   soldExpiryDate?: string | null; // null = lô chưa xác định NSX
@@ -369,6 +386,29 @@ const getQuantityPersistence = (item: CartItem) => {
   };
 };
 
+/**
+ * Giá dòng gửi BE: đơn giá + giảm giá đã cộng GTGT dòng (nếu có), thành tiền
+ * tương ứng và % GTGT để BE ghi nhớ. Giữ luật cũ: quà → giá 0, dòng KM → giảm 0.
+ */
+const getLineVatPersistence = (item: CartItem) => {
+  const isGift = item.isPromoGift && item.promoLineType === "gift";
+  const saved = getSavedLinePrice(item);
+  const price = isGift ? 0 : saved.price;
+  const discount = item.isPromoGift ? 0 : saved.discount;
+  return {
+    price,
+    discount,
+    totalPrice: (price - discount) * Number(item.quantity),
+    lineVatRate: saved.lineVatRate,
+  };
+};
+
+/** Như getLineVatPersistence, cho DTO dùng `unitPrice` (đơn hàng, ký gửi). */
+const getLineVatUnitPrice = (item: CartItem) => {
+  const { price, discount, lineVatRate } = getLineVatPersistence(item);
+  return { unitPrice: price, discount, lineVatRate };
+};
+
 export interface MissingOrderLine {
   productId: number;
   productName: string;
@@ -537,8 +577,8 @@ const mapDocumentLinesToCartItems = (
         Number(item.conversionValueSnapshot) > 0
           ? Number(item.conversionValueSnapshot)
           : getConversionValue(item.product),
-      price: Number(item.price),
-      discount: Number(item.discount) || 0,
+      // Giá đã lưu gồm GTGT dòng → bóc ra để giỏ giữ giá chưa GTGT.
+      ...fromSavedLinePrice(item),
       note: item.note || "",
       conditionType: item.conditionType || "normal",
       soldExpiryDate: item.soldExpiryDate
@@ -712,6 +752,18 @@ export default function BanHangPage() {
     toast.warning(ITEMS_LOCKED_MESSAGE);
     return true;
   };
+  /**
+   * Dòng bắt buộc chọn GTGT (SP007601) mà người dùng chưa chọn 0%/5% → cảnh báo,
+   * trả về true để caller dừng lưu/tạo.
+   */
+  const blockIfLineVatMissing = () => {
+    const missing = findLineVatMissing(activeTab?.cartItems || []);
+    if (!missing) return false;
+    toast.warning(
+      `Vui lòng chọn GTGT (0% hoặc 5%) cho sản phẩm ${missing.product?.code ?? ""} - ${missing.product?.name ?? ""} trước khi lưu.`
+    );
+    return true;
+  };
   useRegisterCustomerInView(
     activeTab?.selectedCustomer,
     "Bán hàng (tab đang mở)"
@@ -723,16 +775,20 @@ export default function BanHangPage() {
           type: "cart",
           id: activeTab.id,
           label: activeTab.code || activeTab.label,
-          lines: activeTab.cartItems.map((item) => ({
-            name: item.product?.name ?? "",
-            code: item.product?.code,
-            unit: item.product?.unit,
-            quantity: Number(item.quantity),
-            price: Number(item.price),
-            // discount là giảm/đơn vị (thành tiền = (giá − giảm) × SL)
-            discount: Number(item.discount || 0) * Number(item.quantity),
-            isGift: item.isPromoGift && item.promoLineType === "gift",
-          })),
+          lines: activeTab.cartItems.map((item) => {
+            // Giá báo khách = giá đã cộng GTGT dòng (nếu có), khớp thành tiền.
+            const saved = getSavedLinePrice(item);
+            return {
+              name: item.product?.name ?? "",
+              code: item.product?.code,
+              unit: item.product?.unit,
+              quantity: Number(item.quantity),
+              price: saved.price,
+              // discount là giảm/đơn vị (thành tiền = (giá − giảm) × SL)
+              discount: saved.discount * Number(item.quantity),
+              isGift: item.isPromoGift && item.promoLineType === "gift",
+            };
+          }),
         }
       : null
   );
@@ -757,11 +813,43 @@ export default function BanHangPage() {
     const map: Record<string, PriceWarning | null> = {};
     (activeTab?.cartItems || []).forEach((item) => {
       const latestPrice = pricesByProduct[Number(item.product?.id)];
-      const currentPrice = item.price - item.discount;
+      // Giá bán gần nhất lấy từ HĐ đã lưu (đã gồm GTGT dòng) → so cùng gốc.
+      const saved = getSavedLinePrice(item);
+      const currentPrice = saved.price - saved.discount;
       map[item.rowId] = getPriceWarning(currentPrice, latestPrice);
     });
     return map;
   }, [activeTab?.cartItems, pricesByProduct]);
+
+  // ── Chứng từ CŨ có SP007601: trừ 8% vào đơn giá đúng 1 lần ──
+  // Dòng nạp từ DB có line_vat_rate NULL (lập trước khi có quy tắc mới) được
+  // fromSavedLinePrice đánh dấu legacyLine + listPrice (giá cũ). Ở đây trừ 8% vào
+  // đơn giá + giảm giá rồi đánh dấu legacyReduced; lưu xong DB có 0/5 → lần mở
+  // sau không còn là dòng cũ nên không bị trừ nữa. Đơn/HĐ mới không có dòng cũ.
+  // Đơn đang khóa dòng (không còn Phiếu tạm) → chưa trừ (BE chặn đổi dòng); khi
+  // chuyển sang tạo HĐ (hết khóa) sẽ trừ.
+  useEffect(() => {
+    if (!activeTab || itemsLocked) return;
+    const pending = (activeTab.cartItems || []).some(
+      (it) => it.legacyLine && !it.legacyReduced
+    );
+    if (!pending) return;
+    const tabId = activeTab.id;
+    setTabs((prev) =>
+      prev.map((t) =>
+        t.id !== tabId
+          ? t
+          : {
+              ...t,
+              cartItems: t.cartItems.map((it) =>
+                it.legacyLine && !it.legacyReduced
+                  ? { ...it, ...applyLegacyReduction(it) }
+                  : it
+              ),
+            }
+      )
+    );
+  }, [activeTab, itemsLocked]);
 
   // ════════════════════════════════════════════════════════════
   // KHUYẾN MÃI TỰ ĐỘNG (inline, KiotViet-style)
@@ -1821,10 +1909,15 @@ export default function BanHangPage() {
           }
         }
 
-        return {
-          ...item,
-          price: newPrice,
-        };
+        // Dòng của chứng từ cũ: vẫn trừ 8% trên giá bảng giá mới. Đơn mới: giữ giá.
+        return item.legacyLine
+          ? {
+              ...item,
+              listPrice: newPrice,
+              price: applyLinePriceReduction(item.product, newPrice),
+              legacyReduced: true,
+            }
+          : { ...item, price: newPrice };
       })
     );
 
@@ -2610,8 +2703,8 @@ export default function BanHangPage() {
           Number(item.conversionValueSnapshot) > 0
             ? Number(item.conversionValueSnapshot)
             : getConversionValue(item.product),
-        price: Number(item.price),
-        discount: Number(item.discount) || 0,
+        // Copy sang đơn/HĐ MỚI → không trừ 8% (dòng cũ chỉ cần chọn lại GTGT).
+        ...fromSavedLinePrice(item, { asNewDocument: true }),
         note: item.note || "",
         conditionType: item.conditionType || "normal",
         soldExpiryDate: item.soldExpiryDate
@@ -2742,8 +2835,8 @@ export default function BanHangPage() {
           Number(item.conversionValueSnapshot) > 0
             ? Number(item.conversionValueSnapshot)
             : getConversionValue(item.product),
-        price: Number(item.price),
-        discount: Number(item.discount) || 0,
+        // Copy sang đơn/HĐ MỚI → không trừ 8% (dòng cũ chỉ cần chọn lại GTGT).
+        ...fromSavedLinePrice(item, { asNewDocument: true }),
         note: item.note || "",
         conditionType: item.conditionType || "normal",
         soldExpiryDate: item.soldExpiryDate
@@ -3015,10 +3108,7 @@ export default function BanHangPage() {
     // Đơn giảm theo %: giữ nguyên % khi chuyển HĐ, còn tiền phải quy đổi theo
     // tổng dòng hàng còn xuất. Đơn giảm theo tiền: giữ cơ chế giảm giá còn lại.
     const remainingSubtotal = remainingCartItems.reduce(
-      (sum, item) =>
-        sum +
-        (Number(item.price) - Number(item.discount || 0)) *
-          Number(item.quantity),
+      (sum, item) => sum + getLineTotal(item),
       0
     );
     const invoiceDiscount =
@@ -3067,6 +3157,8 @@ export default function BanHangPage() {
       return;
 
     if (isSubmittingRef.current) return;
+
+    if (blockIfLineVatMissing()) return;
 
     if (!activeTab.sourceOrderId) {
       toast.error("Không tìm thấy thông tin đơn hàng gốc");
@@ -3252,9 +3344,8 @@ export default function BanHangPage() {
             const isGift = item.isPromoGift && item.promoLineType === "gift";
             const isDiscountedBuy =
               item.isPromoGift && item.promoLineType === "discounted_buy";
-            const price = isGift ? 0 : Number(item.price);
+            const { price, discount, lineVatRate } = getLineVatPersistence(item);
             const quantity = Number(item.quantity);
-            const discount = item.isPromoGift ? 0 : Number(item.discount) || 0;
             const normalPromoId =
               !isGift && !isDiscountedBuy
                 ? (item.promoEnabledIds?.[0] ?? item.promotionId)
@@ -3268,6 +3359,7 @@ export default function BanHangPage() {
               price,
               discount,
               discountRatio: 0,
+              lineVatRate,
               totalPrice: (price - discount) * quantity,
               note: item.note || "",
               conditionType: item.conditionType || "normal",
@@ -3709,8 +3801,13 @@ export default function BanHangPage() {
       quantityUnit: item.quantityUnit || "base",
       conversionValueSnapshot:
         item.conversionValueSnapshot || getConversionValue(item.product),
+      // Dòng thêm cho cùng chứng từ → giữ trạng thái "dòng cũ" như dòng gốc.
+      legacyLine: item.legacyLine,
+      legacyReduced: item.legacyReduced,
+      listPrice: item.listPrice,
       price: item.price,
       discount: item.discount,
+      lineVatRate: item.lineVatRate,
       conditionType: item.conditionType,
       soldExpiryDate: item.soldExpiryDate,
       note: "",
@@ -3722,6 +3819,8 @@ export default function BanHangPage() {
 
   const handleSaveOrder = async () => {
     if (isSubmittingRef.current) return;
+
+    if (blockIfLineVatMissing()) return;
 
     if (!validatePaymentNoteSelection()) return;
 
@@ -3829,8 +3928,7 @@ export default function BanHangPage() {
               productId: Number(item.product.id),
               ...getQuantityPersistence(item),
               quantity: Number(item.quantity),
-              unitPrice: isGift ? 0 : Number(item.price),
-              discount: item.isPromoGift ? 0 : Number(item.discount) || 0,
+              ...getLineVatUnitPrice(item),
               discountRatio: 0,
               note: item.note || "",
               conditionType: item.conditionType || "normal",
@@ -3934,6 +4032,8 @@ export default function BanHangPage() {
     if (!validatePaymentNoteSelection()) return;
 
     if (isSubmittingRef.current) return;
+
+    if (blockIfLineVatMissing()) return;
 
     if (!selectedBranch) {
       toast.error(
@@ -4056,9 +4156,8 @@ export default function BanHangPage() {
           const isGift = item.isPromoGift && item.promoLineType === "gift";
           const isDiscountedBuy =
             item.isPromoGift && item.promoLineType === "discounted_buy";
-          const price = isGift ? 0 : Number(item.price);
+          const { price, discount, lineVatRate } = getLineVatPersistence(item);
           const quantity = Number(item.quantity);
-          const discount = item.isPromoGift ? 0 : Number(item.discount) || 0;
           return {
             productId: Number(item.product.id),
             productCode: item.product.code,
@@ -4068,6 +4167,7 @@ export default function BanHangPage() {
             price: price,
             discount: discount,
             discountRatio: 0,
+            lineVatRate,
             totalPrice: (price - discount) * quantity,
             note: item.note || "",
             conditionType: item.conditionType || "normal",
@@ -4160,6 +4260,8 @@ export default function BanHangPage() {
   const handleSaveConsignment = async () => {
     if (isSubmittingRef.current) return;
 
+    if (blockIfLineVatMissing()) return;
+
     if (!selectedBranch) {
       toast.error("Vui lòng chọn chi nhánh trước khi lưu phiếu ký gửi");
       return;
@@ -4199,8 +4301,7 @@ export default function BanHangPage() {
           .map((item) => ({
             productId: item.product?.id,
             quantity: Number(item.quantity),
-            unitPrice: Number(item.price),
-            discount: Number(item.discount) || 0,
+            ...getLineVatUnitPrice(item),
             note: item.note,
           })),
         delivery: {
@@ -4245,6 +4346,8 @@ export default function BanHangPage() {
       return;
 
     if (isSubmittingRef.current) return;
+
+    if (blockIfLineVatMissing()) return;
 
     if (!selectedBranch) {
       toast.error(
@@ -4334,8 +4437,7 @@ export default function BanHangPage() {
           productId: Number(item.product.id),
           ...getQuantityPersistence(item),
           quantity: Number(item.quantity),
-          unitPrice: isGift ? 0 : Number(item.price),
-          discount: item.isPromoGift ? 0 : Number(item.discount) || 0,
+          ...getLineVatUnitPrice(item),
           discountRatio: 0,
           note: item.note || "",
           conditionType: item.conditionType || "normal",
@@ -4399,8 +4501,7 @@ export default function BanHangPage() {
       documentData.items = activeTab.cartItems.map((item) => ({
         productId: Number(item.product.id),
         quantity: Number(item.quantity),
-        unitPrice: Number(item.price),
-        discount: Number(item.discount) || 0,
+        ...getLineVatUnitPrice(item),
         note: item.note || "",
       }));
       documentData.delivery = {
@@ -4438,9 +4539,8 @@ export default function BanHangPage() {
         const isGift = item.isPromoGift && item.promoLineType === "gift";
         const isDiscountedBuy =
           item.isPromoGift && item.promoLineType === "discounted_buy";
-        const price = isGift ? 0 : Number(item.price);
+        const { price, discount, lineVatRate } = getLineVatPersistence(item);
         const quantity = Number(item.quantity);
-        const discount = item.isPromoGift ? 0 : Number(item.discount) || 0;
         return {
           productId: Number(item.product.id),
           productCode: item.product.code,
@@ -4450,6 +4550,7 @@ export default function BanHangPage() {
           price: price,
           discount: discount,
           discountRatio: 0,
+          lineVatRate,
           totalPrice: (price - discount) * quantity,
           note: item.note || "",
           conditionType: item.conditionType || "normal",

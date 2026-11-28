@@ -24,6 +24,7 @@ import { UnitPicker } from "./UnitPicker";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { formatNumberInput, parseNumberInput } from "@/lib/utils";
 import { ShippingFeeHistoryTooltip } from "./ShippingFeeHistoryTooltip";
+import { getLineTotal } from "@/lib/utils/line-vat";
 
 interface OrderCartProps {
   cartItems: CartItem[];
@@ -436,18 +437,12 @@ export function OrderCart({
   };
 
   const calculateSubtotal = () => {
-    return cartItems.reduce(
-      (sum, item) => sum + (item.price - item.discount) * item.quantity,
-      0,
-    );
+    return cartItems.reduce((sum, item) => sum + getLineTotal(item), 0);
   };
 
   const subtotal = useMemo(() => {
-    return cartItems.reduce(
-      (sum: number, item: any) =>
-        sum + (item.price - item.discount) * item.quantity,
-      0,
-    );
+    // Thành tiền dòng đã gồm GTGT dòng (nếu có) — xem lib/utils/line-vat.ts
+    return cartItems.reduce((sum, item) => sum + getLineTotal(item), 0);
   }, [cartItems]);
 
   // Mode %: giữ nguyên %, tính lại số tiền khi tổng tiền hàng đổi (thêm/bớt SP).

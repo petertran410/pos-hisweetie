@@ -51,6 +51,11 @@ export const ROUTE_PERMISSIONS: Record<
     resource: "product_quality",
     action: "view",
   },
+  "/san-pham/bang-gia-san-pham-moi": {
+    resource: "new_product_price",
+    action: "view",
+  },
+  "/san-pham/thay-doi-gia": { resource: "price_change", action: "view" },
   "/san-pham/san-xuat": { resource: "productions", action: "view" },
   "/san-pham/nha-san-xuat": { resource: "productions", action: "view" },
   "/san-pham/pha-che": { resource: "recipes", action: "view" },
@@ -127,6 +132,7 @@ export const ROUTE_PERMISSIONS: Record<
   "/cai-dat/lich-su": { resource: "audit_logs", action: "view" },
   "/cai-dat/tich-hop-api": { resource: "settings", action: "update" },
   "/cai-dat/smax": { resource: "settings", action: "update" },
+  "/cai-dat/phan-tich-tin-nhan": { resource: "message_intel", action: "view" },
   "/san-pham/kiem-kho": { resource: "stock_audits", action: "view" },
   "/cai-dat/in-an": { resource: "print_templates", action: "view" },
   "/cai-dat/mau-bao-gia": { resource: "quote_templates", action: "view" },
@@ -175,6 +181,18 @@ export const NAV_CONFIG: NavSection[] = [
         label: "Chất lượng hàng hóa",
         href: "/san-pham/chat-luong-hang-hoa",
         permission: { resource: "product_quality", action: "view" },
+      },
+      {
+        key: "new-product-price",
+        label: "Bảng giá sản phẩm mới",
+        href: "/san-pham/bang-gia-san-pham-moi",
+        permission: { resource: "new_product_price", action: "view" },
+      },
+      {
+        key: "price-change",
+        label: "Thay đổi giá sản phẩm",
+        href: "/san-pham/thay-doi-gia",
+        permission: { resource: "price_change", action: "view" },
       },
       {
         key: "productions",

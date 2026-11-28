@@ -192,7 +192,8 @@ export const THREAD_LABEL_META: Record<ThreadLabel, { text: string; className: s
 export const threadLabelApi = {
   /** AI phân loại các hội thoại đang hiển thị (tối đa 30, tính 1 lượt AI). */
   classify: (pagePid: string, tids: string[]): Promise<{ labeled: number }> =>
-    apiClient.post("/ai/compose", { mode: "classify", pagePid, tid: tids[0], tids }),
+    // Đọc 30 hội thoại từ Smax + 1 lượt AI: thường 35–50 giây, vượt mặc định 30 giây
+    apiClient.post("/ai/compose", { mode: "classify", pagePid, tid: tids[0], tids }, 120_000),
   set: (pagePid: string, tid: string, label: ThreadLabel): Promise<{ ok: true }> =>
     apiClient.patch("/ai/compose/labels", { pagePid, tid, label }),
 };

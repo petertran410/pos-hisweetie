@@ -9,6 +9,8 @@ export interface ConsignmentItem {
   discount: number;
   discountRatio: number;
   totalPrice: number;
+  // % GTGT dòng POS (0 | 5) — price/discount đã gồm GTGT; null = dòng chứng từ cũ.
+  lineVatRate?: number | string | null;
   note?: string | null;
   product?: {
     id: number;

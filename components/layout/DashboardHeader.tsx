@@ -85,6 +85,8 @@ export function DashboardHeader() {
         items: [
           { label: "Danh sách hàng hóa", href: "/san-pham/danh-sach" },
           { label: "Thiết lập giá", href: "/san-pham/thiet-lap-gia" },
+          { label: "Bảng giá sản phẩm mới", href: "/san-pham/bang-gia-san-pham-moi" },
+          { label: "Thay đổi giá sản phẩm", href: "/san-pham/thay-doi-gia" },
         ],
       },
       {
