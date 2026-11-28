@@ -18,6 +18,8 @@ import { toast } from "sonner";
 import { smaxChatApi } from "@/lib/api/smaxChat";
 import { useCan } from "@/lib/hooks/useCan";
 import { useMetaAiTakeOver } from "@/lib/store/metaAiTakeOver";
+import { useToggleIntelExclusion } from "@/lib/hooks/useMessageIntel";
+import { ThreadIntelMenu } from "./ThreadIntelMenu";
 
 // Mỗi lần "Tải thêm" xin thêm từng này hội thoại (backend tối đa 200)
 const PAGE = 30;
@@ -436,8 +438,21 @@ export function RecentChatRow({ c, onClick }: { c: RecentChat; onClick: () => vo
   const bold = c.unread || unseen > 0;
   // Chưa gắn khách, không gợi ý, không lead: chỉ 1 icon nhỏ cạnh tên (thay dòng chữ cam lặp lại)
   const plainUnlinked = m?.type !== "linked" && m?.type !== "byCode" && m?.type !== "byPhone" && !c.lead;
+  // Quản trị: chuột phải → loại trừ / bỏ loại trừ hội thoại khỏi phân tích AI (cả các kênh cùng nhóm)
+  const canIntel = useCan("message_intel", "manage");
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const toggleIntel = useToggleIntelExclusion();
   return (
-    <div className="relative">
+    <div
+      className="relative"
+      onContextMenu={
+        canIntel
+          ? (e) => {
+              e.preventDefault();
+              setMenu({ x: e.clientX, y: e.clientY });
+            }
+          : undefined
+      }>
     <button
       onClick={onClick}
       className="w-full flex items-start gap-2.5 rounded-md px-2 py-2 text-left hover:bg-cyan-bg">
@@ -482,6 +497,13 @@ export function RecentChatRow({ c, onClick }: { c: RecentChat; onClick: () => vo
             {c.aiLabel.pending && !c.aiLabel.stale && <span aria-label="khách đang chờ">•</span>}
           </span>
         )}
+        {canIntel && c.intelExcluded && (
+          <span
+            className="mt-0.5 ml-1 inline-flex items-center rounded border border-gray-200 bg-gray-50 px-1 text-[11px] text-gray-500"
+            title="Tin của hội thoại này không gửi AI phân loại (Cài đặt → Phân tích tin nhắn → Loại trừ)">
+            Không phân tích AI
+          </span>
+        )}
         {c.waiting && (
           <span className="flex items-center gap-1 text-xs font-medium text-red-600">
             <AlarmClock className="h-3 w-3 shrink-0" aria-hidden />
@@ -509,6 +531,21 @@ export function RecentChatRow({ c, onClick }: { c: RecentChat; onClick: () => vo
       <span className="absolute bottom-1.5 right-3">
         <RowMetaAiSwitch c={c} />
       </span>
+    )}
+    {menu && (
+      <ThreadIntelMenu
+        x={menu.x}
+        y={menu.y}
+        excluded={!!c.intelExcluded}
+        onPick={() =>
+          toggleIntel.mutate(
+            c.intelExcluded
+              ? { exclude: false, pagePid: c.pagePid, tid: c.tid }
+              : { exclude: true, pagePid: c.pagePid, tid: c.tid }
+          )
+        }
+        onClose={() => setMenu(null)}
+      />
     )}
     </div>
   );
