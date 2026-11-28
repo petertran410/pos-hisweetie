@@ -12,7 +12,9 @@ import { Empty } from "./IntelOverviewTab";
 
 const VERSION_STATUS = { draft: "Nháp", active: "Đang chạy", retired: "Ngừng" } as const;
 const ALERT_REASON = { escalation: "Cần quản lý", complaint: "Khiếu nại khẩn", anomaly: "Bất thường khẩn" } as const;
-const ALERT_STATUS = { sent: "Đã gửi", grouped: "Gộp", recalled: "Thu hồi", failed: "Lỗi gửi" } as const;
+const ALERT_STATUS = { sending: "Đang gửi", sent: "Đã gửi", grouped: "Gộp", recalled: "Thu hồi", failed: "Lỗi gửi" } as const;
+/** Chat id nhóm Lark (khớp backend LARK_CHAT_ID). */
+const LARK_CHAT_ID = /^oc_[A-Za-z0-9]{10,64}$/;
 const dateInput = (d: Date) => new Date(d.getTime() + 7 * 3_600_000).toISOString().slice(0, 10);
 /** Ngày (giờ VN) → mốc UTC đầu ngày. */
 const vnStart = (day: string) => new Date(`${day}T00:00:00+07:00`).toISOString();
@@ -26,6 +28,7 @@ export function IntelSettingsTab() {
   const [bfTo, setBfTo] = useState(() => dateInput(new Date()));
   const [bfScope, setBfScope] = useState<"config" | "all">("config");
   const [th, setTh] = useState({ yes: "0.7", no: "0.3", topic: "0.5" });
+  const [chatId, setChatId] = useState("");
   if (error) return <Empty text={(error as Error).message} />;
   if (isLoading || !data) return <div className="dt-sk h-[320px] rounded-xl" />;
   const { runtime, config, versions, queue } = data;
@@ -203,14 +206,75 @@ export function IntelSettingsTab() {
       <LeadCard
         title="Cảnh báo quản lý (Lark)"
         subtitle="Cần quản lý · khiếu nại độ khẩn ≥ Ưu tiên · bất thường Khẩn cấp. Chỉ tin trong 2 giờ, gộp theo hội thoại 4 giờ, bỏ tin thu hồi.">
-        <ul className="space-y-1.5 text-[13px] mb-3">
-          <Item
-            label="Gửi cảnh báo (MESSAGE_INTEL_ALERTS_ENABLED)"
-            value={data.alerts.enabled ? "Bật" : "Tắt"}
-            warn={!data.alerts.enabled}
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="text-[13px]">
+            <div className="font-medium">Gửi cảnh báo vào nhóm Lark</div>
+            <div style={{ color: "var(--dt-text-muted)" }}>{data.alerts.enabled ? "Đang bật" : "Đang tắt"}</div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={data.alerts.enabled}
+            aria-label="Bật / tắt gửi cảnh báo Lark"
+            disabled={control.isPending}
+            onClick={() =>
+              act(
+                { action: "set_alerts", alertsEnabled: !data.alerts.enabled },
+                data.alerts.enabled
+                  ? "Tắt gửi cảnh báo vào nhóm Lark?"
+                  : `Bật gửi cảnh báo vào nhóm Lark ${data.alerts.chatId}? Tin khiếu nại / bất thường mới sẽ được gửi vào nhóm.`,
+              )
+            }
+            className={`shrink-0 relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+              data.alerts.enabled ? "bg-brand focus:ring-brand" : "bg-gray-300 focus:ring-gray-400"
+            } ${control.isPending ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
+            <span
+              className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${
+                data.alerts.enabled ? "translate-x-7" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
+        <label className="block text-[12.5px] mb-1" htmlFor="intel-alert-chat">
+          Chat id nhóm Lark nhận{" "}
+          <span style={{ color: "var(--dt-text-muted)" }}>
+            {data.alerts.defaultChat ? "(đang dùng nhóm mặc định Báo cáo hàng ngày Sale Chat)" : ""}
+          </span>
+        </label>
+        <div className="flex gap-2 mb-1">
+          <input
+            id="intel-alert-chat"
+            className="dt-input dt-input-sm flex-1 dt-mono"
+            placeholder={data.alerts.chatId}
+            value={chatId}
+            onChange={(e) => setChatId(e.target.value.trim())}
           />
-          <Item label="Nhóm Lark nhận" value={`${data.alerts.chatId.slice(0, 7)}…${data.alerts.chatId.slice(-4)}`} />
-        </ul>
+          <button
+            type="button"
+            className="rounded-lg bg-brand px-3 py-1.5 text-[13px] font-medium text-white disabled:opacity-50"
+            disabled={!chatId || !LARK_CHAT_ID.test(chatId) || chatId === data.alerts.chatId || control.isPending}
+            onClick={() => {
+              act({ action: "set_alerts", alertChatId: chatId }, `Đổi nhóm nhận cảnh báo sang ${chatId}? Topic cảnh báo của ngày sẽ bắt đầu lại trong nhóm mới.`);
+              setChatId("");
+            }}>
+            Lưu
+          </button>
+          {!data.alerts.defaultChat && (
+            <button
+              type="button"
+              className="rounded-lg border px-3 py-1.5 text-[13px]"
+              style={{ borderColor: "var(--dt-border)" }}
+              disabled={control.isPending}
+              onClick={() => act({ action: "set_alerts", alertChatId: "" }, "Về nhóm mặc định Báo cáo hàng ngày Sale Chat?")}>
+              Mặc định
+            </button>
+          )}
+        </div>
+        <p className="text-[12px] mb-3" style={{ color: chatId && !LARK_CHAT_ID.test(chatId) ? "#C0392B" : "var(--dt-text-muted)" }}>
+          {chatId && !LARK_CHAT_ID.test(chatId)
+            ? "Chat id có dạng oc_… (lấy trong Cài đặt nhóm Lark)."
+            : "Bot Lark của POS phải có trong nhóm thì mới gửi được."}
+        </p>
         {data.alerts.recent.length ? (
           <table className="w-full text-[12.5px]">
             <tbody>

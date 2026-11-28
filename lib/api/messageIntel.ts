@@ -1,9 +1,11 @@
 import { apiClient } from "@/lib/config/api";
 import type {
   IntelControl,
+  IntelExclusion,
   IntelMessagesResult,
   IntelOverview,
   IntelStatus,
+  IntelThreadHit,
   CustomerIntelSummary,
   ReviewItem,
   ReviewLabels,
@@ -39,6 +41,13 @@ export const messageIntelApi = {
     previous: { role: "staff" | "customer"; text: string }[];
   }): Promise<SandboxResult> => apiClient.post("/message-intel/sandbox", body, 60_000),
   control: (body: IntelControl): Promise<unknown> => apiClient.post("/message-intel/control", body),
+  /** Hội thoại loại trừ (không gửi AI phân loại): message_intel:manage */
+  exclusions: (): Promise<IntelExclusion[]> => apiClient.get("/message-intel/exclusions"),
+  searchThreads: (q: string): Promise<IntelThreadHit[]> => apiClient.get("/message-intel/exclusions/threads", { q }),
+  exclude: (body: { pagePid: string; tid: string }): Promise<{ groupKey: string; threads: number; skipped: number }> =>
+    apiClient.post("/message-intel/exclusions", body),
+  include: (body: { groupKey?: string; pagePid?: string; tid?: string }): Promise<{ groupKey: string; requeued: number }> =>
+    apiClient.post("/message-intel/exclusions/remove", body),
   /** Khung chat (smax_chat:view): hồ sơ AI của khách POS */
   customerSummary: (customerId: number): Promise<CustomerIntelSummary> =>
     apiClient.get(`/message-intel/customers/${customerId}/summary`),

@@ -12,7 +12,11 @@ import {
 import { InvoicePackingSlipsTab } from "@/components/invoices/InvoicePackingSlipsTab";
 import { InvoicePaymentsTab } from "@/components/invoices/InvoicePaymentsTab";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { computeLineVat, computeInvoiceVat } from "@/lib/utils/vat";
+import {
+  computeInvoiceVat,
+  computeLineVatForKind,
+  resolveLineVatRate,
+} from "@/lib/utils/vat";
 import { printDeliverySlip } from "@/lib/utils/print";
 import Link from "next/link";
 import { DeliveryInfoCard } from "../shared/DeliveryInfoSection";
@@ -385,13 +389,18 @@ export function HoaDonVatDetailRow({
                         <tbody className="bg-white divide-y divide-gray-200">
                           {invoice.details?.map(
                             (item: InvoiceDetail, index: number) => {
-                              const vat = computeLineVat(
+                              // SP007601: 5% hoặc KKKNT theo GTGT dòng — khớp Misa.
+                              const resolvedVat = resolveLineVatRate(
+                                item,
+                                Number((item.product as any)?.vat ?? 8)
+                              );
+                              const vat = computeLineVatForKind(
                                 {
                                   quantity: item.quantity,
                                   price: item.price,
                                   discount: item.discount,
                                 },
-                                Number((item.product as any)?.vat ?? 8)
+                                resolvedVat
                               );
                               const misaCode =
                                 (item.product as any)?.misa_code?.trim() || "";
@@ -462,7 +471,7 @@ export function HoaDonVatDetailRow({
                                   </td>
                                   <td className="px-[10px] py-2 text-center">
                                     <span className="text-md text-gray-900">
-                                      {vat.vatRate}%
+                                      {resolvedVat.label}
                                     </span>
                                   </td>
                                   {/* <td className="px-[10px] py-2 text-right">
@@ -518,7 +527,10 @@ export function HoaDonVatDetailRow({
                               quantity: d.quantity,
                               price: d.price,
                               discount: d.discount,
-                              vatRate: Number((d.product as any)?.vat ?? 8),
+                              resolvedVat: resolveLineVatRate(
+                                d,
+                                Number((d.product as any)?.vat ?? 8)
+                              ),
                             }))
                           );
                           return (

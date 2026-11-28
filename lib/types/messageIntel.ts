@@ -57,6 +57,7 @@ export const SKIP_LABEL: Record<string, string> = {
   media_only: "Chỉ ảnh / tệp",
   sticker_only: "Chỉ sticker",
   empty: "Không nội dung",
+  excluded: "Hội thoại loại trừ",
 };
 
 export const STATUS_LABEL: Record<string, string> = {
@@ -166,12 +167,14 @@ export type IntelStatus = {
   alerts: {
     enabled: boolean;
     chatId: string;
+    /** Chưa đặt chat id trên màn hình → nhóm mặc định "Báo cáo hàng ngày Sale Chat" */
+    defaultChat: boolean;
     recent: {
       id: number;
       pagePid: string;
       tid: string;
       reason: "escalation" | "complaint" | "anomaly";
-      status: "sent" | "grouped" | "recalled" | "failed";
+      status: "sending" | "sent" | "grouped" | "recalled" | "failed";
       messageAt: string;
       createdAt: string;
       error: string | null;
@@ -256,9 +259,29 @@ export type CustomerIntelSummary =
       lastMessageAt: string | null;
     };
 
+/** Hội thoại loại trừ khỏi phân loại tin (1 nhóm = hội thoại được chọn + các kênh cùng nhóm). */
+export type IntelExclusion = {
+  groupKey: string;
+  name: string;
+  createdByName: string | null;
+  createdAt: string;
+  threads: { pagePid: string; tid: string; name: string; channel: string }[];
+};
+
+export type IntelThreadHit = {
+  pagePid: string;
+  tid: string;
+  name: string;
+  isGroup: boolean;
+  lastMessageAt: string | null;
+  channel: string;
+  excluded: boolean;
+};
+
 export type IntelControl =
   | { action: "create_version_v1"; name?: string; thresholds?: { yes: number; no: number; topic: number } }
   | { action: "activate"; versionId: number }
   | { action: "pause" | "resume" | "cancel_backfill" | "retry_failed" }
   | { action: "backfill"; from: string; to: string; pagePids?: string[] }
-  | { action: "set_budget"; tokens: number };
+  | { action: "set_budget"; tokens: number }
+  | { action: "set_alerts"; alertsEnabled?: boolean; alertChatId?: string };

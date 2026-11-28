@@ -124,6 +124,9 @@ export interface InvoiceDetail {
   product?: any;
   conditionType?: string;
   soldExpiryDate?: string | null;
+  // % GTGT dòng POS (0 | 5) — price/discount đã gồm GTGT; null = dòng chứng từ cũ.
+  // Với SP007601: 0 = KKKNT (không kê khai nộp thuế), không phải thuế suất 0%.
+  lineVatRate?: number | string | null;
   // Khuyến mãi
   lineType?: string;
   isGift?: boolean;
