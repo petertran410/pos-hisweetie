@@ -25,7 +25,7 @@ const hm = (iso: string) =>
     hour: "2-digit",
     minute: "2-digit",
   });
-/** "18:00" nếu cùng ngày báo cáo, "09:15 25/11" nếu gửi / lưu vào ngày khác. */
+/** "17:01" nếu cùng ngày báo cáo, "09:15 25/11" nếu gửi / lưu vào ngày khác. */
 const when = (day: string, iso: string) => {
   const vnDay = new Date(new Date(iso).getTime() + 7 * 3_600_000)
     .toISOString()
@@ -252,7 +252,7 @@ function ReportView({ report }: { report: Report }) {
 }
 
 /**
- * Báo cáo chat cuối ngày (gửi nhóm Lark 18:00): xem lại bản đã gửi theo ngày (đầy đủ, không giới hạn
+ * Báo cáo chat cuối ngày (gửi nhóm Lark 17:01): xem lại bản đã gửi theo ngày (đầy đủ, không giới hạn
  * 10 dòng như trên Lark), hoặc tạo bản xem trước cho một ngày (không gửi Lark).
  */
 export function DailyChatReport({
@@ -306,7 +306,7 @@ export function DailyChatReport({
   const running = p?.status === "running";
   const [sending, setSending] = useState(false);
 
-  /** Hỏi xác nhận trước khi gửi Lark: báo gửi trùng ngày / gửi hôm nay trước 18:00. */
+  /** Hỏi xác nhận trước khi gửi Lark: báo gửi trùng ngày / gửi hôm nay trước 17:01. */
   const confirmSend = (reportDay: string) => {
     const sentBefore = list.find((d) => d.day === reportDay && d.sent);
     const notes = [
@@ -314,8 +314,8 @@ export function DailyChatReport({
       sentBefore
         ? `Ngày này đã gửi lúc ${when(sentBefore.day, sentBefore.at)} — nhóm sẽ nhận thêm một bản.`
         : "",
-      reportDay === todayVn() && new Date().getHours() < 18
-        ? "Gửi bây giờ thì 18:00 hôm nay sẽ không tự gửi nữa (tin nhắn sau lúc này không có trong báo cáo)."
+      reportDay === todayVn() && new Date().getHours() * 60 + new Date().getMinutes() < 17 * 60 + 1
+        ? "Gửi bây giờ thì 17:01 hôm nay sẽ không tự gửi nữa (tin nhắn sau lúc này không có trong báo cáo)."
         : "",
     ].filter(Boolean);
     return window.confirm(notes.join("\n\n"));
@@ -339,7 +339,7 @@ export function DailyChatReport({
     }
   };
 
-  /** Gửi bản xem trước đang xem vào nhóm Lark (hỏi xác nhận: gửi trùng ngày / hôm nay trước 18:00). */
+  /** Gửi bản xem trước đang xem vào nhóm Lark (hỏi xác nhận: gửi trùng ngày / hôm nay trước 17:01). */
   const sendPreview = async () => {
     if (!p || p.status !== "done") return;
     if (!confirmSend(p.day)) return;
@@ -388,7 +388,7 @@ export function DailyChatReport({
               Báo cáo chat cuối ngày
             </h1>
             <p className="text-[12.5px] mt-0.5" style={muted}>
-              Gửi nhóm Lark 18:00 hằng ngày · AI tổng hợp, cần đối chiếu hội
+              Gửi nhóm Lark 17:01 hằng ngày · AI tổng hợp, cần đối chiếu hội
               thoại gốc trước khi xử lý
             </p>
           </div>
@@ -491,7 +491,7 @@ export function DailyChatReport({
                     type="button"
                     onClick={savePreview}
                     disabled={saving}
-                    title="Lưu bản này để xem lại sau (không gửi Lark, không ảnh hưởng lần gửi 18:00)"
+                    title="Lưu bản này để xem lại sau (không gửi Lark, không ảnh hưởng lần gửi 17:01)"
                     className="dt-btn-ghost inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium disabled:opacity-50"
                   >
                     {saving ? (
@@ -530,7 +530,7 @@ export function DailyChatReport({
         ) : !day ? (
           <LeadCard title="Chưa có bản đã lưu / gửi">
             <p className="text-[13px] py-4" style={muted}>
-              Báo cáo gửi nhóm Lark lúc 18:00 và bản xem trước đã lưu sẽ hiện ở
+              Báo cáo gửi nhóm Lark lúc 17:01 và bản xem trước đã lưu sẽ hiện ở
               đây. Có thể tạo bản xem trước cho một ngày bất kỳ.
             </p>
           </LeadCard>
