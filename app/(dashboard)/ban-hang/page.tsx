@@ -87,7 +87,9 @@ import {
   applyLinePriceReduction,
   findLineVatMissing,
   fromSavedLinePrice,
-  getLineTotal,
+  getSavedLineTotal,
+  roundMoney,
+  sumLineTotals,
   getSavedLinePrice,
 } from "@/lib/utils/line-vat";
 
@@ -103,7 +105,7 @@ export interface CartItem {
   // price/discount ở giỏ luôn là giá CHƯA cộng GTGT (xem lib/utils/line-vat.ts).
   lineVatRate?: number;
   // Dòng của chứng từ CŨ (DB line_vat_rate NULL, SP trong LINE_VAT_PRODUCT_CODES):
-  // trừ 8% một lần khi mở; listPrice = giá trước khi trừ (hiện "giá cũ").
+  // bóc 8% VAT (÷ 1,08) một lần khi mở; listPrice = giá đã lưu (hiện "giá cũ").
   // Chỉ dùng ở FE, không gửi BE.
   legacyLine?: boolean;
   legacyReduced?: boolean;
@@ -398,7 +400,7 @@ const getLineVatPersistence = (item: CartItem) => {
   return {
     price,
     discount,
-    totalPrice: (price - discount) * Number(item.quantity),
+    totalPrice: getSavedLineTotal(price, discount, Number(item.quantity)),
     lineVatRate: saved.lineVatRate,
   };
 };
@@ -821,13 +823,13 @@ export default function BanHangPage() {
     return map;
   }, [activeTab?.cartItems, pricesByProduct]);
 
-  // ── Chứng từ CŨ có SP007601: trừ 8% vào đơn giá đúng 1 lần ──
+  // ── Chứng từ CŨ có SP007601: bóc 8% VAT (÷ 1,08) khỏi đơn giá đúng 1 lần ──
   // Dòng nạp từ DB có line_vat_rate NULL (lập trước khi có quy tắc mới) được
-  // fromSavedLinePrice đánh dấu legacyLine + listPrice (giá cũ). Ở đây trừ 8% vào
-  // đơn giá + giảm giá rồi đánh dấu legacyReduced; lưu xong DB có 0/5 → lần mở
-  // sau không còn là dòng cũ nên không bị trừ nữa. Đơn/HĐ mới không có dòng cũ.
-  // Đơn đang khóa dòng (không còn Phiếu tạm) → chưa trừ (BE chặn đổi dòng); khi
-  // chuyển sang tạo HĐ (hết khóa) sẽ trừ.
+  // fromSavedLinePrice đánh dấu legacyLine + listPrice (giá cũ). Ở đây bóc 8% VAT
+  // khỏi đơn giá + giảm giá rồi đánh dấu legacyReduced; lưu xong DB có 0/5 → lần
+  // mở sau không còn là dòng cũ nên không bị bóc nữa. Đơn/HĐ mới không có dòng cũ.
+  // Đơn đang khóa dòng (không còn Phiếu tạm) → chưa bóc (BE chặn đổi dòng); khi
+  // chuyển sang tạo HĐ (hết khóa) sẽ bóc.
   useEffect(() => {
     if (!activeTab || itemsLocked) return;
     const pending = (activeTab.cartItems || []).some(
@@ -1909,7 +1911,7 @@ export default function BanHangPage() {
           }
         }
 
-        // Dòng của chứng từ cũ: vẫn trừ 8% trên giá bảng giá mới. Đơn mới: giữ giá.
+        // Dòng của chứng từ cũ: vẫn bóc 8% VAT (÷ 1,08) khỏi giá bảng giá mới. Đơn mới: giữ giá.
         return item.legacyLine
           ? {
               ...item,
@@ -2703,7 +2705,7 @@ export default function BanHangPage() {
           Number(item.conversionValueSnapshot) > 0
             ? Number(item.conversionValueSnapshot)
             : getConversionValue(item.product),
-        // Copy sang đơn/HĐ MỚI → không trừ 8% (dòng cũ chỉ cần chọn lại GTGT).
+        // Copy sang đơn/HĐ MỚI → không bóc 8% (dòng cũ chỉ cần chọn lại GTGT).
         ...fromSavedLinePrice(item, { asNewDocument: true }),
         note: item.note || "",
         conditionType: item.conditionType || "normal",
@@ -2835,7 +2837,7 @@ export default function BanHangPage() {
           Number(item.conversionValueSnapshot) > 0
             ? Number(item.conversionValueSnapshot)
             : getConversionValue(item.product),
-        // Copy sang đơn/HĐ MỚI → không trừ 8% (dòng cũ chỉ cần chọn lại GTGT).
+        // Copy sang đơn/HĐ MỚI → không bóc 8% (dòng cũ chỉ cần chọn lại GTGT).
         ...fromSavedLinePrice(item, { asNewDocument: true }),
         note: item.note || "",
         conditionType: item.conditionType || "normal",
@@ -3107,13 +3109,10 @@ export default function BanHangPage() {
     const remainingDiscount = sourceDiscount - usedDiscount;
     // Đơn giảm theo %: giữ nguyên % khi chuyển HĐ, còn tiền phải quy đổi theo
     // tổng dòng hàng còn xuất. Đơn giảm theo tiền: giữ cơ chế giảm giá còn lại.
-    const remainingSubtotal = remainingCartItems.reduce(
-      (sum, item) => sum + getLineTotal(item),
-      0
-    );
+    const remainingSubtotal = sumLineTotals(remainingCartItems);
     const invoiceDiscount =
       sourceDiscountRatio > 0
-        ? (remainingSubtotal * sourceDiscountRatio) / 100
+        ? roundMoney((remainingSubtotal * sourceDiscountRatio) / 100)
         : remainingDiscount > 0
           ? remainingDiscount
           : 0;
@@ -3360,7 +3359,7 @@ export default function BanHangPage() {
               discount,
               discountRatio: 0,
               lineVatRate,
-              totalPrice: (price - discount) * quantity,
+              totalPrice: getSavedLineTotal(price, discount, quantity),
               note: item.note || "",
               conditionType: item.conditionType || "normal",
               soldExpiryDate: item.soldExpiryDate || null,
@@ -4168,7 +4167,7 @@ export default function BanHangPage() {
             discount: discount,
             discountRatio: 0,
             lineVatRate,
-            totalPrice: (price - discount) * quantity,
+            totalPrice: getSavedLineTotal(price, discount, quantity),
             note: item.note || "",
             conditionType: item.conditionType || "normal",
             soldExpiryDate: item.soldExpiryDate || null,
@@ -4551,7 +4550,7 @@ export default function BanHangPage() {
           discount: discount,
           discountRatio: 0,
           lineVatRate,
-          totalPrice: (price - discount) * quantity,
+          totalPrice: getSavedLineTotal(price, discount, quantity),
           note: item.note || "",
           conditionType: item.conditionType || "normal",
           soldExpiryDate: item.soldExpiryDate || null,

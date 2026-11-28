@@ -24,7 +24,7 @@ import { UnitPicker } from "./UnitPicker";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { formatNumberInput, parseNumberInput } from "@/lib/utils";
 import { ShippingFeeHistoryTooltip } from "./ShippingFeeHistoryTooltip";
-import { getLineTotal } from "@/lib/utils/line-vat";
+import { roundMoney, sumLineTotals } from "@/lib/utils/line-vat";
 
 interface OrderCartProps {
   cartItems: CartItem[];
@@ -436,35 +436,33 @@ export function OrderCart({
     setDiscountMode((mode) => (mode === "amount" ? "percent" : "amount"));
   };
 
-  const calculateSubtotal = () => {
-    return cartItems.reduce((sum, item) => sum + getLineTotal(item), 0);
-  };
+  const calculateSubtotal = () => sumLineTotals(cartItems);
 
   const subtotal = useMemo(() => {
     // Thành tiền dòng đã gồm GTGT dòng (nếu có) — xem lib/utils/line-vat.ts
-    return cartItems.reduce((sum, item) => sum + getLineTotal(item), 0);
+    return sumLineTotals(cartItems);
   }, [cartItems]);
 
   // Mode %: giữ nguyên %, tính lại số tiền khi tổng tiền hàng đổi (thêm/bớt SP).
   // Mode tiền: không đụng gì — số tiền user nhập giữ nguyên.
   useEffect(() => {
     if (discountRatio <= 0) return;
-    const nextAmount = (subtotal * discountRatio) / 100;
+    const nextAmount = roundMoney((subtotal * discountRatio) / 100);
     if (Math.abs(nextAmount - discount) < 0.01) return;
     onDiscountChange?.(nextAmount);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subtotal, discountRatio]);
 
   const effectiveDiscount =
-    discount > 0 ? discount : (subtotal * discountRatio) / 100;
-  const totalAmount = subtotal - effectiveDiscount + shippingFee;
+    discount > 0 ? discount : roundMoney((subtotal * discountRatio) / 100);
+  const totalAmount = roundMoney(subtotal - effectiveDiscount + shippingFee);
 
   const calculateTotal = () => {
     const subtotal = calculateSubtotal();
     // Giảm giá hiệu dụng: ưu tiên số tiền (discount), fallback sang % cho data cũ.
     const effectiveDiscount =
-      discount > 0 ? discount : (subtotal * discountRatio) / 100;
-    return subtotal - effectiveDiscount + shippingFee;
+      discount > 0 ? discount : roundMoney((subtotal * discountRatio) / 100);
+    return roundMoney(subtotal - effectiveDiscount + shippingFee);
   };
 
   const displayDebt = (() => {

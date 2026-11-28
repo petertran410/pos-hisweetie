@@ -935,14 +935,14 @@ export function InvoiceItemsList({
                     )}
                   </div>
 
-                  {/* Giá bảng giá cũ → giá đã trừ 8% mặc định */}
+                  {/* Giá cũ (đã gồm VAT) → giá trước VAT 8% (÷ 1,08) */}
                   {canReduceLinePrice(item) && getLineListPrice(item) != null && (
                     <div className="text-xs text-gray-500">
                       Giá gốc{" "}
                       <span className="line-through text-gray-400">
                         {formatCurrency(getLineListPrice(item) ?? 0)}
                       </span>{" "}
-                      → trừ {LINE_PRICE_REDUCTION_PERCENT}%:{" "}
+                      → trước VAT {LINE_PRICE_REDUCTION_PERCENT}%:{" "}
                       {formatCurrency(getLineReducedPrice(item) ?? 0)}
                     </div>
                   )}
@@ -1033,11 +1033,11 @@ export function InvoiceItemsList({
                         Giảm giá
                       </button>
                     </div>
-                    {/* Giá bảng giá cũ → giá đã trừ 8% mặc định */}
+                    {/* Giá cũ (đã gồm VAT) → giá trước VAT 8% (÷ 1,08) */}
                     {canReduceLinePrice(item) && getLineListPrice(item) != null && (
                       <div className="flex flex-col items-end min-w-[60px]">
                         <span className="text-xs lg:text-sm text-gray-400 mb-0.5">
-                          Giá trừ {LINE_PRICE_REDUCTION_PERCENT}%
+                          Giá trước VAT {LINE_PRICE_REDUCTION_PERCENT}%
                         </span>
                         <span className="text-md text-gray-700 whitespace-nowrap">
                           <span className="mr-1 text-sm text-gray-400 line-through">
