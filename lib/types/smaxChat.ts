@@ -243,6 +243,8 @@ export interface RecentChat {
     /** Nhãn tự động từ phân loại từng tin (Message Intelligence), không phải nút "Phân loại" */
     auto?: boolean;
   } | null;
+  /** Hội thoại trong danh sách loại trừ: tin không gửi AI phân loại */
+  intelExcluded?: boolean;
   // Tổng số tin của thread — "tin mới" = chênh lệch so với lần xem gần nhất trên POS
   messageCount: number;
   avatar: string | null;

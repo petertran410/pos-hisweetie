@@ -78,3 +78,46 @@ export function useSandbox() {
     onError: (e: Error) => toast.error(e.message),
   });
 }
+
+/** Danh sách hội thoại loại trừ khỏi phân loại tin. */
+export function useIntelExclusions(enabled = true) {
+  return useQuery({ queryKey: [KEY, "exclusions"], queryFn: messageIntelApi.exclusions, enabled, retry: false });
+}
+
+/** Tìm hội thoại theo tên để thêm vào danh sách loại trừ (≥ 2 ký tự). */
+export function useIntelThreadSearch(q: string) {
+  const term = q.trim();
+  return useQuery({
+    queryKey: [KEY, "thread-search", term],
+    queryFn: () => messageIntelApi.searchThreads(term),
+    enabled: term.length >= 2,
+    placeholderData: (prev) => prev,
+    staleTime: 30_000,
+    retry: false,
+  });
+}
+
+/** Loại trừ / bỏ loại trừ hội thoại: làm mới màn hình phân tích + danh sách chat (nhãn "Không phân tích AI"). */
+export function useToggleIntelExclusion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      v: { exclude: true; pagePid: string; tid: string } | { exclude: false; groupKey?: string; pagePid?: string; tid?: string }
+    ): Promise<{ groupKey: string; threads?: number; skipped?: number; requeued?: number }> =>
+      v.exclude
+        ? messageIntelApi.exclude({ pagePid: v.pagePid, tid: v.tid })
+        : messageIntelApi.include({ groupKey: v.groupKey, pagePid: v.pagePid, tid: v.tid }),
+    onSuccess: (r, v) => {
+      qc.invalidateQueries({ queryKey: [KEY] });
+      qc.invalidateQueries({ queryKey: ["smaxRecentChats"] });
+      if (v.exclude) {
+        const n = r.threads ?? 0;
+        toast.success(n > 1 ? `Đã loại trừ khỏi phân tích AI (${n} kênh cùng nhóm)` : "Đã loại trừ khỏi phân tích AI");
+      } else {
+        const n = r.requeued ?? 0;
+        toast.success(n ? `Đã bỏ loại trừ, ${n} tin được phân loại lại` : "Đã bỏ loại trừ khỏi danh sách");
+      }
+    },
+    onError: (e: Error) => toast.error(e.message || "Không cập nhật được danh sách loại trừ"),
+  });
+}

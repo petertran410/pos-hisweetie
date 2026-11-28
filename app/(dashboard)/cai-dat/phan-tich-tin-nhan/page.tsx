@@ -9,9 +9,10 @@ import { IntelMessagesTab } from "@/components/message-intel/IntelMessagesTab";
 import { IntelReviewTab } from "@/components/message-intel/IntelReviewTab";
 import { IntelSandboxTab } from "@/components/message-intel/IntelSandboxTab";
 import { IntelSettingsTab } from "@/components/message-intel/IntelSettingsTab";
+import { IntelExclusionsTab } from "@/components/message-intel/IntelExclusionsTab";
 import { IntelRangeBar, rangeOf, type IntelPreset } from "@/components/message-intel/IntelRangeBar";
 
-type Tab = "tong-quan" | "tin-nhan" | "cham-nhan" | "thu-nghiem" | "cau-hinh";
+type Tab = "tong-quan" | "tin-nhan" | "cham-nhan" | "thu-nghiem" | "loai-tru" | "cau-hinh";
 
 /** Cài đặt → Phân tích tin nhắn: AI phân loại từng tin nhắn Smax (Message Intelligence). */
 export default function MessageIntelPage() {
@@ -25,6 +26,7 @@ export default function MessageIntelPage() {
       ["tin-nhan", "Tin nhắn", true],
       ["cham-nhan", "Chấm nhãn", canChat],
       ["thu-nghiem", "Thử nghiệm", canManage],
+      ["loai-tru", "Loại trừ", canManage],
       ["cau-hinh", "Cấu hình", canManage],
     ] as const
   ).filter(([, , ok]) => ok);
@@ -65,6 +67,7 @@ export default function MessageIntelPage() {
         {tab === "tin-nhan" && <IntelMessagesTab range={range} />}
         {tab === "cham-nhan" && <IntelReviewTab />}
         {tab === "thu-nghiem" && <IntelSandboxTab />}
+        {tab === "loai-tru" && <IntelExclusionsTab />}
         {tab === "cau-hinh" && <IntelSettingsTab />}
       </div>
     </PagePermissionGuard>
