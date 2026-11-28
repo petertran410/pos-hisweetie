@@ -3,7 +3,13 @@ import { apiClient } from "@/lib/config/api";
 /** Báo cáo chat cuối ngày (backend DailyReport) — AI tổng hợp hội thoại Smax trong ngày. */
 export type DailyChatReport = {
   day: string;
-  stats: { channels: number; threads: number; messages: number };
+  stats: {
+    channels: number;
+    threads: number;
+    messages: number;
+    /** Hội thoại AI phân loại toàn tin bình thường → không đưa vào báo cáo */
+    normal?: number;
+  };
   complaints: {
     customer: string;
     channel: string;

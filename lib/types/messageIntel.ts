@@ -58,6 +58,8 @@ export const SKIP_LABEL: Record<string, string> = {
   sticker_only: "Chỉ sticker",
   empty: "Không nội dung",
   excluded: "Hội thoại loại trừ",
+  system_notice: "Thông báo kết bạn / cuộc gọi",
+  merged: "Đã gộp vào cụm tin",
 };
 
 export const STATUS_LABEL: Record<string, string> = {
@@ -113,6 +115,10 @@ export type IntelMessage = {
   isGroup: boolean | null;
   senderName: string | null;
   text: string | null;
+  /** Tin cuối cụm: số tin khách gửi liên tiếp đã gộp (text = cả cụm) */
+  burstSize?: number | null;
+  /** Tin đã gộp: msg_pid tin cuối cụm */
+  mergedInto?: string | null;
   status: string;
   skipReason: string | null;
   source: string | null;
@@ -212,6 +218,8 @@ export type ReviewItem = {
   messageAt: string;
   senderName: string | null;
   text: string;
+  /** Chấm cả cụm tin khách gửi liên tiếp */
+  burstSize?: number | null;
   quote: string | null;
   previous: { role: "customer" | "staff" | "other_member"; senderName: string | null; at: string; text: string }[];
 };

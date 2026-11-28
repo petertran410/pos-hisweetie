@@ -189,6 +189,12 @@ function ReportView({ report }: { report: Report }) {
           <Tile label="Yêu cầu cần rà soát" value={vi(report.pending.length)} />
           <Tile label="Cảnh báo giá" value={vi(report.discrepancies.length)} />
         </div>
+        {!!report.stats.normal && (
+          <p className="text-[12.5px] mt-2" style={muted}>
+            Chỉ tổng hợp đoạn chat AI đánh dấu cần chú ý · bỏ qua{" "}
+            {vi(report.stats.normal)} hội thoại phân loại bình thường.
+          </p>
+        )}
       </LeadCard>
 
       <LeadCard
@@ -385,7 +391,7 @@ export function DailyChatReport({
         <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
           <div>
             <h1 className="text-xl font-bold leading-tight">
-              Báo cáo chat cuối ngày
+              Báo cáo chat
             </h1>
             <p className="text-[12.5px] mt-0.5" style={muted}>
               Gửi nhóm Lark 17:01 hằng ngày · AI tổng hợp, cần đối chiếu hội

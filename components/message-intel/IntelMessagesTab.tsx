@@ -139,6 +139,14 @@ function Row({ m }: { m: IntelMessage }) {
                 {m.senderName}:{" "}
               </span>
             )}
+            {m.burstSize && (
+              <span
+                className="mr-1 rounded border px-1 text-[11px]"
+                style={{ borderColor: "var(--dt-border)", color: "var(--dt-text-muted)" }}
+                title="Các tin khách gửi liên tiếp được gộp, AI phân loại cả cụm">
+                Gộp {m.burstSize} tin
+              </span>
+            )}
             <span className="whitespace-pre-wrap break-words">{m.text}</span>
           </>
         ) : (
