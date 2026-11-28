@@ -36,7 +36,7 @@ export default function SmaxReportPage() {
             {(
               [
                 ["tong-quan", "Tổng quan"],
-                ["cuoi-ngay", "Báo cáo chat cuối ngày"],
+                ["cuoi-ngay", "Báo cáo chat"],
               ] as const
             ).map(([key, label]) => (
               <button

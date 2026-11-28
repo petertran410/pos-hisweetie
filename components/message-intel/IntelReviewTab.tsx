@@ -120,7 +120,8 @@ function ReviewForm({ item }: { item: ReviewItem }) {
       )}
       <div className="rounded-lg border-2 border-brand p-3">
         <div className="text-[12px] mb-1" style={{ color: "var(--dt-text-muted)" }}>
-          Tin cần chấm{item.senderName ? ` (${item.senderName})` : ""}
+          {item.burstSize ? `Cụm ${item.burstSize} tin cần chấm (chấm cả cụm)` : "Tin cần chấm"}
+          {item.senderName ? ` (${item.senderName})` : ""}
           {item.quote ? ` · trả lời: "${item.quote.slice(0, 80)}"` : ""}
         </div>
         <div className="text-[15px] font-medium whitespace-pre-wrap break-words">{item.text}</div>
